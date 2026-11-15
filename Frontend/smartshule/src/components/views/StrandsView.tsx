@@ -1,13 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { apiService } from '../../services/api';
 import { BackendLearningArea, BackendStrand, BackendSubStrand } from '../../types';
 import { matchGradeLevels } from '../../utils/formatters';
+import { useAuth } from '../../context/AuthContext';
 
 export const StrandsView: React.FC = () => {
+  const { user } = useAuth();
+  const [editableAreaIds, setEditableAreaIds] = useState<string[]>([]);
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
-  const [selectedGrade, setSelectedGrade] = useState<string>('GRADE_4');
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const isAdmin = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER'].includes(user?.role || '');
+  const canEdit = isAdmin || (user?.role === 'TEACHER' && editableAreaIds.includes(selectedAreaId));
   
+  const strandRequest = useRef(0);
   const [strands, setStrands] = useState<BackendStrand[]>([]);
   const [subStrandsMap, setSubStrandsMap] = useState<Record<string, BackendSubStrand[]>>({});
   const [loading, setLoading] = useState(false);
@@ -44,11 +50,18 @@ export const StrandsView: React.FC = () => {
   useEffect(() => {
     async function loadAreas() {
       try {
-        const res = await apiService.getLearningAreas();
+        setEditableAreaIds([]);
+        const [res, context] = await Promise.all([
+          apiService.getLearningAreas(),
+          user?.role === 'TEACHER' ? apiService.getTeacherAuthorizedContext().catch(() => null) : Promise.resolve(null)
+        ]);
+        setEditableAreaIds(context?.data?.editableLearningAreaIds || []);
         if (res.success && res.data?.length) {
           setLearningAreas(res.data);
           if (res.data.length > 0) {
             setSelectedAreaId(res.data[0].id);
+            setSelectedGrade(res.data[0].gradeLevel);
+            setStrandGradeLevel(res.data[0].gradeLevel);
           }
         }
       } catch {
@@ -56,13 +69,13 @@ export const StrandsView: React.FC = () => {
       }
     }
     loadAreas();
-  }, []);
+  }, [user?.id, user?.role]);
 
   // Filter available learning areas strictly by the selected grade level
   const availableAreas = useMemo(() => {
     if (!selectedGrade) return learningAreas;
     const filtered = learningAreas.filter(a => matchGradeLevels(a.gradeLevel, selectedGrade));
-    return filtered.length > 0 ? filtered : learningAreas;
+    return filtered;
   }, [learningAreas, selectedGrade]);
 
   // Keep selectedAreaId valid
@@ -79,18 +92,20 @@ export const StrandsView: React.FC = () => {
   }, [availableAreas, selectedAreaId]);
 
   const loadStrands = async (areaId: string, grade: string) => {
+    const request = ++strandRequest.current;
     if (!areaId) {
       setStrands([]);
       setSubStrandsMap({});
       return;
     }
     setLoading(true);
+    setStrands([]);
+    setSubStrandsMap({});
     try {
       const res = await apiService.getStrandsByLearningArea(areaId, grade);
+      if (request !== strandRequest.current) return;
       if (res.success && res.data) {
-        // Filter strands by grade level if specified, or show all if universal / fallback
-        const matchingStrands = res.data.filter(s => !s.gradeLevel || matchGradeLevels(s.gradeLevel, grade));
-        const effectiveStrands = matchingStrands.length > 0 ? matchingStrands : res.data;
+        const effectiveStrands = res.data.filter(s => s.learningAreaId === areaId && (!s.gradeLevel || matchGradeLevels(s.gradeLevel, grade)));
         
         // Deduplicate strands by title so no duplicates are ever displayed
         const seen = new Set<string>();
@@ -111,6 +126,7 @@ export const StrandsView: React.FC = () => {
             const seenSub = new Set<string>();
             const uniqueSubs: BackendSubStrand[] = [];
             for (const sub of subRes.data) {
+              if (sub.strandId !== st.id) continue;
               const sk = (sub.title || '').trim().toLowerCase();
               if (!sk || seenSub.has(sk)) continue;
               seenSub.add(sk);
@@ -119,16 +135,15 @@ export const StrandsView: React.FC = () => {
             subMap[st.id] = uniqueSubs;
           }
         }
-        setSubStrandsMap(subMap);
+        if (request === strandRequest.current) setSubStrandsMap(subMap);
       } else {
         setStrands([]);
         setSubStrandsMap({});
       }
     } catch {
-      setStrands([]);
-      setSubStrandsMap({});
+      if (request === strandRequest.current) { setStrands([]); setSubStrandsMap({}); }
     } finally {
-      setLoading(false);
+      if (request === strandRequest.current) setLoading(false);
     }
   };
 
@@ -139,6 +154,7 @@ export const StrandsView: React.FC = () => {
   }, [selectedAreaId, selectedGrade]);
 
   const handleDeleteStrand = async (strandId: string, title: string) => {
+    if (!canEdit) return;
     if (window.confirm(`Are you sure you want to delete strand "${title}"? This will also remove associated sub-strands.`)) {
       try {
         const res = await apiService.deleteStrand(strandId);
@@ -155,6 +171,7 @@ export const StrandsView: React.FC = () => {
   };
 
   const handleDeleteSubStrand = async (subStrandId: string, title: string, strandId: string) => {
+    if (!canEdit) return;
     if (window.confirm(`Are you sure you want to delete sub-strand "${title}"?`)) {
       try {
         const res = await apiService.deleteSubStrand(subStrandId);
@@ -174,6 +191,7 @@ export const StrandsView: React.FC = () => {
   const currentStrand = strands.find((s) => s.id === selectedStrandId);
 
   const handleOpenAddStrand = () => {
+    if (!canEdit) return;
     const areaPrefix = currentArea?.code ? currentArea.code.substring(0, 3).toUpperCase() : 'STR';
     const nextNumber = strands.length + 1;
     setStrandCode(`${areaPrefix}-${nextNumber.toString().padStart(2, '0')}`);
@@ -184,6 +202,7 @@ export const StrandsView: React.FC = () => {
   };
 
   const handleOpenEditStrand = (st: BackendStrand) => {
+    if (!canEdit) return;
     setEditingStrand(st);
     setEditStrandCode(st.code);
     setEditStrandTitle(st.title);
@@ -193,6 +212,7 @@ export const StrandsView: React.FC = () => {
 
   const handleUpdateStrand = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!editingStrand) return;
     setIsSubmitting(true);
     try {
@@ -215,6 +235,7 @@ export const StrandsView: React.FC = () => {
 
   const handleCreateStrand = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsSubmitting(true);
     try {
       const res = await apiService.createStrand({
@@ -237,6 +258,7 @@ export const StrandsView: React.FC = () => {
   };
 
   const handleOpenAddSubStrand = (st: BackendStrand) => {
+    if (!canEdit) return;
     setSelectedStrandId(st.id);
     const existingCount = (subStrandsMap[st.id] || []).length;
     setSubCode(`${st.code}.${existingCount + 1}`);
@@ -246,6 +268,7 @@ export const StrandsView: React.FC = () => {
   };
 
   const handleOpenEditSubStrand = (sub: BackendSubStrand, strandId: string) => {
+    if (!canEdit) return;
     setEditingSubStrand(sub);
     setSelectedStrandId(strandId);
     setEditSubCode(sub.code);
@@ -256,6 +279,7 @@ export const StrandsView: React.FC = () => {
 
   const handleUpdateSubStrand = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!editingSubStrand) return;
     setIsSubmitting(true);
 
@@ -286,6 +310,7 @@ export const StrandsView: React.FC = () => {
 
   const handleCreateSubStrand = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsSubmitting(true);
     
     const outcomesArray = outcomesText.split('\n').map(o => o.trim()).filter(o => o.length > 0);
@@ -335,7 +360,7 @@ export const StrandsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleOpenAddStrand}
-            disabled={!selectedAreaId}
+            disabled={!selectedAreaId || !canEdit}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
@@ -343,6 +368,8 @@ export const StrandsView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {selectedAreaId && !canEdit && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">View only. Only a teacher explicitly assigned this subject can add, edit or delete its strands and sub-strands. Being the class teacher does not grant editing access.</p>}
 
       {/* Grade Selector */}
       <div className="flex items-center gap-3 bg-surface-container-low p-3 rounded-xl border border-outline-variant/30">
@@ -352,18 +379,7 @@ export const StrandsView: React.FC = () => {
           onChange={(e) => setSelectedGrade(e.target.value)}
           className="bg-white border border-outline-variant/40 rounded-lg p-2 text-xs font-bold text-primary focus:outline-primary cursor-pointer"
         >
-          <option value="PLAYGROUP">Playgroup</option>
-          <option value="PP1">PP1</option>
-          <option value="PP2">PP2</option>
-          <option value="GRADE_1">Grade 1</option>
-          <option value="GRADE_2">Grade 2</option>
-          <option value="GRADE_3">Grade 3</option>
-          <option value="GRADE_4">Grade 4</option>
-          <option value="GRADE_5">Grade 5</option>
-          <option value="GRADE_6">Grade 6</option>
-          <option value="GRADE_7">Grade 7</option>
-          <option value="GRADE_8">Grade 8</option>
-          <option value="GRADE_9">Grade 9</option>
+          {[...new Set(learningAreas.map(a=>a.gradeLevel))].map(grade=><option key={grade} value={grade}>{String(grade).replace(/_/g," ")}</option>)}
         </select>
         <span className="text-[11px] text-on-surface-variant font-medium">
           Showing all {availableAreas.length} verified global school subjects
@@ -413,8 +429,9 @@ export const StrandsView: React.FC = () => {
                       {st.description && <p className="text-xs text-on-surface-variant mt-1">{st.description}</p>}
                     </div>
                     <button
+                      disabled={!canEdit}
                       onClick={() => handleOpenAddSubStrand(st)}
-                      className="px-2.5 py-1 text-[11px] font-semibold bg-surface-container hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface flex items-center gap-1 cursor-pointer shrink-0"
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-surface-container hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface flex items-center gap-1 cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span className="material-symbols-outlined text-[14px]">add</span>
                       <span>Sub-strand</span>
@@ -436,15 +453,17 @@ export const StrandsView: React.FC = () => {
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
+                                  disabled={!canEdit}
                                   onClick={() => handleOpenEditSubStrand(sub, st.id)}
-                                  className="p-1 rounded text-outline hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                  className="p-1 rounded text-outline hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   title="Edit sub-strand"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">edit</span>
                                 </button>
                                 <button
+                                  disabled={!canEdit}
                                   onClick={() => handleDeleteSubStrand(sub.id, sub.title, st.id)}
-                                  className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                  className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   title="Delete sub-strand"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">delete</span>
@@ -469,15 +488,17 @@ export const StrandsView: React.FC = () => {
                 </div>
                 <div className="pt-2 border-t border-surface-container flex items-center justify-between">
                   <button
+                    disabled={!canEdit}
                     onClick={() => handleOpenEditStrand(st)}
-                    className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-sans"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-sans disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span className="material-symbols-outlined text-[14px]">edit</span>
                     <span>Edit Strand</span>
                   </button>
                   <button
+                    disabled={!canEdit}
                     onClick={() => handleDeleteStrand(st.id, st.title)}
-                    className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer font-sans"
+                    className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer font-sans disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span className="material-symbols-outlined text-[14px]">delete</span>
                     <span>Delete Strand</span>
@@ -491,7 +512,7 @@ export const StrandsView: React.FC = () => {
         <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/30 text-center space-y-2">
           <span className="material-symbols-outlined text-outline text-[32px]">folder_open</span>
           <div className="font-bold text-sm text-on-surface">No Strands Found For {currentArea?.name || 'Selected Subject'}</div>
-          <p className="text-xs text-on-surface-variant">Click &quot;Add New Strand&quot; to populate curriculum content for this learning area.</p>
+          <p className="text-xs text-on-surface-variant">{canEdit ? 'Click "Add New Strand" to populate curriculum content for this learning area.' : 'No curriculum content has been recorded for this learning area yet.'}</p>
         </div>
       )}
 
@@ -511,18 +532,7 @@ export const StrandsView: React.FC = () => {
               <div>
                 <label className="block font-bold text-on-surface-variant uppercase mb-1">Target Grade Level *</label>
                 <select value={strandGradeLevel} onChange={(e) => setStrandGradeLevel(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 font-bold text-on-surface focus:outline-primary cursor-pointer">
-                  <option value="PLAYGROUP">Playgroup</option>
-                  <option value="PP1">PP1</option>
-                  <option value="PP2">PP2</option>
-                  <option value="GRADE_1">Grade 1</option>
-                  <option value="GRADE_2">Grade 2</option>
-                  <option value="GRADE_3">Grade 3</option>
-                  <option value="GRADE_4">Grade 4</option>
-                  <option value="GRADE_5">Grade 5</option>
-                  <option value="GRADE_6">Grade 6</option>
-                  <option value="GRADE_7">Grade 7</option>
-                  <option value="GRADE_8">Grade 8</option>
-                  <option value="GRADE_9">Grade 9</option>
+                  {[...new Set(learningAreas.map(a=>a.gradeLevel))].map(grade=><option key={grade} value={grade}>{String(grade).replace(/_/g," ")}</option>)}
                 </select>
               </div>
 
@@ -544,7 +554,7 @@ export const StrandsView: React.FC = () => {
               
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-outline-variant/20 mt-2">
                 <button type="button" onClick={() => setIsAddStrandOpen(false)} className="px-4 py-2.5 text-sm font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                <button type="submit" disabled={isSubmitting || !canEdit} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                   <span className="material-symbols-outlined text-[18px]">save</span>
                   <span>Create Strand</span>
                 </button>
@@ -585,7 +595,7 @@ export const StrandsView: React.FC = () => {
               
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-outline-variant/20 mt-2">
                 <button type="button" onClick={() => setIsEditStrandOpen(false)} className="px-4 py-2.5 text-sm font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                <button type="submit" disabled={isSubmitting || !canEdit} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                   <span className="material-symbols-outlined text-[18px]">save</span>
                   <span>Save Changes</span>
                 </button>
@@ -623,7 +633,7 @@ export const StrandsView: React.FC = () => {
               </div>
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">
                 <button type="button" onClick={() => setIsAddSubStrandOpen(false)} className="px-4 py-2 font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md cursor-pointer disabled:opacity-50">Save Sub-strand</button>
+                <button type="submit" disabled={isSubmitting || !canEdit} className="px-5 py-2 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md cursor-pointer disabled:opacity-50">Save Sub-strand</button>
               </div>
             </form>
           </div>
@@ -658,7 +668,7 @@ export const StrandsView: React.FC = () => {
               </div>
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">
                 <button type="button" onClick={() => setIsEditSubStrandOpen(false)} className="px-4 py-2 font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md cursor-pointer disabled:opacity-50">Save Changes</button>
+                <button type="submit" disabled={isSubmitting || !canEdit} className="px-5 py-2 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md cursor-pointer disabled:opacity-50">Save Changes</button>
               </div>
             </form>
           </div>

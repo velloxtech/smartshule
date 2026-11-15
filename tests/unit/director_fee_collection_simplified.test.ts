@@ -189,7 +189,7 @@ describe('Director & Cashier Simplified Fee Management Unit Tests', () => {
       expect(position.financialPosition.totalPaid).toBe(4000);
       expect(position.financialPosition.outstandingBalance).toBe(1500);
       expect(position.financialPosition.status).toBe('PARTIAL');
-      expect(position.financialPosition.formula).toBe('KSh 4,500 + KSh 1,000 - KSh 4,000 = KSh 1,500');
+      expect(position.financialPosition.formula).toBe('KSh 4,500 + KSh 1,000 − KSh 4,000 = KSh 1,500');
     });
 
     it('does NOT charge a fictitious previous balance to a learner without arrears', async () => {

@@ -363,8 +363,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       let loaded = res?.data && Array.isArray(res.data) ? res.data : [];
 
       if (loaded.length === 0 && selectedTermId) {
-        const altTermId = selectedTermId.includes('-t')
-          ? selectedTermId.replace('-t', '-')
+        const altTermId = new RegExp('-t[1-3]$').test(selectedTermId)
+          ? selectedTermId.replace(/-t([1-3])$/, '-$1')
           : selectedTermId.replace(/-(\d)$/, '-t$1');
         const altRes = await apiService
           .listSummatives({
@@ -570,22 +570,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
   const getScoreInfo = (s?: BackendSummativeAssessment) => {
     if (!s) return { score: 0, level: '--', points: 0, hasMark: false };
 
-    let score = -1;
-    if (s.strandScores && s.strandScores.length > 0) {
-      let totalRaw = 0;
-      let totalMax = 0;
-      s.strandScores.forEach((st) => {
-        if (st.rawScore !== undefined && st.maxScore) {
-          totalRaw += st.rawScore;
-          totalMax += st.maxScore;
-        }
-      });
-      if (totalMax > 0) {
-        score = Math.round((totalRaw / totalMax) * 100);
-      } else if (s.strandScores[0]?.rawScore !== undefined) {
-        score = s.strandScores[0].rawScore;
-      }
-    }
+    if (s.scoreIssue) return { score: 0, level: 'Review', points: 0, hasMark: false };
+    let score = s.percentageScore ?? -1;
 
     if (score === -1) {
       switch (s.overallPerformanceLevel) {
@@ -852,7 +838,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
     const lines: string[] = [];
     lines.push('GRACE SEEDS SCHOOL - SUMMATIVE EXAMINATION MARKSHEET MATRIX');
-    lines.push('KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
+    lines.push('P.O Box 12-20123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
     lines.push(`Academic Term: ${selectedTermId}, Year: ${selectedYearId}, Exported: ${new Date().toLocaleDateString('en-KE')}`);
     lines.push('');
     lines.push(headers.join(','));
@@ -1241,7 +1227,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                               <div>{getLevelPill(cell.level)}</div>
                             </div>
                           ) : (
-                            <span className="text-gray-300 font-mono text-xs">--</span>
+                            <span className={cell?.level === 'Review' ? "text-amber-700 font-bold text-xs" : "text-gray-300 font-mono text-xs"}>{cell?.level === 'Review' ? 'Review' : '--'}</span>
                           )}
                         </td>
                       );

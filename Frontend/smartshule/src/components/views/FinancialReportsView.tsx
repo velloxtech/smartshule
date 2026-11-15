@@ -612,7 +612,7 @@ export const FinancialReportsView: React.FC = () => {
 
       {/* Navigation Tabs for Reports */}
       <div className="border-b border-outline-variant/30 print:hidden">
-        <nav className="flex space-x-8 -mb-px">
+        <nav className="flex flex-wrap gap-x-5 -mb-px">
           <button
             onClick={() => setActiveReportTab('INCOME_EXPENDITURE')}
             className={`py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors cursor-pointer ${

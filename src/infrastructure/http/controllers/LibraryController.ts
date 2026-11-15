@@ -363,7 +363,7 @@ export class LibraryController {
       }
 
       const schoolId = (req.query.schoolId as string) || req.user?.schoolId || undefined;
-      const stats = await this.useCases.getStats(schoolId);
+      const stats = await this.useCases.getStats(schoolId, (req as any).canAccessTeachingRecord);
       return res.status(200).json({
         success: true,
         data: stats

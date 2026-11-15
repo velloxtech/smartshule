@@ -159,7 +159,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           streamId: 'stream-g7',
           teacherId: 't-01',
           teacherName: 'Teacher Mark',
-          date: '2026-02-10',
+          date: new Date().toISOString().slice(0, 10),
           title: 'Mathematics Algebra Exercises',
           homework: 'Page 50 numbers 1 to 5',
           teacherRemarks: 'Excellent class participation today.',
@@ -178,7 +178,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           streamId: 'stream-g7',
           academicYearId: 'year-2026',
           termId: 'term-1',
-          date: '2026-02-10',
+          date: new Date().toISOString().slice(0, 10),
           type: AttendanceType.DAILY_MORNING,
           markedByTeacherId: 't-01',
           entries: [

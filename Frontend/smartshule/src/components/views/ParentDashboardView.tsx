@@ -1422,12 +1422,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div className="space-y-3">
                   {summativeEvaluations.length > 0 ? (
                     summativeEvaluations.map((ev: any) => {
-                      const rawScore =
-                        ev.percentageScore ??
-                        ev.overallScore ??
-                        ev.score ??
-                        (ev.strandScores?.[0]?.rawScore !== undefined ? ev.strandScores[0].rawScore : null);
-                      const scoreDisplay = rawScore !== null && rawScore !== undefined ? `${rawScore}%` : 'Competency Assessed';
+                      const scoreDisplay = ev.scoreIssue
+                        ? 'Score requires verification'
+                        : ev.percentageScore !== null && ev.percentageScore !== undefined
+                          ? `${ev.percentageScore}%` : 'Competency Assessed';
                       const areaName = resolveLearningAreaName(ev.learningAreaId, ev.learningAreaName || ev.name);
 
                       return (

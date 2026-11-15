@@ -188,7 +188,7 @@ describe('Student Promotion, Admission Fee & Balance Carry-Forward Integration T
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          admissionNumber: 'ADM-BULK-01',
+          admissionNumber: '8301',
           firstName: 'Faith',
           lastName: 'Chebet',
           dateOfBirth: '2015-08-20',
@@ -203,7 +203,7 @@ describe('Student Promotion, Admission Fee & Balance Carry-Forward Integration T
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          admissionNumber: 'ADM-BULK-02',
+          admissionNumber: '8302',
           firstName: 'Dennis',
           lastName: 'Kiprono',
           dateOfBirth: '2015-11-10',
@@ -257,7 +257,7 @@ describe('Student Promotion, Admission Fee & Balance Carry-Forward Integration T
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          admissionNumber: 'ADM-CLEAN-01',
+          admissionNumber: '8303',
           firstName: 'Mercy',
           lastName: 'Wanjiku',
           dateOfBirth: '2016-03-12',

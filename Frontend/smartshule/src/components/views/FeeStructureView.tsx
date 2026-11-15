@@ -180,7 +180,7 @@ export const FeeStructureView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
     const schoolName = school?.name || 'GRACE SEEDS SCHOOL';
-    const address = school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+    const address = school?.address || 'P.O Box 12-20123';
     const phone = school?.phone || '0745436312';
     const motto = school?.motto || 'The Future Begins Here';
 
@@ -350,13 +350,13 @@ export const FeeStructureView: React.FC = () => {
       {/* 1. Header & Quick Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-on-surface flex items-center gap-2">
             <span>Fee Structures</span>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
               {structures.length} Invoicing Schedules Active
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
             Real-time fee structures stored in the database. Invoices generated for students dynamically pull from these records.
           </p>
         </div>
@@ -364,15 +364,15 @@ export const FeeStructureView: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsRequirementsOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-surface text-on-surface-variant font-semibold rounded-xl text-xs border border-outline-variant/30 shadow-2xs transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[17px] text-gray-500">menu_book</span>
+            <span className="material-symbols-outlined text-[17px] text-on-surface-variant">menu_book</span>
             <span>Stationery &amp; Books</span>
           </button>
 
           <button
             onClick={downloadOfficialPDF}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
             title="Export official itemized schedule as PDF"
           >
             <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
@@ -410,13 +410,13 @@ export const FeeStructureView: React.FC = () => {
       )}
 
       {/* 2. Filters & View Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-2xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-gray-500 uppercase">View:</span>
+          <span className="text-xs font-bold text-on-surface-variant uppercase">View:</span>
           <button
             onClick={() => setViewMode('matrix')}
             className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              viewMode === 'matrix' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              viewMode === 'matrix' ? 'bg-primary text-white shadow-xs' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-[15px]">table_chart</span>
@@ -425,7 +425,7 @@ export const FeeStructureView: React.FC = () => {
           <button
             onClick={() => setViewMode('cards')}
             className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              viewMode === 'cards' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              viewMode === 'cards' ? 'bg-primary text-white shadow-xs' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-[15px]">grid_view</span>
@@ -433,13 +433,13 @@ export const FeeStructureView: React.FC = () => {
           </button>
 
           {viewMode === 'cards' && (
-            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-outline-variant/30">
               {(['ALL', 'TERM_1', 'TERM_2', 'TERM_3'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setSelectedTerm(t)}
                   className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                    selectedTerm === t ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    selectedTerm === t ? 'bg-slate-800 text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                   }`}
                 >
                   {t === 'ALL' ? 'All Terms' : getTermName(t)}
@@ -458,54 +458,54 @@ export const FeeStructureView: React.FC = () => {
             placeholder="Search class or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:bg-white focus:outline-[#7a1228]"
+            className="w-full pl-8 pr-3 py-1 bg-surface border border-outline-variant/30 rounded-lg text-xs focus:bg-white focus:outline-primary"
           />
         </div>
       </div>
 
       {/* 3. Main Data Presentation */}
       {loading ? (
-        <div className="p-16 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
-          <span className="w-8 h-8 border-3 border-[#7a1228] border-t-transparent rounded-full animate-spin" />
+        <div className="p-16 text-center text-on-surface-variant text-xs flex flex-col items-center justify-center gap-3 bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
+          <span className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <span className="font-semibold">Loading fee schedules from database...</span>
         </div>
       ) : structures.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-gray-200 text-gray-500 space-y-3">
+        <div className="p-12 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/30 text-on-surface-variant space-y-3">
           <span className="material-symbols-outlined text-4xl text-gray-300">database</span>
-          <p className="font-bold text-sm text-gray-800">No fee structures exist in the database</p>
+          <p className="font-bold text-sm text-on-surface">No fee structures exist in the database</p>
           <p className="text-xs text-gray-400">
             Click &quot;New Fee Schedule&quot; to define your school&apos;s term fees, or check your database connection.
           </p>
         </div>
       ) : viewMode === 'matrix' ? (
         /* LIVE DATABASE MATRIX VIEW */
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
-          <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-surface border-b border-outline-variant/30 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#7a1228] text-[20px]">payments</span>
-              <h2 className="text-sm font-bold text-gray-900">Termly Fee Matrix (Active Database Rates)</h2>
+              <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
+              <h2 className="text-sm font-bold text-on-surface">Termly Fee Matrix (Active Database Rates)</h2>
             </div>
-            <span className="text-xs text-gray-500 font-mono">Values in KES</span>
+            <span className="text-xs text-on-surface-variant font-mono">Values in KES</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-gray-50/60 text-gray-600 uppercase font-bold text-[11px] tracking-wider border-b border-gray-200">
+              <thead className="bg-surface/60 text-on-surface-variant uppercase font-bold text-[11px] tracking-wider border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Class / Level</th>
                   <th className="py-3 px-3 text-center">Term 1</th>
                   <th className="py-3 px-3 text-center">Term 2</th>
                   <th className="py-3 px-3 text-center">Term 3</th>
-                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Annual Invoiced</th>
+                  <th className="py-3 px-4 text-right text-on-surface font-bold">Annual Invoiced</th>
                   <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
                 {dynamicTiers.map((tier) => (
                   <tr key={tier.gradeLevel} className="hover:bg-rose-50/20 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-gray-900">
+                    <td className="py-3.5 px-4 font-bold text-on-surface">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#7a1228]" />
+                        <span className="w-2 h-2 rounded-full bg-primary" />
                         <span>{tier.gradeName}</span>
                       </div>
                     </td>
@@ -514,7 +514,7 @@ export const FeeStructureView: React.FC = () => {
                     <td className="py-3.5 px-3 text-center font-mono">
                       {tier.term1 ? (
                         <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term1!)}>
-                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                          <span className="font-bold text-on-surface hover:text-primary hover:underline">
                             KES {tier.totalT1.toLocaleString()}
                           </span>
                           <span className="text-[10px] text-gray-400 block font-sans">
@@ -530,7 +530,7 @@ export const FeeStructureView: React.FC = () => {
                     <td className="py-3.5 px-3 text-center font-mono">
                       {tier.term2 ? (
                         <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term2!)}>
-                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                          <span className="font-bold text-on-surface hover:text-primary hover:underline">
                             KES {tier.totalT2.toLocaleString()}
                           </span>
                           <span className="text-[10px] text-gray-400 block font-sans">
@@ -546,7 +546,7 @@ export const FeeStructureView: React.FC = () => {
                     <td className="py-3.5 px-3 text-center font-mono">
                       {tier.term3 ? (
                         <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term3!)}>
-                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                          <span className="font-bold text-on-surface hover:text-primary hover:underline">
                             KES {tier.totalT3.toLocaleString()}
                           </span>
                           <span className="text-[10px] text-gray-400 block font-sans">
@@ -559,7 +559,7 @@ export const FeeStructureView: React.FC = () => {
                     </td>
 
                     {/* Annual Total */}
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-[#7a1228]">
+                    <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-primary">
                       KES {tier.annualTotal.toLocaleString()}
                     </td>
 
@@ -569,7 +569,7 @@ export const FeeStructureView: React.FC = () => {
                         {tier.term1 && (
                           <button
                             onClick={() => handleOpenEdit(tier.term1!)}
-                            className="p-1 rounded text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 cursor-pointer"
+                            className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-rose-50 cursor-pointer"
                             title="Edit schedule"
                           >
                             <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -593,20 +593,20 @@ export const FeeStructureView: React.FC = () => {
             return (
               <div
                 key={s.id}
-                className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-200 flex flex-col justify-between hover:border-gray-300 transition-all space-y-3"
+                className="bg-surface-container-lowest rounded-2xl p-4 shadow-2xs border border-outline-variant/30 flex flex-col justify-between hover:border-outline-variant/30 transition-all space-y-3"
               >
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between border-b border-gray-100 pb-2.5">
+                  <div className="flex items-start justify-between border-b border-outline-variant/30 pb-2.5">
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold text-[#7a1228] bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                        <span className="text-xs font-bold text-primary bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                           {resolveGradeName(s.gradeLevel)}
                         </span>
                         <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                           {getTermName(s.termId)}
                         </span>
                       </div>
-                      <h3 className="font-bold text-sm text-gray-900 mt-1 truncate" title={s.title}>
+                      <h3 className="font-bold text-sm text-on-surface mt-1 truncate" title={s.title}>
                         {s.title}
                       </h3>
                     </div>
@@ -614,7 +614,7 @@ export const FeeStructureView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleOpenEdit(s)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Edit schedule in database"
                       >
                         <span className="material-symbols-outlined text-[17px]">edit</span>
@@ -630,8 +630,8 @@ export const FeeStructureView: React.FC = () => {
                   </div>
 
                   <div className="bg-rose-50/50 rounded-xl p-3 border border-rose-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-700">Term Total:</span>
-                    <span className="text-lg font-bold font-mono text-[#7a1228]">
+                    <span className="text-xs font-bold text-on-surface-variant">Term Total:</span>
+                    <span className="text-lg font-bold font-mono text-primary">
                       KES {total.toLocaleString()}
                     </span>
                   </div>
@@ -644,10 +644,10 @@ export const FeeStructureView: React.FC = () => {
                       items.map((it, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between text-xs py-1 px-2 rounded bg-gray-50 border border-gray-100"
+                          className="flex items-center justify-between text-xs py-1 px-2 rounded bg-surface border border-outline-variant/30"
                         >
-                          <span className="text-gray-700 truncate">{it.name}</span>
-                          <span className="font-mono font-bold text-gray-900">
+                          <span className="text-on-surface-variant truncate">{it.name}</span>
+                          <span className="font-mono font-bold text-on-surface">
                             KES {(Number(it.amount) || 0).toLocaleString()}
                           </span>
                         </div>
@@ -658,11 +658,11 @@ export const FeeStructureView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px] text-gray-400">
                   <span>{resolveAcademicYearName(s.academicYearId)}</span>
                   <button
                     onClick={() => handleOpenEdit(s)}
-                    className="font-bold text-[#7a1228] hover:underline cursor-pointer flex items-center gap-1"
+                    className="font-bold text-primary hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[14px]">edit</span>
                     <span>Edit Schedule</span>

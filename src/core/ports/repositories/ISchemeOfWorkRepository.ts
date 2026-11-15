@@ -1,4 +1,4 @@
-import { SchemeOfWork, SchemeStatus } from '../../domain/curriculum-plan/SchemeOfWork';
+import { SchemeOfWork, SchemeOfWorkEntry, SchemeStatus } from '../../domain/curriculum-plan/SchemeOfWork';
 import { LessonPlan } from '../../domain/curriculum-plan/LessonPlan';
 
 export interface SchemeFilterCriteria {
@@ -15,6 +15,7 @@ export interface ISchemeOfWorkRepository {
   findAll(filters?: SchemeFilterCriteria): Promise<SchemeOfWork[]>;
   save(scheme: SchemeOfWork): Promise<void>;
   update(scheme: SchemeOfWork): Promise<void>;
+  savePlanning?(scheme: SchemeOfWork, expectedRevision: number, expectedEntries?: SchemeOfWorkEntry[]): Promise<void>;
   delete(id: string): Promise<void>;
 }
 

@@ -184,6 +184,10 @@ export class StudentController {
     }
   };
 
+  public listAssessmentRoster = async(req:Request,res:Response,next:NextFunction)=>{
+    try{const data=await this.studentUseCases.listAssessmentRoster({schoolId:req.query.schoolId as string,classroomId:req.query.classroomId as string,streamId:req.query.streamId as string,academicYearId:req.query.academicYearId as string,termId:req.query.termId as string,learningAreaId:req.query.learningAreaId as string,requestingUser:(req as any).user});res.json({success:true,count:data.length,data});}catch(e){next(e);}
+  };
+
   public listStudents = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { schoolId, gradeLevel, classroomId, streamId, academicYearId, search } = req.query;

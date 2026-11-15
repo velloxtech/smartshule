@@ -1,3 +1,5 @@
+import {TeacherAssignmentAccess} from '../shared/TeacherAssignmentAccess';
+import { assessmentScore, assessmentResults } from '../../core/domain/cbc/AssessmentScore';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
@@ -225,32 +227,12 @@ export class BroadsheetUseCases {
   ) {}
 
   public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string, requestingUser?: UserContext) {
-    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      if (this.teacherRepository) {
-        let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
-        if (!teacher) teacher = await this.teacherRepository.findById(requestingUser.userId);
-        if (teacher) {
-          const assignedClasses = new Set<string>();
-          const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
-          try {
-            const ctas = await this.academicRepository.findClassTeacherAssignments({ teacherId: teacher.id, isActive: true });
-            for (const a of ctas) {
-              if (a.classRoomId) assignedClasses.add(a.classRoomId);
-              if (a.streamId) assignedStreams.add(a.streamId);
-            }
-          } catch {}
-          try {
-            const stas = await this.academicRepository.findSubjectTeacherAssignments({ teacherId: teacher.id, isActive: true });
-            for (const s of stas) {
-              if (s.classRoomId) assignedClasses.add(s.classRoomId);
-              if (s.streamId) assignedStreams.add(s.streamId);
-            }
-          } catch {}
-          if (!assignedClasses.has(classId) && !assignedStreams.has(classId)) {
-            throw new ForbiddenError('Access denied: You are not authorized to view analytics for this class.');
-          }
-        }
-      }
+    if(requestingUser?.role===UserRole.TEACHER){
+      if(!this.teacherRepository)throw new ForbiddenError('Teaching assignments cannot be verified.');
+      const access=new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+      const streams=await this.academicRepository.findStreamsByClass(classId);
+      const scopes=[{classRoomId:classId,academicYearId,termId},...streams.map(stream=>({classRoomId:classId,streamId:stream.id,academicYearId,termId}))];
+      if(!(await Promise.all(scopes.map(scope=>access.can(requestingUser,scope)))).some(Boolean))throw new ForbiddenError('No active assignment permits this class.');
     }
 
     const allClasses = await this.academicRepository.findAllClasses();
@@ -277,58 +259,6 @@ export class BroadsheetUseCases {
       query.streamId.toLowerCase().startsWith('all_') ||
       query.streamId.toLowerCase().startsWith('all-');
 
-    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      if (!this.teacherRepository) {
-        throw new ForbiddenError('Teacher repository unavailable to verify permissions.');
-      }
-      let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
-      if (!teacher) {
-        teacher = await this.teacherRepository.findById(requestingUser.userId);
-      }
-      if (!teacher) {
-        throw new ForbiddenError('No teacher profile associated with your account.');
-      }
-
-      const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
-      const assignedClasses = new Set<string>();
-
-      try {
-        const ctas = await this.academicRepository.findClassTeacherAssignments({
-          teacherId: teacher.id,
-          isActive: true
-        });
-        for (const a of ctas) {
-          if (a.streamId) assignedStreams.add(a.streamId);
-          if (a.classRoomId) assignedClasses.add(a.classRoomId);
-        }
-      } catch {}
-
-      try {
-        const stas = await this.academicRepository.findSubjectTeacherAssignments({
-          teacherId: teacher.id,
-          isActive: true
-        });
-        for (const s of stas) {
-          if (s.streamId) assignedStreams.add(s.streamId);
-          if (s.classRoomId) assignedClasses.add(s.classRoomId);
-        }
-      } catch {}
-
-      const matchesStream = query.streamId && (assignedStreams.has(query.streamId) || assignedClasses.has(query.streamId));
-      const matchesClass = query.classId && assignedClasses.has(query.classId);
-
-      let matchesAllClass = false;
-      if (isAllStreams) {
-        const targetClassId = query.classId || (query.streamId.includes('_') ? query.streamId.split('_')[1] : undefined);
-        if (targetClassId && assignedClasses.has(targetClassId)) {
-          matchesAllClass = true;
-        }
-      }
-
-      if (!matchesStream && !matchesClass && !matchesAllClass) {
-        throw new ForbiddenError('Access denied: You are not authorized to view the broadsheet for this stream or class.');
-      }
-    }
 
     const allClasses = typeof this.academicRepository.findAllClasses === 'function'
       ? await this.academicRepository.findAllClasses()
@@ -630,6 +560,18 @@ export class BroadsheetUseCases {
     }
 
     let learningAreas = Array.from(canonicalMap.values());
+    const teacherAccess=requestingUser?.role===UserRole.TEACHER;
+    const assignmentAccess=this.teacherRepository?new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository):null;
+    const visibilityCache=new Map<string,Promise<boolean>>();
+    const visibleAreas=async <T extends {id:string;name:string}>(clsId:string,streamId:string|undefined,areas:T[]):Promise<T[]>=>{
+      if(!teacherAccess)return areas;
+      if(!assignmentAccess||!requestingUser)throw new ForbiddenError('Teaching assignments cannot be verified.');
+      const allowed:T[]=[];
+      for(const area of areas){const scope={classRoomId:clsId,streamId,learningAreaId:area.id,academicYearId,termId};const key=JSON.stringify(scope);if(!visibilityCache.has(key))visibilityCache.set(key,assignmentAccess.can(requestingUser,scope));if(await visibilityCache.get(key))allowed.push(area);}
+      return allowed;
+    };
+    if(teacherAccess&&stream){learningAreas=await visibleAreas(classRoom.id,stream.id,learningAreas);if(!learningAreas.length)throw new ForbiddenError('No active assignment permits this broadsheet.');}
+
 
     // 4. Streams for selected class
     let streamsToCompare = classRoom ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
@@ -645,9 +587,19 @@ export class BroadsheetUseCases {
       }
     }
 
+    if(teacherAccess){
+      const allowed=[];
+      for(const candidate of streamsToCompare){if(stream&&candidate.id!==stream.id)continue;if((await visibleAreas(classRoom.id,candidate.id===classRoom.id?undefined:candidate.id,learningAreas)).length)allowed.push(candidate);}
+      streamsToCompare=allowed;
+      const visibleIds=new Set<string>();
+      for(const candidate of streamsToCompare)for(const area of await visibleAreas(classRoom.id,candidate.id===classRoom.id?undefined:candidate.id,learningAreas))visibleIds.add(area.id);
+      learningAreas=learningAreas.filter(area=>visibleIds.has(area.id));
+      if(!streamsToCompare.length)throw new ForbiddenError('No active assignment permits this broadsheet.');
+    }
+
     // Evaluate target class streams (parallel, using shared pre-fetched context)
     const allStreamResults: StreamSection[] = await Promise.all(
-      streamsToCompare.map(s => this.evaluateSingleStream(s, classRoom, termId, academicYearId, learningAreas, sharedCtx))
+      streamsToCompare.map(async s => this.evaluateSingleStream(s, classRoom, termId, academicYearId, await visibleAreas(classRoom.id,s.id===classRoom.id?undefined:s.id,learningAreas), sharedCtx))
     );
 
     const allClassRows: BroadsheetRow[] = [];
@@ -752,7 +704,7 @@ export class BroadsheetUseCases {
     // 5. SCHOOL-WIDE ANALYTICS COMPUTATION
     // ==========================================
     // Reuse already-fetched allLearningAreas instead of refetching
-    const allSchoolLearningAreas = allLearningAreas;
+    const allSchoolLearningAreas = teacherAccess?[]:allLearningAreas;
     const schoolAllLearningAreasMap = new Map<string, { id: string; name: string }>();
     allSchoolLearningAreas.forEach(la => {
       schoolAllLearningAreasMap.set(la.id, { id: la.id, name: la.name });
@@ -764,7 +716,7 @@ export class BroadsheetUseCases {
     // Fetch all streams for all classes in parallel
     const clsLearningAreasList = allSchoolLearningAreas.map(la => ({ id: la.id, name: la.name }));
     const allClsStreamsArr = await Promise.all(
-      allClasses.map(async cls => {
+      (teacherAccess?[]:allClasses).map(async cls => {
         let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
         if (!clsStreams || clsStreams.length === 0) {
           clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
@@ -1004,12 +956,17 @@ export class BroadsheetUseCases {
 
     // Use pre-fetched students from context when available to avoid extra DB calls
     if (ctx) {
+      const classStreams = classRoom?.id
+        ? await this.academicRepository.findStreamsByClass(classRoom.id)
+        : [];
       const clsStudents = ctx.allStudents.filter(s => {
+        const belongsToClass = s.classroomId
+          ? s.classroomId === classRoom?.id
+          : Boolean(classRoom?.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'));
         if (stream && stream.id !== classRoom?.id) {
-          return s.streamId === stream.id || s.classroomId === classRoom?.id;
+          return s.streamId === stream.id || (!s.streamId && classStreams.length <= 1 && belongsToClass);
         }
-        return s.classroomId === classRoom?.id ||
-          (classRoom?.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'));
+        return belongsToClass;
       });
       students = clsStudents as unknown as Student[];
     } else {
@@ -1079,6 +1036,7 @@ export class BroadsheetUseCases {
         : [];
     }
 
+    summatives = assessmentResults(summatives.map(s => typeof s.toJSON === 'function' ? s.toJSON() : s));
     const summativeMap = new Map<string, any>();
     for (const s of summatives) {
       summativeMap.set(`${s.studentId}_${s.learningAreaId}`, s);
@@ -1150,17 +1108,17 @@ export class BroadsheetUseCases {
         let level: PerformanceLevel = PerformanceLevel.BELOW_EXPECTATIONS;
         let score = 0;
 
-        if (rcScore) {
-          level = rcScore.performanceLevel;
-          score = rcScore.rawScore !== undefined && rcScore.rawScore !== null
-            ? rcScore.rawScore
-            : (rcScore.score !== undefined ? rcScore.score : this.scoreFromLevel(level));
-          hasEvaluation = true;
-        } else if (s) {
+        if (s) {
           level = s.overallPerformanceLevel;
-          const rawSum = s.strandScores?.reduce((acc: number, cur: any) => acc + (cur.rawScore ?? cur.score ?? 0), 0) || 0;
-          const count = s.strandScores?.length || 1;
-          score = Math.round(rawSum / count) || this.scoreFromLevel(level);
+          const calculated = assessmentScore(s.strandScores);
+          if (!s.scoreIssue && !calculated.scoreIssue) {
+            score = calculated.percentageScore ?? this.scoreFromLevel(level);
+            hasEvaluation = true;
+          }
+        } else if (rcScore) {
+          level = rcScore.performanceLevel;
+          // Report score is already a percentage. rawScore has a different unit.
+          score = rcScore.score !== undefined ? rcScore.score : this.scoreFromLevel(level);
           hasEvaluation = true;
         }
 

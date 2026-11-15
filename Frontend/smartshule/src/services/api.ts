@@ -61,6 +61,9 @@ import {
   SystemLogStats,
   ConcernRecord,
   ComplaintRecord,
+  LunchWeeklyCollectionReport,
+  LunchMonthlyCollectionReport,
+  LunchDashboardMetrics,
   LunchEnrollmentItem,
   LunchPaymentItem,
   LunchSummaryStats,
@@ -267,9 +270,15 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
 
   const fetchPromise = (async () => {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    const timer = window.setTimeout(abort, 45000);
+    if (options.signal?.aborted) abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
     try {
       const res = await fetch(url, {
         ...options,
+        signal: controller.signal,
         headers: {
           ...getHeaders(),
           ...(options.headers || {}),
@@ -300,6 +309,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       }
       return json;
     } finally {
+      window.clearTimeout(timer);
+      options.signal?.removeEventListener('abort', abort);
       if (method === 'GET') {
         inFlightRequests.delete(url);
       }
@@ -401,6 +412,8 @@ export interface MarksCommitResult {
 }
 
 export interface TeacherAuthorizedClass {
+  wholeClass?: boolean;
+  subjectsByStream?: Record<string, TeacherAuthorizedSubject[]>;
   id: string;
   name: string;
   gradeLevel: string;
@@ -417,6 +430,7 @@ export interface TeacherAuthorizedSubject {
 export interface TeacherAuthorizedContext {
   isGlobalAdmin: boolean;
   teacherId?: string;
+  editableLearningAreaIds?: string[];
   teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' | 'GLOBAL_ADMIN';
   assignedClasses: TeacherAuthorizedClass[];
   authorizedSubjectsByClass: Record<string, TeacherAuthorizedSubject[]>;
@@ -739,8 +753,8 @@ const coreApiService = {
     return apiFetch<ApiResponse<AcademicContext>>(`/academics/context${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
-  getClasses: async (schoolId?: string): Promise<ApiResponse<ClassRoom[]>> => {
-    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  getClasses: async (schoolId?: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<ClassRoom[]>> => {
+    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes?${new URLSearchParams({...schoolId?{schoolId}:{},...context})}`);
   },
 
   createClass: async (data: {
@@ -761,8 +775,8 @@ const coreApiService = {
     });
   },
 
-  getStreamsByClass: async (classRoomId: string): Promise<ApiResponse<StreamItem[]>> => {
-    return apiFetch<ApiResponse<StreamItem[]>>(`/academics/streams/by-class/${classRoomId}`);
+  getStreamsByClass: async (classRoomId: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<StreamItem[]>> => {
+    return apiFetch<ApiResponse<StreamItem[]>>(`/academics/streams/by-class/${classRoomId}?${new URLSearchParams(context as Record<string,string>)}`);
   },
 
   createStream: async (data: {
@@ -783,12 +797,13 @@ const coreApiService = {
     });
   },
 
-  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string; classroomId?: string; globalSubjectId?: string }): Promise<ApiResponse<BackendLearningArea[]>> => {
+  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string; classroomId?: string; globalSubjectId?: string;academicYearId?:string;termId?:string }): Promise<ApiResponse<BackendLearningArea[]>> => {
     const q = new URLSearchParams();
     if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
     if (params?.schoolId) q.append('schoolId', params.schoolId);
     if (params?.classroomId) q.append('classroomId', params.classroomId);
     if (params?.globalSubjectId) q.append('globalSubjectId', params.globalSubjectId);
+    if(params?.academicYearId)q.append('academicYearId',params.academicYearId);if(params?.termId)q.append('termId',params.termId);
     return apiFetch<ApiResponse<BackendLearningArea[]>>(`/academics/learning-areas?${q.toString()}`);
   },
 
@@ -895,12 +910,16 @@ const coreApiService = {
     });
   },
 
-  getTeacherAuthorizedContext: async (academicYearId?: string): Promise<ApiResponse<TeacherAuthorizedContext>> => {
-    const q = academicYearId ? `?academicYearId=${academicYearId}` : '';
-    return apiFetch<ApiResponse<TeacherAuthorizedContext>>(`/academics/teacher/authorized-context${q}`);
+  getTeacherAuthorizedContext: async (academicYearId?: string, termId?: string): Promise<ApiResponse<TeacherAuthorizedContext>> => {
+    const q = new URLSearchParams({...academicYearId?{academicYearId}:{},...termId?{termId}:{}});
+    return apiFetch<ApiResponse<TeacherAuthorizedContext>>(`/academics/teacher/authorized-context?${q}`);
   },
 
   // 3. Students & Guardians Endpoints
+  getAssessmentRoster: async(filters:Record<string,any>={}):Promise<ApiResponse<any[]>>=>{
+    const query=new URLSearchParams(Object.entries(filters).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]));
+    return apiFetch<ApiResponse<any[]>>(`/students/assessment-roster?${query}`);
+  },
   getStudents: async (filters?: {
     schoolId?: string;
     gradeLevel?: string;
@@ -919,6 +938,7 @@ const coreApiService = {
     if (filters?.classroomId) q.append('classroomId', filters.classroomId);
     if (filters?.streamId) q.append('streamId', filters.streamId);
     if (filters?.academicYearId) q.append('academicYearId', filters.academicYearId);
+    if (filters?.termId) q.append('termId', filters.termId);
     if (filters?.search) q.append('search', filters.search);
     if (filters?.limit) q.append('limit', String(filters.limit));
     if (filters?.offset) q.append('offset', String(filters.offset));
@@ -1327,9 +1347,9 @@ const coreApiService = {
 
   getStrandsByLearningArea: async (
     learningAreaId: string,
-    gradeLevel?: string
+    gradeLevel?: string, context?:{academicYearId?:string;termId?:string}
   ): Promise<ApiResponse<BackendStrand[]>> => {
-    const q = gradeLevel ? `?gradeLevel=${gradeLevel}` : '';
+    const q = '?'+new URLSearchParams({...gradeLevel?{gradeLevel}:{},...context});
     return apiFetch<ApiResponse<BackendStrand[]>>(`/CBC/strands/by-learning-area/${learningAreaId}${q}`);
   },
 
@@ -1368,8 +1388,8 @@ const coreApiService = {
     });
   },
 
-  getSubStrandsByStrand: async (strandId: string): Promise<ApiResponse<BackendSubStrand[]>> => {
-    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/CBC/sub-strands/by-strand/${strandId}`);
+  getSubStrandsByStrand: async (strandId: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<BackendSubStrand[]>> => {
+    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/CBC/sub-strands/by-strand/${strandId}?${new URLSearchParams(context as Record<string,string>)}`);
   },
 
   deleteSubStrand: async (id: string): Promise<ApiResponse<any>> => {
@@ -1581,24 +1601,25 @@ const coreApiService = {
     });
   },
 
-  addSchemeEntry: async (schemeId: string, entry: SchemeEntry): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/entries`, {
+  addSchemeEntry: async (schemeId: string, entry: SchemeEntry, context?:{academicYearId:string;termId:string}): Promise<ApiResponse<SchemeOfWork>> => {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/entries${context?'?'+new URLSearchParams(context):''}`, {
       method: 'POST',
       body: JSON.stringify(entry),
     });
   },
 
-  submitScheme: async (schemeId: string): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/submit`, {
+  submitScheme: async (schemeId: string, context?:{academicYearId:string;termId:string}): Promise<ApiResponse<SchemeOfWork>> => {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/submit${context?'?'+new URLSearchParams(context):''}`, {
       method: 'POST',
     });
   },
 
   reviewScheme: async (
     schemeId: string,
-    review: { approved: boolean; remarks: string }
+    review: { approved: boolean; remarks: string },
+    context?: { academicYearId: string; termId: string }
   ): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/review`, {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/review${context ? '?' + new URLSearchParams(context) : ''}`, {
       method: 'POST',
       body: JSON.stringify(review),
     });
@@ -1660,6 +1681,18 @@ const coreApiService = {
   submitLessonPlan: async (id: string): Promise<ApiResponse<LessonPlan>> => {
     return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}/submit`, {
       method: 'POST',
+    });
+  },
+
+  submitCoverageDraft: async (id: string, revision: number): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/schemes/${id}/allocations/submit`, {
+      method: 'POST', body: JSON.stringify({ revision }),
+    });
+  },
+
+  reviewCoverageDraft: async (id: string, data: { revision: number; approved: boolean; remarks: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/schemes/${id}/allocations/review`, {
+      method: 'POST', body: JSON.stringify(data),
     });
   },
 
@@ -1731,6 +1764,10 @@ const coreApiService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  exemptPreviousWeekForNoInstruction: async (id:string,reason:string):Promise<ApiResponse<{weekNumber:number;status:'EXEMPTED';reason:string;trackerId:string}>> => {
+    return apiFetch(`/curriculum/records-of-work/${id}/exempt-previous-week`,{method:'POST',body:JSON.stringify({reason})});
   },
 
   deleteRecordOfWork: async (id: string): Promise<ApiResponse<any>> => {
@@ -4747,6 +4784,17 @@ export const parentConsentApi = {
 
 // Unified apiService containing core and extended domain endpoints
 export const apiService = {
+  schemePlanning: async (path:string,options:RequestInit={}):Promise<any> => apiFetch(`/curriculum/schemes/${path}`,options),
+  saveSlotReflection: async (id:string,reflection:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reflection?${new URLSearchParams(context)}`,{method:'PUT',body:JSON.stringify({reflection})}),
+  downloadWeeklyScheme: async (id:string,format:'pdf'|'doc',context:{academicYearId:string;termId:string}):Promise<void> => {
+    const response=await fetch(`${API_BASE_URL}/curriculum/schemes/${encodeURIComponent(id)}/weekly/export?${new URLSearchParams({...context,format})}`,{headers:{Authorization:`Bearer ${getStoredAuthToken()}`}});
+    if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||'Export access denied.');}
+    const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`Schemes_of_Work.${format==='doc'?'docx':format}`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  },
+  planning: async (path:string,options:RequestInit = {}):Promise<any> => apiFetch(`/curriculum/planning/${path}`,options),
+  rescheduleLessonPlan: async (id:string,context?:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reschedule${context?'?'+new URLSearchParams(context):''}`,{method:'POST',body:'{}'}),
+  archiveSchemeEntry: async (id:string,entryId:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/schemes/${id}/entries/${entryId}/archive?${new URLSearchParams(context)}`,{method:'POST',body:'{}'}),
+  updateSchemeEntry: async (id:string,entryId:string,data:any,context?:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/schemes/${id}/entries/${entryId}${context?'?'+new URLSearchParams(context):''}`,{method:'PUT',body:JSON.stringify(data)}),
   ...coreApiService,
   ...libraryApi,
   ...signatureApi,

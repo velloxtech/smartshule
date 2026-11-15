@@ -119,9 +119,9 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-fade-in">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-outline-variant/30 animate-fade-in">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#7a1228] to-[#9e1c38] p-5 text-white flex justify-between items-center">
+        <div className="bg-gradient-to-r from-primary to-maroon-light p-5 text-white flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-white/10 rounded-xl">
               <ShieldAlert className="w-6 h-6 text-white" />
@@ -149,49 +149,49 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
           )}
 
           {/* Transaction Summary Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-sm">
+          <div className="bg-surface border border-outline-variant/30 rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Learner:</span>
-              <span className="font-semibold text-slate-800">
+              <span className="text-on-surface-variant font-medium">Learner:</span>
+              <span className="font-semibold text-on-surface">
                 {transaction.studentName} ({transaction.admissionNumber})
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-medium">Transaction Type:</span>
+              <span className="text-on-surface-variant font-medium">Transaction Type:</span>
               <span className="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 uppercase tracking-wide">
                 {transaction.type.replace('_', ' ')}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Reference / Receipt:</span>
-              <span className="font-mono text-xs font-bold text-slate-700">
+              <span className="text-on-surface-variant font-medium">Reference / Receipt:</span>
+              <span className="font-mono text-xs font-bold text-on-surface-variant">
                 {transaction.receiptNumber || transaction.reference}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Transaction Date:</span>
-              <span className="text-xs font-medium text-slate-700">{transaction.date}</span>
+              <span className="text-on-surface-variant font-medium">Transaction Date:</span>
+              <span className="text-xs font-medium text-on-surface-variant">{transaction.date}</span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-              <span className="text-slate-600 font-bold">Transaction Amount:</span>
-              <span className="text-base font-extrabold text-[#7a1228] font-mono">
+            <div className="flex justify-between items-center pt-2 border-t border-outline-variant/30">
+              <span className="text-on-surface-variant font-bold">Transaction Amount:</span>
+              <span className="text-base font-extrabold text-primary font-mono">
                 KES {Number(transaction.amount).toLocaleString()}
               </span>
             </div>
           </div>
 
           {/* Authoritative Financial Position Card */}
-          <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-              <span className="font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                <span className="material-symbols-outlined text-[15px] text-[#7a1228]">account_balance_wallet</span>
+          <div className="bg-surface/70 border border-outline-variant/30 rounded-xl p-3.5 space-y-2 text-xs">
+            <div className="flex items-center justify-between border-b border-outline-variant/80 pb-2">
+              <span className="font-bold text-on-surface-variant flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                <span className="material-symbols-outlined text-[15px] text-primary">account_balance_wallet</span>
                 <span>Current Account Position</span>
               </span>
               <button
                 type="button"
                 onClick={loadPosition}
                 disabled={isLoadingPosition}
-                className="text-[11px] font-semibold text-[#7a1228] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <span className={`material-symbols-outlined text-[13px] ${isLoadingPosition ? 'animate-spin' : ''}`}>
                   refresh
@@ -201,25 +201,25 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
             </div>
 
             {isLoadingPosition ? (
-              <div className="py-3 flex items-center justify-center space-x-2 text-slate-500 text-xs">
+              <div className="py-3 flex items-center justify-center space-x-2 text-on-surface-variant text-xs">
                 <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                 <span>Loading live ledger position...</span>
               </div>
             ) : positionError ? (
-              <div className="py-1 text-slate-500 text-[11px] flex justify-between items-center">
+              <div className="py-1 text-on-surface-variant text-[11px] flex justify-between items-center">
                 <span>{positionError}</span>
                 <button
                   type="button"
                   onClick={loadPosition}
-                  className="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-surface-container hover:bg-slate-300 text-on-surface-variant font-bold cursor-pointer"
                 >
                   Retry
                 </button>
               </div>
             ) : accountPosition?.financialPosition ? (
               <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
-                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                  <span className="block text-[10px] font-sans uppercase font-bold text-slate-500">Outstanding Fees</span>
+                <div className="p-2.5 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+                  <span className="block text-[10px] font-sans uppercase font-bold text-on-surface-variant">Outstanding Fees</span>
                   <span className={`text-sm font-black ${
                     accountPosition.financialPosition.outstandingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
                   }`}>
@@ -234,7 +234,7 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
                 </div>
               </div>
             ) : (
-              <div className="py-1 text-slate-500 text-[11px]">
+              <div className="py-1 text-on-surface-variant text-[11px]">
                 Learner position snapshot verified.
               </div>
             )}
@@ -242,7 +242,7 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
 
           {/* Mandatory Reason */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
               Mandatory Reason for Reversal <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -251,13 +251,13 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
               placeholder="e.g. Incorrect bank deposit allocated, Parent presented returned cheque, Duplicate entry recorded..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-[#7a1228] outline-none transition"
+              className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
             />
           </div>
 
           {/* Optional Explanation */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
               Additional Details / Explanation <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <textarea
@@ -265,13 +265,13 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
               placeholder="Provide any additional context or audit explanations..."
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-[#7a1228] outline-none transition"
+              className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
             />
           </div>
 
           {/* Optional Attachment Link */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
               Supporting Attachment URL <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <input
@@ -279,7 +279,7 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
               placeholder="https://... (link to scanned slip or letter)"
               value={attachmentUrl}
               onChange={(e) => setAttachmentUrl(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-[#7a1228] outline-none transition"
+              className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
             />
           </div>
 
@@ -292,19 +292,19 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+          <div className="flex justify-end space-x-3 pt-3 border-t border-outline-variant/30">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container-low rounded-xl transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-sm font-bold text-white bg-[#7a1228] hover:bg-[#600e1f] rounded-xl shadow-md hover:shadow-lg transition flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2 text-sm font-bold text-white bg-primary hover:bg-primary-container rounded-xl shadow-md hover:shadow-lg transition flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
             >
               <span>{isSubmitting ? 'Submitting...' : 'Submit Reversal Request'}</span>
               <ArrowRight className="w-4 h-4" />

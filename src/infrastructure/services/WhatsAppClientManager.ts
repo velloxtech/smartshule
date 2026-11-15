@@ -119,7 +119,7 @@ export class WhatsAppClientManager {
 
   constructor(sessionPath?: string, configPath?: string) {
     this.sessionDir = sessionPath || process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), 'data', 'whatsapp_session');
-    this.configFilePath = configPath || path.join(process.cwd(), 'data', 'whatsapp_meta_config.json');
+    this.configFilePath = configPath || process.env.WHATSAPP_CONFIG_PATH || path.join(process.cwd(), 'data', 'whatsapp_meta_config.json');
 
     // Ensure session directory exists
     if (!fs.existsSync(this.sessionDir)) {

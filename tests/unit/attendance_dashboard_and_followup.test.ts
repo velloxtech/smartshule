@@ -182,7 +182,11 @@ describe('Phase 2 & 8: Attendance Register Persistence, Dashboards, and Follow-U
   });
 
   test('4. Attendance trends identifies chronic absenteeism (3+ absences)', async () => {
-    const dates = ['2026-10-28', '2026-10-29', '2026-10-30'];
+    const dates = [3, 2, 1].map(daysAgo => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - daysAgo);
+      return date.toISOString().slice(0, 10);
+    });
     for (const d of dates) {
       await container.attendanceUseCases.markAttendance({
         schoolId,

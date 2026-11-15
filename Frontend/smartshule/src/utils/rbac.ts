@@ -517,7 +517,7 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
       },
       {
         id: 'curriculum-tracker',
-        label: 'Curriculum Tracker',
+        label: 'Syllabus Coverage Plan',
         icon: 'fact_check',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -1042,9 +1042,10 @@ export function getFilteredNavModules(role?: UserRole): NavModuleDef[] {
     const isModuleAllowed = module.allowedRoles.some((r) => activeRoles.includes(r));
     if (!isModuleAllowed) return null;
 
-    const allowedItems = module.items.filter((item) =>
-      item.allowedRoles.some((r) => activeRoles.includes(r))
-    );
+    const allowedItems = module.items.filter((item) => {
+      if (item.id === 'teacher-profile' && ![UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER].includes(role!)) return false;
+      return item.allowedRoles.some((r) => activeRoles.includes(r));
+    });
 
     if (allowedItems.length === 0) return null;
 
@@ -1089,6 +1090,7 @@ export function isTabPermitted(tab: TabType, role?: UserRole): boolean {
     'teachers': 'teachers-staff',
     'staff-directory': 'teachers-staff',
     'cashflow-ledger': 'financial-reports',
+    'scheme-of-work-builder': 'curriculum-tracker',
     'capitation-income': 'financial-reports',
     'assessments': 'formative-assessments',
     'complaints': 'concerns',

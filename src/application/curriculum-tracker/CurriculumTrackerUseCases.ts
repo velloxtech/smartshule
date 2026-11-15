@@ -96,6 +96,7 @@ export interface DailyLogQueryCriteria {
 
 export interface EnrichedDailyLog extends CurriculumTrackerDailyLog {
   trackerId: string;
+  schoolId: string; teacherId: string; classRoomId: string; streamId?: string; learningAreaId: string;
   subjectName: string;
   className: string;
   streamName?: string;
@@ -422,8 +423,9 @@ export class CurriculumTrackerUseCases {
     return tracker.toJSON();
   }
 
-  public async getSummary(schoolId: string, term?: string, academicYear?: string) {
-    const trackers = await this.trackerRepo.findTrackers({ schoolId, term, academicYear });
+  public async getSummary(schoolId: string, term?: string, academicYear?: string, authorize?: (record:any)=>Promise<boolean>) {
+    let trackers = await this.trackerRepo.findTrackers({ schoolId, term, academicYear });
+    if(authorize){const permitted=[];for(const record of trackers)if(await authorize(record))permitted.push(record);trackers=permitted;}
 
     let totalWeeksAll = 0;
     let coveredWeeksAll = 0;
@@ -667,6 +669,7 @@ export class CurriculumTrackerUseCases {
         allLogs.push({
           ...log,
           trackerId: t.id,
+          schoolId:t.schoolId, teacherId:t.teacherId, classRoomId:t.classRoomId, streamId:t.streamId, learningAreaId:t.learningAreaId,
           subjectName: t.subjectName,
           className: t.className,
           streamName: t.streamName,

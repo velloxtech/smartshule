@@ -55,6 +55,13 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
       });
     expect([200, 201]).toContain(laRes.status);
     testLearningAreaId = laRes.body.data.id;
+    await container.academicUseCases.assignSubjectTeacher({
+      schoolId: 'school-001', academicYearId: 'year-2026',
+      classRoomId: 'class-grade-7', streamId: 'stream-g7-east',
+      learningAreaId: testLearningAreaId, teacherId: 'teacher-001',
+      role: 'SUBJECT_TEACHER', effectiveFrom: '2026-01-05'
+    });
+
 
     // Fetch active academic year & term
     const yearsRes = await request(app)
@@ -103,7 +110,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
       createdStrandId = res.body.data.id;
     });
 
-    it('2. Prevents creating a duplicate strand with the same code or title under the same grade (409 Conflict)', async () => {
+    it('2. Repeated strand creation returns the existing record without creating duplicates', async () => {
       const dupRes = await request(app)
         .post('/api/v1/CBC/strands')
         .set('Authorization', `Bearer ${teacherToken}`)
@@ -115,8 +122,11 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
           description: 'Should be rejected as conflict.'
         });
 
-      expect(dupRes.status).toBe(409);
-      expect(dupRes.body.success).toBe(false);
+      expect(dupRes.status).toBe(201);
+      expect(dupRes.body.success).toBe(true);
+      expect(dupRes.body.data.id).toBe(createdStrandId);
+      const strands = await container.CBCAssessmentRepository.findStrandsByLearningArea(testLearningAreaId);
+      expect(strands.filter(strand => strand.code === 'STR-TEST-01')).toHaveLength(1);
     });
 
     it('3. Updates existing strand details via PUT /api/v1/CBC/strands/:id', async () => {
@@ -170,7 +180,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
       createdSubStrandId = res.body.data.id;
     });
 
-    it('6. Rejects duplicate sub-strand with identical code under same strand (409 Conflict)', async () => {
+    it('6. Repeated sub-strand creation returns the existing record without creating duplicates', async () => {
       const dupRes = await request(app)
         .post('/api/v1/CBC/sub-strands')
         .set('Authorization', `Bearer ${teacherToken}`)
@@ -181,8 +191,11 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
           specificLearningOutcomes: ['Duplicate outcome']
         });
 
-      expect(dupRes.status).toBe(409);
-      expect(dupRes.body.success).toBe(false);
+      expect(dupRes.status).toBe(201);
+      expect(dupRes.body.success).toBe(true);
+      expect(dupRes.body.data.id).toBe(createdSubStrandId);
+      const subStrands = await container.CBCAssessmentRepository.findSubStrandsByStrand(createdStrandId);
+      expect(subStrands.filter(sub => sub.id === createdSubStrandId)).toHaveLength(1);
     });
 
     it('7. Updates sub-strand details and learning outcomes via PUT /api/v1/CBC/sub-strands/:id', async () => {

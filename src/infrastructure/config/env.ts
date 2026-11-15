@@ -3,7 +3,9 @@ import path from 'path';
 import { resolveDatabaseConfig } from './databaseResolver';
 
 // Load .env from root directory
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+}
 
 const resolvedDb = resolveDatabaseConfig();
 

@@ -1,4 +1,4 @@
-import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import rateLimit, { MemoryStore, RateLimitRequestHandler } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 interface AuthenticatedRequest extends Request {
@@ -8,6 +8,15 @@ interface AuthenticatedRequest extends Request {
     schoolId?: string;
   };
 }
+
+// Separate stores keep limiter windows independent and allow deterministic test isolation.
+export const rateLimitStores = {
+  auth: new MemoryStore(),
+  passwordReset: new MemoryStore(),
+  finance: new MemoryStore(),
+  search: new MemoryStore(),
+  general: new MemoryStore(),
+};
 
 // Key generator that incorporates school/user context when authenticated to isolate tenants
 const tenantUserKeyGenerator = (req: Request): string => {
@@ -24,6 +33,7 @@ const tenantUserKeyGenerator = (req: Request): string => {
  * 5 login attempts per 15 minutes per IP/Account
  */
 export const authLimiter: RateLimitRequestHandler = rateLimit({
+  store: rateLimitStores.auth,
   windowMs: 15 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -49,6 +59,7 @@ export const authLimiter: RateLimitRequestHandler = rateLimit({
  * 3 requests per hour per IP/Account
  */
 export const passwordResetLimiter: RateLimitRequestHandler = rateLimit({
+  store: rateLimitStores.passwordReset,
   windowMs: 60 * 60 * 1000,
   max: 3,
   standardHeaders: true,
@@ -74,6 +85,7 @@ export const passwordResetLimiter: RateLimitRequestHandler = rateLimit({
  * 15 requests per minute per authenticated user
  */
 export const sensitiveFinanceLimiter: RateLimitRequestHandler = rateLimit({
+  store: rateLimitStores.finance,
   windowMs: 60 * 1000,
   max: 15,
   standardHeaders: true,
@@ -96,6 +108,7 @@ export const sensitiveFinanceLimiter: RateLimitRequestHandler = rateLimit({
  * 60 requests per minute per user/IP
  */
 export const searchLimiter: RateLimitRequestHandler = rateLimit({
+  store: rateLimitStores.search,
   windowMs: 60 * 1000,
   max: 60,
   standardHeaders: true,
@@ -118,6 +131,7 @@ export const searchLimiter: RateLimitRequestHandler = rateLimit({
  * 180 requests per minute per user/IP (generous for multi-component dashboards)
  */
 export const generalApiLimiter: RateLimitRequestHandler = rateLimit({
+  store: rateLimitStores.general,
   windowMs: 60 * 1000,
   max: 180,
   standardHeaders: true,

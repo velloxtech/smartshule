@@ -76,7 +76,15 @@ The server will start at `http://localhost:3000`. The system operates cleanly us
 ```bash
 npm test
 ```
-All unit tests and integration tests will execute against the complete API surface.
+The default run executes checked unit and in-memory API tests. It does not load the
+application `.env`; uploads and WhatsApp test state use a temporary directory, and
+rate-limit windows are reset between independent tests.
+
+PostgreSQL suites are opt-in with `RUN_DATABASE_TESTS=true` and their dedicated
+test database variables. Use a provisioned disposable database only. The e-diary
+suite requires `EDIARY_TEST_DATABASE_URL` pointing to a localhost `smartshule_test`
+or `smartshule_investigation` database; it never falls back to `DATABASE_URL`.
+Other PostgreSQL suites declare their required test URL at the top of each file.
 
 ---
 

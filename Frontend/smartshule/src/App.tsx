@@ -69,7 +69,8 @@ const InventoryManagementView = lazy(() => import('./components/views/InventoryM
 const DisciplineClubsView = lazy(() => import('./components/views/DisciplineClubsView').then(m => ({ default: m.DisciplineClubsView })));
 const MasterBroadsheetView = lazy(() => import('./components/views/MasterBroadsheetView').then(m => ({ default: m.MasterBroadsheetView })));
 const OccurrenceBookView = lazy(() => import('./components/views/OccurrenceBookView').then(m => ({ default: m.OccurrenceBookView })));
-const CurriculumTrackerView = lazy(() => import('./components/views/CurriculumTrackerView').then(m => ({ default: m.CurriculumTrackerView })));
+const CurriculumTrackerView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SyllabusCoveragePlanView })));
+const SchemeOfWorkBuilderView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SchemeOfWorkBuilderView })));
 const FeeDeadlineBannerManagementView = lazy(() => import('./components/views/FeeDeadlineBannerManagementView').then(m => ({ default: m.FeeDeadlineBannerManagementView })));
 const SponsoredStudentsView = lazy(() => import('./components/views/SponsoredStudentsView').then(m => ({ default: m.SponsoredStudentsView })));
 const MyDigitalSignatureView = lazy(() => import('./components/views/MyDigitalSignatureView').then(m => ({ default: m.MyDigitalSignatureView })));
@@ -103,6 +104,7 @@ export default function App() {
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
+  const [schemesInitialTab, setSchemesInitialTab] = useState<'schemes' | 'lesson-plans'>('schemes');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSidebarCompact, setIsSidebarCompact] = useState<boolean>(() => {
     try {
@@ -491,7 +493,7 @@ export default function App() {
             } catch {
               setStudents([]);
             }
-          } else if (!isFinanceOnly) {
+          } else {
             await refreshStudentsAndFees();
           }
         } catch {
@@ -582,8 +584,8 @@ export default function App() {
         } else {
           try {
             const [analyticsData, paymentsRes] = await Promise.all([
-              apiService.getDashboardAnalytics().catch(() => null),
-              apiService.getPayments().catch(() => null),
+              user?.role === UserRole.TEACHER ? Promise.resolve(null) : apiService.getDashboardAnalytics().catch(() => null),
+              user?.role === UserRole.TEACHER ? Promise.resolve(null) : apiService.getPayments().catch(() => null),
             ]);
             if (analyticsData?.data?.finance?.totalCollected) {
               setTotalCollectedFee(analyticsData.data.finance.totalCollected);
@@ -1005,6 +1007,7 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         onSelectTab={(tab) => {
+          if (tab === 'schemes-lesson-plans') setSchemesInitialTab('schemes');
           if (tab === 'archived-records') {
             setAppView('archive');
             window.location.hash = '/archive';
@@ -1167,8 +1170,8 @@ export default function App() {
                         setUploadMarksInitialType('SUMMATIVE');
                         setUploadMarksModalOpen(true);
                       }}
-                      onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
-                      onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
+                      onOpenNewLessonPlan={() => { setSchemesInitialTab('lesson-plans'); setCurrentTab('schemes-lesson-plans'); }}
+                      onOpenNewScheme={() => setCurrentTab('scheme-of-work-builder')}
                       refreshTrigger={marksRefreshTrigger}
                     />
                   );
@@ -1214,14 +1217,22 @@ export default function App() {
                 <span className="material-symbols-outlined text-[48px] text-amber-700">account_balance_wallet</span>
                 <h3 className="text-base font-bold">Finance Department Access Isolation</h3>
                 <p className="text-xs text-amber-800">
-                  The finance department is strictly isolated to fee structures, invoices, cash flow ledgers, and expenses.
+                  The finance department is strictly isolated to fee structures, invoices, student accounts, cash flow ledgers, and expenses.
                 </p>
-                <button
-                  onClick={() => setCurrentTab('cashflow-ledger')}
-                  className="px-4 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition-colors cursor-pointer"
-                >
-                  Go to Cash Flow Ledger
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setCurrentTab('student-fee-search')}
+                    className="px-4 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition-colors cursor-pointer"
+                  >
+                    Fee Collection & Accounts
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('cashflow-ledger')}
+                    className="px-4 py-2 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-bold text-xs hover:bg-amber-200 transition-colors cursor-pointer"
+                  >
+                    Cash Flow Ledger
+                  </button>
+                </div>
               </div>
             ) : (
               <StudentsView
@@ -1384,7 +1395,7 @@ export default function App() {
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
           {currentTab === 'schemes-lesson-plans' && (
-            <SchemesView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+            <SchemesView initialTab={schemesInitialTab} onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
 
           {currentTab === 'records-of-work' && (
@@ -1545,6 +1556,9 @@ export default function App() {
           {currentTab === 'occurrence-records' && <OccurrenceBookView />}
           {currentTab === 'curriculum-tracker' && (
             <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
+          {currentTab === 'scheme-of-work-builder' && (
+            <SchemeOfWorkBuilderView onNavigateTab={(tab) => { if (tab === 'lesson-plans') { setSchemesInitialTab('lesson-plans'); setCurrentTab('schemes-lesson-plans'); } else setCurrentTab(tab as any); }} />
           )}
           </Suspense>
         </main>

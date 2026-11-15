@@ -1,0 +1,29 @@
+[
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 6072,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 6072,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 6072,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  }
+]

@@ -1,3 +1,6 @@
+import {TeacherAssignmentAccess} from '../shared/TeacherAssignmentAccess';
+import { assessmentResults } from '../../core/domain/cbc/AssessmentScore';
+import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 import { IStudentRepository, StudentFilterCriteria } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -1100,6 +1103,10 @@ export class StudentUseCases {
       }
     }
 
+    if(isTeacher && requestingUser) {
+      if(!this.academicRepository||!this.teacherRepository||!await new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository).canClassTeacher(requestingUser,{schoolId:student.schoolId,classRoomId:student.classroomId,streamId:student.streamId}))throw new ForbiddenError('Learners and guardians are available only to the assigned class teacher.');
+    }
+
     const guardiansByStudentId = await this.guardianRepository.findByStudentId(studentId);
     const guardiansList = [...guardiansByStudentId];
     for (const gid of student.guardianIds || []) {
@@ -1166,6 +1173,19 @@ export class StudentUseCases {
     };
   }
 
+  public async listAssessmentRoster(filters:StudentFilterCriteria & {requestingUser?:UserContext;termId?:string;learningAreaId?:string}={}) {
+    const actor=filters.requestingUser;
+    if(!actor||!['TEACHER','ADMIN','SCHOOL_ADMIN','SUPER_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'].includes(actor.role||''))throw new ForbiddenError('Teaching roster access denied.');
+    if(!actor.schoolId||filters.schoolId&&filters.schoolId!==actor.schoolId)throw new ForbiddenError('School access denied.');
+    if(!this.academicRepository||!this.teacherRepository)throw new ForbiddenError('Teaching assignments cannot be verified.');
+    const access=new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+    const students=await this.studentRepository.findAll({...filters,schoolId:actor.schoolId});const result=[];
+    const scopeCache=new Map<string,Promise<boolean>>();
+    for(const student of students){const scope={schoolId:student.schoolId,classRoomId:student.classroomId,streamId:student.streamId,academicYearId:filters.academicYearId,termId:filters.termId,learningAreaId:filters.learningAreaId};const key=JSON.stringify(scope);if(!scopeCache.has(key))scopeCache.set(key,access.can(actor,scope));if(!await scopeCache.get(key))continue;
+      const row=student.toJSON();result.push({id:row.id,firstName:row.firstName,middleName:row.middleName,lastName:row.lastName,fullName:row.fullName,admissionNumber:row.admissionNumber,gender:row.gender,gradeLevel:row.gradeLevel,classroomId:row.classroomId,classRoomId:row.classroomId,streamId:row.streamId,status:row.status});
+    }return result;
+  }
+
   public async listStudents(filters?: StudentFilterCriteria & { requestingUser?: UserContext }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
     const isTeacher = filters?.requestingUser?.role === UserRole.TEACHER;
@@ -1181,12 +1201,9 @@ export class StudentUseCases {
     } else if (isTeacher && filters?.requestingUser) {
       teacherInfo = await this.getTeacherAssignments(filters.requestingUser.userId);
       const allStudents = await this.studentRepository.findAll(filters);
-      // Restrict learner list to classes and streams assigned to this teacher
-      students = allStudents.filter(s => {
-        const streamMatch = s.streamId && (teacherInfo.assignedStreamIds.has(s.streamId) || teacherInfo.allAssignedIds.has(s.streamId));
-        const classMatch = s.classroomId && (teacherInfo.assignedClassroomIds.has(s.classroomId) || teacherInfo.allAssignedIds.has(s.classroomId));
-        return streamMatch || classMatch;
-      });
+      const directoryAccess=this.academicRepository&&this.teacherRepository?new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository):null;
+      students=[];const scopeCache=new Map<string,Promise<boolean>>();
+      for(const student of allStudents){if(!directoryAccess)continue;const scope={schoolId:student.schoolId,classRoomId:student.classroomId,streamId:student.streamId,academicYearId:filters.academicYearId};const key=JSON.stringify(scope);if(!scopeCache.has(key))scopeCache.set(key,directoryAccess.canClassTeacher(filters.requestingUser,scope));if(await scopeCache.get(key))students.push(student);}
     } else {
       students = await this.studentRepository.findAll(filters);
     }
@@ -2263,31 +2280,17 @@ export class StudentUseCases {
             })
           );
 
+          const areas = await this.academicRepository?.findAllLearningAreas().catch(() => []) || [];
+          const areaNames = new Map(areas.map(a => [a.id, a.name]));
+          const results = assessmentResults(summatives.map(ev => ev.toJSON()));
           CBCSummary = {
             assessmentsCount: summatives.length + formatives.length,
             formativesCount: formatives.length,
             summativesCount: summatives.length,
             formativeAssessments: hydratedFormatives,
-            latestEvaluations: summatives.slice(0, 5).map(ev => {
-              const json = ev.toJSON();
-              let rawScore: number | null = null;
-              if (json.strandScores && json.strandScores.length > 0) {
-                const totalRaw = json.strandScores.reduce((acc: number, st: any) => acc + (st.rawScore || 0), 0);
-                const totalMax = json.strandScores.reduce((acc: number, st: any) => acc + (st.maxScore || 100), 0);
-                rawScore = totalMax > 0 ? Math.round((totalRaw / totalMax) * 100) : (json.strandScores[0].rawScore ?? null);
-              } else if (json.overallPerformanceLevel) {
-                rawScore = json.overallPerformanceLevel === 'EE' ? 88 : json.overallPerformanceLevel === 'ME' ? 72 : json.overallPerformanceLevel === 'AE' ? 55 : 40;
-              }
-
-              const learningAreaName = this.resolveBackendLearningAreaName(json.learningAreaId);
-
-              return {
-                ...json,
-                learningAreaName,
-                name: learningAreaName,
-                percentageScore: rawScore,
-                score: rawScore
-              };
+            latestEvaluations: results.map(json => {
+              const learningAreaName = areaNames.get(json.learningAreaId) || this.resolveBackendLearningAreaName(json.learningAreaId);
+              return { ...json, learningAreaName, name: learningAreaName, score: json.percentageScore };
             })
           };
         }
@@ -2502,6 +2505,10 @@ export class StudentUseCases {
 
             const alreadyAssigned = targetAssignments.some(a => a.teacherId === cohortTeacherId);
             if (!alreadyAssigned) {
+              await releasePreviousClassTeacherDuty(this.academicRepository, {
+                schoolId: student.schoolId, academicYearId: targetAcademicYearId,
+                teacherId: cohortTeacherId, classRoomId: destClassroomId, streamId: destStreamId
+              }, this.teacherRepository);
               for (const oldA of targetAssignments) {
                 oldA.deactivate(new Date().toISOString().split('T')[0]);
                 await this.academicRepository.saveClassTeacherAssignment(oldA);
@@ -2520,6 +2527,14 @@ export class StudentUseCases {
                 IdGenerator.generate()
               );
               await this.academicRepository.saveClassTeacherAssignment(newAssignment);
+
+              if (this.teacherRepository && destStreamId) {
+                const teacher = await this.teacherRepository.findById(cohortTeacherId);
+                if (teacher) {
+                  teacher.assignStream(destStreamId);
+                  await this.teacherRepository.update(teacher);
+                }
+              }
 
               if (destStreamId) {
                 const st = await this.academicRepository.findStreamById(destStreamId);

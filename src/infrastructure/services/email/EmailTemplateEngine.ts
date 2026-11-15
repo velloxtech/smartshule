@@ -26,7 +26,7 @@ export interface RenderedEmail {
 export class EmailTemplateEngine {
   private static readonly SCHOOL_NAME = 'Grace Seeds School';
   private static readonly SCHOOL_TAGLINE = '"The future Begins Here"';
-  private static readonly SCHOOL_LOCATION = 'KEMRI Street, Kisian, Kisumu County, Kenya';
+  private static readonly SCHOOL_LOCATION = 'P.O Box 12-20123';
   private static readonly SCHOOL_PHONE = '0745436312';
   private static readonly SCHOOL_EMAIL = 'schoolgraceseeds@gmail.com';
 

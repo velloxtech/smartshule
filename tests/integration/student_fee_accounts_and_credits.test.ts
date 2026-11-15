@@ -118,7 +118,7 @@ describe('Student Fee Accounts, Term Billing, Arrears & Traceable Credits Audit'
   };
 
   // Helper to generate term invoice for student
-  const generateTermInvoice = async (studentId: string, termId: string) => {
+  const generateTermInvoice = async (studentId: string, termId: string, includePreviousBalance = true) => {
     const res = await request(app)
       .post('/api/v1/finance/invoices/generate')
       .set('Authorization', `Bearer ${superAdminToken}`)
@@ -127,7 +127,8 @@ describe('Student Fee Accounts, Term Billing, Arrears & Traceable Credits Audit'
         schoolId: 'school-001',
         academicYearId: testYearId,
         termId,
-        gradeLevel: 'GRADE_3'
+        gradeLevel: 'GRADE_3',
+        includePreviousBalance
       });
     if (res.status !== 200 && res.status !== 201) {
       console.error('generateTermInvoice failed:', res.status, res.body);
@@ -352,22 +353,15 @@ describe('Student Fee Accounts, Term Billing, Arrears & Traceable Credits Audit'
       // 2. Generate Term 2 invoice (KES 14,500)
       const term2Inv = await generateTermInvoice(student.id, testTerm2Id);
       expect(term2Inv.amountPayable).toBe(14500);
-      expect(term2Inv.balance).toBe(14500);
+      expect(term2Inv.balance).toBe(9000);
 
-      // 3. Apply the 5,500 credit to the Term 2 invoice
-      const applyRes = await request(app)
-        .post('/api/v1/finance/credits/apply')
-        .set('Authorization', `Bearer ${superAdminToken}`)
-        .send({
-          creditId,
-          invoiceId: term2Inv.id,
-          amount: 5500
-        });
-      expect(applyRes.status).toBe(200);
-      expect(applyRes.body.success).toBe(true);
-      expect(applyRes.body.updatedInvoice.balance).toBe(9000);
-      expect(applyRes.body.updatedCredit.balance).toBe(0);
-      expect(applyRes.body.updatedCredit.status).toBe('FULLY_USED');
+      // Generation reconciles the existing credit automatically; applying it again would double-spend.
+      const creditsAfter = await request(app)
+        .get(`/api/v1/finance/credits/${student.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+      expect(creditsAfter.body.data.availableBalance).toBe(0);
+      const applications = await container.feeRepository.findCreditApplications({ creditId });
+      expect(applications.reduce((sum: number, application: any) => sum + application.amountApplied, 0)).toBe(5500);
 
       // 4. Verify student fee accounts for Term 2
       const accRes = await request(app)
@@ -388,7 +382,9 @@ describe('Student Fee Accounts, Term Billing, Arrears & Traceable Credits Audit'
   describe('Scenario F: Changing the selected term', () => {
     it('should return term-isolated charges when switching between Term 1 and Term 2', async () => {
       const student = await createTestStudent('TermSwitch');
-      // Student has no invoices yet, should reflect grade fee structure for that term
+      await generateTermInvoice(student.id, testTerm1Id);
+      await generateTermInvoice(student.id, testTerm2Id, false);
+      // Compare actual persisted invoices without carrying the earlier term into the later invoice.
       // Term 1: KES 12,000
       const t1Res = await request(app)
         .get(`/api/v1/finance/student-accounts?termId=${testTerm1Id}`)

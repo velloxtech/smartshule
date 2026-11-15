@@ -73,7 +73,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
     doc.setFont('helvetica', 'normal');
     doc.text('The Future Begins Here', 14, 16);
     doc.text(
-      `${receipt.schoolAddress || 'KEMRI Street, Kisian, Kisumu, Kenya'} | Tel: ${receipt.schoolPhone || '0745436312'} | Email: ${receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}`,
+      `${receipt.schoolAddress || 'P.O Box 12-20123'} | Tel: ${receipt.schoolPhone || '0745436312'} | Email: ${receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}`,
       14,
       21
     );
@@ -296,7 +296,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                     {receipt.schoolName || 'Grace Seeds School'}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    {receipt.schoolAddress || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {receipt.schoolPhone || '0745436312'} · Email: {receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}
+                    {receipt.schoolAddress || 'P.O Box 12-20123'} · Tel: {receipt.schoolPhone || '0745436312'} · Email: {receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}
                   </div>
                   <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-300 rounded-full text-[11px] font-extrabold text-[#7a1228] uppercase tracking-wider">
                     <span className="material-symbols-outlined text-[14px]">receipt_long</span>

@@ -275,21 +275,21 @@ export const ParentConsentView: React.FC = () => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-6 pb-20">
       {/* Header & Constitutional Article 53 Notice */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center shadow-xs">
-              <ShieldCheck className="w-6 h-6 text-[#7a1228]" />
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+              <ShieldCheck className="w-6 h-6 text-primary" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Parent Portal</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">Parent Portal</span>
                 <span className="text-xs bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
                   Kenya Child Protection Law & Art. 53
                 </span>
               </div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Parental Consent & Authorizations</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-2xl font-black text-on-surface tracking-tight">Parental Consent & Authorizations</h1>
+              <p className="text-xs text-on-surface-variant">
                 Review official school activity consent requests, emergency medical directives, and electronically sign per child.
               </p>
             </div>
@@ -298,7 +298,7 @@ export const ParentConsentView: React.FC = () => {
           <button
             onClick={loadData}
             disabled={loading}
-            className="self-start md:self-auto px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 transition-colors cursor-pointer"
+            className="self-start md:self-auto px-3.5 py-2 rounded-xl border border-outline-variant/30 hover:bg-surface text-xs font-bold text-on-surface-variant flex items-center gap-2 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh Forms</span>
@@ -307,8 +307,8 @@ export const ParentConsentView: React.FC = () => {
 
         {/* Multi-child selector pill group */}
         {children.length > 1 && (
-          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+          <div className="pt-2 border-t border-outline-variant/30 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-on-surface-variant mr-1 flex items-center gap-1">
               <User className="w-3.5 h-3.5" /> Filter Child:
             </span>
             <button
@@ -316,7 +316,7 @@ export const ParentConsentView: React.FC = () => {
               className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 selectedChildId === 'ALL'
                   ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
               }`}
             >
               All Children ({children.length})
@@ -327,8 +327,8 @@ export const ParentConsentView: React.FC = () => {
                 onClick={() => setSelectedChildId(c.id)}
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   selectedChildId === c.id
-                    ? 'bg-[#7a1228] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                 }`}
               >
                 <span>{c.name}</span>
@@ -340,19 +340,19 @@ export const ParentConsentView: React.FC = () => {
       </div>
 
       {/* Tabs: Pending vs Completed */}
-      <div className="flex border-b border-slate-200 gap-4">
+      <div className="flex border-b border-outline-variant/30 gap-4">
         <button
           onClick={() => setActiveTab('PENDING')}
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             activeTab === 'PENDING'
-              ? 'border-[#7a1228] text-[#7a1228]'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <Clock className="w-4 h-4" />
           <span>Awaiting My Response</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-            pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+            pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-surface-container-low text-on-surface-variant'
           }`}>
             {pendingCount}
           </span>
@@ -362,13 +362,13 @@ export const ParentConsentView: React.FC = () => {
           onClick={() => setActiveTab('SUBMITTED')}
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             activeTab === 'SUBMITTED'
-              ? 'border-[#7a1228] text-[#7a1228]'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>Completed Forms & Records</span>
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant">
             {completedCount}
           </span>
         </button>
@@ -376,17 +376,17 @@ export const ParentConsentView: React.FC = () => {
 
       {/* Forms Listing */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#7a1228]" />
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-3">
+          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
           <p className="text-sm font-semibold">Loading parental consent records...</p>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-2">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-2">
           <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="font-bold text-base text-slate-800">
+          <h3 className="font-bold text-base text-on-surface">
             {activeTab === 'PENDING' ? 'No pending consent requests!' : 'No completed consent forms found'}
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
             {activeTab === 'PENDING'
               ? 'You have responded to all active school authorizations and excursions for your children.'
               : 'Forms that you sign or decline will appear here with full audit receipts and printable slips.'}
@@ -403,7 +403,7 @@ export const ParentConsentView: React.FC = () => {
             return (
               <div
                 key={`${item.consentRequestId}-${item.student.id}`}
-                className="bg-white rounded-2xl border border-slate-200 hover:border-slate-300 p-5 shadow-xs flex flex-col justify-between transition-all space-y-4"
+                className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 hover:border-outline-variant/30 p-5 shadow-xs flex flex-col justify-between transition-all space-y-4"
               >
                 <div className="space-y-3">
                   {/* Top Badges */}
@@ -416,23 +416,23 @@ export const ParentConsentView: React.FC = () => {
 
                   {/* Title & Description */}
                   <div>
-                    <h3 className="font-extrabold text-base text-slate-900 leading-snug">{item.title}</h3>
+                    <h3 className="font-extrabold text-base text-on-surface leading-snug">{item.title}</h3>
                     {item.description && (
-                      <p className="text-xs text-slate-600 line-clamp-2 mt-1">{item.description}</p>
+                      <p className="text-xs text-on-surface-variant line-clamp-2 mt-1">{item.description}</p>
                     )}
                   </div>
 
                   {/* Child Badge */}
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                  <div className="p-2.5 rounded-xl bg-surface border border-outline-variant/30 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                      <div className="w-7 h-7 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold text-xs">
                         {item.student.firstName[0]}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">
+                        <div className="font-bold text-on-surface">
                           {item.student.firstName} {item.student.lastName}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-mono">
+                        <div className="text-[10px] text-on-surface-variant font-mono">
                           Adm: {item.student.admissionNumber} · {item.student.gradeLevel}
                         </div>
                       </div>
@@ -447,7 +447,7 @@ export const ParentConsentView: React.FC = () => {
 
                   {/* Deadline Notice */}
                   {item.deadline && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
                       <span>Response Deadline: <strong>{new Date(item.deadline).toLocaleDateString()}</strong></span>
                     </div>
@@ -481,11 +481,11 @@ export const ParentConsentView: React.FC = () => {
                 </div>
 
                 {/* Bottom Actions */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-between gap-2">
                   {item.responseStatus === 'PENDING' || isOutdated ? (
                     <button
                       onClick={() => handleOpenSigningModal(item)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-[#7a1228] hover:bg-[#600e1f] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                     >
                       <PenTool className="w-3.5 h-3.5" />
                       <span>{isOutdated ? 'Review Updated Terms & Sign' : 'Review & Respond to Consent'}</span>
@@ -494,7 +494,7 @@ export const ParentConsentView: React.FC = () => {
                     <div className="w-full flex items-center justify-between gap-2">
                       <button
                         onClick={() => handleOpenSigningModal(item)}
-                        className="py-1.5 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1 cursor-pointer"
+                        className="py-1.5 px-3 rounded-lg border border-outline-variant/30 hover:bg-surface text-xs font-semibold text-on-surface-variant flex items-center gap-1 cursor-pointer"
                       >
                         <PenTool className="w-3.5 h-3.5" />
                         <span>Update Response</span>
@@ -518,24 +518,24 @@ export const ParentConsentView: React.FC = () => {
       {/* MODAL 1: REVIEW & SIGNING MODAL */}
       {activeConsentForSigning && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 my-auto max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-6 my-auto max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-start justify-between border-b border-outline-variant/30 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#7a1228] bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                     Official Consent Document (v{activeConsentForSigning.version}.0)
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">
+                  <span className="text-xs text-on-surface-variant font-mono">
                     Concerning: {activeConsentForSigning.student.firstName} {activeConsentForSigning.student.lastName}
                   </span>
                 </div>
-                <h2 className="text-xl font-black text-slate-900">{activeConsentForSigning.title}</h2>
+                <h2 className="text-xl font-black text-on-surface">{activeConsentForSigning.title}</h2>
               </div>
               <button
                 type="button"
                 onClick={handleCloseSigningModal}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-on-surface-variant p-1 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
               >
                 ✕
               </button>
@@ -558,12 +558,12 @@ export const ParentConsentView: React.FC = () => {
             <form onSubmit={handleSubmitResponse} className="space-y-5">
               {/* Terms Box */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-700">
+                <label className="block text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
                   Full Legal Consent Terms & Conditions
                 </label>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed font-sans max-h-48 overflow-y-auto space-y-2">
+                <div className="p-4 rounded-2xl bg-surface border border-outline-variant/30 text-xs text-on-surface-variant leading-relaxed font-sans max-h-48 overflow-y-auto space-y-2">
                   <p>{activeConsentForSigning.termsAndConditions}</p>
-                  <p className="text-[11px] text-slate-500 italic pt-2 border-t border-slate-200">
+                  <p className="text-[11px] text-on-surface-variant italic pt-2 border-t border-outline-variant/30">
                     By submitting your electronic signature below, this record is legally bound under the Laws of Kenya,
                     the Constitution of Kenya (Article 53), the Basic Education Act (2013), and the Data Protection Act (2019).
                   </p>
@@ -572,7 +572,7 @@ export const ParentConsentView: React.FC = () => {
 
               {/* Decision Toggle */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-700">
+                <label className="block text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
                   Your Decision for {activeConsentForSigning.student.firstName}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -582,7 +582,7 @@ export const ParentConsentView: React.FC = () => {
                     className={`p-3 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer ${
                       decision === 'CONSENTED'
                         ? 'border-emerald-600 bg-emerald-50/60 text-emerald-900 shadow-xs'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                        : 'border-outline-variant/30 hover:border-outline-variant/30 text-on-surface-variant'
                     }`}
                   >
                     <CheckCircle2 className={`w-5 h-5 ${decision === 'CONSENTED' ? 'text-emerald-700' : 'text-slate-400'}`} />
@@ -598,7 +598,7 @@ export const ParentConsentView: React.FC = () => {
                     className={`p-3 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer ${
                       decision === 'DECLINED'
                         ? 'border-rose-600 bg-rose-50/60 text-rose-900 shadow-xs'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                        : 'border-outline-variant/30 hover:border-outline-variant/30 text-on-surface-variant'
                     }`}
                   >
                     <XCircle className={`w-5 h-5 ${decision === 'DECLINED' ? 'text-rose-700' : 'text-slate-400'}`} />
@@ -612,7 +612,7 @@ export const ParentConsentView: React.FC = () => {
 
               {/* Notes / Instructions */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-700">
+                <label className="block text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
                   Parent Directives, Medical Notes, or Specific Remarks (Optional)
                 </label>
                 <textarea
@@ -620,14 +620,14 @@ export const ParentConsentView: React.FC = () => {
                   onChange={e => setParentNotes(e.target.value)}
                   placeholder="e.g., Learner carries an asthma inhaler; allergic to dairy; emergency contact directives..."
                   rows={2}
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] outline-hidden"
+                  className="w-full text-xs p-3 rounded-xl border border-outline-variant/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                 />
               </div>
 
               {/* Guardian Identification */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-surface border border-outline-variant/30">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Parent / Guardian Legal Name</label>
+                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Parent / Guardian Legal Name</label>
                   <input
                     type="text"
                     value={parentName}
@@ -636,15 +636,15 @@ export const ParentConsentView: React.FC = () => {
                       if (signatureMode === 'TYPE') setTypedSignature(e.target.value);
                     }}
                     required
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-semibold"
+                    className="w-full text-xs p-2 rounded-lg border border-outline-variant/30 bg-white font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Relationship to Child</label>
+                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Relationship to Child</label>
                   <select
                     value={parentRelationship}
                     onChange={e => setParentRelationship(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-semibold"
+                    className="w-full text-xs p-2 rounded-lg border border-outline-variant/30 bg-white font-semibold"
                   >
                     <option value="Mother">Mother</option>
                     <option value="Father">Father</option>
@@ -653,23 +653,23 @@ export const ParentConsentView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Emergency Phone Number</label>
+                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Emergency Phone Number</label>
                   <input
                     type="text"
                     value={parentPhone}
                     onChange={e => setParentPhone(e.target.value)}
                     placeholder="+2547..."
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-mono"
+                    className="w-full text-xs p-2 rounded-lg border border-outline-variant/30 bg-white font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">National ID / Passport Number</label>
+                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">National ID / Passport Number</label>
                   <input
                     type="text"
                     value={parentNationalId}
                     onChange={e => setParentNationalId(e.target.value)}
                     placeholder="e.g. 28475921"
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-mono"
+                    className="w-full text-xs p-2 rounded-lg border border-outline-variant/30 bg-white font-mono"
                   />
                 </div>
               </div>
@@ -677,15 +677,15 @@ export const ParentConsentView: React.FC = () => {
               {/* Electronic Signature Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-700">
+                  <label className="block text-xs font-extrabold uppercase tracking-wide text-on-surface-variant">
                     Electronic Digital Signature
                   </label>
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg text-xs font-semibold">
+                  <div className="flex items-center gap-1 p-0.5 bg-surface-container-low rounded-lg text-xs font-semibold">
                     <button
                       type="button"
                       onClick={() => setSignatureMode('DRAW')}
                       className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                        signatureMode === 'DRAW' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                        signatureMode === 'DRAW' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                       }`}
                     >
                       Draw
@@ -694,7 +694,7 @@ export const ParentConsentView: React.FC = () => {
                       type="button"
                       onClick={() => setSignatureMode('TYPE')}
                       className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                        signatureMode === 'TYPE' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                        signatureMode === 'TYPE' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                       }`}
                     >
                       Type
@@ -704,7 +704,7 @@ export const ParentConsentView: React.FC = () => {
                         type="button"
                         onClick={() => setSignatureMode('SAVED')}
                         className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                          signatureMode === 'SAVED' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                          signatureMode === 'SAVED' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                         }`}
                       >
                         Saved Vault
@@ -714,7 +714,7 @@ export const ParentConsentView: React.FC = () => {
                 </div>
 
                 {signatureMode === 'DRAW' && (
-                  <div className="border border-slate-300 rounded-2xl bg-white p-2 text-center space-y-1 relative">
+                  <div className="border border-outline-variant/30 rounded-2xl bg-surface-container-lowest p-2 text-center space-y-1 relative">
                     <canvas
                       ref={canvasRef}
                       width={520}
@@ -726,7 +726,7 @@ export const ParentConsentView: React.FC = () => {
                       onTouchStart={startDrawing}
                       onTouchMove={draw}
                       onTouchEnd={stopDrawing}
-                      className="w-full h-28 border border-dashed border-slate-200 rounded-xl cursor-crosshair touch-none bg-slate-50/50"
+                      className="w-full h-28 border border-dashed border-outline-variant/30 rounded-xl cursor-crosshair touch-none bg-surface/50"
                     />
                     <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
                       <span>Sign in the box above using mouse or finger touch</span>
@@ -742,15 +742,15 @@ export const ParentConsentView: React.FC = () => {
                 )}
 
                 {signatureMode === 'TYPE' && (
-                  <div className="border border-slate-300 rounded-2xl p-4 bg-slate-50/50 space-y-2">
+                  <div className="border border-outline-variant/30 rounded-2xl p-4 bg-surface/50 space-y-2">
                     <input
                       type="text"
                       value={typedSignature}
                       onChange={e => setTypedSignature(e.target.value)}
                       placeholder="Type your full legal name"
-                      className="w-full text-sm p-2.5 rounded-xl border border-slate-200 bg-white font-semibold"
+                      className="w-full text-sm p-2.5 rounded-xl border border-outline-variant/30 bg-white font-semibold"
                     />
-                    <div className="p-3 bg-white border border-slate-200 rounded-xl text-center">
+                    <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl text-center">
                       <span className="font-serif italic text-2xl text-blue-900 font-bold">
                         {typedSignature || 'Signature Preview'}
                       </span>
@@ -764,18 +764,18 @@ export const ParentConsentView: React.FC = () => {
                       <div className="text-xs font-bold text-emerald-900">Digital Signature Profile Loaded</div>
                       <div className="text-[11px] text-emerald-700">Verified institutional key bound to your account</div>
                     </div>
-                    <img src={savedSignatureData} alt="Saved Signature" className="h-12 object-contain bg-white px-3 py-1 rounded-lg border border-emerald-200" />
+                    <img src={savedSignatureData} alt="Saved Signature" className="h-12 object-contain bg-surface-container-lowest px-3 py-1 rounded-lg border border-emerald-200" />
                   </div>
                 )}
               </div>
 
               {/* Constitutional Checkbox */}
-              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer">
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-surface border border-outline-variant/30 text-xs text-on-surface-variant cursor-pointer">
                 <input
                   type="checkbox"
                   checked={legalDeclarationChecked}
                   onChange={e => setLegalDeclarationChecked(e.target.checked)}
-                  className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228]"
+                  className="mt-0.5 rounded text-primary focus:ring-primary"
                   required
                 />
                 <span className="leading-tight">
@@ -787,12 +787,12 @@ export const ParentConsentView: React.FC = () => {
               </label>
 
               {/* Submit Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleCloseSigningModal}
                   disabled={submitting}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-outline-variant/30 hover:bg-surface text-xs font-bold text-on-surface-variant cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -824,12 +824,12 @@ export const ParentConsentView: React.FC = () => {
       {/* MODAL 2: PRINTABLE SLIP / AUDIT RECEIPT */}
       {viewingSlipConsent && viewingSlipConsent.latestResponse && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 my-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-6 my-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header with print/close */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-slate-700" />
-                <h3 className="font-bold text-base text-slate-900">Parental Consent Certificate</h3>
+                <Printer className="w-5 h-5 text-on-surface-variant" />
+                <h3 className="font-bold text-base text-on-surface">Parental Consent Certificate</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -841,7 +841,7 @@ export const ParentConsentView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setViewingSlipConsent(null)}
-                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
+                  className="text-slate-400 hover:text-on-surface-variant p-1 rounded-lg cursor-pointer"
                 >
                   ✕
                 </button>

@@ -707,11 +707,11 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span><span>/</span><span>Curriculum & Timetable</span><span>/</span>
-            <span className="text-primary font-semibold">Curriculum Progress Tracker</span>
+            <span className="text-primary font-semibold">Syllabus Coverage Plan</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2 mt-1">
-            <span className="material-symbols-outlined text-[#7a1228] text-3xl">fact_check</span>
-            Curriculum Progress Tracker
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight flex items-center gap-2 mt-1">
+            <span className="material-symbols-outlined text-primary text-3xl">fact_check</span>
+            Syllabus Coverage Plan
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -725,37 +725,37 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
               <span>View Tracker Dossier</span>
             </button>
           )}
-          <button onClick={() => setIsCreateModalOpen(true)} className="px-3.5 py-2 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] font-semibold text-xs flex items-center gap-1.5 cursor-pointer">
+          <button onClick={() => setIsCreateModalOpen(true)} className="px-3.5 py-2 bg-primary text-white rounded-xl hover:bg-primary-container font-semibold text-xs flex items-center gap-1.5 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Subject Tracker</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between no-print">
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between no-print">
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[#7a1228] text-[18px]">auto_stories</span>
+          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-primary text-[18px]">auto_stories</span>
             Select Tracker:
           </label>
           <select
             value={selectedTracker?.id || ''}
             onChange={(e) => setSelectedTracker(trackers.find((t) => t.id === e.target.value) || null)}
-            className="w-full sm:w-80 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7a1228]/20 bg-white font-semibold text-gray-800"
+            className="w-full sm:w-80 px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 bg-white font-semibold text-on-surface"
           >
             {trackers.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.subjectName} · {t.className} &mdash; {t.stats?.completionPercentage ?? 0}% Covered
               </option>
             ))}
-            {trackers.length === 0 && <option value="">No curriculum trackers yet</option>}
+            {trackers.length === 0 && <option value="">No syllabus coverage plans yet</option>}
           </select>
         </div>
         <div className="flex items-center gap-2">
           {selectedTracker && (
             <button
               onClick={() => setViewingTrackerDossier(true)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/30 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
               title="Open full interactive on-screen tracker dossier"
             >
               <span className="material-symbols-outlined text-[16px]">visibility</span>
@@ -763,24 +763,24 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
             </button>
           )}
           {selectedTracker && (
-            <button onClick={() => handleDeleteTracker(selectedTracker.id, selectedTracker.subjectName)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" title="Delete tracker">
+            <button onClick={() => handleDeleteTracker(selectedTracker.id, selectedTracker.subjectName)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" title="Delete syllabus coverage plan">
               <span className="material-symbols-outlined text-[18px]">delete</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-2 no-print overflow-x-auto">
-        <button onClick={() => setActiveTab('weekly')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'weekly' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2 no-print">
+        <button onClick={() => setActiveTab('weekly')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'weekly' ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface'}`}>
           <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
           <span>Weekly Syllabus Scope</span>
         </button>
-        <button onClick={() => setActiveTab('daily')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'daily' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+        <button onClick={() => setActiveTab('daily')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'daily' ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface'}`}>
           <span className="material-symbols-outlined text-[18px]">today</span>
           <span>Daily Tracking & Reflections</span>
         </button>
         {isSchoolAdmin && (
-          <button onClick={() => setActiveTab('leadership')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'leadership' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+          <button onClick={() => setActiveTab('leadership')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'leadership' ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface'}`}>
             <span className="material-symbols-outlined text-[18px]">verified_user</span>
             <span>Leadership Oversight</span>
           </button>
@@ -789,15 +789,15 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
 
       {/* WEEKLY TAB */}
       {activeTab === 'weekly' && selectedTracker && (
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden print-full-width">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden print-full-width">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm print-table">
-              <thead className="bg-gray-50/80 border-b border-gray-200">
+              <thead className="bg-surface/80 border-b border-outline-variant/30">
                 <tr>
-                  <th className="px-4 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider w-24">Week</th>
-                  <th className="px-4 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">Curriculum Content</th>
-                  <th className="px-4 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">Status</th>
-                  <th className="px-4 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-right w-28">Actions</th>
+                  <th className="px-4 py-3.5 text-xs font-bold text-on-surface-variant uppercase tracking-wider w-24">Week</th>
+                  <th className="px-4 py-3.5 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Curriculum Content</th>
+                  <th className="px-4 py-3.5 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-center">Status</th>
+                  <th className="px-4 py-3.5 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right w-28">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -808,17 +808,17 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                   const isWeekLocked = week.weekNumber > 1 && prevWeekItem && !prevWeekItem.isCovered && prevWeekItem.status !== 'APPROVED' && prevWeekItem.status !== 'EXEMPTED';
 
                   return (
-                    <tr key={week.weekNumber} className={week.isCovered || week.status === 'APPROVED' ? 'bg-emerald-50/15' : (isWeekLocked ? 'bg-gray-50/60 opacity-80' : '')}>
+                    <tr key={week.weekNumber} className={week.isCovered || week.status === 'APPROVED' ? 'bg-emerald-50/15' : (isWeekLocked ? 'bg-surface/60 opacity-80' : '')}>
                       <td className="px-4 py-3.5">
-                        <span className="font-bold text-xs bg-gray-100 px-2 py-1 rounded-lg">Week {week.weekNumber}</span>
+                        <span className="font-bold text-xs bg-surface-container-low px-2 py-1 rounded-lg">Week {week.weekNumber}</span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <div className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                        <div className="font-bold text-on-surface text-sm flex items-center gap-1.5">
                           {isWeekLocked && <span className="material-symbols-outlined text-gray-400 text-base" title="Locked sequentially">lock</span>}
                           <span>{displayStrand}</span>
                         </div>
-                        <div className="text-xs text-gray-600 mt-0.5">{displaySubStrand}</div>
-                        <div className="text-xs text-gray-500 mt-1">{week.learningOutcomes}</div>
+                        <div className="text-xs text-on-surface-variant mt-0.5">{displaySubStrand}</div>
+                        <div className="text-xs text-on-surface-variant mt-1">{week.learningOutcomes}</div>
                         {week.hodRemarks && (
                           <div className="mt-1 text-[11px] p-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200">
                             <strong>Supervisor Feedback:</strong> {week.hodRemarks}
@@ -826,7 +826,12 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-center">
-                        {week.isCovered || week.status === 'APPROVED' ? (
+                        {week.status === 'EXEMPTED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant inline-flex items-center gap-1" title={week.hodRemarks || 'No instruction took place'}>
+                            <span className="material-symbols-outlined text-[14px]">event_busy</span>
+                            No instruction
+                          </span>
+                        ) : week.isCovered || week.status === 'APPROVED' ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
                             <span className="material-symbols-outlined text-[14px]">check_circle</span>
                             Approved
@@ -842,7 +847,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                             Returned
                           </span>
                         ) : isWeekLocked ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 inline-flex items-center gap-1" title={`Complete and get Week ${week.weekNumber - 1} approved first`}>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant inline-flex items-center gap-1" title={`Complete and get Week ${week.weekNumber - 1} approved first`}>
                             <span className="material-symbols-outlined text-[14px]">lock</span>
                             Locked
                           </span>
@@ -858,18 +863,20 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                           <button
                             onClick={() => setViewingWeek(week)}
                             title="View Week Progression Details"
-                            className="p-1.5 text-gray-600 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                            className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
                           >
                             <span className="material-symbols-outlined text-[18px]">visibility</span>
                           </button>
-                          {isWeekLocked ? (
+                          {week.status === 'EXEMPTED' ? (
+                            <span className="text-[11px] text-on-surface-variant italic font-medium px-2 py-1">Exempt</span>
+                          ) : isWeekLocked ? (
                             <span className="text-[11px] text-gray-400 italic font-medium px-2 py-1">Locked</span>
                           ) : (
                             <>
-                              <button onClick={() => handleOpenEditPlan(week)} title="Edit Curriculum Plan" className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer">
+                              <button onClick={() => handleOpenEditPlan(week)} title="Edit Curriculum Plan" className="p-1.5 text-gray-400 hover:text-primary hover:bg-rose-50 rounded-lg cursor-pointer">
                                 <span className="material-symbols-outlined text-[18px]">edit</span>
                               </button>
-                              <button onClick={() => { setActiveTab('daily'); handleOpenAddDailyLog(week.weekNumber, displayStrand, displaySubStrand); }} title="Log Daily Lesson" className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer">
+                              <button onClick={() => { setActiveTab('daily'); handleOpenAddDailyLog(week.weekNumber, displayStrand, displaySubStrand); }} title="Log Daily Lesson" className="p-1.5 text-gray-400 hover:text-primary hover:bg-rose-50 rounded-lg cursor-pointer">
                                 <span className="material-symbols-outlined text-[18px]">add_circle</span>
                               </button>
                               {week.status === 'SUBMITTED' && isSchoolAdmin && (
@@ -904,32 +911,32 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* DAILY TAB */}
       {activeTab === 'daily' && selectedTracker && (
         <div className="space-y-4">
-          <button onClick={() => handleOpenAddDailyLog()} className="px-4 py-2 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] font-semibold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer">
+          <button onClick={() => handleOpenAddDailyLog()} className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-container font-semibold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
             <span>Log Daily Lesson & Reflection</span>
           </button>
           
           <div className="space-y-4">
             {filteredDailyLogs.map((log) => (
-              <div key={log.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs">
-                <div className="flex justify-between border-b border-gray-100 pb-3 mb-3">
-                  <div className="font-bold text-xs bg-gray-100 px-3 py-1 rounded-xl text-gray-800">
+              <div key={log.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 shadow-xs">
+                <div className="flex justify-between border-b border-outline-variant/30 pb-3 mb-3">
+                  <div className="font-bold text-xs bg-surface-container-low px-3 py-1 rounded-xl text-on-surface">
                     {log.date} ({log.dayOfWeek}) · Wk {log.weekNumber}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setViewingDailyLog(log)}
                       title="View Daily Lesson Log & Reflection Details"
-                      className="text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
+                      className="text-on-surface-variant hover:text-primary hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">visibility</span>
                     </button>
-                    <button onClick={() => handleOpenEditDailyLog(log)} className="text-gray-400 hover:text-[#7a1228] cursor-pointer"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                    <button onClick={() => handleOpenEditDailyLog(log)} className="text-gray-400 hover:text-primary cursor-pointer"><span className="material-symbols-outlined text-[18px]">edit</span></button>
                     <button onClick={() => handleDeleteDailyLog(selectedTracker.id, log.id)} className="text-gray-400 hover:text-red-600 cursor-pointer"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                   </div>
                 </div>
-                <h4 className="text-sm font-bold text-gray-900">{log.strand} &mdash; <span className="font-semibold text-gray-700">{log.subStrand}</span></h4>
-                <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                <h4 className="text-sm font-bold text-on-surface">{log.strand} &mdash; <span className="font-semibold text-on-surface-variant">{log.subStrand}</span></h4>
+                <div className="mt-2 text-xs text-on-surface-variant bg-surface p-2.5 rounded-xl border border-outline-variant/30">
                   <strong className="block">Outcomes Taught:</strong> {log.learningOutcomesTaught}
                 </div>
                 {log.reflection && (
@@ -946,27 +953,27 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* LEADERSHIP TAB */}
       {activeTab === 'leadership' && isSchoolAdmin && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-r from-gray-900 via-[#7a1228] to-gray-900 rounded-2xl p-6 text-white shadow-sm flex items-center justify-between">
+          <div className="bg-gradient-to-r from-gray-900 via-primary to-gray-900 rounded-2xl p-6 text-white shadow-sm flex items-center justify-between">
             <div>
               <h2 className="text-xl font-black">Leadership Curriculum Oversight</h2>
               <p className="text-xs text-rose-100 mt-1">Review and endorse daily lesson logs across all classrooms.</p>
             </div>
-            <button onClick={loadAllDailyLogs} className="px-4 py-2 bg-white text-[#7a1228] font-bold text-xs rounded-xl hover:bg-gray-100 cursor-pointer">Refresh Feed</button>
+            <button onClick={loadAllDailyLogs} className="px-4 py-2 bg-white text-primary font-bold text-xs rounded-xl hover:bg-surface-container-low cursor-pointer">Refresh Feed</button>
           </div>
           <div className="space-y-4">
             {filteredLeadershipLogs.map((log) => (
-              <div key={`${log.trackerId}-${log.id}`} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
+              <div key={`${log.trackerId}-${log.id}`} className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3 mb-3">
                   <div className="flex gap-2">
-                    <span className="px-3 py-1 bg-[#7a1228]/10 text-[#7a1228] font-bold text-xs rounded-xl">{log.subjectName}</span>
-                    <span className="px-3 py-1 bg-gray-100 text-gray-800 font-bold text-xs rounded-xl">{log.className}</span>
-                    <span className="text-xs text-gray-500 font-medium py-1">Teacher: <strong className="text-gray-900">{log.loggedByTeacherName}</strong></span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-xl">{log.subjectName}</span>
+                    <span className="px-3 py-1 bg-surface-container-low text-on-surface font-bold text-xs rounded-xl">{log.className}</span>
+                    <span className="text-xs text-on-surface-variant font-medium py-1">Teacher: <strong className="text-on-surface">{log.loggedByTeacherName}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setViewingDailyLog(log)}
                       title="View Complete Daily Log & Reflection Details"
-                      className="p-1.5 rounded-lg text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-rose-50 transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">visibility</span>
                     </button>
@@ -975,8 +982,8 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                     )}
                   </div>
                 </div>
-                <h4 className="text-sm font-bold">{log.strand} &mdash; <span className="font-semibold text-gray-700">{log.subStrand}</span></h4>
-                {log.reflection && <p className="text-xs text-gray-600 mt-2">"{log.reflection.whatWentWell}"</p>}
+                <h4 className="text-sm font-bold">{log.strand} &mdash; <span className="font-semibold text-on-surface-variant">{log.subStrand}</span></h4>
+                {log.reflection && <p className="text-xs text-on-surface-variant mt-2">"{log.reflection.whatWentWell}"</p>}
                 {log.endorsement && (
                   <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900">
                     <strong>Endorsed by {log.endorsement.endorsedByName}:</strong> {log.endorsement.remarks}
@@ -991,8 +998,8 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* CONFIRM COVERED MODAL */}
       {confirmModalWeek && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-[#7a1228] text-white flex items-center justify-between">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 bg-primary text-white flex items-center justify-between">
               <h3 className="font-bold text-sm">Confirm Curriculum Coverage</h3>
               <button onClick={() => setConfirmModalWeek(null)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
@@ -1003,7 +1010,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
               </select>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setConfirmModalWeek(null)} className="px-4 py-2 text-xs border rounded-xl">Cancel</button>
-                <button type="submit" disabled={savingConfirm} className="px-4 py-2 bg-[#7a1228] text-white text-xs font-semibold rounded-xl">Save</button>
+                <button type="submit" disabled={savingConfirm} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">Save</button>
               </div>
             </form>
           </div>
@@ -1013,7 +1020,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* EDIT WEEK PLAN MODAL */}
       {editPlanModalWeek && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 bg-gray-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm">Edit Week {editPlanModalWeek.weekNumber} Plan</h3>
               <button onClick={() => setEditPlanModalWeek(null)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
@@ -1021,31 +1028,31 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
             <form onSubmit={handleSavePlan} className="p-6 space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Curriculum Strand *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Curriculum Strand *</label>
                   {loadingStrands ? (
-                    <div className="p-2 text-xs text-gray-500">Loading DB strands...</div>
+                    <div className="p-2 text-xs text-on-surface-variant">Loading DB strands...</div>
                   ) : strands.length > 0 ? (
-                    <select value={planStrandId} onChange={(e) => setPlanStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl cursor-pointer">
+                    <select value={planStrandId} onChange={(e) => setPlanStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl cursor-pointer">
                       {strands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </select>
                   ) : <div className="p-2 text-xs text-rose-500 bg-rose-50 rounded-lg">No Strands Found</div>}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Sub-strand *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Sub-strand *</label>
                   {subStrands.length > 0 ? (
-                    <select value={planSubStrandId} onChange={(e) => setPlanSubStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl cursor-pointer">
+                    <select value={planSubStrandId} onChange={(e) => setPlanSubStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl cursor-pointer">
                       {subStrands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </select>
-                  ) : <div className="p-2 text-xs text-gray-500">-</div>}
+                  ) : <div className="p-2 text-xs text-on-surface-variant">-</div>}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Specific Learning Outcomes *</label>
-                <textarea rows={3} required value={planOutcomes} onChange={(e) => setPlanOutcomes(e.target.value)} className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl" />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Specific Learning Outcomes *</label>
+                <textarea rows={3} required value={planOutcomes} onChange={(e) => setPlanOutcomes(e.target.value)} className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl" />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setEditPlanModalWeek(null)} className="px-4 py-2 text-xs border rounded-xl">Cancel</button>
-                <button type="submit" disabled={savingPlan} className="px-4 py-2 bg-[#7a1228] text-white text-xs font-semibold rounded-xl">Save Plan</button>
+                <button type="submit" disabled={savingPlan} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">Save Plan</button>
               </div>
             </form>
           </div>
@@ -1055,41 +1062,41 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* DAILY LOG MODAL */}
       {isDailyModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-[#7a1228] text-white flex justify-between">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 bg-primary text-white flex justify-between">
               <h3 className="font-bold text-sm">Log Daily Lesson</h3>
               <button onClick={() => setIsDailyModalOpen(false)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
             <form onSubmit={handleSaveDailyLog} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Curriculum Strand *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Curriculum Strand *</label>
                   {strands.length > 0 ? (
-                    <select value={dailyStrandId} onChange={(e) => setDailyStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl cursor-pointer">
+                    <select value={dailyStrandId} onChange={(e) => setDailyStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl cursor-pointer">
                       {strands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </select>
                   ) : <div className="p-2 text-xs text-rose-500 bg-rose-50 rounded-lg">No Strands Found</div>}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Sub-strand *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Sub-strand *</label>
                   {subStrands.length > 0 ? (
-                    <select value={dailySubStrandId} onChange={(e) => setDailySubStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl cursor-pointer">
+                    <select value={dailySubStrandId} onChange={(e) => setDailySubStrandId(e.target.value)} required className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl cursor-pointer">
                       {subStrands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </select>
-                  ) : <div className="p-2 text-xs text-gray-500">-</div>}
+                  ) : <div className="p-2 text-xs text-on-surface-variant">-</div>}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Outcomes Taught *</label>
-                <textarea rows={2} required value={dailyOutcomes} onChange={(e) => setDailyOutcomes(e.target.value)} className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl" />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Outcomes Taught *</label>
+                <textarea rows={2} required value={dailyOutcomes} onChange={(e) => setDailyOutcomes(e.target.value)} className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Teacher Reflection (What went well) *</label>
-                <textarea rows={2} required value={reflectionWhatWentWell} onChange={(e) => setReflectionWhatWentWell(e.target.value)} className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl" />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Teacher Reflection (What went well) *</label>
+                <textarea rows={2} required value={reflectionWhatWentWell} onChange={(e) => setReflectionWhatWentWell(e.target.value)} className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl" />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setIsDailyModalOpen(false)} className="px-4 py-2 text-xs border rounded-xl">Cancel</button>
-                <button type="submit" disabled={savingDailyLog} className="px-4 py-2 bg-[#7a1228] text-white text-xs font-semibold rounded-xl">Save Log</button>
+                <button type="submit" disabled={savingDailyLog} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">Save Log</button>
               </div>
             </form>
           </div>
@@ -1099,13 +1106,13 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* ENDORSE MODAL */}
       {endorseModalLog && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 bg-gradient-to-r from-gray-900 via-emerald-950 to-gray-900 text-white flex justify-between">
               <h3 className="font-bold text-sm">Supervisory Endorsement</h3>
               <button onClick={() => setEndorseModalLog(null)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
             <form onSubmit={handleSaveEndorsement} className="p-6 space-y-4">
-              <textarea rows={3} required placeholder="Endorsement remarks..." value={endorsementRemark} onChange={(e) => setEndorsementRemark(e.target.value)} className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl" />
+              <textarea rows={3} required placeholder="Endorsement remarks..." value={endorsementRemark} onChange={(e) => setEndorsementRemark(e.target.value)} className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl" />
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setEndorseModalLog(null)} className="px-4 py-2 text-xs border rounded-xl">Cancel</button>
                 <button type="submit" disabled={savingEndorsement} className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl">Sign Endorsement</button>
@@ -1118,7 +1125,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* SUBMIT FOR APPROVAL MODAL */}
       {submitModalWeek && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 bg-secondary text-white flex justify-between">
               <div>
                 <h3 className="font-bold text-sm">Submit Week {submitModalWeek.weekNumber} Coverage</h3>
@@ -1130,7 +1137,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
             </div>
             <form onSubmit={handleSubmitWeek} className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Lessons Taught This Week *</label>
+                <label className="block font-bold text-on-surface-variant uppercase mb-1">Lessons Taught This Week *</label>
                 <input
                   type="number"
                   min={1}
@@ -1138,17 +1145,17 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                   required
                   value={submitLessons}
                   onChange={(e) => setSubmitLessons(parseInt(e.target.value, 10) || 5)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl"
                 />
               </div>
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Teacher Coverage Reflection / Notes</label>
+                <label className="block font-bold text-on-surface-variant uppercase mb-1">Teacher Coverage Reflection / Notes</label>
                 <textarea
                   rows={3}
                   placeholder="Summarize outcomes achieved, pupil mastery, and any areas requiring review..."
                   value={submitComment}
                   onChange={(e) => setSubmitComment(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl"
                 />
               </div>
               <div className="p-3 bg-blue-50 rounded-xl text-blue-900 border border-blue-200">
@@ -1170,7 +1177,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {/* RETURN FOR REVISION MODAL */}
       {returnModalWeek && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 bg-rose-700 text-white flex justify-between">
               <div>
                 <h3 className="font-bold text-sm">Return Week {returnModalWeek.weekNumber} for Revision</h3>
@@ -1182,14 +1189,14 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
             </div>
             <form onSubmit={handleReturnWeek} className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-gray-700 uppercase mb-1">Reason for Return *</label>
+                <label className="block font-bold text-on-surface-variant uppercase mb-1">Reason for Return *</label>
                 <textarea
                   rows={3}
                   required
                   placeholder="Specify why coverage is not approved (e.g. practical inquiry lesson missing evidence, remedial outcomes required)..."
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl"
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
@@ -1218,7 +1225,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
         />
       )}
 
-      {/* View Curriculum Tracker Dossier Modal */}
+      {/* View Syllabus Coverage Plan Dossier Modal */}
       {viewingTrackerDossier && selectedTracker && (
         <ViewCurriculumTrackerModal
           tracker={selectedTracker}
@@ -1313,9 +1320,9 @@ const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learni
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
-        <div className="px-6 py-4 bg-[#7a1228] text-white flex justify-between">
-          <h3 className="font-bold text-sm">New Tracker</h3>
+      <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-sm">
+        <div className="px-6 py-4 bg-primary text-white flex justify-between">
+          <h3 className="font-bold text-sm">New Syllabus Coverage Plan</h3>
           <button onClick={onClose} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -1329,7 +1336,7 @@ const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learni
           </select>
           <div className="flex justify-end gap-2 pt-2 border-t">
             <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-semibold border rounded-xl">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-[#7a1228] text-white text-xs font-semibold rounded-xl">Create</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">Create</button>
           </div>
         </form>
       </div>

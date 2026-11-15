@@ -1,30 +1,62 @@
-import React, { useState } from 'react';
+import { SchemeApprovalActions } from '../curriculum/SchemeApprovalActions';
+import { canReviewCurriculum } from '../../utils/curriculumPermissions';
+import React, { useState, useEffect } from 'react';
+import {apiService} from '../../services/api';
+import {SchemeOfWorkDocument} from '../curriculum/SchemeOfWorkDocument';
 import { SchemeOfWork, SchemeEntry } from '../../types';
+import { SubStrandSchemePlanner } from '../curriculum/SubStrandSchemePlanner';
+import { useAuth } from '../../context/AuthContext';
 
 interface ViewSchemeModalProps {
   scheme: SchemeOfWork | null;
+  context?: {school?: any; classes?: any[]; areas?: any[]};
   onClose: () => void;
   onDownloadPDF?: (scheme: SchemeOfWork) => void;
   onSubmitForReview?: (schemeId: string) => void;
-  onApproveScheme?: (schemeId: string) => void;
-  isApprover?: boolean;
+  onRefresh?: () => Promise<void>;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
   scheme,
+  context,
   onClose,
   onDownloadPDF,
   onSubmitForReview,
-  onApproveScheme,
-  isApprover = false,
+  onRefresh = async () => {},
+  onNavigateTab,
 }) => {
-  if (!scheme) return null;
-
   const [searchTerm, setSearchTerm] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [period, setPeriod] = useState<{year?: string; term?: string}>({});
+  useEffect(() => {
+    setEditing(false); setPeriod({}); let live = true;
+    if (scheme) Promise.all([apiService.getAcademicYears(), apiService.getAcademicTermsByYear(scheme.academicYearId)])
+      .then(([years, terms]) => {if(live) setPeriod({year:years.data?.find(y=>y.id===scheme.academicYearId)?.name,term:terms.data?.find(t=>t.id===scheme.termId)?.name});})
+      .catch(() => {});
+    return () => {live=false;};
+  }, [scheme?.id]);
+
   const [selectedWeekFilter, setSelectedWeekFilter] = useState<string>('ALL');
   const [focusedEntry, setFocusedEntry] = useState<SchemeEntry | null>(null);
+  const { user } = useAuth();
+  const [weeklyDirty, setWeeklyDirty] = useState(false);
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const authorizedReviewer = canReviewCurriculum(user?.role);
+  const close = () => { if (weeklyDirty && !window.confirm('Discard unsaved lesson details? Saved lessons will be retained.')) return; onClose(); };
+  if (!scheme) return null;
+  const canEditScheme = Boolean(scheme.planningState && (user?.role === 'TEACHER' || authorizedReviewer));
+
+  const inlinePlanner = editing && canEditScheme;
 
   const entries: SchemeEntry[] = scheme.entries || [];
+  const activeEntries = entries.filter((entry) => !entry.archivedAt);
+  const allocatedLessons = scheme.planningState?.allocations?.reduce((sum, item) => sum + (Number(item.lessons) || 0), 0) || 0;
+  const allocationDraft = Boolean(scheme.planningState && activeEntries.length === 0);
+  const yearLabel = scheme.academicYearId?.match(/\d{4}/)?.[0] || scheme.academicYearId;
+  const termNumber = scheme.termId?.match(/(?:term)?[-_ ]?\d{4}[-_ ]?t?([1-3])$/i)?.[1]
+    || scheme.termId?.match(/(?:term|t)[-_ ]?([1-3])$/i)?.[1];
+  const termLabel = `${termNumber ? `Term ${termNumber}` : scheme.termId} · ${yearLabel}`;
 
   const uniqueWeeks = Array.from(new Set(entries.map((e) => e.weekNumber))).sort(
     (a, b) => a - b
@@ -81,7 +113,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={close}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">close</span>
@@ -93,11 +125,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-700">
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Academic Term</span>
-              <span className="font-black text-slate-900">Term 1 · 2026</span>
+              <span className="font-black text-slate-900">{termLabel}</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Lessons</span>
-              <span className="font-black text-slate-900">{scheme.totalLessons || entries.length} Planned</span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">{allocationDraft ? 'Initial estimate' : 'Teaching sessions'}</span>
+              <span className="font-black text-slate-900">{allocationDraft ? allocatedLessons : (scheme.totalLessons || activeEntries.length)} {allocationDraft ? 'estimated' : 'planned'}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Curriculum Standard</span>
@@ -105,11 +137,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Entries Loaded</span>
-              <span className="font-black text-slate-900">{entries.length} Lesson Units</span>
+              <span className="font-black text-slate-900">{activeEntries.length} Lesson Units</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${!editing || inlinePlanner ? 'hidden' : ''}`}>
             {/* Week Filter */}
             <select
               value={selectedWeekFilter}
@@ -149,9 +181,16 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
           </div>
         )}
 
+        {authorizedReviewer && <div className="shrink-0 max-h-[42vh] overflow-y-auto border-b border-outline-variant/30 p-4"><SchemeApprovalActions scheme={scheme} onReviewed={async () => { await onRefresh(); setReviewVersion(value => value + 1); }} /></div>}
         {/* Modal Body: Full Interactive Scheme Matrix */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 text-xs">
-          {filteredEntries.length === 0 ? (
+          {!editing ? <SchemeOfWorkDocument scheme={scheme} school={context?.school} schoolName={context?.school?.name} className={context?.classes?.find(c=>c.id===scheme.classRoomId)?.name} areaName={context?.areas?.find(a=>a.id===scheme.learningAreaId)?.name} termName={period.term || (termNumber ? `Term ${termNumber}` : undefined)} yearName={period.year || scheme.academicYearId?.match(/\d{4}/)?.[0]} /> : inlinePlanner ? <div key={`${scheme.id}:${reviewVersion}`}><SubStrandSchemePlanner showReviewActions={false} embedded onDirtyChange={setWeeklyDirty} scope={{ academicYearId: scheme.academicYearId, termId: scheme.termId, classRoomId: scheme.classRoomId, streamId: scheme.streamId, learningAreaId: scheme.learningAreaId }} area={{ name: scheme.title, schemeId: scheme.id, scheme }} className="Selected class" streamName={scheme.streamId || 'Whole class'} termName={termLabel} yearName={yearLabel} onRefresh={onRefresh} onNavigateTab={onNavigateTab} /></div> : filteredEntries.length === 0 && allocationDraft ? (
+            <div className="mx-auto max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center text-amber-950">
+              <span className="material-symbols-outlined text-4xl mb-2">edit_calendar</span>
+              <h3 className="font-bold">Term draft saved · {allocatedLessons} lessons allocated</h3>
+              <p className="mt-2 text-sm">The allocations are saved, but the scheduled week and lesson entries have not been generated yet. Continue the term scheme, complete the required learning outcomes, learning experiences and assessment methods, then finalize it after the term calendar and timetable are ready.</p>
+            </div>
+          ) : filteredEntries.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">event_busy</span>
               <p className="font-bold">No scheme entries match your current search / week filter.</p>
@@ -215,25 +254,25 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                               ))}
                             </ul>
                           ) : (
-                            <span className="text-slate-400 italic">Teacher demonstration, learner group discussion & practical tasks</span>
+                            <span className="text-slate-400 italic">Not recorded</span>
                           )}
                         </td>
 
                         {/* Learning Resources */}
                         <td className="py-3 px-3 text-slate-600">
-                          {e.learningResources?.join(', ') || 'KICD Approved Textbooks, Realia, Digital Devices'}
+                          {e.learningResources?.join(', ') || 'Not recorded'}
                         </td>
 
                         {/* Assessment Methods */}
                         <td className="py-3 px-3">
                           <span className="inline-block bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                            {e.assessmentMethods?.join(', ') || 'Oral Questions, Observation'}
+                            {e.assessmentMethods?.join(', ') || 'Not recorded'}
                           </span>
                         </td>
 
                         {/* Reflection / Remarks */}
                         <td className="py-3 px-3 text-slate-500 italic text-[11px]">
-                          {e.reflection || 'Lesson successfully executed.'}
+                          {e.reflection || 'Not recorded'}
                         </td>
 
                         {/* View Button */}
@@ -259,11 +298,12 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
         {/* Modal Bottom Actions Footer */}
         <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-500">
-            Official Ministry of Education KICD Scheme of Work Dossier · Grace Seeds School
+            Scheme of Work · {context?.school?.name || 'School'}
           </div>
 
           <div className="flex items-center gap-2">
-            {onDownloadPDF && (
+            {canEditScheme && <button type="button" className="ui-button" onClick={()=>{if(weeklyDirty&&!window.confirm('Discard unsaved lesson details?'))return;setWeeklyDirty(false);setEditing(!editing);}}>{editing?'View document':'Edit scheme'}</button>}
+            {onDownloadPDF && activeEntries.length > 0 && (
               <button
                 type="button"
                 onClick={() => onDownloadPDF(scheme)}
@@ -274,7 +314,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
               </button>
             )}
 
-            {scheme.status === 'DRAFT' && onSubmitForReview && (
+            {!canEditScheme && scheme.status === 'DRAFT' && activeEntries.length > 0 && onSubmitForReview && (
               <button
                 type="button"
                 onClick={() => {
@@ -288,23 +328,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
               </button>
             )}
 
-            {isApprover && scheme.status !== 'APPROVED' && onApproveScheme && (
-              <button
-                type="button"
-                onClick={() => {
-                  onApproveScheme(scheme.id);
-                  onClose();
-                }}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">verified</span>
-                <span>Approve & Endorse</span>
-              </button>
-            )}
+
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-100 transition-all cursor-pointer"
             >
               Close
@@ -364,7 +392,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-slate-400 italic">Teacher demonstration, guided learner tasks and practical collaborative inquiry.</span>
+                      <span className="text-slate-400 italic">Not recorded</span>
                     )}
                   </div>
                 </div>
@@ -372,11 +400,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="font-black text-slate-900 uppercase text-[10px] block mb-0.5">Resources:</span>
-                    <p className="text-[11px] text-slate-600">{focusedEntry.learningResources?.join(', ') || 'KICD Approved Textbooks'}</p>
+                    <p className="text-[11px] text-slate-600">{focusedEntry.learningResources?.join(', ') || 'Not recorded'}</p>
                   </div>
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="font-black text-slate-900 uppercase text-[10px] block mb-0.5">Assessment:</span>
-                    <p className="text-[11px] text-slate-600">{focusedEntry.assessmentMethods?.join(', ') || 'Oral Questions, Observation'}</p>
+                    <p className="text-[11px] text-slate-600">{focusedEntry.assessmentMethods?.join(', ') || 'Not recorded'}</p>
                   </div>
                 </div>
 

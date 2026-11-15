@@ -128,7 +128,7 @@ describe('Strand Creation and System-Wide Usage Suite', () => {
     });
   });
 
-  describe('2. Deduplication and Flexible Grade / Subject Retrieval', () => {
+  describe('2. Deduplication and exact grade / subject retrieval', () => {
     it('should deduplicate strands with same title so zero duplicate strands are returned', async () => {
       const s1 = Strand.create({
         learningAreaId: 'la-math-01',
@@ -152,7 +152,7 @@ describe('Strand Creation and System-Wide Usage Suite', () => {
       expect(strands[0].title).toBe('Geometry & Measurement');
     });
 
-    it('should fall back to subject strands if specific grade has no strands yet, preventing empty blocking', async () => {
+    it('returns an empty list when the requested grade has no strands instead of another grade’s content', async () => {
       const s1 = Strand.create({
         learningAreaId: 'la-agri-01',
         gradeLevel: CBCGradeLevel.GRADE_5,
@@ -163,8 +163,7 @@ describe('Strand Creation and System-Wide Usage Suite', () => {
       await cbcRepo.saveStrand(s1);
 
       const strands = await cbcRepo.findStrandsByLearningArea('la-agri-01', CBCGradeLevel.GRADE_6);
-      expect(strands.length).toBe(1);
-      expect(strands[0].title).toBe('Crop Production & Soil Care');
+      expect(strands).toEqual([]);
     });
   });
 

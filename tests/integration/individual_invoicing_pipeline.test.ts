@@ -240,6 +240,16 @@ describe('Individual Invoicing Pipeline & Fee Management Integration Tests', () 
     let testInvoiceId: string;
 
     beforeAll(async () => {
+      const earlierInvoices = await container.feeRepository.findInvoices({ studentId: student1Id });
+      const outstanding = earlierInvoices.filter(invoice => !['DRAFT', 'CANCELLED', 'CARRIED_FORWARD'].includes(invoice.status))
+        .reduce((total, invoice) => total + invoice.balance, 0);
+      if (outstanding > 0) {
+        await container.feeUseCases.recordPayment({
+          schoolId: 'school-001', studentId: student1Id, amount: outstanding,
+          paymentMethod: PaymentMethod.CASH, transactionReference: 'SETTLE-PRIOR-FIXTURE', recordedByUserId: 'usr-admin-01'
+        });
+      }
+
       const invRes = await request(app)
         .post('/api/v1/finance/invoices/individual')
         .set('Authorization', `Bearer ${adminToken}`)

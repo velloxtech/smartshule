@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import { Teacher, LessonPlan } from '../../types';
 import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
 
@@ -13,10 +12,8 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
   teachers,
   onNavigateTab,
 }) => {
-  const { user } = useAuth();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const loadLessonPlans = async () => {
     setLoading(true);
@@ -36,43 +33,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
     loadLessonPlans();
   }, []);
 
-  const pendingPlans = lessonPlans.filter((lp) => lp.status === 'SUBMITTED');
-  const approvedPlans = lessonPlans.filter((lp) => lp.status === 'APPROVED');
-  const revisionPlans = lessonPlans.filter((lp) => lp.status === 'REJECTED');
-
-  const handleQuickApprove = async (planId: string) => {
-    try {
-      const res = await apiService.reviewLessonPlan(planId, {
-        approved: true,
-        remarks: `Approved by Deputy Head Teacher (${user?.fullName || 'Deputy'})`,
-      });
-      if (res.success) {
-        setActionMessage('Lesson plan approved successfully!');
-        loadLessonPlans();
-        setTimeout(() => setActionMessage(null), 3500);
-      }
-    } catch (err: any) {
-      alert(err.message || 'Failed to approve lesson plan');
-    }
-  };
-
-  const handleQuickReject = async (planId: string) => {
-    const reason = prompt('Enter feedback / revisions needed for the teacher:');
-    if (!reason) return;
-    try {
-      const res = await apiService.reviewLessonPlan(planId, {
-        approved: false,
-        remarks: reason,
-      });
-      if (res.success) {
-        setActionMessage('Revision request returned to teacher.');
-        loadLessonPlans();
-        setTimeout(() => setActionMessage(null), 3500);
-      }
-    } catch (err: any) {
-      alert(err.message || 'Failed to request revisions');
-    }
-  };
+  const recordedPlans = lessonPlans;
 
   return (
     <div className="space-y-6 pb-12">
@@ -90,10 +51,10 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Instructional Supervision & Lesson Plan Approvals
+              Instructional Supervision & Teaching Records
             </h1>
             <p className="mt-1 text-sm text-indigo-100 max-w-xl">
-              Approving submitted lesson plans, managing the timetable roster, monitoring daily learner attendance, and coordinating teaching staff.
+              Recording lesson plans and work covered, managing the timetable roster, and coordinating teaching staff.
             </p>
           </div>
 
@@ -103,7 +64,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
               className="px-4 py-2.5 rounded-xl bg-white text-indigo-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">rule</span>
-              <span>All Lesson Plans ({pendingPlans.length} Pending)</span>
+              <span>Lesson Plan Records ({recordedPlans.length})</span>
             </button>
             <button
               onClick={() => onNavigateTab('timetable')}
@@ -123,47 +84,40 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
         </div>
       </div>
 
-      {actionMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center gap-2 shadow-xs">
-          <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
-          <span>{actionMessage}</span>
-        </div>
-      )}
-
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="text-xs font-bold uppercase tracking-wider">Awaiting My Approval</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Lesson Plans in Workflow</span>
             <span className="material-symbols-outlined text-amber-600 text-[20px]">pending_actions</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-amber-600">{pendingPlans.length}</div>
+            <div className="text-2xl font-black text-emerald-700">{recordedPlans.length}</div>
             <div className="text-[11px] text-on-surface-variant mt-1">
-              Lesson plans submitted for review
+              Drafted, awaiting review, and approved
             </div>
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="text-xs font-bold uppercase tracking-wider">Approved Lesson Plans</span>
+            <span className="text-xs font-bold uppercase tracking-wider">After-class Comments</span>
             <span className="material-symbols-outlined text-emerald-600 text-[20px]">task_alt</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-emerald-700">{approvedPlans.length}</div>
-            <div className="text-[11px] text-on-surface-variant mt-1">Cleared for classroom instruction</div>
+            <div className="text-2xl font-black text-emerald-700">{recordedPlans.filter(lp => Boolean(lp.teacherSelfReflection?.trim())).length}</div>
+            <div className="text-[11px] text-on-surface-variant mt-1">Saved with their lesson plan</div>
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
-            <span className="text-xs font-bold uppercase tracking-wider">Revisions Requested</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Record of Work</span>
             <span className="material-symbols-outlined text-rose-600 text-[20px]">edit_note</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-rose-700">{revisionPlans.length}</div>
-            <div className="text-[11px] text-on-surface-variant mt-1">Returned to teachers with remarks</div>
+            <div className="text-2xl font-black text-rose-700">—</div>
+            <div className="text-[11px] text-on-surface-variant mt-1">Tracks what was covered after class</div>
           </div>
         </div>
 
@@ -182,29 +136,29 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       {/* Live Faculty Attendance & Geofence Clock-In Roster */}
       <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
 
-      {/* Main Interactive Approval Queue */}
+      {/* Lesson plan records */}
       <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-base font-bold text-on-surface">Submitted Lesson Plans Awaiting Your Approval</h2>
+            <h2 className="text-base font-bold text-on-surface">Lesson Plans for Reference</h2>
             <p className="text-xs text-on-surface-variant">
-              Approve or return with constructive feedback to ensure CBE pedagogical standards.
+              Lesson plans are saved teaching records. Actual work covered is entered in Records of Work.
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
-            {pendingPlans.length} In Queue
+            {recordedPlans.length} Recorded
           </span>
         </div>
 
-        {pendingPlans.length === 0 ? (
+        {recordedPlans.length === 0 ? (
           <div className="py-14 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
             <span className="material-symbols-outlined text-emerald-600 text-[40px]">check_circle</span>
-            <span className="font-bold text-sm text-on-surface">Queue Clear</span>
-            <span>All submitted lesson plans have been reviewed and approved!</span>
+            <span className="font-bold text-sm text-on-surface">No lesson plans recorded yet</span>
+            <span>Saved lesson plans will appear here for reference.</span>
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingPlans.map((plan) => (
+            {recordedPlans.map((plan) => (
               <div
                 key={plan.id}
                 className="p-4 rounded-xl border border-indigo-200/80 bg-indigo-50/30 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
@@ -214,8 +168,8 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
                     <span className="font-bold text-sm text-on-surface">
                       {plan.strand} · {plan.subStrand}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300/40">
-                      SUBMITTED
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${plan.status==='APPROVED'?'bg-emerald-100 text-emerald-800 border-emerald-300':plan.status==='SUBMITTED'?'bg-amber-100 text-amber-800 border-amber-300':plan.status==='REJECTED'?'bg-rose-100 text-rose-800 border-rose-300':'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      {plan.status || 'DRAFT'}
                     </span>
                   </div>
 
@@ -229,18 +183,18 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
                 <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
                   <button
-                    onClick={() => handleQuickApprove(plan.id)}
+                    onClick={() => onNavigateTab('schemes-lesson-plans')}
                     className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">check</span>
-                    <span>Approve</span>
+                    <span>View Records</span>
                   </button>
                   <button
-                    onClick={() => handleQuickReject(plan.id)}
-                    className="px-3.5 py-2 rounded-lg bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => onNavigateTab('records-of-work')}
+                    className="px-3.5 py-2 rounded-lg bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">close</span>
-                    <span>Request Revision</span>
+                    <span>Records of Work</span>
                   </button>
                 </div>
               </div>

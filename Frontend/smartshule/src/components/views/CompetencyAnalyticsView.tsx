@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
 export const CompetencyAnalyticsView: React.FC = () => {
+  const {user}=useAuth();
   const [analytics, setAnalytics] = useState<any>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ export const CompetencyAnalyticsView: React.FC = () => {
       setLoading(true);
       try {
         const [dashRes, ctxRes] = await Promise.all([
-          apiService.getDashboardAnalytics().catch(() => null),
+          user?.role==='TEACHER'?Promise.resolve(null):apiService.getDashboardAnalytics().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
         ]);
         if (dashRes?.success) setDashboardData(dashRes.data);

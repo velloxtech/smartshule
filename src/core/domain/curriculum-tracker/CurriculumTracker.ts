@@ -401,7 +401,9 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     if (!item) throw new Error(`Week ${weekNumber} in curriculum tracker not found`);
 
     item.status = override.status;
-    item.isCovered = override.status === 'EXEMPTED'; // Exempted counts as fulfilled
+    // An exempted week unlocks progression but is not teaching coverage.
+    // Keep it out of coverage totals and progress bars.
+    item.isCovered = override.status === 'EXEMPTED' ? false : item.isCovered;
     item.hodRemarks = `Administrative Override: ${override.reason} (by ${override.overrideByName})`;
 
     this.checkAndUpdateOverallStatus();

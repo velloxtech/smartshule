@@ -142,7 +142,7 @@ export const VisualCBCView: React.FC = () => {
 
       // If not guardian, load from database students endpoint
       if (!isGuardian && rawStudentList.length === 0) {
-        const stRes = await apiService.getStudents().catch(() => null);
+        const stRes = await apiService.getAssessmentRoster().catch(() => null);
         if (stRes?.data && Array.isArray(stRes.data)) {
           rawStudentList = stRes.data;
         }

@@ -46,6 +46,7 @@ export type TabType =
   | 'broadsheets'
   | 'occurrence-records'
   | 'curriculum-tracker'
+  | 'scheme-of-work-builder'
   | 'fee-deadline-banner'
   | 'sponsored-students'
   | 'digital-signature'
@@ -848,6 +849,8 @@ export interface BackendFormativeAssessment {
 }
 
 export interface BackendSummativeAssessment {
+  percentageScore?: number;
+  scoreIssue?: string;
   id: string;
   studentId: string;
   teacherId: string;
@@ -923,6 +926,7 @@ export interface CBCReportCardData {
 
 export interface SchemeEntry {
   id?: string;
+  archivedAt?: string;
   weekNumber: number;
   lessonNumber: number;
   strandId?: string;
@@ -953,6 +957,40 @@ export interface SchemeOfWork {
   reviewedAt?: string;
   reviewRemarks?: string;
   createdAt?: string;
+  planningState?: {
+    revision?: number;
+    coverageReviewStatus?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+    submittedEntryIds?: string[];
+    approvedEntryIds?: string[];
+    allocations?: Array<{ lessons: number }>;
+    locked?: boolean;
+  };
+}
+
+export interface LessonPlanSourceEntry {
+  strandTitle?: string;
+  subStrandTitle?: string;
+  strandId?: string;
+  subStrandId?: string;
+  specificLearningOutcomes?: string[];
+  keyInquiryQuestions?: string[];
+  learningResources?: string[];
+  learningExperiences?: string[];
+  assessmentMethods?: string[];
+  academicYearId?: string;
+  termId?: string;
+  schemeOfWorkEntryId: string;
+  classRoomId: string;
+  streamId?: string;
+  learningAreaId: string;
+  lessonDate: string;
+  lessonTime: string;
+  weekNumber: number;
+  lessonNumber: number;
+  className?: string;
+  streamName?: string;
+  learningAreaName?: string;
+  schemeTitle?: string;
 }
 
 export interface LessonPlanStep {
@@ -961,10 +999,22 @@ export interface LessonPlanStep {
   durationMinutes: number;
   teacherActivities: string;
   learnerActivities: string;
+  learningPoints?: string;
+  resources?: string;
   assessmentCriterion?: string;
 }
 
 export interface LessonPlan {
+  otherLearningAreas?: string[];
+  communityServiceActivities?: string;
+  nonFormalActivity?: string;
+  assessmentRubric?: {criterion:string; exceeds:string; meets:string; approaching:string; below:string}[];
+
+  weekNumber?: number;
+  lessonNumber?: number;
+  lessonTime?: string;
+  pcis?: string[];
+
   id: string;
   teacherId: string;
   schemeOfWorkEntryId?: string;
@@ -981,11 +1031,13 @@ export interface LessonPlan {
   keyInquiryQuestions: string[];
   coreCompetenciesAddressed: string[];
   valuesAddressed: string[];
+  learningExperiences?: string[];
+  assessmentMethods?: string[];
   learningResources: string[];
   steps: LessonPlanStep[];
   extendedActivity?: string;
   teacherSelfReflection?: string;
-  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  status?: 'RECORDED' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
   submittedAt?: string;
   reviewedByUserId?: string;
   reviewedAt?: string;
@@ -2835,7 +2887,7 @@ export interface OccurrenceDailySummary {
 // CURRICULUM PROGRESS TRACKER TYPES
 // ==========================================
 
-export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED' | 'EXEMPTED' | 'RESCHEDULED' | 'APPROVED' | 'SUBMITTED' | 'RETURNED';
 export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
 
 export interface DailyReflection {

@@ -3,7 +3,7 @@ import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
-import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
+import { setupTestFixtures, setupTestRoleAccounts, fixtureLessonPlanPayload, fixtureRecordPayload } from '../helpers/testFixtures';
 
 describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   let app: any;
@@ -231,45 +231,7 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       const res = await request(app)
         .post('/api/v1/curriculum/lesson-plans')
         .set('Authorization', `Bearer ${teacherToken}`)
-        .send({
-          teacherId: 'tch-default-01',
-          learningAreaId: 'la-001',
-          classRoomId: 'class-001',
-          lessonDate: '2026-09-22',
-          durationMinutes: 40,
-          rollBoys: 18,
-          rollGirls: 20,
-          strand: 'Numbers',
-          subStrand: 'Fractions and Decimals',
-          specificLearningOutcomes: ['By the end of the lesson, the learner should be able to identify proper fractions.'],
-          keyInquiryQuestions: ['What is the difference between a numerator and denominator?'],
-          coreCompetenciesAddressed: ['CRITICAL_THINKING_AND_PROBLEM_SOLVING'],
-          valuesAddressed: ['UNITY', 'RESPECT'],
-          learningResources: ['Fraction charts', 'Textbooks'],
-          steps: [
-            {
-              stepNumber: 1,
-              stepTitle: 'Introduction',
-              durationMinutes: 5,
-              teacherActivities: 'Review whole numbers',
-              learnerActivities: 'Answer questions'
-            },
-            {
-              stepNumber: 2,
-              stepTitle: 'Concept Development',
-              durationMinutes: 25,
-              teacherActivities: 'Demonstrate dividing an apple into 4 parts',
-              learnerActivities: 'Work in pairs with cut-out shapes'
-            },
-            {
-              stepNumber: 3,
-              stepTitle: 'Conclusion',
-              durationMinutes: 10,
-              teacherActivities: 'Summarize key points',
-              learnerActivities: 'Complete formative exercise'
-            }
-          ]
-        });
+        .send(await fixtureLessonPlanPayload(container));
 
       expect(res.status).toBe(201);
       expect(res.body.data.id).toBeDefined();
@@ -318,11 +280,21 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(res.body.data.reviewRemarks).toContain('Deputy Head Teacher');
     });
 
-    it('allows Head Teacher to also review and reject/request revision with remarks', async () => {
-      // Re-submit
-      await request(app)
+    it('allows Head Teacher to return a newly submitted plan without reopening an approved plan', async () => {
+      const blocked = await request(app)
         .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
         .set('Authorization', `Bearer ${teacherToken}`);
+      expect(blocked.status).toBe(400);
+      const draft = await request(app)
+        .post('/api/v1/curriculum/lesson-plans')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send(await fixtureLessonPlanPayload(container));
+      expect(draft.status).toBe(201);
+      lessonPlanId = draft.body.data.id;
+      const submitted = await request(app)
+        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(submitted.status).toBe(200);
 
       const res = await request(app)
         .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
@@ -338,6 +310,10 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
     });
 
     it('allows Super Admin and Admin to review lesson plans as well', async () => {
+      const submitted = await request(app)
+        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(submitted.status).toBe(200);
       // Super Admin approval
       const resSa = await request(app)
         .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
@@ -351,6 +327,16 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(resSa.body.data.status).toBe('APPROVED');
 
       // Admin approval
+      const adminDraft = await request(app)
+        .post('/api/v1/curriculum/lesson-plans')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send(await fixtureLessonPlanPayload(container));
+      expect(adminDraft.status).toBe(201);
+      lessonPlanId = adminDraft.body.data.id;
+      const adminSubmitted = await request(app)
+        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(adminSubmitted.status).toBe(200);
       const resAdmin = await request(app)
         .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -751,11 +737,14 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(unlinkedRes.body.error.message).toMatch(/Access denied/i);
     });
 
-    it('denies parent from viewing daily roll-call register via GET /attendance/daily (403 Forbidden)', async () => {
+    it('filters the daily roll-call register to linked children', async () => {
       const res = await request(app)
         .get('/api/v1/attendance/daily?date=2026-09-20&type=DAILY_MORNING')
         .set('Authorization', `Bearer ${parentToken}`);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      if (res.body.data) {
+        expect(res.body.data.entries.every((entry: any) => entry.studentId === 'student-001')).toBe(true);
+      }
     });
 
     it('denies parent from accessing another learner’s attendance record via GET /attendance/student/:id (403 Forbidden)', async () => {

@@ -501,8 +501,14 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     // 1. Identify teacher assigned subjects for this selected class (if available)
     const assignedSubjectKeys = new Set<string>();
     const assignedSubjectIds = new Set<string>();
+    const selectedClassScope=teacherAuthContext?.assignedClasses.find(cls=>cls.id===filterClassId);
+    const subjectStream=filterStreamId||students.find(student=>student.id===selectedStudentId)?.streamId||'';
+    const scopeSubjects=selectedClassScope?.subjectsByStream
+      ? selectedClassScope.subjectsByStream[subjectStream]||[]
+      : teacherAuthContext?.authorizedSubjectsByClass?.[filterClassId]||[];
+
     if (teacherAuthContext && filterClassId && teacherAuthContext.authorizedSubjectsByClass?.[filterClassId]) {
-      const authorizedList = teacherAuthContext.authorizedSubjectsByClass[filterClassId];
+      const authorizedList = scopeSubjects;
       if (authorizedList && authorizedList.length > 0) {
         authorizedList.forEach((la) => {
           const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
@@ -626,13 +632,13 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
     // Authorized subjects from teacher context
     if (teacherAuthContext && filterClassId && teacherAuthContext.authorizedSubjectsByClass?.[filterClassId]) {
-      teacherAuthContext.authorizedSubjectsByClass[filterClassId].forEach((la) => {
+      scopeSubjects.forEach((la) => {
         registerSubject(la, true, true);
       });
     }
 
     // Guaranteed canonical CBC learning areas so ALL subjects are always available
-    DEFAULT_CBC_LEARNING_AREAS.forEach((defLa) => {
+    (isSchoolAdmin?DEFAULT_CBC_LEARNING_AREAS:[]).forEach((defLa) => {
       registerSubject(defLa, false, false);
     });
 
@@ -668,8 +674,17 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       return a.name.localeCompare(b.name);
     });
 
-    return list;
-  }, [learningAreas, teacherAuthContext, filterClassId, selectedStudentId, students, classes, scoredSubjectKeys, isSchoolAdmin]);
+    return isSchoolAdmin?list:list.filter(s=>s.aliasIds.some(id=>assignedSubjectIds.has(id))||assignedSubjectKeys.has(s.key));
+  }, [learningAreas, teacherAuthContext, filterClassId, filterStreamId, selectedStudentId, students, classes, scoredSubjectKeys, isSchoolAdmin]);
+
+  useEffect(()=>{
+    if(!isOpen||!academicYearId||!termId)return;let live=true;
+    Promise.all([apiService.getTeacherAuthorizedContext(academicYearId,termId),apiService.getAssessmentRoster({academicYearId,termId})]).then(([context,roster])=>{
+      if(!live)return;setTeacherAuthContext(context.data);setAuthorizedClasses(context.data?.assignedClasses||[]);setStudents((roster.data||[]).map(normalizeStudent));
+      if(!context.data?.isGlobalAdmin){const allowed=context.data?.assignedClasses||[];setFilterClassId(old=>allowed.some(cls=>cls.id===old)?old:allowed[0]?.id||'');}
+    }).catch(err=>{if(live){setStudents([]);setTeacherAuthContext(null);setError(err?.message||'Teaching assignments could not be verified.');}});
+    return()=>{live=false;};
+  },[isOpen,academicYearId,termId]);
 
   const effectiveSubjectsRef = useRef<MarksPortalSubjectItem[]>([]);
   useEffect(() => {
@@ -682,7 +697,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     async function loadData() {
       try {
         const [stRes, laRes, ctxRes, yrRes, cRes, authCtxRes] = await Promise.all([
-          apiService.getStudents().catch(() => null),
+          apiService.getAssessmentRoster().catch(() => null),
           apiService.getLearningAreas().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
           apiService.getYears().catch(() => null),
@@ -805,11 +820,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       const authClass = authorizedClasses.find((c) => c.id === filterClassId);
       if (authClass && authClass.streams && authClass.streams.length > 0) {
         setStreams(authClass.streams as any);
-        setFilterStreamId('');
+        setFilterStreamId(old=>authClass.streams.some(stream=>stream.id===old)?old:authClass.wholeClass||isSchoolAdmin?'':authClass.streams[0]?.id||'');
         return;
       }
     }
 
+    if(!isSchoolAdmin){setStreams([]);setFilterStreamId('');return;}
     apiService
       .getStreamsByClass(filterClassId)
       .then((res) => {
@@ -1076,6 +1092,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   }, [rosterRows, rosterSearch]);
 
   useEffect(() => {
+    if (!isOpen)return;
     if (!selectedLearningAreaId) {
       setStrands([]);
       setSelectedStrandId('');
@@ -1126,7 +1143,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         setStrands(mappedStrands);
         setSelectedStrandId(mappedStrands[0]?.id || '');
       });
-  }, [selectedLearningAreaId, learningAreas]);
+  }, [selectedLearningAreaId, learningAreas, isOpen]);
 
   useEffect(() => {
     if (!selectedStrandId) {
@@ -2004,7 +2021,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                         disabled={!filterClassId}
                         className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
                       >
-                        <option value="">All Streams / Whole Grade</option>
+                        <option value="" disabled={!isSchoolAdmin&&!teacherAuthContext?.assignedClasses.find(cls=>cls.id===filterClassId)?.wholeClass}>All Streams / Whole Grade</option>
                         {streams.map((s) => (
                           <option key={s.id} value={s.id}>
                             Stream {s.name}
@@ -2395,7 +2412,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     onChange={(e) => setFilterStreamId(e.target.value)}
                     className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
-                    <option value="">All Streams / Whole Grade</option>
+                    <option value="" disabled={!isSchoolAdmin&&!teacherAuthContext?.assignedClasses.find(cls=>cls.id===filterClassId)?.wholeClass}>All Streams / Whole Grade</option>
                     {streams.map((s) => (
                       <option key={s.id} value={s.id}>
                         Stream {s.name}

@@ -145,7 +145,7 @@ export const TransactionReversalsView: React.FC = () => {
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-container-low text-on-surface">
             {status}
           </span>
         );
@@ -155,14 +155,14 @@ export const TransactionReversalsView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
             <ShieldAlert className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Transaction Reversal Requests</h2>
-            <p className="text-xs text-slate-500">
+            <h2 className="text-xl font-bold text-on-surface">Transaction Reversal Requests</h2>
+            <p className="text-xs text-on-surface-variant">
               Admin-approved reversal governance &bull; Bursar submission with complete audit trail
             </p>
           </div>
@@ -172,7 +172,7 @@ export const TransactionReversalsView: React.FC = () => {
         <button
           onClick={fetchRequests}
           disabled={loading}
-          className="self-start md:self-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center space-x-2"
+          className="self-start md:self-auto px-4 py-2 bg-surface-container-low hover:bg-surface-container text-on-surface-variant text-xs font-bold rounded-xl transition flex items-center space-x-2"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Queue</span>
@@ -186,7 +186,7 @@ export const TransactionReversalsView: React.FC = () => {
           className={`p-4 rounded-xl border transition cursor-pointer ${
             statusFilter === 'ALL'
               ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-              : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
+              : 'bg-surface-container-lowest text-on-surface border-outline-variant/30 hover:border-outline-variant/30'
           }`}
         >
           <span className="text-xs font-semibold opacity-80 block">Total Requests</span>
@@ -198,7 +198,7 @@ export const TransactionReversalsView: React.FC = () => {
           className={`p-4 rounded-xl border transition cursor-pointer ${
             statusFilter === 'PENDING_ADMIN_APPROVAL'
               ? 'bg-amber-600 text-white border-amber-600 shadow-md'
-              : 'bg-white text-slate-800 border-slate-200 hover:border-amber-300'
+              : 'bg-surface-container-lowest text-on-surface border-outline-variant/30 hover:border-amber-300'
           }`}
         >
           <span className="text-xs font-semibold opacity-80 block flex items-center gap-1">
@@ -212,7 +212,7 @@ export const TransactionReversalsView: React.FC = () => {
           className={`p-4 rounded-xl border transition cursor-pointer ${
             statusFilter === 'COMPLETED'
               ? 'bg-emerald-700 text-white border-emerald-700 shadow-md'
-              : 'bg-white text-slate-800 border-slate-200 hover:border-emerald-300'
+              : 'bg-surface-container-lowest text-on-surface border-outline-variant/30 hover:border-emerald-300'
           }`}
         >
           <span className="text-xs font-semibold opacity-80 block flex items-center gap-1">
@@ -226,7 +226,7 @@ export const TransactionReversalsView: React.FC = () => {
           className={`p-4 rounded-xl border transition cursor-pointer ${
             statusFilter === 'REJECTED'
               ? 'bg-red-700 text-white border-red-700 shadow-md'
-              : 'bg-white text-slate-800 border-slate-200 hover:border-red-300'
+              : 'bg-surface-container-lowest text-on-surface border-outline-variant/30 hover:border-red-300'
           }`}
         >
           <span className="text-xs font-semibold opacity-80 block flex items-center gap-1">
@@ -237,7 +237,7 @@ export const TransactionReversalsView: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
@@ -245,19 +245,19 @@ export const TransactionReversalsView: React.FC = () => {
             placeholder="Search learner, ref, reason..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full pl-9 pr-3 py-2 text-xs border border-outline-variant/30 rounded-lg outline-none focus:ring-2 focus:ring-slate-900"
           />
         </div>
 
         <div className="flex items-center space-x-2 w-full md:w-auto">
-          <div className="flex items-center space-x-1.5 text-xs text-slate-600 font-semibold">
+          <div className="flex items-center space-x-1.5 text-xs text-on-surface-variant font-semibold">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <span>Type:</span>
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg outline-none bg-white font-medium"
+            className="px-3 py-1.5 text-xs border border-outline-variant/30 rounded-lg outline-none bg-white font-medium"
           >
             <option value="ALL">All Types</option>
             <option value="PAYMENT">Original Payment</option>
@@ -267,16 +267,16 @@ export const TransactionReversalsView: React.FC = () => {
       </div>
 
       {/* Requests Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-slate-500 text-sm">
+          <div className="py-16 text-center text-on-surface-variant text-sm">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto text-slate-400 mb-2" />
             <span>Loading transaction reversal requests...</span>
           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="py-16 text-center text-slate-500 text-sm">
+          <div className="py-16 text-center text-on-surface-variant text-sm">
             <ShieldAlert className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="font-semibold text-slate-700">No reversal requests found</p>
+            <p className="font-semibold text-on-surface-variant">No reversal requests found</p>
             <p className="text-xs text-slate-400 mt-1">
               Eligible transactions can be submitted for reversal from the Learner Fee Position desk.
             </p>
@@ -284,7 +284,7 @@ export const TransactionReversalsView: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+              <thead className="bg-surface border-b border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider">
                 <tr>
                   <th className="px-4 py-3">Request Ref</th>
                   <th className="px-4 py-3">Learner</th>
@@ -295,11 +295,11 @@ export const TransactionReversalsView: React.FC = () => {
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-slate-100 font-medium text-on-surface-variant">
                 {filteredRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/70 transition">
+                  <tr key={req.id} className="hover:bg-surface/70 transition">
                     <td className="px-4 py-3.5">
-                      <span className="font-mono font-bold text-slate-900 block">
+                      <span className="font-mono font-bold text-on-surface block">
                         {req.requestReference}
                       </span>
                       <span className="text-[11px] text-slate-400">
@@ -307,22 +307,22 @@ export const TransactionReversalsView: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="font-bold text-slate-900 block">{req.studentName}</span>
-                      <span className="text-[11px] text-slate-500">Adm: {req.admissionNumber}</span>
+                      <span className="font-bold text-on-surface block">{req.studentName}</span>
+                      <span className="text-[11px] text-on-surface-variant">Adm: {req.admissionNumber}</span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase mb-0.5">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-on-surface-variant uppercase mb-0.5">
                         {req.transactionType.replace('_', ' ')}
                       </span>
-                      <span className="font-mono text-[11px] text-slate-600 block">
+                      <span className="font-mono text-[11px] text-on-surface-variant block">
                         {req.originalReceiptNumber || req.transactionReference}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-bold text-slate-900">
+                    <td className="px-4 py-3.5 text-right font-bold text-on-surface">
                       KES {Number(req.originalAmount).toLocaleString()}
                     </td>
                     <td className="px-4 py-3.5 max-w-xs">
-                      <p className="line-clamp-2 text-slate-700 italic">"{req.reason}"</p>
+                      <p className="line-clamp-2 text-on-surface-variant italic">"{req.reason}"</p>
                       <span className="text-[10px] text-slate-400 block mt-0.5">
                         By: {req.requestedByName}
                       </span>
@@ -356,7 +356,7 @@ export const TransactionReversalsView: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => handleOpenReview(req)}
-                          className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-xs rounded-lg transition"
+                          className="px-3 py-1.5 bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-semibold text-xs rounded-lg transition"
                         >
                           View Audit
                         </button>

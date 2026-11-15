@@ -430,7 +430,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[14px] text-amber-300">location_on</span>
-                <span>P.O. Box 12-20123 / 12-40123 Kisumu, Kenya</span>
+                <span>P.O Box 12-20123</span>
               </div>
             </div>
           </div>
@@ -1072,7 +1072,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         </div>
 
         <p className="font-semibold text-white/90">
-          Grace Seeds School · &quot;The Future Begins Here&quot; · P.O. Box 12-20123 / 12-40123 Kisumu, Kenya
+          Grace Seeds School · &quot;The Future Begins Here&quot; · P.O Box 12-20123
         </p>
         <p className="text-[11px] text-rose-300/70">
           Official Competency-Based Education (CBE) Management Platform

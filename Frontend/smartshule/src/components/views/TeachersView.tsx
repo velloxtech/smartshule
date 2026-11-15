@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Teacher, UserRole, ClassRoom, StreamItem, TeacherCorrectionRequest } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { isPackagedClient } from '../../utils/runtime';
 
 interface TeachersViewProps {
   teachers: Teacher[];
@@ -332,6 +333,20 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         targetStreamName = found ? found.name : 'Stream';
       }
 
+      if (!isPackagedClient()) {
+        const context = await apiService.getCurrentContext(user?.schoolId);
+        const year = context.data?.currentYear;
+        if (!year?.id) throw new Error('Set the current academic year before assigning a teacher.');
+        const result = await apiService.assignClassTeacher({
+          schoolId: user?.schoolId || selectedTeacher.schoolId || '',
+          academicYearId: year.id,
+          classRoomId: activeClassId,
+          streamId: targetStreamId,
+          teacherId: selectedTeacher.id,
+          effectiveFrom: new Date().toISOString().split('T')[0],
+        });
+        if (!result.success || !result.data?.id) throw new Error('The class assignment was not saved. Please try again.');
+      } else {
       await apiService.assignStreamToTeacher(selectedTeacher.id, targetStreamId);
       try {
         await apiService.assignClassTeacher({
@@ -344,6 +359,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         });
       } catch {
         // formal assignment fallback sync
+      }
+
       }
 
       const assignedLabel = `${activeClassName} - ${targetStreamName}`;
@@ -549,7 +566,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
   const isTeachingStaff = (t: Teacher) => {
     const r = (t as any).role || (t as any).user?.role || 'TEACHER';
-    return ['TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(r);
+    const role = isPackagedClient() ? r : String(r).toUpperCase().replace(/\s+/g, '_');
+    return ['TEACHER', 'TEACHER_/_EDUCATOR', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(role);
   };
 
   const teachingCount = teachers.filter(isTeachingStaff).length;
@@ -582,7 +600,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
             <span>/</span>
             <span>Academics</span>
@@ -656,7 +674,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
       {/* Tab Switcher: Faculty Roster vs Correction Requests */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-outline-variant/30 pb-1 gap-2">
-        <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-1 min-w-0 max-w-full">
           <button
             onClick={() => { setActiveTab('roster'); setStaffCategory('ALL'); }}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
@@ -1564,6 +1582,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             </div>
 
             <form onSubmit={handleAssignClassAndStream} className="p-4 sm:p-5 space-y-4 overflow-y-auto text-xs">
+              <p className="text-on-surface-variant">A teacher can lead one class and stream per academic year. Assigning another transfers their class-teacher duty and preserves the previous assignment history.</p>
               {assignSuccess && (
                 <div className="p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg flex items-center gap-2">
                   <span className="material-symbols-outlined text-teal-700 text-[18px]">check_circle</span>
@@ -1639,9 +1658,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
                 >
                   <option value="CLASS_TEACHER">Class Teacher (Lead Educator & Roll Call)</option>
-                  <option value="SUBJECT_TEACHER">Subject Teacher (CBC Learning Area)</option>
-                  <option value="ASSISTANT_TEACHER">Assistant Class Teacher</option>
+                  {isPackagedClient() && <><option value="SUBJECT_TEACHER">Subject Teacher (CBC Learning Area)</option><option value="ASSISTANT_TEACHER">Assistant Class Teacher</option></>}
                 </select>
+                {!isPackagedClient() && <p className="mt-2 text-on-surface-variant">This assigns a class teacher. {onNavigateTab ? <button type="button" className="font-semibold text-primary underline" onClick={() => { setIsAssignOpen(false); onNavigateTab('learning-areas'); }}>Assign a subject teacher under Subjects &amp; Learning Areas.</button> : 'Assign subject teachers under Subjects & Learning Areas.'}</p>}
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">

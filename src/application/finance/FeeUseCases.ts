@@ -2372,18 +2372,25 @@ export class FeeUseCases {
 
       // If no invoices exist at all, auto-generate one for current term if fee structure is configured
       if (studentInvoices.length === 0) {
-        try {
-          const invRes = await this.generateInvoices({
-            schoolId,
-            academicYearId: activeYearId,
-            termId: activeTermId,
-            studentId,
-            gradeLevel: student!.gradeLevel
-          });
-          if (invRes?.invoices && invRes.invoices.length > 0) {
-            studentInvoices = await this.feeRepository.findInvoices({ studentId });
-          }
-        } catch {}
+        const configuredStructures = await this.feeRepository.findAllFeeStructures(schoolId);
+        const hasConfiguredStructure = configuredStructures.some(structure =>
+          structure.schoolId === schoolId && structure.gradeLevel === student!.gradeLevel &&
+          structure.academicYearId === activeYearId
+        );
+        if (hasConfiguredStructure) {
+          try {
+            const invRes = await this.generateInvoices({
+              schoolId,
+              academicYearId: activeYearId,
+              termId: activeTermId,
+              studentId,
+              gradeLevel: student!.gradeLevel
+            });
+            if (invRes?.invoices && invRes.invoices.length > 0) {
+              studentInvoices = await this.feeRepository.findInvoices({ studentId });
+            }
+          } catch {}
+        }
       }
 
       // Calculate authoritative fee obligations (Arrears vs Current fees)
@@ -2678,7 +2685,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolName: 'Grace Seeds School',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+      schoolAddress: 'P.O Box 12-20123',
       servedBy: data.servedBy || 'School Accounts Office',
       bankName: data.bankName,
       slipNumber: data.slipNumber,
@@ -2804,7 +2811,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolName: 'Grace Seeds School',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+      schoolAddress: 'P.O Box 12-20123',
       servedBy: payment.recordedByUserId,
       notes: payment.notes
     };
@@ -4174,9 +4181,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     receipt?: FeeCreditUtilizationReceiptPayload;
   }> {
     if (requestingUser) {
-      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR];
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT];
       if (!allowedRoles.includes(requestingUser.role)) {
-        throw new ForbiddenError('Access denied: Only school administrators (Admin / Super Admin) can apply overpayment fee credits to invoices.');
+        throw new ForbiddenError('Access denied: Only school administrators and finance personnel can apply overpayment fee credits to invoices.');
       }
     }
 
@@ -4307,7 +4314,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolLogoUrl: '/logo.png',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+      schoolAddress: 'P.O Box 12-20123'
     };
 
     const application = FeeCreditApplication.create(
@@ -4613,7 +4620,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
           schoolLogoUrl: '/logo.png',
           schoolPhone: '0745436312',
           schoolEmail: 'schoolgraceseeds@gmail.com',
-          schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+          schoolAddress: 'P.O Box 12-20123'
         };
 
         for (const app of applicationsCreated) {
@@ -5041,10 +5048,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     allocation: AutoCreditReconciliationResult;
     receipt: FeeCreditUtilizationReceiptPayload;
   }> {
-    const adminRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR];
+    const adminRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT];
     if (requestingUser && !adminRoles.includes(requestingUser.role)) {
       throw new ForbiddenError(
-        `Access denied: Only administrators (Admin / Super Admin) can initiate overpayment credit utilization. Role "${requestingUser.role}" is not authorized.`
+        `Access denied: Only administrators and finance officers can initiate overpayment credit utilization. Role "${requestingUser.role}" is not authorized.`
       );
     }
 
@@ -5303,7 +5310,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         schoolLogoUrl: '/logo.png',
         schoolPhone: '0745436312',
         schoolEmail: 'schoolgraceseeds@gmail.com',
-        schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+        schoolAddress: 'P.O Box 12-20123'
       };
 
       for (const app of applicationsCreated) {
@@ -6341,7 +6348,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
           schoolName: 'Grace Seeds School',
           schoolPhone: '0745436312',
           schoolEmail: 'schoolgraceseeds@gmail.com',
-          schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+          schoolAddress: 'P.O Box 12-20123',
           studentId: currentReq.studentId,
           studentName: currentReq.studentName,
           admissionNumber: currentReq.admissionNumber,

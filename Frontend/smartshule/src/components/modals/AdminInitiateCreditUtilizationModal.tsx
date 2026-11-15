@@ -70,7 +70,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
     const num = Number(newVal);
     if (!isNaN(num) && num > 0 && studentId) {
       apiService
-        .previewCreditUtilization({ studentId, amount: num })
+        .previewCreditUtilization({ studentId, amountToApply: num })
         .then((res: any) => {
           if (res.success && res.data) {
             setPreview(res.data);
@@ -112,7 +112,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
     try {
       const res = await apiService.adminInitiateCreditUtilization({
         studentId,
-        amount: numAmount,
+        amountToApply: numAmount,
         reason: reason.trim(),
       });
 
@@ -141,7 +141,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in font-body">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
@@ -171,14 +171,14 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
           )}
 
           {/* Learner Identity Summary Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-surface border border-outline-variant/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="font-bold text-sm text-slate-900">{currentLearnerName}</div>
-              <div className="text-[11px] text-slate-600 mt-0.5">
-                Adm: <span className="font-mono font-bold text-slate-800">{currentAdmNo}</span> · Grade: <span className="font-medium text-slate-800">{currentGrade}</span>
+              <div className="font-bold text-sm text-on-surface">{currentLearnerName}</div>
+              <div className="text-[11px] text-on-surface-variant mt-0.5">
+                Adm: <span className="font-mono font-bold text-on-surface">{currentAdmNo}</span> · Grade: <span className="font-medium text-on-surface">{currentGrade}</span>
               </div>
             </div>
-            <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
+            <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-outline-variant/30">
               <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800">Available Credit</span>
               <span className="text-base font-black font-mono text-teal-700">+KES {availCredit.toLocaleString()}</span>
             </div>
@@ -201,14 +201,14 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
           {/* Amount to Apply Input */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="font-bold text-slate-700">
-                Amount to Apply (KES) <span className="text-[#7a1228]">*</span>
+              <label className="font-bold text-on-surface-variant">
+                Amount to Apply (KES) <span className="text-primary">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleApplyMax}
                 disabled={maxApplicable <= 0}
-                className="text-[11px] font-bold text-[#7a1228] hover:text-[#600e1f] underline cursor-pointer disabled:opacity-40"
+                className="text-[11px] font-bold text-primary hover:text-primary-container underline cursor-pointer disabled:opacity-40"
               >
                 Apply Maximum Eligible (KES {maxApplicable.toLocaleString()})
               </button>
@@ -224,17 +224,17 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
                 value={amountStr}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] focus:border-transparent"
+                className="w-full pl-12 pr-3 py-2 bg-white border border-outline-variant/30 rounded-xl text-sm font-mono font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
           </div>
 
           {/* Live Allocation Preview Box */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-            <div className="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 font-bold text-[11px] text-slate-700 uppercase tracking-wider flex items-center justify-between">
+          <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+            <div className="bg-surface-container-low/80 px-3.5 py-2 border-b border-outline-variant/30 font-bold text-[11px] text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
               <span>Projected Settlement Breakdown</span>
               {isLoadingPreview && (
-                <span className="flex items-center gap-1 text-[10px] text-slate-500 lowercase">
+                <span className="flex items-center gap-1 text-[10px] text-on-surface-variant lowercase">
                   <span className="material-symbols-outlined animate-spin text-xs">sync</span>
                   calculating...
                 </span>
@@ -242,31 +242,31 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
             </div>
 
             <div className="p-3.5 space-y-2 text-xs font-mono">
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-sans">Allocation to Previous-Term Arrears:</span>
                 <strong className="text-emerald-700 font-bold">
                   KES {(preview?.amountToArrears ?? 0).toLocaleString()}
                 </strong>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-sans">Allocation to Current-Term Fees:</span>
                 <strong className="text-emerald-700 font-bold">
                   KES {(preview?.amountToCurrentFees ?? 0).toLocaleString()}
                 </strong>
               </div>
-              <div className="border-t border-slate-100 pt-1.5 flex justify-between items-center font-bold text-slate-800">
+              <div className="border-t border-outline-variant/30 pt-1.5 flex justify-between items-center font-bold text-on-surface">
                 <span className="font-sans">Total Credit Utilized:</span>
                 <span className="text-emerald-800 text-sm">
                   KES {(preview?.proposedAmount ?? (Number(amountStr) || 0)).toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-sans">Projected Remaining Fee Due:</span>
                 <span className="text-rose-700 font-bold">
                   KES {(preview?.projectedRemainingOutstanding ?? 0).toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-sans">Projected Remaining Available Credit:</span>
                 <span className="text-teal-800 font-bold">
                   +KES {(preview?.projectedRemainingCredit ?? 0).toLocaleString()}
@@ -277,9 +277,9 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
 
           {/* Mandatory Reason Field */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 flex items-center justify-between">
+            <label className="font-bold text-on-surface-variant flex items-center justify-between">
               <span>
-                Mandatory Reason / Justification <span className="text-[#7a1228]">*</span>
+                Mandatory Reason / Justification <span className="text-primary">*</span>
               </span>
               <span className="text-[10px] text-slate-400 font-normal">Recorded for compliance audit</span>
             </label>
@@ -289,7 +289,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Authorized utilization of Term 1 fee overpayment towards outstanding Term 2 balance as requested by guardian."
-              className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] focus:border-transparent"
+              className="w-full p-2.5 bg-white border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
 
@@ -298,7 +298,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
             <button
               type="submit"
               disabled={isSubmitting || maxApplicable <= 0}
-              className="flex-1 py-2.5 bg-[#7a1228] hover:bg-[#600e1f] text-white font-bold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -316,7 +316,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="px-4 py-2.5 bg-surface-container hover:bg-slate-300 text-on-surface font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>

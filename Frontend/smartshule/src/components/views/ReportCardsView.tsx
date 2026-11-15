@@ -510,7 +510,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const schoolName = schoolInfo?.name || 'Grace Seeds School';
   const schoolMotto = schoolInfo?.motto || 'The future begins here';
-  const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+  const schoolAddress = schoolInfo?.address || 'P.O Box 12-20123';
   const schoolPhone = schoolInfo?.phone || '0745436312';
   const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
 
@@ -550,7 +550,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         rawList = rawEvals.map((ev: any, index: number) => {
           const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : null;
           const score = rawScore !== null
-            ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore)
+            ? rawScore
             : null;
 
           const gp = getGradeAndPoints(score !== null ? score : 0, ev.levelLabel || ev.performanceLevel);
@@ -1789,12 +1789,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Learner:</span>
             <select
               value={selectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="bg-surface-container-low border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs max-w-[260px] truncate"
+              className="bg-surface-container-low border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs max-w-full sm:max-w-[260px] min-w-0 truncate"
             >
               {filteredStudents.length === 0 ? (
                 <option value="">No learners match &ldquo;{searchTerm}&rdquo;</option>
@@ -1808,7 +1808,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Term:</span>
             <select
               value={selectedTermId || currentTerm?.id || ''}
@@ -1973,7 +1973,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           {/* Subjects Table */}
-          <div className="border border-gray-400 rounded-sm overflow-hidden mb-3">
+          <div className="border border-gray-400 rounded-sm overflow-x-auto print:overflow-visible min-w-0 max-w-full mb-3">
             <table className="subjects-table-el w-full text-left text-xs print:text-[7.5pt] border-collapse">
               <thead className="bg-slate-100 border-b border-gray-400 text-gray-800 uppercase text-[11px] print:text-[7pt] font-black">
                 <tr>

@@ -270,18 +270,18 @@ export const MyDigitalSignatureView: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-semibold mb-2">
               <ShieldCheck className="w-3.5 h-3.5" />
               Institutional Security &amp; Compliance
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
               My Digital Signature Vault
             </h1>
-            <p className="text-sm text-slate-300 mt-1 max-w-2xl">
+            <p className="text-sm text-on-primary-container mt-1 max-w-2xl">
               Grace Seeds School Official Electronic Signature Management. Document signing requires dual authorization via 6-digit email verification codes.
             </p>
           </div>
@@ -317,10 +317,10 @@ export const MyDigitalSignatureView: React.FC = () => {
       {/* Vault Status Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Verification Status */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Email Authentication
               </span>
               {emailVerified ? (
@@ -333,21 +333,21 @@ export const MyDigitalSignatureView: React.FC = () => {
                 </span>
               )}
             </div>
-            <div className="text-sm font-semibold text-slate-800 flex items-center gap-2 mt-2">
+            <div className="text-sm font-semibold text-on-surface flex items-center gap-2 mt-2">
               <Mail className="w-4 h-4 text-slate-400" />
               {registeredEmail || 'No email registered'}
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 mt-4">
+          <p className="text-[11px] text-on-surface-variant mt-4">
             Signing authorization codes will be sent to this email address.
           </p>
         </div>
 
         {/* Vault Configuration Status */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Signature Vault Status
               </span>
               {isConfigured ? (
@@ -355,16 +355,16 @@ export const MyDigitalSignatureView: React.FC = () => {
                   <Lock className="w-3 h-3" /> Active &amp; Secured
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant">
                   Unconfigured
                 </span>
               )}
             </div>
-            <div className="text-lg font-bold text-slate-900 mt-2">
+            <div className="text-lg font-bold text-on-surface mt-2">
               {isConfigured ? 'Ready for Electronic Signing' : 'Action Required'}
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 mt-4">
+          <p className="text-[11px] text-on-surface-variant mt-4">
             {isConfigured
               ? `Profile Version ${currentProfile?.version || 1} · Configured on ${currentProfile?.consentGivenAt ? new Date(currentProfile.consentGivenAt).toLocaleDateString() : 'N/A'}`
               : 'Create or upload your signature below to enable document signing.'}
@@ -390,14 +390,14 @@ export const MyDigitalSignatureView: React.FC = () => {
 
       {/* Active Signature Display (If Configured) */}
       {isConfigured && currentProfile && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <FileSignature className="w-5 h-5 text-blue-700" />
+              <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
+                <FileSignature className="w-5 h-5 text-primary" />
                 Current Active Signature
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 Type: <span className="font-semibold">{currentProfile.signatureType}</span> · Version: <span className="font-semibold">{currentProfile.version}</span>
               </p>
             </div>
@@ -412,15 +412,15 @@ export const MyDigitalSignatureView: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center max-w-md mx-auto">
-            <div className="bg-white rounded-lg p-4 border border-dashed border-slate-300 shadow-inner w-full flex items-center justify-center min-h-[120px]">
+          <div className="bg-surface border border-outline-variant/30 rounded-xl p-6 flex flex-col items-center justify-center max-w-md mx-auto">
+            <div className="bg-surface-container-lowest rounded-lg p-4 border border-dashed border-outline-variant/30 shadow-inner w-full flex items-center justify-center min-h-[120px]">
               <img
                 src={currentProfile.signatureData}
                 alt="Active Signature"
                 className="max-h-24 max-w-full object-contain filter drop-shadow-sm"
               />
             </div>
-            <div className="w-full mt-3 pt-2 border-t border-slate-200 text-center text-xs text-slate-500">
+            <div className="w-full mt-3 pt-2 border-t border-outline-variant/30 text-center text-xs text-on-surface-variant">
               Grace Seeds School Official Electronic Signature Stamp
             </div>
           </div>
@@ -428,27 +428,27 @@ export const MyDigitalSignatureView: React.FC = () => {
       )}
 
       {/* Signature Creator Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <PenTool className="w-5 h-5 text-blue-700" />
+            <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
+              <PenTool className="w-5 h-5 text-primary" />
               {isConfigured ? 'Replace or Update Digital Signature' : 'Configure Your Digital Signature'}
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-on-surface-variant mt-1">
               Choose your preferred method to create your signature: draw on screen, type in script style, or upload an image.
             </p>
           </div>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-slate-200">
+        <div className="flex flex-wrap border-b border-outline-variant/30">
           <button
             onClick={() => setActiveTab('DRAW')}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'DRAW'
-                ? 'border-blue-700 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
             <PenTool className="w-4 h-4" />
@@ -458,8 +458,8 @@ export const MyDigitalSignatureView: React.FC = () => {
             onClick={() => setActiveTab('TYPE')}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'TYPE'
-                ? 'border-blue-700 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
             <Type className="w-4 h-4" />
@@ -469,8 +469,8 @@ export const MyDigitalSignatureView: React.FC = () => {
             onClick={() => setActiveTab('UPLOAD')}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${
               activeTab === 'UPLOAD'
-                ? 'border-blue-700 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
             <Upload className="w-4 h-4" />
@@ -481,14 +481,14 @@ export const MyDigitalSignatureView: React.FC = () => {
         {/* TAB 1: DRAW SIGNATURE */}
         {activeTab === 'DRAW' && (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-on-surface-variant bg-surface p-3 rounded-xl border border-outline-variant/30">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-slate-700">Ink Color:</span>
+                <span className="font-semibold text-on-surface-variant">Ink Color:</span>
                 <button
                   type="button"
                   onClick={() => setPenColor('#1e3a8a')}
                   className={`w-6 h-6 rounded-full bg-blue-900 border-2 transition-transform ${
-                    penColor === '#1e3a8a' ? 'scale-110 border-blue-500 shadow-sm' : 'border-transparent'
+                    penColor === '#1e3a8a' ? 'scale-110 border-primary shadow-sm' : 'border-transparent'
                   }`}
                   title="Institutional Navy"
                 />
@@ -496,7 +496,7 @@ export const MyDigitalSignatureView: React.FC = () => {
                   type="button"
                   onClick={() => setPenColor('#0f172a')}
                   className={`w-6 h-6 rounded-full bg-slate-900 border-2 transition-transform ${
-                    penColor === '#0f172a' ? 'scale-110 border-blue-500 shadow-sm' : 'border-transparent'
+                    penColor === '#0f172a' ? 'scale-110 border-primary shadow-sm' : 'border-transparent'
                   }`}
                   title="Deep Slate"
                 />
@@ -504,14 +504,14 @@ export const MyDigitalSignatureView: React.FC = () => {
                   type="button"
                   onClick={() => setPenColor('#1d4ed8')}
                   className={`w-6 h-6 rounded-full bg-blue-700 border-2 transition-transform ${
-                    penColor === '#1d4ed8' ? 'scale-110 border-blue-500 shadow-sm' : 'border-transparent'
+                    penColor === '#1d4ed8' ? 'scale-110 border-primary shadow-sm' : 'border-transparent'
                   }`}
                   title="Royal Blue"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-700">Stroke Width:</span>
+                <span className="font-semibold text-on-surface-variant">Stroke Width:</span>
                 <input
                   type="range"
                   min="1.5"
@@ -526,13 +526,13 @@ export const MyDigitalSignatureView: React.FC = () => {
               <button
                 type="button"
                 onClick={clearCanvas}
-                className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition-colors"
+                className="px-3 py-1 rounded-lg bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-low font-semibold transition-colors"
               >
                 Clear Canvas
               </button>
             </div>
 
-            <div className="relative border-2 border-dashed border-slate-300 rounded-xl overflow-hidden bg-white shadow-inner">
+            <div className="relative border-2 border-dashed border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest shadow-inner">
               <canvas
                 ref={canvasRef}
                 width={700}
@@ -559,7 +559,7 @@ export const MyDigitalSignatureView: React.FC = () => {
         {activeTab === 'TYPE' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                 Full Name / Signer Name:
               </label>
               <input
@@ -567,12 +567,12 @@ export const MyDigitalSignatureView: React.FC = () => {
                 value={typedName}
                 onChange={(e) => setTypedName(e.target.value)}
                 placeholder="e.g. Sister Grace Ochieng"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-700 text-slate-900 font-medium"
+                className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
                 Select Signature Script Style:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -588,11 +588,11 @@ export const MyDigitalSignatureView: React.FC = () => {
                     onClick={() => setSelectedFont(font.name)}
                     className={`p-4 rounded-xl border-2 text-left transition-all ${
                       selectedFont === font.name
-                        ? 'border-blue-700 bg-blue-50/50 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-primary bg-primary-fixed/50 shadow-sm'
+                        : 'border-outline-variant/30 hover:border-outline-variant/30 bg-white'
                     }`}
                   >
-                    <div className="text-xs font-semibold text-slate-500 mb-1">{font.name}</div>
+                    <div className="text-xs font-semibold text-on-surface-variant mb-1">{font.name}</div>
                     <div
                       style={{ fontFamily: font.style, color: penColor }}
                       className="text-2xl truncate"
@@ -609,7 +609,7 @@ export const MyDigitalSignatureView: React.FC = () => {
         {/* TAB 3: UPLOAD IMAGE */}
         {activeTab === 'UPLOAD' && (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-slate-300 hover:border-blue-600 rounded-xl p-8 text-center bg-slate-50 hover:bg-blue-50/20 transition-all cursor-pointer relative">
+            <div className="border-2 border-dashed border-outline-variant/30 hover:border-blue-600 rounded-xl p-8 text-center bg-surface hover:bg-blue-50/20 transition-all cursor-pointer relative">
               <input
                 type="file"
                 accept="image/png, image/jpeg, image/webp, image/svg+xml"
@@ -617,20 +617,20 @@ export const MyDigitalSignatureView: React.FC = () => {
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
               <Upload className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-              <div className="text-sm font-bold text-slate-800">
+              <div className="text-sm font-bold text-on-surface">
                 Click or drag &amp; drop your signature image
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-on-surface-variant mt-1">
                 Accepted: PNG, JPEG, WebP, SVG (Max 2MB). A transparent PNG is strongly recommended.
               </p>
             </div>
 
             {uploadedDataUrl && (
-              <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              <div className="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm">
+                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
                   Uploaded Preview:
                 </span>
-                <div className="flex items-center justify-center p-4 bg-slate-50 rounded-lg">
+                <div className="flex items-center justify-center p-4 bg-surface rounded-lg">
                   <img
                     src={uploadedDataUrl}
                     alt="Uploaded preview"
@@ -643,16 +643,16 @@ export const MyDigitalSignatureView: React.FC = () => {
         )}
 
         {/* Mandatory Legal & Security Electronic Consent */}
-        <div className="pt-4 border-t border-slate-100">
-          <label className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer transition-colors">
+        <div className="pt-4 border-t border-outline-variant/30">
+          <label className="flex items-start gap-3 p-4 rounded-xl bg-surface hover:bg-surface-container-low border border-outline-variant/30 cursor-pointer transition-colors">
             <input
               type="checkbox"
               checked={consentConfirmed}
               onChange={(e) => setConsentConfirmed(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded text-blue-700 focus:ring-blue-600 border-slate-300 cursor-pointer"
+              className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/30 cursor-pointer"
             />
-            <div className="text-xs text-slate-700 leading-relaxed select-none">
-              <strong className="text-slate-900 block font-bold mb-0.5">
+            <div className="text-xs text-on-surface-variant leading-relaxed select-none">
+              <strong className="text-on-surface block font-bold mb-0.5">
                 Explicit Electronic Signature Consent &amp; Authorization
               </strong>
               I explicitly authorize Grace Seeds School to securely store this digital signature in my SmartShule profile. I understand that creating or updating this signature does not automatically sign any document, and that placing this signature on any official school document will strictly require a single-use 6-digit email authorization challenge verified through my registered account email.
@@ -668,8 +668,8 @@ export const MyDigitalSignatureView: React.FC = () => {
             disabled={saving || !consentConfirmed}
             className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all ${
               saving || !consentConfirmed
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                : 'bg-blue-700 hover:bg-blue-800 text-white shadow-blue-700/20 active:scale-95'
+                ? 'bg-surface-container text-slate-400 cursor-not-allowed shadow-none'
+                : 'bg-primary hover:bg-primary-container text-white shadow-primary/20 active:scale-95'
             }`}
           >
             {saving ? (

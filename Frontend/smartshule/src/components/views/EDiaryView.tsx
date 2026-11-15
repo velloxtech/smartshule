@@ -338,13 +338,13 @@ export const EDiaryView: React.FC = () => {
           {isGuardian && (
             <>
               {linkedStudents.length > 0 && (
-                <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/30 px-2.5 py-1.5 rounded-xl shadow-2xs">
+                <div className="flex flex-wrap items-center min-w-0 max-w-full gap-2 bg-surface-container-lowest border border-outline-variant/30 px-2.5 py-1.5 rounded-xl shadow-2xs">
                   <span className="material-symbols-outlined text-[18px] text-primary">family_restroom</span>
                   <span className="text-xs font-bold text-on-surface-variant">Child:</span>
                   <select
                     value={selectedStudentId}
                     onChange={(e) => handleChildChange(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-primary focus:outline-hidden cursor-pointer"
+                    className="min-w-0 max-w-full bg-transparent text-xs font-bold text-primary focus:outline-hidden cursor-pointer"
                   >
                     <option value="">All Children (Combined Feed)</option>
                     {linkedStudents.map((st) => (

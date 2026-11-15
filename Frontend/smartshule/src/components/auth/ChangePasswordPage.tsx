@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { apiService } from '../../services/api';
-import { User } from '../../types';
+import { AuthUser } from '../../types';
 
 interface ChangePasswordPageProps {
-  user: User;
+  user: AuthUser;
   onSuccess: () => void;
   onLogout: () => void;
   onOpenLegalModal?: (tab: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;

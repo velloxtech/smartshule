@@ -130,7 +130,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
         if (query.academicYearId) list = list.filter(s => s.academicYearId === query.academicYearId);
         if (query.studentId) list = list.filter(s => s.studentId === query.studentId);
         if (query.learningAreaId) list = list.filter(s => s.learningAreaId === query.learningAreaId);
-        return Promise.resolve(list);
+        return Promise.resolve(list.map(row => SummativeAssessment.create(row, row.id)));
       }),
       saveSummative: jest.fn().mockImplementation((assessment: any) => {
         const json = typeof assessment.toJSON === 'function' ? assessment.toJSON() : assessment;
@@ -171,6 +171,8 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
     );
   });
 
+  // Deliberately mismapped historical subjects are imported by an administrator;
+  // teacher authorization is tested separately with valid school/grade assignments.
   const uploadEightSubjects = async () => {
     // 8 distinct subjects with marks
     const eightSubjects = [
@@ -194,7 +196,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
         rows: [
           { admissionNumber: '1001', score: sub.score, performanceLevel: sub.level }
         ]
-      }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+      }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
     }
   };
 
@@ -250,7 +252,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
       learningAreaId: 'uuid-art-005',
       maxScore: 100,
       rows: [{ admissionNumber: '1001', score: 85, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS }]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     await cbcUseCases.commitMarksUpload({
       academicYearId: 'year-2026',
@@ -259,7 +261,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
       learningAreaId: 'uuid-fre-006',
       maxScore: 100,
       rows: [{ admissionNumber: '1001', score: 80, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS }]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     expect(savedSummatives.length).toBe(10);
 
@@ -289,7 +291,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
         { admissionNumber: '1001', score: 95, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS },
         { admissionNumber: '1002', score: 70, performanceLevel: PerformanceLevel.MEETING_EXPECTATIONS }
       ]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     await cbcUseCases.commitMarksUpload({
       academicYearId: 'year-2026',
@@ -301,7 +303,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
         { admissionNumber: '1001', score: 88, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS },
         { admissionNumber: '1002', score: 62, performanceLevel: PerformanceLevel.APPROACHING_EXPECTATIONS }
       ]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     const broadsheet = await broadsheetUseCases.getStreamBroadsheet({
       classId: 'class-g1',
@@ -333,7 +335,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
         rows: [
           { admissionNumber: '1001', score: 105 } // Invalid score > 100
         ]
-      }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any)
+      }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any)
     ).rejects.toThrow(ValidationError);
 
     // No corrupted records saved
@@ -349,7 +351,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
       rows: [
         { admissionNumber: '1001', score: 95 }
       ]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     expect(retryRes.recordedCount).toBe(1);
     expect(savedSummatives.length).toBe(1);
@@ -364,7 +366,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
       learningAreaId: 'la-mat',
       maxScore: 100,
       rows: [{ admissionNumber: '1001', score: 85 }]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     expect(savedSummatives.length).toBe(1);
 
@@ -376,7 +378,7 @@ describe('Critical Bug Fix: All Uploaded Examination Subjects Display (Tests A-H
       learningAreaId: 'la-mat',
       maxScore: 100,
       rows: [{ admissionNumber: '1001', score: 92 }]
-    }, { userId: 'u-tch-1', role: 'TEACHER', schoolId: 'school-001' } as any);
+    }, { userId: 'u-tch-1', role: 'ADMIN', schoolId: 'school-001' } as any);
 
     expect(secondUpload.updatedCount).toBe(1);
     expect(savedSummatives.length).toBe(1); // Zero duplicates created

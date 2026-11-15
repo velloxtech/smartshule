@@ -12,6 +12,8 @@ export interface RecordOfWorkReflection {
 }
 
 export interface RecordOfWorkProps {
+  planningLink?: { lessonPlanId:string; schemeId:string; schemeEntryId:string; slotId:string };
+
   schoolId?: string;
   teacherId: string;
   teacherName?: string;
@@ -76,6 +78,7 @@ export class RecordOfWork extends Entity<RecordOfWorkProps> {
   ) {
     super(
       {
+        planningLink: extraProps?.planningLink,
         schoolId: extraProps?.schoolId || 'school-001',
         teacherId,
         teacherName: extraProps?.teacherName,
@@ -330,6 +333,7 @@ export class RecordOfWork extends Entity<RecordOfWorkProps> {
   public toJSON() {
     return {
       id: this.id,
+      planningLink: this._props.planningLink,
       schoolId: this.schoolId,
       teacherId: this.teacherId,
       teacherName: this.teacherName,

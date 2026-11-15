@@ -192,6 +192,7 @@ describe('Teacher Roll Call / Attendance Marking Integration with Admin Dashboar
           classRoomId: grade4Class.id,
           streamId: grade4StreamEast.id,
           academicYearId,
+          effectiveFrom: '2026-01-05',
           isActive: true
         },
         'cta-g4-east'
@@ -280,10 +281,10 @@ describe('Teacher Roll Call / Attendance Marking Integration with Admin Dashboar
       expect(attSummary).toBeDefined();
       expect(attSummary.hasData).toBe(true);
       expect(attSummary.totalMarked).toBe(4);
-      expect(attSummary.present).toBe(3); // 2 Present + 1 Late
+      expect(attSummary.present).toBe(2); // PRESENT and LATE are separate dashboard counters
       expect(attSummary.late).toBe(1);
       expect(attSummary.absent).toBe(1);
-      expect(attSummary.presentPercentage).toBe(75);
+      expect(attSummary.presentPercentage).toBe(50);
       expect(attSummary.completedRegisters).toBe(1);
 
       // Absent learners list must include Mercy Nyambura
@@ -351,7 +352,7 @@ describe('Teacher Roll Call / Attendance Marking Integration with Admin Dashboar
 
       // Step C: Teacher loads daily register for Grade 4 East and sees EXCUSED status
       const teacherGetRes = await request(app)
-        .get(`/api/v1/attendance/daily?streamId=${grade4StreamEast.id}&date=${testDate}&classRoomId=${grade4Class.id}`)
+        .get(`/api/v1/attendance/daily?streamId=${grade4StreamEast.id}&date=${testDate}&classRoomId=${grade4Class.id}&academicYearId=${academicYearId}&termId=${termId}`)
         .set('Authorization', `Bearer ${teacherToken}`);
 
       expect(teacherGetRes.status).toBe(200);
@@ -498,7 +499,7 @@ describe('Teacher Roll Call / Attendance Marking Integration with Admin Dashboar
         });
 
       expect(res.status).toBe(403);
-      expect(res.body.message).toContain('Access denied');
+      expect(res.body.message).toMatch(/access denied|no active assignment/i);
     });
   });
 });

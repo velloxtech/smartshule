@@ -2,7 +2,7 @@ import request from 'supertest';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
-import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
+import { setupTestFixtures, setupTestRoleAccounts, fixtureLessonPlanPayload, fixtureRecordPayload } from '../helpers/testFixtures';
 
 describe('SmartShule Security Hardening & Vulnerability Remediation Integration Tests', () => {
   let app: any;
@@ -359,7 +359,8 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
         .send({
           subjectAndGrade: 'Science Grade 7 East',
           strandAndWorkCovered: 'Living Things & Cell Structure microscopy lab',
-          date: '2026-09-25'
+          date: '2026-09-25',
+          ...await fixtureRecordPayload(container)
         });
 
       expect(res.status).toBe(201);
@@ -379,7 +380,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/You can only update your own records of work/i);
+      expect(res.body.message).toMatch(/private work|access denied|own records/i);
     });
 
     it('denies Teacher 2 from deleting Teacher 1’s record of work (403 Forbidden)', async () => {
@@ -389,7 +390,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/You can only delete your own records of work/i);
+      expect(res.body.message).toMatch(/private work|access denied|own records/i);
     });
 
     it('allows Teacher 1 to update their own record of work (200 OK)', async () => {
@@ -433,7 +434,8 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
           learningAreaId: 'la-science-7',
           classRoomId: 'class-grade-7',
           academicYearId: 'year-2026',
-          termId: 'term-2026-1',
+          termId: 'term-2026-3',
+          streamId: 'stream-g7-east',
           title: 'Teacher 1 Botany Scheme'
         });
 
@@ -446,7 +448,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
         .set('Authorization', `Bearer ${teacher2Token}`);
 
       expect(delRes.status).toBe(403);
-      expect(delRes.body.message).toMatch(/You can only delete your own schemes of work/i);
+      expect(delRes.body.message).toMatch(/private work|access denied|own schemes/i);
 
       // Teacher 1 successfully deletes own scheme
       const t1DelRes = await request(app)
@@ -461,29 +463,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
       const createRes = await request(app)
         .post('/api/v1/curriculum/lesson-plans')
         .set('Authorization', `Bearer ${teacher1Token}`)
-        .send({
-          teacherId: 'usr-teacher-01',
-          learningAreaId: 'la-science-7',
-          classRoomId: 'class-grade-7',
-          lessonDate: '2026-09-26',
-          durationMinutes: 40,
-          strand: 'Living Things',
-          subStrand: 'Plant Cells',
-          specificLearningOutcomes: ['Identify plant organelles'],
-          keyInquiryQuestions: ['What differentiates plant cells?'],
-          coreCompetenciesAddressed: ['CRITICAL_THINKING_AND_PROBLEM_SOLVING'],
-          valuesAddressed: ['INTEGRITY'],
-          learningResources: ['Wall chart'],
-          steps: [
-            {
-              stepNumber: 1,
-              stepTitle: 'Introduction',
-              durationMinutes: 10,
-              teacherActivities: 'Display diagrams',
-              learnerActivities: 'Name organelles'
-            }
-          ]
-        });
+        .send(await fixtureLessonPlanPayload(container));
 
       expect(createRes.status).toBe(201);
       lessonPlanId = createRes.body.data.id;
@@ -494,7 +474,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
         .set('Authorization', `Bearer ${teacher2Token}`);
 
       expect(delRes.status).toBe(403);
-      expect(delRes.body.message).toMatch(/You can only delete your own lesson plans/i);
+      expect(delRes.body.message).toMatch(/private work|access denied|own lesson/i);
 
       // Teacher 1 successfully deletes own lesson plan
       const t1DelRes = await request(app)
@@ -538,7 +518,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
         .set('Authorization', `Bearer ${teacher2Token}`);
 
       expect(delRes.status).toBe(403);
-      expect(delRes.body.message).toMatch(/You can only delete your own formative assessments/i);
+      expect(delRes.body.message).toMatch(/own formative assessments|no active assignment/i);
 
       // Teacher 1 can delete it
       const t1DelRes = await request(app)

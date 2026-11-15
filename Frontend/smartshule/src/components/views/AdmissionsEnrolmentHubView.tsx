@@ -153,11 +153,12 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
   const handleRecordDecision = () => {
     if (!decisionApp) return;
     try {
-      onboardingService.updateStatus(decisionApp.id, decisionAction, {
-        reviewerName: user?.fullName || 'Admissions Director',
-        reviewerRole: user?.role ? String(user.role).replace(/_/g, ' ') : 'Admissions Officer',
-        notes: decisionNotes || (decisionAction === 'APPROVED' ? 'Application officially accepted.' : 'Application declined.'),
-      });
+      const reviewerName = user?.fullName || 'Admissions Director';
+      const reviewerRole = user?.role ? String(user.role).replace(/_/g, ' ') : 'Admissions Officer';
+      const result = decisionAction === 'APPROVED'
+        ? onboardingService.approveOnboarding(decisionApp.id, reviewerName, reviewerRole, undefined, undefined, decisionNotes)
+        : onboardingService.rejectOnboarding(decisionApp.id, reviewerName, reviewerRole, decisionNotes || 'Application declined.');
+      if (!result) throw new Error('Application could not be found. Reload and try again.');
 
       setFeedback({
         type: 'success',
@@ -335,7 +336,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
   return (
     <div className="space-y-6 pb-12">
       {/* Admissions Module Banner & Interactive Workflow Stepper */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#7a1228] via-[#800000] to-[#550000] p-6 text-white shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-r from-primary via-primary to-[#550000] p-6 text-white shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
@@ -361,7 +362,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigateTab('new-applications')}
-              className="px-3.5 py-2 rounded-xl bg-white text-[#7a1228] font-bold text-xs shadow-md hover:bg-rose-50 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-rose-50 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
               <span>New Intake Form</span>
@@ -387,7 +388,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   onClick={() => onNavigateTab(step.id as TabType)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-white text-[#7a1228] font-bold shadow-sm'
+                      ? 'bg-white text-primary font-bold shadow-sm'
                       : 'bg-white/10 hover:bg-white/20 text-white'
                   }`}
                 >
@@ -395,7 +396,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   <span>{step.label}</span>
                   {typeof step.count === 'number' && step.count > 0 && (
                     <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-[#7a1228] text-white' : 'bg-emerald-400 text-emerald-950'
+                      isActive ? 'bg-primary text-white' : 'bg-emerald-400 text-emerald-950'
                     }`}>
                       {step.count}
                     </span>
@@ -424,7 +425,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           </div>
           <button
             onClick={() => setFeedback(null)}
-            className="text-slate-500 hover:text-slate-800 cursor-pointer"
+            className="text-on-surface-variant hover:text-on-surface cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">close</span>
           </button>
@@ -456,11 +457,11 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 2. Sub-Tab: New Applications */}
       {currentSubTab === 'new-applications' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-4xl mx-auto space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 01</span>
-            <h2 className="text-xl font-bold text-slate-900">Direct Learner Application Entry</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs max-w-4xl mx-auto space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 01</span>
+            <h2 className="text-xl font-bold text-on-surface">Direct Learner Application Entry</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Record walk-in, phone, or direct prospective student admission applications for Grace Seeds School.
             </p>
           </div>
@@ -468,35 +469,35 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           <form onSubmit={handleCreateNewApplication} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Learner First Name *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Learner First Name *</label>
                 <input
                   type="text"
                   required
                   value={newAppFirstName}
                   onChange={(e) => setNewAppFirstName(e.target.value)}
                   placeholder="e.g. Liam"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Learner Last Name *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Learner Last Name *</label>
                 <input
                   type="text"
                   required
                   value={newAppLastName}
                   onChange={(e) => setNewAppLastName(e.target.value)}
                   placeholder="e.g. Otieno"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Gender *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Gender *</label>
                 <select
                   value={newAppGender}
                   onChange={(e) => setNewAppGender(e.target.value as 'Boy' | 'Girl')}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
                   <option value="Boy">Boy</option>
                   <option value="Girl">Girl</option>
@@ -504,22 +505,22 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Date of Birth *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Date of Birth *</label>
                 <input
                   type="date"
                   required
                   value={newAppDob}
                   onChange={(e) => setNewAppDob(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Target CBC Grade *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Target CBC Grade *</label>
                 <select
                   value={newAppGrade}
                   onChange={(e) => setNewAppGrade(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 >
                   <option value="PLAYGROUP">Playgroup (Age 2-3)</option>
                   <option value="PP1">Pre-Primary 1 (PP1 - Age 4)</option>
@@ -537,70 +538,70 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Entry Term *</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Entry Term *</label>
                 <input
                   type="text"
                   value={newAppTerm}
                   onChange={(e) => setNewAppTerm(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Birth Certificate No.</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Birth Certificate No.</label>
                 <input
                   type="text"
                   value={newAppBirthCert}
                   onChange={(e) => setNewAppBirthCert(e.target.value)}
                   placeholder="e.g. BC-2021-9988"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">NEMIS / UPI (If transferring)</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">NEMIS / UPI (If transferring)</label>
                 <input
                   type="text"
                   value={newAppNemis}
                   onChange={(e) => setNewAppNemis(e.target.value)}
                   placeholder="e.g. ABC1234XYZ"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Previous School (Optional)</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Previous School (Optional)</label>
                 <input
                   type="text"
                   value={newAppPrevSchool}
                   onChange={(e) => setNewAppPrevSchool(e.target.value)}
                   placeholder="e.g. Sunrise Academy"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Parent / Guardian Information</h3>
+            <div className="pt-4 border-t border-outline-variant/30">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface mb-3">Parent / Guardian Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Parent Full Name *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Parent Full Name *</label>
                   <input
                     type="text"
                     required
                     value={newAppParentName}
                     onChange={(e) => setNewAppParentName(e.target.value)}
                     placeholder="e.g. Grace Aluoch"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Relationship *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Relationship *</label>
                   <select
                     value={newAppParentRelationship}
                     onChange={(e) => setNewAppParentRelationship(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   >
                     <option value="MOTHER">Mother</option>
                     <option value="FATHER">Father</option>
@@ -611,63 +612,63 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (Kenyan) *</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Phone Number (Kenyan) *</label>
                   <input
                     type="tel"
                     required
                     value={newAppParentPhone}
                     onChange={(e) => setNewAppParentPhone(e.target.value)}
                     placeholder="e.g. 07XXXXXXXX"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Parent Email</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Parent Email</label>
                   <input
                     type="email"
                     value={newAppParentEmail}
                     onChange={(e) => setNewAppParentEmail(e.target.value)}
                     placeholder="e.g. parent@example.com"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">National ID No.</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">National ID No.</label>
                   <input
                     type="text"
                     value={newAppParentId}
                     onChange={(e) => setNewAppParentId(e.target.value)}
                     placeholder="e.g. 12345678"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Residential Address</label>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Residential Address</label>
                   <input
                     type="text"
                     value={newAppAddress}
                     onChange={(e) => setNewAppAddress(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#7a1228] focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/30">
               <button
                 type="button"
                 onClick={() => onNavigateTab('admissions-dashboard')}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-on-surface-variant hover:text-on-surface cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmittingNewApp}
-                className="px-6 py-2.5 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                className="px-6 py-2.5 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">save</span>
                 <span>{isSubmittingNewApp ? 'Submitting...' : 'Register Applicant Dossier'}</span>
@@ -697,12 +698,12 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 5. Sub-Tab: Application Review */}
       {currentSubTab === 'application-review' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-outline-variant/30 pb-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 02</span>
-              <h2 className="text-xl font-bold text-slate-900">Application Review Workbench</h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 02</span>
+              <h2 className="text-xl font-bold text-on-surface">Application Review Workbench</h2>
+              <p className="text-xs text-on-surface-variant mt-1">
                 Verify birth certificates, guardian identity, previous academic clearance, and developmental notes before scheduling assessments.
               </p>
             </div>
@@ -712,16 +713,16 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           </div>
 
           {pendingApplications.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-on-surface-variant">
               <span className="material-symbols-outlined text-[48px] text-slate-300">task_alt</span>
-              <p className="text-sm font-bold text-slate-700 mt-2">All Applications Reviewed</p>
+              <p className="text-sm font-bold text-on-surface-variant mt-2">All Applications Reviewed</p>
               <p className="text-xs text-slate-400 mt-1">There are no pending applications in the review queue.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                  <tr className="border-b border-outline-variant/30 bg-surface text-on-surface-variant font-bold">
                     <th className="py-3 px-3">Tracking Code</th>
                     <th className="py-3 px-3">Applicant Name</th>
                     <th className="py-3 px-3">Grade Applied</th>
@@ -733,20 +734,20 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {pendingApplications.map((app) => (
-                    <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-slate-900">{app.trackingCode}</td>
-                      <td className="py-3 px-3 font-bold text-slate-900">
+                    <tr key={app.id} className="hover:bg-surface/80 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-on-surface">{app.trackingCode}</td>
+                      <td className="py-3 px-3 font-bold text-on-surface">
                         {app.firstName} {app.lastName}
-                        <span className="block text-[10px] text-slate-500 font-normal">{app.gender} · DOB: {app.dob}</span>
+                        <span className="block text-[10px] text-on-surface-variant font-normal">{app.gender} · DOB: {app.dob}</span>
                       </td>
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7a1228]/10 text-[#7a1228]">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
                           {app.targetGrade}
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <span className="font-semibold text-slate-800">{app.parentName}</span>
-                        <span className="block text-[10px] text-slate-500">{app.parentPhone}</span>
+                        <span className="font-semibold text-on-surface">{app.parentName}</span>
+                        <span className="block text-[10px] text-on-surface-variant">{app.parentPhone}</span>
                       </td>
                       <td className="py-3 px-3">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
@@ -754,14 +755,14 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                           {app.birthCertNo ? 'Verified' : 'Pending Upload'}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-slate-500">{new Date(app.submittedAt).toLocaleDateString()}</td>
+                      <td className="py-3 px-3 text-on-surface-variant">{new Date(app.submittedAt).toLocaleDateString()}</td>
                       <td className="py-3 px-3 text-right space-x-2">
                         <button
                           onClick={() => {
                             setAssessingApp(app);
                             onNavigateTab('admission-assessments');
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-[11px] cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-primary font-bold text-[11px] cursor-pointer"
                         >
                           Schedule Assessment
                         </button>
@@ -786,11 +787,11 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 6. Sub-Tab: Applicant Interviews / Assessments */}
       {currentSubTab === 'admission-assessments' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 03</span>
-            <h2 className="text-xl font-bold text-slate-900">Applicant Interviews & Learner Readiness Assessments</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 03</span>
+            <h2 className="text-xl font-bold text-on-surface">Applicant Interviews & Learner Readiness Assessments</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Conduct age-appropriate readiness interactions, evaluate developmental milestones, and record interviewer ratings.
             </p>
           </div>
@@ -804,7 +805,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   </h3>
                   <p className="text-xs text-indigo-800">Tracking Code: {assessingApp.trackingCode}</p>
                 </div>
-                <button onClick={() => setAssessingApp(null)} className="text-xs font-bold text-indigo-700 hover:underline">
+                <button onClick={() => setAssessingApp(null)} className="text-xs font-bold text-primary hover:underline">
                   Close Form
                 </button>
               </div>
@@ -815,7 +816,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   <select
                     value={assessmentScore}
                     onChange={(e) => setAssessmentScore(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs bg-white border border-indigo-300 rounded-xl outline-none"
+                    className="w-full px-3 py-2 text-xs bg-white border border-primary rounded-xl outline-none"
                   >
                     <option value="EXCEEDS">Exceeding Expectations (EE) - Highly Prepared</option>
                     <option value="MEETS">Meeting Expectations (ME) - Ready for Cohort</option>
@@ -830,7 +831,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                     type="text"
                     value={assessmentComments}
                     onChange={(e) => setAssessmentComments(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-white border border-indigo-300 rounded-xl outline-none"
+                    className="w-full px-3 py-2 text-xs bg-white border border-primary rounded-xl outline-none"
                   />
                 </div>
               </div>
@@ -838,7 +839,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               <div className="flex justify-end gap-2">
                 <button
                   onClick={handleRecordAssessment}
-                  className="px-4 py-2 bg-indigo-800 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-indigo-900 cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-xs hover:bg-primary-container cursor-pointer"
                 >
                   Save Assessment & Advance to Decisions
                 </button>
@@ -849,7 +850,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                <tr className="border-b border-outline-variant/30 bg-surface text-on-surface-variant font-bold">
                   <th className="py-3 px-3">Applicant</th>
                   <th className="py-3 px-3">Grade Applied</th>
                   <th className="py-3 px-3">Interview / Tour Step</th>
@@ -860,16 +861,16 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {allApplications.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 font-bold text-slate-900">
+                  <tr key={app.id} className="hover:bg-surface/80 transition-colors">
+                    <td className="py-3 px-3 font-bold text-on-surface">
                       {app.firstName} {app.lastName}
-                      <span className="block text-[10px] text-slate-500 font-mono">{app.trackingCode}</span>
+                      <span className="block text-[10px] text-on-surface-variant font-mono">{app.trackingCode}</span>
                     </td>
                     <td className="py-3 px-3">{app.targetGrade}</td>
-                    <td className="py-3 px-3 font-medium text-slate-800">
+                    <td className="py-3 px-3 font-medium text-on-surface">
                       {app.scheduledStep?.stepTitle || 'Readiness Interaction'}
                     </td>
-                    <td className="py-3 px-3 text-slate-600">
+                    <td className="py-3 px-3 text-on-surface-variant">
                       {app.scheduledStep?.date || 'Scheduled on Intake Day'} · {app.scheduledStep?.time || '10:00 AM'}
                     </td>
                     <td className="py-3 px-3">
@@ -885,7 +886,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                           setAssessingApp(app);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-[11px] cursor-pointer"
                       >
                         Record Scores
                       </button>
@@ -900,28 +901,28 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 7. Sub-Tab: Admission Decisions */}
       {currentSubTab === 'admission-decisions' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 04</span>
-            <h2 className="text-xl font-bold text-slate-900">Admission Decisions Board</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 04</span>
+            <h2 className="text-xl font-bold text-on-surface">Admission Decisions Board</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Render official admission determinations: Acceptance, Waitlist, or Decline based on class capacity and assessment outcomes.
             </p>
           </div>
 
           {decisionApp && (
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4 max-w-lg mx-auto">
-              <h3 className="text-sm font-bold text-slate-900">
+            <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-4 max-w-lg mx-auto">
+              <h3 className="text-sm font-bold text-on-surface">
                 Record Decision for {decisionApp.firstName} {decisionApp.lastName}
               </h3>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Decision</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Decision</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setDecisionAction('APPROVED')}
                     className={`flex-1 py-2 text-xs font-bold rounded-xl border cursor-pointer ${
-                      decisionAction === 'APPROVED' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'
+                      decisionAction === 'APPROVED' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-on-surface-variant border-outline-variant/30'
                     }`}
                   >
                     Approve (Offer Admission)
@@ -930,7 +931,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                     type="button"
                     onClick={() => setDecisionAction('REJECTED')}
                     className={`flex-1 py-2 text-xs font-bold rounded-xl border cursor-pointer ${
-                      decisionAction === 'REJECTED' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-slate-700 border-slate-200'
+                      decisionAction === 'REJECTED' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-on-surface-variant border-outline-variant/30'
                     }`}
                   >
                     Decline / Waitlist
@@ -939,13 +940,13 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Official Notes / Remarks</label>
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">Official Notes / Remarks</label>
                 <input
                   type="text"
                   value={decisionNotes}
                   onChange={(e) => setDecisionNotes(e.target.value)}
                   placeholder="e.g. Assessment passed, space available in Stream East."
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl outline-none"
                 />
               </div>
 
@@ -953,14 +954,14 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 <button
                   type="button"
                   onClick={() => setDecisionApp(null)}
-                  className="px-3 py-1.5 text-xs text-slate-600 font-bold"
+                  className="px-3 py-1.5 text-xs text-on-surface-variant font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleRecordDecision}
-                  className="px-4 py-1.5 bg-[#800000] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#600000] cursor-pointer"
+                  className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#600000] cursor-pointer"
                 >
                   Confirm Decision
                 </button>
@@ -971,7 +972,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                <tr className="border-b border-outline-variant/30 bg-surface text-on-surface-variant font-bold">
                   <th className="py-3 px-3">Applicant</th>
                   <th className="py-3 px-3">Target Grade</th>
                   <th className="py-3 px-3">Status</th>
@@ -981,10 +982,10 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {allApplications.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 font-bold text-slate-900">
+                  <tr key={app.id} className="hover:bg-surface/80 transition-colors">
+                    <td className="py-3 px-3 font-bold text-on-surface">
                       {app.firstName} {app.lastName}
-                      <span className="block text-[10px] text-slate-500 font-mono">{app.trackingCode}</span>
+                      <span className="block text-[10px] text-on-surface-variant font-mono">{app.trackingCode}</span>
                     </td>
                     <td className="py-3 px-3">{app.targetGrade}</td>
                     <td className="py-3 px-3">
@@ -995,7 +996,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                         {app.status}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-600">
+                    <td className="py-3 px-3 text-on-surface-variant">
                       {app.reviewNotes || '--'}
                     </td>
                     <td className="py-3 px-3 text-right space-x-2">
@@ -1028,37 +1029,37 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 8. Sub-Tab: Offer Letters */}
       {currentSubTab === 'admission-offers' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 05</span>
-            <h2 className="text-xl font-bold text-slate-900">Official Admission Offer Letters</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 05</span>
+            <h2 className="text-xl font-bold text-on-surface">Official Admission Offer Letters</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Issue formal admission letters with attached fee schedules, reporting dates, uniform guidelines, and orientation notices.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {approvedApplications.map((app) => (
-              <div key={app.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between space-y-3">
+              <div key={app.id} className="p-4 rounded-xl border border-outline-variant/30 bg-surface flex flex-col justify-between space-y-3">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                       Offer Generated
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{app.trackingCode}</span>
+                    <span className="text-[10px] font-mono text-on-surface-variant">{app.trackingCode}</span>
                   </div>
-                  <h4 className="font-bold text-sm text-slate-900 mt-2">{app.firstName} {app.lastName}</h4>
-                  <p className="text-xs text-slate-600">Grade Placed: <strong>{app.targetGrade}</strong></p>
-                  <p className="text-xs text-slate-600">Parent: {app.parentName} ({app.parentPhone})</p>
+                  <h4 className="font-bold text-sm text-on-surface mt-2">{app.firstName} {app.lastName}</h4>
+                  <p className="text-xs text-on-surface-variant">Grade Placed: <strong>{app.targetGrade}</strong></p>
+                  <p className="text-xs text-on-surface-variant">Parent: {app.parentName} ({app.parentPhone})</p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500">
+                <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between">
+                  <span className="text-[10px] text-on-surface-variant">
                     {app.emailsSent?.length || 1} Email Notice Logged
                   </span>
                   <button
                     onClick={() => setPreviewOfferApp(app)}
-                    className="px-3 py-1 rounded-lg bg-[#800000] text-white text-xs font-bold hover:bg-[#600000] cursor-pointer flex items-center gap-1"
+                    className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold hover:bg-[#600000] cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[14px]">visibility</span>
                     <span>Preview Letter</span>
@@ -1072,11 +1073,11 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 9. Sub-Tab: Enrolment & Registration */}
       {currentSubTab === 'admission-enrolment' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Intake Stage 06</span>
-            <h2 className="text-xl font-bold text-slate-900">Enrolment & Student Matriculation Desk</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Intake Stage 06</span>
+            <h2 className="text-xl font-bold text-on-surface">Enrolment & Student Matriculation Desk</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Officially matriculate accepted applicants into active registered learners. Once enrolled, they appear in <strong>Academics & Learners</strong>.
             </p>
           </div>
@@ -1125,7 +1126,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 <button
                   type="button"
                   onClick={() => setEnrollingApp(null)}
-                  className="px-3 py-1.5 text-xs text-slate-600 font-bold cursor-pointer"
+                  className="px-3 py-1.5 text-xs text-on-surface-variant font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1145,7 +1146,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                <tr className="border-b border-outline-variant/30 bg-surface text-on-surface-variant font-bold">
                   <th className="py-3 px-3">Applicant Name</th>
                   <th className="py-3 px-3">Grade</th>
                   <th className="py-3 px-3">Parent Details</th>
@@ -1160,22 +1161,22 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                     s => s.admNo.trim() === (app.assignedAdmNo || '').trim() && (app.assignedAdmNo || '').trim().length > 0
                   );
                   return (
-                    <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3 font-bold text-slate-900">
+                    <tr key={app.id} className="hover:bg-surface/80 transition-colors">
+                      <td className="py-3 px-3 font-bold text-on-surface">
                         {app.firstName} {app.lastName}
-                        <span className="block text-[10px] text-slate-500 font-mono">{app.trackingCode}</span>
+                        <span className="block text-[10px] text-on-surface-variant font-mono">{app.trackingCode}</span>
                       </td>
                       <td className="py-3 px-3">{app.targetGrade}</td>
                       <td className="py-3 px-3">
                         <span className="font-semibold">{app.parentName}</span>
-                        <span className="block text-[10px] text-slate-500">{app.parentPhone}</span>
+                        <span className="block text-[10px] text-on-surface-variant">{app.parentPhone}</span>
                       </td>
                       <td className="py-3 px-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                           APPROVED
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-mono font-bold text-slate-800">
+                      <td className="py-3 px-3 font-mono font-bold text-on-surface">
                         {app.assignedAdmNo || 'Pending Assignment'}
                       </td>
                       <td className="py-3 px-3 text-right">
@@ -1205,20 +1206,20 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 10. Sub-Tab: Admission Reports */}
       {currentSubTab === 'admission-reports' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Admissions Analytics</span>
-            <h2 className="text-xl font-bold text-slate-900">Intake Reports & Enrolment Metrics</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Admissions Analytics</span>
+            <h2 className="text-xl font-bold text-on-surface">Intake Reports & Enrolment Metrics</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Conversion rates, classroom capacity utilization, and intake demographics across all entry streams.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-xs font-bold text-slate-500 uppercase">Total Applications</span>
-              <div className="text-2xl font-black text-slate-900 mt-1">{allApplications.length}</div>
-              <span className="text-[11px] text-slate-500">Slot & Dossier submissions</span>
+            <div className="p-4 rounded-xl bg-surface border border-outline-variant/30">
+              <span className="text-xs font-bold text-on-surface-variant uppercase">Total Applications</span>
+              <div className="text-2xl font-black text-on-surface mt-1">{allApplications.length}</div>
+              <span className="text-[11px] text-on-surface-variant">Slot & Dossier submissions</span>
             </div>
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
               <span className="text-xs font-bold text-amber-800 uppercase">Under Review</span>
@@ -1245,35 +1246,35 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
       {/* 11. Sub-Tab: Admissions Settings */}
       {currentSubTab === 'admission-settings' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">System Preferences</span>
-            <h2 className="text-xl font-bold text-slate-900">Admissions & Intake Settings</h2>
-            <p className="text-xs text-slate-500 mt-1">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-6">
+          <div className="border-b border-outline-variant/30 pb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">System Preferences</span>
+            <h2 className="text-xl font-bold text-on-surface">Admissions & Intake Settings</h2>
+            <p className="text-xs text-on-surface-variant mt-1">
               Configure class capacity caps, admissions office contacts, and requirement checklists.
             </p>
           </div>
 
           <div className="space-y-4 max-w-xl">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <h4 className="font-bold text-xs uppercase text-slate-800">Class Intake Capacity Policy</h4>
-              <p className="text-xs text-slate-600">
+            <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-3">
+              <h4 className="font-bold text-xs uppercase text-on-surface">Class Intake Capacity Policy</h4>
+              <p className="text-xs text-on-surface-variant">
                 Grace Seeds School caps classroom sizes at <strong>15–18 pupils</strong> for Playgroup through Grade 6 to preserve teacher-pupil intimacy and CBE competency assessment quality.
               </p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-xs font-semibold text-slate-700">Current Average Class Size: 14.2 Learners</span>
+                <span className="text-xs font-semibold text-on-surface-variant">Current Average Class Size: 14.2 Learners</span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <h4 className="font-bold text-xs uppercase text-slate-800">Stationery & Requirements List</h4>
-              <p className="text-xs text-slate-600">
+            <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-3">
+              <h4 className="font-bold text-xs uppercase text-on-surface">Stationery & Requirements List</h4>
+              <p className="text-xs text-on-surface-variant">
                 Manage the required documents, uniforms, stationery packages, and medical disclosures handed to parents upon acceptance.
               </p>
               <button
                 onClick={() => setIsStationeryModalOpen(true)}
-                className="px-4 py-2 bg-[#7a1228] text-white text-xs font-bold rounded-xl hover:bg-[#600000] cursor-pointer"
+                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-[#600000] cursor-pointer"
               >
                 View & Edit 2027 Requirements List
               </button>
@@ -1285,36 +1286,36 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
       {/* Offer Letter Preview Modal */}
       {previewOfferApp && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-2xl w-full p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between border-b pb-4">
               <div className="flex items-center gap-3">
                 <img src="/logo.png" alt="Logo" className="w-10 h-10 object-cover rounded-lg" onError={(e) => (e.target as any).style.display = 'none'} />
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">Grace Seeds School</h3>
-                  <p className="text-xs text-slate-500">Kisian, Kisumu · admissions@graceseeds.sc.ke</p>
+                  <h3 className="font-bold text-base text-on-surface">Grace Seeds School</h3>
+                  <p className="text-xs text-on-surface-variant">Kisian, Kisumu · admissions@graceseeds.sc.ke</p>
                 </div>
               </div>
-              <button onClick={() => setPreviewOfferApp(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button onClick={() => setPreviewOfferApp(null)} className="text-slate-400 hover:text-on-surface-variant cursor-pointer">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-slate-800 leading-relaxed font-serif">
-              <div className="text-right text-slate-500 font-mono">
+            <div className="space-y-4 text-xs text-on-surface leading-relaxed font-serif">
+              <div className="text-right text-on-surface-variant font-mono">
                 Date: {new Date().toLocaleDateString()}
               </div>
 
               <div>
                 <p><strong>To the Parent/Guardian of:</strong></p>
-                <p className="text-sm font-bold text-slate-900">{previewOfferApp.firstName} {previewOfferApp.lastName}</p>
+                <p className="text-sm font-bold text-on-surface">{previewOfferApp.firstName} {previewOfferApp.lastName}</p>
                 <p>{previewOfferApp.parentName} · {previewOfferApp.parentPhone}</p>
               </div>
 
-              <div className="py-2 border-y border-slate-200 font-sans text-center">
-                <h4 className="font-bold text-sm text-[#7a1228] uppercase">
+              <div className="py-2 border-y border-outline-variant/30 font-sans text-center">
+                <h4 className="font-bold text-sm text-primary uppercase">
                   RE: PROVISIONAL OFFER OF ADMISSION ({previewOfferApp.targetGrade})
                 </h4>
-                <p className="text-[11px] text-slate-500">Reference: {previewOfferApp.trackingCode}</p>
+                <p className="text-[11px] text-on-surface-variant">Reference: {previewOfferApp.trackingCode}</p>
               </div>
 
               <p>
@@ -1323,9 +1324,9 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 <strong> {previewOfferApp.targetGrade}</strong> at Grace Seeds School for the upcoming academic period.
               </p>
 
-              <div className="p-3 bg-slate-50 rounded-xl space-y-1 font-sans">
-                <p className="font-bold text-slate-800">Conditions of Enrolment:</p>
-                <ul className="list-disc list-inside text-slate-600 space-y-0.5">
+              <div className="p-3 bg-surface rounded-xl space-y-1 font-sans">
+                <p className="font-bold text-on-surface">Conditions of Enrolment:</p>
+                <ul className="list-disc list-inside text-on-surface-variant space-y-0.5">
                   <li>Payment of the commitment and initial term tuition fee according to the fee structure.</li>
                   <li>Submission of official birth certificate copy and previous academic report.</li>
                   <li>Completion of student health & medical clearance questionnaire.</li>
@@ -1339,8 +1340,8 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
               <div className="pt-6 flex justify-between items-end font-sans">
                 <div>
-                  <p className="font-bold text-slate-900">Mr. Dan Ooko</p>
-                  <p className="text-[11px] text-slate-500">Head of Admissions & Registration</p>
+                  <p className="font-bold text-on-surface">Mr. Dan Ooko</p>
+                  <p className="text-[11px] text-on-surface-variant">Head of Admissions & Registration</p>
                 </div>
                 <div className="px-3 py-1 rounded bg-emerald-50 text-emerald-800 font-bold text-[10px] uppercase border border-emerald-200">
                   Official Seal Verified
@@ -1351,13 +1352,13 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
             <div className="flex justify-end gap-2 pt-4 border-t">
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl cursor-pointer"
+                className="px-4 py-2 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-bold rounded-xl cursor-pointer"
               >
                 Print Letter
               </button>
               <button
                 onClick={() => setPreviewOfferApp(null)}
-                className="px-4 py-2 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl cursor-pointer"
+                className="px-4 py-2 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl cursor-pointer"
               >
                 Close
               </button>

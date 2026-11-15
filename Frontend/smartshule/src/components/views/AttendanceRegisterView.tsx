@@ -344,7 +344,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+    doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, curY + 9);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -496,7 +496,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+    doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, curY + 9);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -820,7 +820,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
       {/* Date & Stream Selector (Locked/Disabled for single-class assigned teachers) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
             <span className="text-xs font-bold text-on-surface-variant">
               {isTeacher ? 'Assigned Class / Stream:' : 'Class / Stream:'}
             </span>
@@ -833,7 +833,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
               <select
                 value={streamId}
                 onChange={(e) => setStreamId(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface cursor-pointer"
+                className="min-w-0 max-w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface cursor-pointer"
               >
                 {availableStreams.length > 0 && (
                   <optgroup label="Class Streams">
@@ -857,13 +857,13 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
             <span className="text-xs font-bold text-on-surface-variant">Date:</span>
             <input
               type="date"
               value={registerDate}
               onChange={(e) => setRegisterDate(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
+              className="min-w-0 max-w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
             />
           </div>
         </div>

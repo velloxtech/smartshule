@@ -227,7 +227,7 @@ export class AcademicController {
 
   public updateTerm = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const term = await this.academicUseCases.updateAcademicTerm(req.params.id as string, req.body);
+      const term = await this.academicUseCases.updateAcademicTerm(req.params.id as string, req.body, (req as any).user);
       return res.status(200).json({ success: true, data: term });
     } catch (err) {
       next(err);
@@ -454,10 +454,11 @@ export class AcademicController {
 
   public getTeacherAuthorizedContext = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { academicYearId } = req.query;
+      const { academicYearId, termId } = req.query;
       const result = await this.academicUseCases.getTeacherAuthorizedContext(
         (req as any).user,
-        academicYearId as string | undefined
+        academicYearId as string | undefined,
+        termId as string | undefined
       );
       return res.status(200).json({ success: true, data: result });
     } catch (err) {

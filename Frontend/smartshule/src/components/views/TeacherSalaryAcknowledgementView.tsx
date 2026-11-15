@@ -283,7 +283,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 pb-20">
       {/* Top Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-800 flex items-center justify-center shadow-xs">
@@ -296,8 +296,8 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                   Staff Remuneration Vault
                 </span>
               </div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Salary Payment Acknowledgement</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-2xl font-black text-on-surface tracking-tight">Salary Payment Acknowledgement</h1>
+              <p className="text-xs text-on-surface-variant">
                 Review official disbursed salary records, verify net compensation, electronically acknowledge receipts, or report discrepancies.
               </p>
             </div>
@@ -306,7 +306,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
           <button
             onClick={fetchRecords}
             disabled={loading}
-            className="self-start md:self-auto px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 transition-colors cursor-pointer"
+            className="self-start md:self-auto px-3.5 py-2 rounded-xl border border-outline-variant/30 hover:bg-surface text-xs font-bold text-on-surface-variant flex items-center gap-2 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh Records</span>
@@ -314,11 +314,11 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
         </div>
 
         {/* Global KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Periods</span>
-            <span className="text-xl font-black text-slate-900">{totalCount}</span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Disbursed salary records</span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-outline-variant/30">
+          <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/30">
+            <span className="text-[10px] uppercase font-bold text-on-surface-variant block">Total Periods</span>
+            <span className="text-xl font-black text-on-surface">{totalCount}</span>
+            <span className="text-[10px] text-on-surface-variant block mt-0.5">Disbursed salary records</span>
           </div>
           <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200">
             <span className="text-[10px] uppercase font-bold text-amber-700 block">Awaiting Acknowledgement</span>
@@ -346,17 +346,17 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
       )}
 
       {/* Filter Tabs */}
-      <div className="flex border-b border-slate-200 gap-4">
+      <div className="flex flex-wrap border-b border-outline-variant/30 gap-4">
         <button
           onClick={() => setStatusFilter('ALL')}
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             statusFilter === 'ALL'
               ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span>All Records</span>
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant">
             {totalCount}
           </span>
         </button>
@@ -366,12 +366,12 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             statusFilter === 'AWAITING'
               ? 'border-amber-600 text-amber-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span>Awaiting Acknowledgement</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-            awaitingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+            awaitingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-surface-container-low text-on-surface-variant'
           }`}>
             {awaitingCount}
           </span>
@@ -382,11 +382,11 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             statusFilter === 'ACKNOWLEDGED'
               ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span>Acknowledged</span>
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant">
             {ackCount}
           </span>
         </button>
@@ -396,11 +396,11 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
           className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             statusFilter === 'DISPUTED'
               ? 'border-rose-600 text-rose-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span>Under Review</span>
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-on-surface-variant">
             {disputedCount}
           </span>
         </button>
@@ -408,23 +408,23 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
 
       {/* Salary Records Table */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-3">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-emerald-700" />
           <p className="text-sm font-semibold">Loading your salary records...</p>
         </div>
       ) : filteredRecords.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-2">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-2">
           <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="font-bold text-base text-slate-800">No salary payment records found</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <h3 className="font-bold text-base text-on-surface">No salary payment records found</h3>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
             Disbursed salary records processed by the school accounts office will appear here for your review and acknowledgement.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200 text-[10px] tracking-wider">
+              <thead className="bg-surface text-on-surface-variant uppercase font-bold border-b border-outline-variant/30 text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Period</th>
                   <th className="py-3 px-4">Gross Salary</th>
@@ -445,14 +445,14 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                   const netAmount = r.amountPaid > 0 ? r.amountPaid : r.netSalary;
 
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <tr key={r.id} className="hover:bg-surface/70 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-on-surface">
                         <span className="font-mono text-xs">{r.month}</span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                      <td className="py-3.5 px-4 font-mono font-bold text-on-surface">
                         KES {Number(r.grossSalary || 0).toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600">
+                      <td className="py-3.5 px-4 text-on-surface-variant">
                         <div className="text-[11px] font-mono text-rose-700 font-semibold">
                           KES {Number(r.totalDeductions || 0).toLocaleString()}
                         </div>
@@ -464,14 +464,14 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                         KES {Number(netAmount).toLocaleString()}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="text-[11px] font-semibold text-slate-800">
+                        <div className="text-[11px] font-semibold text-on-surface">
                           {r.paymentMethod ? r.paymentMethod.replace(/_/g, ' ') : 'N/A'}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">
                           Ref: {r.paymentReference || 'No Ref'}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
+                      <td className="py-3.5 px-4 text-on-surface-variant font-mono text-[11px]">
                         {r.paidAt ? new Date(r.paidAt).toLocaleDateString() : 'Pending'}
                       </td>
                       <td className="py-3.5 px-4">
@@ -503,7 +503,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                             <span>AWAITING ACKNOWLEDGEMENT</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-on-surface-variant">
                             <span>UNPAID DRAFT</span>
                           </span>
                         )}
@@ -521,7 +521,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                             <button
                               onClick={() => handleOpenDisputeModal(r)}
                               title="Report Discrepancy"
-                              className="px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-rose-700 font-bold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              className="px-2 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-rose-50 text-rose-700 font-bold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer"
                             >
                               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                               <span>Dispute</span>
@@ -530,9 +530,9 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                         ) : isAck ? (
                           <button
                             onClick={() => setViewingCertificateRecord(r)}
-                            className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs inline-flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-surface text-on-surface font-bold text-xs inline-flex items-center gap-1 cursor-pointer"
                           >
-                            <Printer className="w-3.5 h-3.5 text-slate-600" />
+                            <Printer className="w-3.5 h-3.5 text-on-surface-variant" />
                             <span>View Slip</span>
                           </button>
                         ) : isDisputed ? (
@@ -553,16 +553,16 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
       {/* MODAL 1: ACKNOWLEDGE SALARY MODAL */}
       {selectedRecordForAck && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-emerald-700" />
-                <h3 className="font-bold text-base text-slate-900">Acknowledge Receipt of Salary</h3>
+                <h3 className="font-bold text-base text-on-surface">Acknowledge Receipt of Salary</h3>
               </div>
               <button
                 type="button"
                 onClick={handleCloseAckModal}
-                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -584,30 +584,30 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
 
             <form onSubmit={handleConfirmAck} className="space-y-4">
               {/* Payment Summary Box */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="p-3.5 rounded-2xl bg-surface border border-outline-variant/30 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Payroll Period:</span>
-                  <span className="font-bold font-mono text-slate-900">{selectedRecordForAck.month}</span>
+                  <span className="text-on-surface-variant">Payroll Period:</span>
+                  <span className="font-bold font-mono text-on-surface">{selectedRecordForAck.month}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Gross Salary:</span>
-                  <span className="font-mono text-slate-800">
+                  <span className="text-on-surface-variant">Gross Salary:</span>
+                  <span className="font-mono text-on-surface">
                     KES {Number(selectedRecordForAck.grossSalary || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Total Deductions:</span>
+                  <span className="text-on-surface-variant">Total Deductions:</span>
                   <span className="font-mono text-rose-700 font-semibold">
                     KES {Number(selectedRecordForAck.totalDeductions || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-slate-200">
-                  <span className="text-slate-700 font-bold">Net Amount Disbursed:</span>
+                <div className="flex justify-between pt-1 border-t border-outline-variant/30">
+                  <span className="text-on-surface-variant font-bold">Net Amount Disbursed:</span>
                   <span className="font-bold font-mono text-emerald-800 text-sm">
                     KES {Number(selectedRecordForAck.amountPaid > 0 ? selectedRecordForAck.amountPaid : selectedRecordForAck.netSalary).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-on-surface-variant">
                   <span>Method & Ref:</span>
                   <span className="font-mono">
                     {selectedRecordForAck.paymentMethod} · {selectedRecordForAck.paymentReference || 'N/A'}
@@ -617,29 +617,29 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
 
               {/* Statement */}
               <div>
-                <label className="block text-xs font-extrabold uppercase text-slate-700 mb-1">
+                <label className="block text-xs font-extrabold uppercase text-on-surface-variant mb-1">
                   Acknowledgement Confirmation Statement
                 </label>
                 <textarea
                   value={customStatement}
                   onChange={e => setCustomStatement(e.target.value)}
                   rows={3}
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 outline-hidden font-medium"
+                  className="w-full text-xs p-3 rounded-xl border border-outline-variant/30 focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 outline-hidden font-medium"
                 />
               </div>
 
               {/* Signature Options */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-extrabold uppercase text-slate-700">
+                  <label className="block text-xs font-extrabold uppercase text-on-surface-variant">
                     Electronic Digital Signature
                   </label>
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg text-xs font-semibold">
+                  <div className="flex items-center gap-1 p-0.5 bg-surface-container-low rounded-lg text-xs font-semibold">
                     <button
                       type="button"
                       onClick={() => setSignatureMode('TYPE')}
                       className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                        signatureMode === 'TYPE' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                        signatureMode === 'TYPE' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                       }`}
                     >
                       Type
@@ -648,7 +648,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                       type="button"
                       onClick={() => setSignatureMode('DRAW')}
                       className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                        signatureMode === 'DRAW' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                        signatureMode === 'DRAW' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                       }`}
                     >
                       Draw
@@ -658,7 +658,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                         type="button"
                         onClick={() => setSignatureMode('SAVED')}
                         className={`px-2.5 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
-                          signatureMode === 'SAVED' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500'
+                          signatureMode === 'SAVED' ? 'bg-white text-on-surface shadow-xs font-bold' : 'text-on-surface-variant'
                         }`}
                       >
                         Saved Profile
@@ -675,9 +675,9 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                       onChange={e => setTypedSignature(e.target.value)}
                       placeholder="Type your full legal name"
                       required
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-200 font-semibold"
+                      className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 font-semibold"
                     />
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                    <div className="p-2.5 bg-surface border border-outline-variant/30 rounded-xl text-center">
                       <span className="font-serif italic text-xl text-blue-900 font-bold">
                         {typedSignature || 'Signature Preview'}
                       </span>
@@ -686,7 +686,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                 )}
 
                 {signatureMode === 'DRAW' && (
-                  <div className="border border-slate-300 rounded-2xl bg-white p-2 text-center space-y-1">
+                  <div className="border border-outline-variant/30 rounded-2xl bg-surface-container-lowest p-2 text-center space-y-1">
                     <canvas
                       ref={canvasRef}
                       width={480}
@@ -698,7 +698,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                       onTouchStart={startDrawing}
                       onTouchMove={draw}
                       onTouchEnd={stopDrawing}
-                      className="w-full h-24 border border-dashed border-slate-200 rounded-xl cursor-crosshair touch-none bg-slate-50/50"
+                      className="w-full h-24 border border-dashed border-outline-variant/30 rounded-xl cursor-crosshair touch-none bg-surface/50"
                     />
                     <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
                       <span>Draw signature in the box</span>
@@ -719,7 +719,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                       <div className="text-xs font-bold text-emerald-900">Stored Digital Signature Profile</div>
                       <div className="text-[10px] text-emerald-700">Cryptographically bound to your employee record</div>
                     </div>
-                    <img src={savedSignatureData} alt="Saved" className="h-10 object-contain bg-white px-2 py-0.5 rounded border border-emerald-200" />
+                    <img src={savedSignatureData} alt="Saved" className="h-10 object-contain bg-surface-container-lowest px-2 py-0.5 rounded border border-emerald-200" />
                   </div>
                 )}
 
@@ -729,12 +729,12 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleCloseAckModal}
                   disabled={isSubmittingAck}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -764,16 +764,16 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
       {/* MODAL 2: REPORT DISCREPANCY / DISPUTE MODAL */}
       {selectedRecordForDispute && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 shadow-2xl border border-outline-variant/30 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-rose-700" />
-                <h3 className="font-bold text-base text-slate-900">Report Salary Discrepancy</h3>
+                <h3 className="font-bold text-base text-on-surface">Report Salary Discrepancy</h3>
               </div>
               <button
                 type="button"
                 onClick={handleCloseDisputeModal}
-                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -787,25 +787,25 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
             )}
 
             <form onSubmit={handleConfirmDispute} className="space-y-4">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="p-3 rounded-xl bg-surface border border-outline-variant/30 text-xs space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Period:</span>
-                  <span className="font-mono font-bold text-slate-800">{selectedRecordForDispute.month}</span>
+                  <span className="text-on-surface-variant">Period:</span>
+                  <span className="font-mono font-bold text-on-surface">{selectedRecordForDispute.month}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Recorded Disbursed Amount:</span>
+                  <span className="text-on-surface-variant">Recorded Disbursed Amount:</span>
                   <span className="font-mono font-bold text-emerald-800">
                     KES {Number(selectedRecordForDispute.amountPaid > 0 ? selectedRecordForDispute.amountPaid : selectedRecordForDispute.netSalary).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Payment Reference:</span>
-                  <span className="font-mono text-slate-700">{selectedRecordForDispute.paymentReference || 'N/A'}</span>
+                  <span className="text-on-surface-variant">Payment Reference:</span>
+                  <span className="font-mono text-on-surface-variant">{selectedRecordForDispute.paymentReference || 'N/A'}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">
                   Describe Discrepancy / Reason for Dispute
                 </label>
                 <textarea
@@ -814,19 +814,19 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                   placeholder="e.g. Received KES 42,000 via M-Pesa instead of stated KES 47,500; responsibility allowance omitted; wrong bank reference..."
                   rows={4}
                   required
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-700/20 focus:border-rose-700 outline-hidden"
+                  className="w-full text-xs p-3 rounded-xl border border-outline-variant/30 focus:ring-2 focus:ring-rose-700/20 focus:border-rose-700 outline-hidden"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   Submitting this report changes the status to <strong>UNDER REVIEW</strong> and notifies the school accounts office for immediate investigation.
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={handleCloseDisputeModal}
                   disabled={isSubmittingDispute}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -856,11 +856,11 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
       {/* MODAL 3: VIEW OFFICIAL ACKNOWLEDGEMENT CERTIFICATE / SLIP */}
       {viewingCertificateRecord && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-slate-700" />
-                <h3 className="font-bold text-base text-slate-900">Salary Acknowledgement Advice</h3>
+                <Printer className="w-5 h-5 text-on-surface-variant" />
+                <h3 className="font-bold text-base text-on-surface">Salary Acknowledgement Advice</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -872,7 +872,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setViewingCertificateRecord(null)}
-                  className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                  className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
                 >
                   ✕
                 </button>

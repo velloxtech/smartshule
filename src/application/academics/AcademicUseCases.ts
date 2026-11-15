@@ -1,3 +1,5 @@
+import { TeacherAssignmentAccess } from '../shared/TeacherAssignmentAccess';
+import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -61,7 +63,7 @@ export class AcademicUseCases {
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',
-          address: 'KEMRI Street, Kisian, Kisumu, Kenya',
+          address: 'P.O Box 12-20123',
           logoUrl: '/logo.png',
           currency: 'KES',
           latitude: -0.061234,
@@ -92,7 +94,7 @@ export class AcademicUseCases {
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',
-          address: school.address || 'KEMRI Street, Kisian, Kisumu, Kenya',
+          address: school.id === 'school-001' ? 'P.O Box 12-20123' : school.address,
           logoUrl: school.logoUrl || '/logo.png',
           currency: school.currency || 'KES',
           latitude: school.latitude ?? -0.061234,
@@ -105,7 +107,7 @@ export class AcademicUseCases {
       );
       await this.academicRepository.updateSchool(school);
     }
-    return school.toJSON();
+    return { ...school.toJSON(), ...(school.id === 'school-001' ? { address: 'P.O Box 12-20123' } : {}) };
   }
 
   public async getGeofenceConfig(schoolId?: string) {
@@ -349,10 +351,20 @@ export class AcademicUseCases {
 
   public async updateAcademicTerm(
     id: string,
-    dto: { name?: string; startDate?: string; endDate?: string; termNumber?: number; isCurrent?: boolean }
+    dto: { name?: string; startDate?: string; endDate?: string; termNumber?: number; isCurrent?: boolean },
+    actor?: UserContext
   ) {
     const term = await this.academicRepository.findTermById(id);
     if (!term) throw new NotFoundError(`Academic term with id ${id}`);
+    if (actor) {
+      if (!isAcademicAdminRole(actor.role)) throw new ForbiddenError('Only school administrators can update term dates.');
+      const year = await this.academicRepository.findYearById(term.academicYearId);
+      if (!year || (actor.schoolId && year.schoolId !== actor.schoolId)) throw new ForbiddenError('Academic term access denied.');
+    }
+    const start = dto.startDate ?? term.startDate;
+    const end = dto.endDate ?? term.endDate;
+    const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    if (!validDate(start) || !validDate(end) || end <= start) throw new ValidationError('Choose a valid closing date after the term opening date.');
 
     if (dto.isCurrent) {
       const existingTerms = await this.academicRepository.findTermsByYear(term.academicYearId);
@@ -366,7 +378,11 @@ export class AcademicUseCases {
 
     term.updateDetails(dto);
     await this.academicRepository.updateTerm(term);
-    return term.toJSON();
+    const persisted = await this.academicRepository.findTermById(id);
+    if (!persisted || persisted.startDate !== start || persisted.endDate !== end) {
+      throw new ConflictError('The term dates were not saved. Refresh the term and try again.');
+    }
+    return persisted.toJSON();
   }
 
   public async activateAcademicTerm(termId: string) {
@@ -654,8 +670,21 @@ export class AcademicUseCases {
   }
 
   public async createStream(dto: { classRoomId: string; name: string; capacity: number; classTeacherId?: string }) {
-    const stream = Stream.create(dto, IdGenerator.generate());
+    let year: AcademicYear | null = null;
+    const classroom = dto.classTeacherId ? await this.academicRepository.findClassById(dto.classRoomId) : null;
+    if (dto.classTeacherId) {
+      if (!classroom) throw new NotFoundError('Classroom', dto.classRoomId);
+      year = await this.academicRepository.findCurrentYear(classroom.schoolId);
+      if (!year) throw new ValidationError('Set the current academic year before assigning a teacher.');
+      if (this.teacherRepository && !await this.teacherRepository.findById(dto.classTeacherId)) throw new NotFoundError('Teacher', dto.classTeacherId);
+    }
+    const stream = Stream.create({ ...dto, classTeacherId: undefined }, IdGenerator.generate());
     await this.academicRepository.saveStream(stream);
+    if (dto.classTeacherId && classroom && year) {
+      await this.assignClassTeacher({ schoolId: classroom.schoolId, academicYearId: year.id,
+        classRoomId: classroom.id, streamId: stream.id, teacherId: dto.classTeacherId });
+      stream.setClassTeacher(dto.classTeacherId);
+    }
     return stream.toJSON();
   }
 
@@ -841,6 +870,8 @@ export class AcademicUseCases {
 
     const effectiveFrom = dto.effectiveFrom || new Date().toISOString().split('T')[0];
 
+    await releasePreviousClassTeacherDuty(this.academicRepository, { ...dto, effectiveFrom }, this.teacherRepository);
+
     // Find existing active assignments strictly for this exact stream (or class-wide if streamId is null)
     const allClassAssignments = await this.academicRepository.findClassTeacherAssignments({
       schoolId: dto.schoolId,
@@ -860,6 +891,13 @@ export class AcademicUseCases {
       // Deactivate safely preserving historical record
       oldAssignment.deactivate(effectiveFrom);
       await this.academicRepository.saveClassTeacherAssignment(oldAssignment);
+      if (this.teacherRepository && oldAssignment.streamId) {
+        const previousTeacher = await this.teacherRepository.findById(oldAssignment.teacherId);
+        if (previousTeacher) {
+          previousTeacher.removeStream(oldAssignment.streamId);
+          await this.teacherRepository.update(previousTeacher);
+        }
+      }
     }
 
     // Create new assignment
@@ -1006,11 +1044,28 @@ export class AcademicUseCases {
     if (!dto.academicYearId) throw new ValidationError('academicYearId is required');
     if (!dto.learningAreaId) throw new ValidationError('learningAreaId is required');
     if (!dto.teacherId) throw new ValidationError('teacherId is required');
+    if (requestingUser?.schoolId && requestingUser.schoolId !== dto.schoolId) throw new ForbiddenError('School access denied.');
+    const year = await this.academicRepository.findYearById(dto.academicYearId);
+    if (!year || year.schoolId !== dto.schoolId) throw new ValidationError('Select an academic year belonging to this school.');
+    const role = dto.role || 'SUBJECT_LEAD';
+    if (!['SUBJECT_LEAD', 'SUBJECT_TEACHER', 'ASSESSMENT_APPROVER'].includes(role)) throw new ValidationError('Invalid subject assignment role.');
+    let classRoomId = dto.classRoomId;
+    if (dto.streamId) {
+      const stream = await this.academicRepository.findStreamById(dto.streamId);
+      if (!stream || (classRoomId && stream.classRoomId !== classRoomId)) throw new ValidationError('Select a stream belonging to the selected class.');
+      classRoomId = stream.classRoomId;
+    }
+    if (!classRoomId && role !== 'SUBJECT_LEAD') throw new ValidationError('Select a class for this subject teacher assignment.');
+    const classroom = classRoomId ? await this.academicRepository.findClassById(classRoomId) : null;
+    if (classRoomId && (!classroom || classroom.schoolId !== dto.schoolId)) throw new ValidationError('Select a class belonging to this school.');
 
     // Validate learning area
     const learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
     if (!learningArea) {
       throw new NotFoundError('Learning Area', dto.learningAreaId);
+    }
+    if (learningArea.schoolId !== dto.schoolId || (classroom && learningArea.gradeLevel !== classroom.gradeLevel)) {
+      throw new ValidationError('The learning area must belong to this school and match the selected class grade.');
     }
 
     // Validate teacher
@@ -1025,20 +1080,19 @@ export class AcademicUseCases {
       }
     }
 
-    const role = dto.role || 'SUBJECT_LEAD';
+    if (teacherUser && teacherUser.schoolId !== dto.schoolId) throw new ValidationError('Select a teacher belonging to this school.');
     const effectiveFrom = dto.effectiveFrom || new Date().toISOString().split('T')[0];
+
+    const existing = (await this.academicRepository.findSubjectTeacherAssignments({
+      schoolId: dto.schoolId, academicYearId: dto.academicYearId,
+      learningAreaId: dto.learningAreaId, role, isActive: true
+    })).filter(a => (a.classRoomId || '') === (classRoomId || '') && (a.streamId || '') === (dto.streamId || ''));
+    const duplicate = existing.find(a => a.teacherId === dto.teacherId);
+    if (duplicate) return duplicate.toJSON();
 
     // If SUBJECT_LEAD, deactivate any previous active SUBJECT_LEAD for this learning area and class/stream
     if (role === 'SUBJECT_LEAD') {
-      const existingLeads = await this.academicRepository.findSubjectTeacherAssignments({
-        schoolId: dto.schoolId,
-        academicYearId: dto.academicYearId,
-        classRoomId: dto.classRoomId,
-        streamId: dto.streamId,
-        learningAreaId: dto.learningAreaId,
-        role: 'SUBJECT_LEAD',
-        isActive: true
-      });
+      const existingLeads = existing;
 
       for (const oldLead of existingLeads) {
         if (oldLead.teacherId === dto.teacherId) {
@@ -1053,7 +1107,7 @@ export class AcademicUseCases {
       {
         schoolId: dto.schoolId,
         academicYearId: dto.academicYearId,
-        classRoomId: dto.classRoomId,
+        classRoomId,
         streamId: dto.streamId,
         learningAreaId: dto.learningAreaId,
         teacherId: dto.teacherId,
@@ -1191,16 +1245,20 @@ export class AcademicUseCases {
 
   public async getTeacherAuthorizedContext(
     requestingUser?: UserContext,
-    academicYearId?: string
+    academicYearId?: string,
+    termId?: string
   ): Promise<{
     isGlobalAdmin: boolean;
     teacherId?: string;
+    editableLearningAreaIds?: string[];
     teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' | 'GLOBAL_ADMIN';
     assignedClasses: Array<{
       id: string;
       name: string;
       gradeLevel: string;
       streams: Array<{ id: string; name: string }>;
+      wholeClass?: boolean;
+      subjectsByStream?: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>>;
     }>;
     authorizedSubjectsByClass: Record<string, Array<{
       id: string;
@@ -1275,185 +1333,42 @@ export class AcademicUseCases {
       };
     }
 
-    const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
-      teacherId: teacher.id,
-      academicYearId: academicYearId || undefined,
-      isActive: true
-    });
-
-    const subjectTeacherAssignments = await this.academicRepository.findSubjectTeacherAssignments({
-      teacherId: teacher.id,
-      academicYearId: academicYearId || undefined,
-      isActive: true
-    });
-
-    const legacyStreamIds = teacher.assignedClassStreamIds || [];
-    const lowerPrimaryGrades = ['PLAYGROUP', 'CRECHE', 'RECEPTION', 'PP1', 'PP2', 'GRADE_1', 'GRADE_2', 'GRADE_3'];
-
-    const streamMap = new Map<string, Stream>();
+    // Use the same period-aware policy as learner, curriculum and export requests.
+    // Legacy profile arrays are display caches, never a source of permission.
+    const access = new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository);
+    const scope = { academicYearId, termId };
+    const assigned = await access.assignments(requestingUser, scope);
+    const period = {academicYearId: assigned.year.id, termId: assigned.term.id};
+    const assignedClasses = [];
+    const authorizedSubjectsByClass: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>> = {};
     for (const cls of allClasses) {
+      const base = {...period, classRoomId:cls.id};
+      const wholeClass = await access.can(requestingUser, base);
       const streams = await this.academicRepository.findStreamsByClass(cls.id);
-      for (const s of streams) {
-        streamMap.set(s.id, s);
-      }
-    }
-
-    const classTeacherClassIds = new Set<string>();
-    const classTeacherStreamIdsByClass = new Map<string, Set<string>>();
-
-    for (const cta of classTeacherAssignments) {
-      classTeacherClassIds.add(cta.classRoomId);
-      if (cta.streamId) {
-        if (!classTeacherStreamIdsByClass.has(cta.classRoomId)) {
-          classTeacherStreamIdsByClass.set(cta.classRoomId, new Set());
-        }
-        classTeacherStreamIdsByClass.get(cta.classRoomId)!.add(cta.streamId);
-      }
-    }
-
-    for (const sId of legacyStreamIds) {
-      const st = streamMap.get(sId);
-      if (st) {
-        classTeacherClassIds.add(st.classRoomId);
-        if (!classTeacherStreamIdsByClass.has(st.classRoomId)) {
-          classTeacherStreamIdsByClass.set(st.classRoomId, new Set());
-        }
-        classTeacherStreamIdsByClass.get(st.classRoomId)!.add(sId);
-      }
-    }
-
-    const subjectTeacherClassIds = new Set<string>();
-    const subjectTeacherSubjectsByClass = new Map<string, Set<string>>();
-    const subjectTeacherStreamsByClass = new Map<string, Set<string>>();
-
-    for (const sta of subjectTeacherAssignments) {
-      let clsId = sta.classRoomId;
-      if (!clsId && sta.streamId) {
-        const st = streamMap.get(sta.streamId);
-        if (st) clsId = st.classRoomId;
-      }
-      if (clsId) {
-        subjectTeacherClassIds.add(clsId);
-        if (!subjectTeacherSubjectsByClass.has(clsId)) {
-          subjectTeacherSubjectsByClass.set(clsId, new Set());
-        }
-        subjectTeacherSubjectsByClass.get(clsId)!.add(sta.learningAreaId);
-
-        if (sta.streamId) {
-          if (!subjectTeacherStreamsByClass.has(clsId)) {
-            subjectTeacherStreamsByClass.set(clsId, new Set());
-          }
-          subjectTeacherStreamsByClass.get(clsId)!.add(sta.streamId);
-        }
-      }
-    }
-
-    const allAuthorizedClassIds = new Set<string>([...classTeacherClassIds, ...subjectTeacherClassIds]);
-    const assignedClasses: Array<{
-      id: string;
-      name: string;
-      gradeLevel: string;
-      streams: Array<{ id: string; name: string }>;
-    }> = [];
-    const authorizedSubjectsByClass: Record<string, Array<{ id: string; code: string; name: string; gradeLevel?: string }>> = {};
-
-    let hasClassTeacherRole = false;
-    let hasSubjectTeacherRole = false;
-
-    for (const clsId of allAuthorizedClassIds) {
-      const cls = allClasses.find((c: ClassRoom) => c.id === clsId);
-      if (!cls) continue;
-
-      const isCt = classTeacherClassIds.has(clsId);
-      const isSt = subjectTeacherClassIds.has(clsId);
-
-      const classStreams = await this.academicRepository.findStreamsByClass(clsId);
-      let allowedStreams: Stream[] = [];
-
-      const ctStreams = classTeacherStreamIdsByClass.get(clsId);
-      const stStreams = subjectTeacherStreamsByClass.get(clsId);
-
-      if ((!ctStreams || ctStreams.size === 0) && (!stStreams || stStreams.size === 0)) {
-        allowedStreams = classStreams;
-      } else {
-        const allowedStreamIds = new Set<string>();
-        if (ctStreams) ctStreams.forEach(id => allowedStreamIds.add(id));
-        if (stStreams) stStreams.forEach(id => allowedStreamIds.add(id));
-        allowedStreams = classStreams.filter(s => allowedStreamIds.has(s.id));
-        if (allowedStreams.length === 0 && classStreams.length > 0) {
-          allowedStreams = classStreams;
-        }
-      }
-
-      assignedClasses.push({
-        id: cls.id,
-        name: cls.name,
-        gradeLevel: cls.gradeLevel,
-        streams: allowedStreams.map(s => ({ id: s.id, name: s.name }))
-      });
-
-      const clsGrade = (cls.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_');
-      const isLowerPrimary = lowerPrimaryGrades.includes(clsGrade);
-
-      const classLearningAreas = allLearningAreas.filter((la: any) => {
-        if (!la.gradeLevel) return true;
-        const laGrade = String(la.gradeLevel).toUpperCase().replace(/[\s-]/g, '_');
-        return laGrade === clsGrade || clsGrade.includes(laGrade) || laGrade.includes(clsGrade);
-      });
-      const lasToSelectFrom = classLearningAreas.length > 0 ? classLearningAreas : allLearningAreas;
-
-      const authorizedLas: Array<{ id: string; code: string; name: string; gradeLevel?: string }> = [];
-
-      if (isCt) {
-        hasClassTeacherRole = true;
-        if (isLowerPrimary) {
-          for (const la of lasToSelectFrom) {
-            authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
-          }
-        } else {
-          const allClassSubjAssignments = await this.academicRepository.findSubjectTeacherAssignments({
-            classRoomId: cls.id,
-            isActive: true
-          });
-          const competingAssignments = allClassSubjAssignments.filter(a => a.teacherId !== teacher.id);
-          const competingSubjIds = new Set(competingAssignments.map(a => a.learningAreaId));
-
-          for (const la of lasToSelectFrom) {
-            if (!competingSubjIds.has(la.id) && !competingSubjIds.has(la.code)) {
-              authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
-            }
+      const allowedStreams = [];
+      const subjectsByStream: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>> = {};
+      const subjects = new Map<string, {id:string; code:string; name:string; gradeLevel?:string}>();
+      for (const stream of [undefined,...streams]) {
+        if (!await access.can(requestingUser, {...base,streamId:stream?.id})) continue;
+        if (stream) allowedStreams.push({id:stream.id,name:stream.name});
+        const areas = [];
+        for (const area of allLearningAreas.filter(a=>a.gradeLevel===cls.gradeLevel)) {
+          if (await access.can(requestingUser,{...base,streamId:stream?.id,learningAreaId:area.id})) {
+            const item={id:area.id,code:area.code,name:area.name,gradeLevel:area.gradeLevel};
+            areas.push(item); subjects.set(area.id,item);
           }
         }
+        subjectsByStream[stream?.id || ''] = areas;
       }
-
-      if (isSt) {
-        hasSubjectTeacherRole = true;
-        const assignedSubjIds = subjectTeacherSubjectsByClass.get(clsId) || new Set();
-        for (const la of allLearningAreas) {
-          if (assignedSubjIds.has(la.id) || assignedSubjIds.has(la.code)) {
-            if (!authorizedLas.some(a => a.id === la.id)) {
-              authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
-            }
-          }
-        }
-      }
-
-      authorizedSubjectsByClass[cls.id] = authorizedLas;
+      if (!wholeClass && !allowedStreams.length) continue;
+      assignedClasses.push({id:cls.id,name:cls.name,gradeLevel:cls.gradeLevel,streams:allowedStreams,wholeClass,subjectsByStream});
+      authorizedSubjectsByClass[cls.id]=[...subjects.values()];
     }
-
-    let teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' = 'SUBJECT_TEACHER';
-    if (hasClassTeacherRole && hasSubjectTeacherRole) {
-      teachingModel = 'HYBRID';
-    } else if (hasClassTeacherRole) {
-      teachingModel = 'CLASS_TEACHER';
-    }
-
     return {
-      isGlobalAdmin: false,
-      teacherId: teacher.id,
-      teachingModel,
-      assignedClasses,
-      authorizedSubjectsByClass
+      isGlobalAdmin:false, teacherId:teacher.id,
+      teachingModel: assigned.classes.length ? (assigned.subjects.length ? 'HYBRID' : 'CLASS_TEACHER') : 'SUBJECT_TEACHER',
+      assignedClasses, authorizedSubjectsByClass,
+      editableLearningAreaIds: await access.editableLearningAreaIds(requestingUser)
     };
   }
 }

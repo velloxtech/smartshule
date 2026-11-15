@@ -334,7 +334,7 @@ export const TeacherProfileView: React.FC = () => {
 
       {/* Profile Overview Card */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center gap-5 min-w-0">
           <div className="relative group">
             {profile?.profilePhotoUrl ? (
               <img
@@ -395,7 +395,7 @@ export const TeacherProfileView: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-1">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-1">
         <button
           onClick={() => setActiveTab('profile')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${

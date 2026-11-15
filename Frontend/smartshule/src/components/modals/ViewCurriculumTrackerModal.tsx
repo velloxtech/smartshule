@@ -45,7 +45,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
-                  Curriculum Tracker Dossier
+                  Syllabus Coverage Plan Dossier
                 </span>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400 text-emerald-950">
                   {completionPct}% Complete
@@ -300,7 +300,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
         {/* Modal Bottom Actions */}
         <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-500">
-            KICD CBC Curriculum Tracker Dossier · Grace Seeds School
+            KICD CBC Syllabus Coverage Plan Dossier · Grace Seeds School
           </div>
 
           <div className="flex items-center gap-2">

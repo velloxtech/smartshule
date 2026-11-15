@@ -241,7 +241,7 @@ describe('New Features Integration Tests', () => {
         .send({
           schoolId: 'school-001',
           studentId: 'student-001',
-          learningAreaId: 'la-science-g7',
+          learningAreaId: 'la-science-7',
           competencyTag: 'Creativity & Imagination',
           title: 'Solar System Model Practical Task',
           description: 'Kevin crafted an excellent scale model of the solar system using recyclable materials.',
@@ -274,7 +274,7 @@ describe('New Features Integration Tests', () => {
         .send({
           schoolId: 'school-001',
           studentId: 'student-001',
-          learningAreaId: 'la-science-g7',
+          learningAreaId: 'la-science-7',
           competencyDomain: 'Critical Thinking & Problem Solving',
           rating: 'EE',
           title: 'Robotics Assembly Milestone',

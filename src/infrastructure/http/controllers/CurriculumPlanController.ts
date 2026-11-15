@@ -17,6 +17,7 @@ export const CreateSchemeSchema = z.object({
   entries: z
     .array(
       z.object({
+        slotId: z.string().optional(),
         weekNumber: z.number().int().min(1),
         lessonNumber: z.number().int().min(1),
         strandId: z.string().optional(),
@@ -35,6 +36,7 @@ export const CreateSchemeSchema = z.object({
 });
 
 export const AddSchemeEntrySchema = z.object({
+  slotId: z.string().optional(),
   weekNumber: z.number().int().min(1),
   lessonNumber: z.number().int().min(1),
   strandId: z.string().optional(),
@@ -73,8 +75,18 @@ export const CreateLessonPlanSchema = z.object({
   subStrand: z.string().min(1),
   specificLearningOutcomes: z.array(z.string()).min(1),
   keyInquiryQuestions: z.array(z.string()).min(1),
+  weekNumber: z.number().int().positive().optional(),
+  lessonNumber: z.number().int().positive().optional(),
+  lessonTime: z.string().optional(),
+  pcis: z.array(z.string()).optional(),
+  otherLearningAreas: z.array(z.string().trim().min(1)).optional(),
+  communityServiceActivities: z.string().optional(),
+  nonFormalActivity: z.string().optional(),
+  assessmentRubric: z.array(z.object({criterion:z.string().trim().min(1),exceeds:z.string().trim().min(1),meets:z.string().trim().min(1),approaching:z.string().trim().min(1),below:z.string().trim().min(1)})).min(3).optional(),
   coreCompetenciesAddressed: z.array(z.nativeEnum(CoreCompetency)),
   valuesAddressed: z.array(z.nativeEnum(CoreValue)),
+  learningExperiences: z.array(z.string().trim().min(1)).optional(),
+  assessmentMethods: z.array(z.string().trim().min(1)).optional(),
   learningResources: z.array(z.string()).min(1),
   steps: z
     .array(
@@ -84,6 +96,8 @@ export const CreateLessonPlanSchema = z.object({
         durationMinutes: z.number().int().min(1),
         teacherActivities: z.string().min(1),
         learnerActivities: z.string().min(1),
+        learningPoints: z.string().optional(),
+        resources: z.string().optional(),
         assessmentCriterion: z.string().optional()
       })
     )
@@ -102,7 +116,7 @@ export class CurriculumPlanController {
       if (user?.role === UserRole.TEACHER && user?.userId) {
         body.teacherId = user.userId;
       }
-      const scheme = await this.curriculumUseCases.createSchemeOfWork(body);
+      const scheme = await this.curriculumUseCases.createSchemeOfWork(body, user);
       return res.status(201).json({ success: true, message: 'Scheme of work created', data: scheme });
     } catch (err) {
       next(err);
@@ -111,7 +125,7 @@ export class CurriculumPlanController {
 
   public addSchemeEntry = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const scheme = await this.curriculumUseCases.addEntryToScheme(req.params.id as string, req.body);
+      const scheme = await this.curriculumUseCases.addEntryToScheme(req.params.id as string, req.body, (req as any).user);
       return res.status(200).json({ success: true, message: 'Entry added to scheme of work', data: scheme });
     } catch (err) {
       next(err);
@@ -120,7 +134,7 @@ export class CurriculumPlanController {
 
   public submitScheme = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const scheme = await this.curriculumUseCases.submitSchemeForReview(req.params.id as string);
+      const scheme = await this.curriculumUseCases.submitSchemeForReview(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Scheme of work submitted for review', data: scheme });
     } catch (err) {
       next(err);
@@ -131,7 +145,7 @@ export class CurriculumPlanController {
     try {
       const reviewerUserId = req.user!.userId;
       const { approved, remarks } = req.body;
-      const scheme = await this.curriculumUseCases.reviewScheme(req.params.id as string, reviewerUserId, approved, remarks);
+      const scheme = await this.curriculumUseCases.reviewScheme(req.params.id as string, reviewerUserId, approved, remarks, req.user);
       return res.status(200).json({ success: true, message: `Scheme of work ${approved ? 'approved' : 'rejected'}`, data: scheme });
     } catch (err) {
       next(err);
@@ -140,7 +154,7 @@ export class CurriculumPlanController {
 
   public getSchemeById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const scheme = await this.curriculumUseCases.getSchemeById(req.params.id as string);
+      const scheme = await this.curriculumUseCases.getSchemeById(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, data: scheme });
     } catch (err) {
       next(err);
@@ -157,7 +171,7 @@ export class CurriculumPlanController {
         termId: termId as string,
         academicYearId: academicYearId as string,
         status: status as SchemeStatus
-      });
+      }, (req as any).user);
       return res.status(200).json({ success: true, count: schemes.length, data: schemes });
     } catch (err) {
       next(err);
@@ -171,7 +185,7 @@ export class CurriculumPlanController {
       if (user?.role === UserRole.TEACHER && user?.userId) {
         body.teacherId = user.userId;
       }
-      const lessonPlan = await this.curriculumUseCases.createLessonPlan(body);
+      const lessonPlan = await this.curriculumUseCases.createLessonPlan(body, user);
       return res.status(201).json({ success: true, message: 'Lesson plan created successfully', data: lessonPlan });
     } catch (err) {
       next(err);
@@ -180,7 +194,7 @@ export class CurriculumPlanController {
 
   public submitLessonPlan = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const plan = await this.curriculumUseCases.submitLessonPlanForReview(req.params.id as string);
+      const plan = await this.curriculumUseCases.submitLessonPlanForReview(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Lesson plan submitted for review', data: plan });
     } catch (err) {
       next(err);
@@ -191,7 +205,7 @@ export class CurriculumPlanController {
     try {
       const reviewerUserId = req.user!.userId;
       const { approved, remarks } = req.body;
-      const plan = await this.curriculumUseCases.reviewLessonPlan(req.params.id as string, reviewerUserId, approved, remarks);
+      const plan = await this.curriculumUseCases.reviewLessonPlan(req.params.id as string, reviewerUserId, approved, remarks, req.user);
       return res.status(200).json({ success: true, message: `Lesson plan ${approved ? 'approved' : 'rejected'}`, data: plan });
     } catch (err) {
       next(err);
@@ -200,7 +214,7 @@ export class CurriculumPlanController {
 
   public getLessonPlanById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const plan = await this.curriculumUseCases.getLessonPlanById(req.params.id as string);
+      const plan = await this.curriculumUseCases.getLessonPlanById(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, data: plan });
     } catch (err) {
       next(err);
@@ -217,7 +231,7 @@ export class CurriculumPlanController {
         streamId: streamId as string,
         startDate: startDate as string,
         endDate: endDate as string
-      });
+      }, (req as any).user);
       return res.status(200).json({ success: true, count: plans.length, data: plans });
     } catch (err) {
       next(err);

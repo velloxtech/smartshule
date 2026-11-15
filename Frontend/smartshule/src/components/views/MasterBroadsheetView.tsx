@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
@@ -59,18 +60,22 @@ const getSubjectInitials = (nameOrCode: string): string => {
 };
 
 export const MasterBroadsheetView: React.FC = () => {
+  const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streams, setStreams] = useState<StreamItem[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [academicTerms, setAcademicTerms] = useState<AcademicTerm[]>([]);
 
+  const [initializing, setInitializing] = useState(true);
+  const [permittedStreamIds, setPermittedStreamIds] = useState<string[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedStreamId, setSelectedStreamId] = useState<string>('all');
-  const [selectedTerm, setSelectedTerm] = useState<string>('term-2026-t3');
-  const [selectedYear, setSelectedYear] = useState<string>('year-2026');
+  const [selectedTerm, setSelectedTerm] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedExamType, setSelectedExamType] = useState<string>('End of Term Examination');
 
   const [broadsheet, setBroadsheet] = useState<BroadsheetResult | null>(null);
+  const requestVersion=useRef(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,7 +93,6 @@ export const MasterBroadsheetView: React.FC = () => {
           if (yRes?.success && yRes.data && yRes.data.length > 0) {
             setAcademicYears(yRes.data);
             const activeYear =
-              yRes.data.find((y) => y.name.includes('2026')) ||
               yRes.data.find((y) => y.isCurrent) ||
               yRes.data[0];
             setSelectedYear(activeYear.id);
@@ -110,24 +114,34 @@ export const MasterBroadsheetView: React.FC = () => {
 
         const res = await apiService.getClasses();
         if (res?.success && res.data && res.data.length > 0) {
-          const sorted = [...res.data].sort((a, b) => {
+          let permittedClasses = res.data;
+          let teacherStreams: string[] = [];
+          if (user?.role === 'TEACHER') {
+            const authorized=(await apiService.getTeacherAuthorizedContext()).data;
+            if(!authorized)throw new Error('Teaching assignments could not be verified.');
+            teacherStreams=authorized.assignedClasses.flatMap(cls=>cls.streams.map(stream=>stream.id));
+            setPermittedStreamIds(teacherStreams);
+            const ids=new Set(authorized.assignedClasses.map(cls=>cls.id));
+            permittedClasses=res.data.filter(cls=>ids.has(cls.id));
+          }
+          const sorted = [...permittedClasses].sort((a, b) => {
             const orderA = GRADE_ORDER[a.gradeLevel?.toUpperCase()] ?? 99;
             const orderB = GRADE_ORDER[b.gradeLevel?.toUpperCase()] ?? 99;
             return orderA - orderB;
           });
           setClasses(sorted);
 
-          const defaultClass =
-            sorted.find((c) => c.name.toLowerCase().includes('grade 4')) || sorted[0];
+          const defaultClass = user?.role === 'TEACHER' ? sorted[0] : sorted.find((c) => c.name.toLowerCase().includes('grade 4')) || sorted[0];
+          if (!defaultClass) { setError('No class assignment is available for your account.'); return; }
           setSelectedClassId(defaultClass.id);
 
           const sRes = await apiService.getStreamsByClass(defaultClass.id);
           if (sRes?.success && sRes.data && sRes.data.length > 0) {
-            setStreams(sRes.data);
+            setStreams(user?.role==='TEACHER'?sRes.data.filter(stream=>teacherStreams.includes(stream.id)):sRes.data);
           } else {
             setStreams([]);
           }
-          setSelectedStreamId('all');
+          setSelectedStreamId(user?.role === 'TEACHER' ? sRes.data?.find(s => teacherStreams.includes(s.id))?.id || 'all' : 'all');
         } else {
           setClasses([]);
           setStreams([]);
@@ -136,25 +150,39 @@ export const MasterBroadsheetView: React.FC = () => {
       } catch (err: any) {
         console.error('Error fetching classes and terms:', err);
         setError(err?.message || 'Failed to load classes from database.');
-      }
+      } finally { setInitializing(false); }
     };
     initData();
   }, []);
 
+  useEffect(()=>{
+    if(user?.role!=='TEACHER'||!selectedYear||!selectedTerm)return;let live=true;
+    Promise.all([apiService.getTeacherAuthorizedContext(selectedYear,selectedTerm),apiService.getClasses(undefined,{academicYearId:selectedYear,termId:selectedTerm})]).then(([context,catalogue])=>{
+      if(!live)return;const assigned=context.data?.assignedClasses||[];const ids=new Set(assigned.map(cls=>cls.id));
+      setClasses((catalogue.data||[]).filter(cls=>ids.has(cls.id)));setPermittedStreamIds(assigned.flatMap(cls=>cls.streams.map(stream=>stream.id)));
+      const active=assigned.find(cls=>cls.id===selectedClassId)||assigned[0];
+      if(!active){requestVersion.current++;setSelectedClassId('');setStreams([]);setBroadsheet(null);return;}
+      setSelectedClassId(active.id);setStreams(active.streams as StreamItem[]);
+      setSelectedStreamId(old=>old==='all'||active.streams.some(stream=>stream.id===old)?old:active.streams[0]?.id||'all');
+    }).catch(err=>{if(live){requestVersion.current++;setClasses([]);setStreams([]);setBroadsheet(null);setError(err?.message||'Teaching assignments could not be verified.');}});
+    return()=>{live=false;};
+  },[user?.role,selectedYear,selectedTerm,selectedClassId]);
+
   const handleClassChange = async (classId: string) => {
+    setInitializing(true);
     setSelectedClassId(classId);
     try {
-      const sRes = await apiService.getStreamsByClass(classId);
+      const sRes = await apiService.getStreamsByClass(classId,{academicYearId:selectedYear,termId:selectedTerm});
       if (sRes?.success && sRes.data && sRes.data.length > 0) {
-        setStreams(sRes.data);
+        setStreams(user?.role==='TEACHER'?sRes.data.filter(stream=>permittedStreamIds.includes(stream.id)):sRes.data);
       } else {
         setStreams([]);
       }
-      setSelectedStreamId('all');
+      setSelectedStreamId(user?.role === 'TEACHER' ? sRes.data?.find(s => permittedStreamIds.includes(s.id))?.id || 'all' : 'all');
     } catch {
       setStreams([]);
       setSelectedStreamId('all');
-    }
+    } finally { setInitializing(false); }
   };
 
   const handleYearChange = async (yearId: string) => {
@@ -176,11 +204,13 @@ export const MasterBroadsheetView: React.FC = () => {
   };
 
   const fetchBroadsheetData = async (streamIdToFetch: string) => {
+    const version=++requestVersion.current;
     if (!streamIdToFetch && !selectedClassId) {
       setBroadsheet(null);
       return;
     }
     setLoading(true);
+    setBroadsheet(null);
     setError(null);
     try {
       const res = await apiService.getStreamBroadsheet(
@@ -190,25 +220,27 @@ export const MasterBroadsheetView: React.FC = () => {
         selectedClassId,
         selectedExamType
       );
+      if(version!==requestVersion.current)return;
       if (res?.success && res.data) {
         setBroadsheet(res.data);
       } else {
         setError(res?.message || 'Failed to generate broadsheet from database records.');
       }
     } catch (err: any) {
-      setError(err?.message || 'Error communicating with broadsheet database service.');
+      if(version===requestVersion.current)setError(err?.message || 'Error communicating with broadsheet database service.');
     } finally {
-      setLoading(false);
+      if(version===requestVersion.current)setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (initializing) return;
     if (selectedClassId) {
       fetchBroadsheetData(selectedStreamId);
     } else {
       setBroadsheet(null);
     }
-  }, [selectedStreamId, selectedClassId, selectedTerm, selectedYear, selectedExamType]);
+  }, [initializing, selectedStreamId, selectedClassId, selectedTerm, selectedYear, selectedExamType]);
 
   const overallStats = useMemo(() => {
     if (!broadsheet || !broadsheet.rows) return { EE: 0, ME: 0, AE: 0, BE: 0 };
@@ -380,7 +412,7 @@ export const MasterBroadsheetView: React.FC = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
-      doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, 20);
+      doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, 20);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
@@ -709,8 +741,9 @@ export const MasterBroadsheetView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {user?.role==='TEACHER'&&<p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-primary">Only your permitted streams and subjects are included. Totals and rankings use the visible subjects.</p>}
       {/* Top Banner */}
-      <div className="print:hidden bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="print:hidden bg-gradient-to-r from-primary-container via-primary to-maroon-light rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
           <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1.5">
             <span className="material-symbols-outlined text-base">analytics</span>
@@ -737,7 +770,7 @@ export const MasterBroadsheetView: React.FC = () => {
           <button
             onClick={handlePrint}
             disabled={!broadsheet || !broadsheet.rows.length}
-            className="bg-white hover:bg-slate-100 disabled:opacity-50 text-[#500b1b] px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
+            className="bg-white hover:bg-surface-container-low disabled:opacity-50 text-primary-container px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
           >
             <span className="material-symbols-outlined text-lg">print</span>
             Print Broadsheet
@@ -746,9 +779,9 @@ export const MasterBroadsheetView: React.FC = () => {
       </div>
 
       {/* Control Selector Bar */}
-      <div className="print:hidden bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center gap-1.5 pb-3 border-b border-slate-100">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2 flex items-center gap-1">
+      <div className="print:hidden bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center gap-1.5 pb-3 border-b border-outline-variant/30">
+          <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-2 flex items-center gap-1">
             <span className="material-symbols-outlined text-base text-rose-800">school</span>
             Grade:
           </span>
@@ -758,8 +791,8 @@ export const MasterBroadsheetView: React.FC = () => {
               onClick={() => handleClassChange(c.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                 c.id === selectedClassId
-                  ? 'bg-[#500b1b] text-white shadow-sm'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-primary-container text-white shadow-sm'
+                  : 'bg-surface-container-low hover:bg-surface-container text-on-surface-variant'
               }`}
             >
               {c.name}
@@ -770,11 +803,11 @@ export const MasterBroadsheetView: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Class / Grade</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Class / Grade</label>
               <select
                 value={selectedClassId}
                 onChange={(e) => handleClassChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -785,14 +818,14 @@ export const MasterBroadsheetView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Stream</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Stream</label>
               <select
                 value={selectedStreamId}
                 onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 <option value="all">
-                  ⭐ All Streams ({classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'})
+                  ⭐ {user?.role==='TEACHER'?'Permitted streams':'All Streams'} ({classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'})
                 </option>
                 {streams.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -803,11 +836,11 @@ export const MasterBroadsheetView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Assessment Type</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Assessment Type</label>
               <select
                 value={selectedExamType}
                 onChange={(e) => setSelectedExamType(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 <option value="End of Term Examination">End of Term Examination</option>
                 <option value="Mid-Term Assessment">Mid-Term Assessment</option>
@@ -817,11 +850,11 @@ export const MasterBroadsheetView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Term</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Term</label>
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {academicTerms.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -832,11 +865,11 @@ export const MasterBroadsheetView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Year</label>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Year</label>
               <select
                 value={selectedYear}
                 onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {academicYears.map((y) => (
                   <option key={y.id} value={y.id}>
@@ -849,7 +882,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
           <button
             onClick={() => fetchBroadsheetData(selectedStreamId)}
-            className="bg-[#7a1228] hover:bg-[#5e0d1e] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="bg-primary hover:bg-primary-container text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <span className="material-symbols-outlined text-base">refresh</span>
             Recalculate Broadsheet
@@ -861,22 +894,22 @@ export const MasterBroadsheetView: React.FC = () => {
       {broadsheet && (
         <div className="space-y-4 print:hidden">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-rose-200 transition-all">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-rose-200 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">
+                <span className="text-xs font-semibold text-on-surface-variant">
                   {selectedStreamId === 'all' ? 'Grade Mean Score' : 'Stream Mean Score'}
                 </span>
-                <span className="material-symbols-outlined text-[#7a1228] text-lg">trending_up</span>
+                <span className="material-symbols-outlined text-primary text-lg">trending_up</span>
               </div>
-              <p className="text-2xl font-black text-[#7a1228] mt-1">{broadsheet.streamMeanScore}%</p>
-              <p className="text-xs text-slate-500 mt-1 font-mono">
+              <p className="text-2xl font-black text-primary mt-1">{broadsheet.streamMeanScore}%</p>
+              <p className="text-xs text-on-surface-variant mt-1 font-mono">
                 {broadsheet.streamMeanPoints ? `${broadsheet.streamMeanPoints} Mean GPA` : ''} • {broadsheet.totalStudents} ranked
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-emerald-200 transition-all">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-emerald-200 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Exceeding (EE)</span>
+                <span className="text-xs font-semibold text-on-surface-variant">Exceeding (EE)</span>
                 <span className="material-symbols-outlined text-emerald-500 text-lg">verified</span>
               </div>
               <p className="text-2xl font-black text-emerald-600 mt-1">{overallStats.EE}</p>
@@ -887,9 +920,9 @@ export const MasterBroadsheetView: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-blue-200 transition-all">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-blue-200 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Meeting (ME)</span>
+                <span className="text-xs font-semibold text-on-surface-variant">Meeting (ME)</span>
                 <span className="material-symbols-outlined text-blue-500 text-lg">check_circle</span>
               </div>
               <p className="text-2xl font-black text-blue-600 mt-1">{overallStats.ME}</p>
@@ -900,9 +933,9 @@ export const MasterBroadsheetView: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-amber-200 transition-all">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-amber-200 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Quality Pass Rate (EE+ME)</span>
+                <span className="text-xs font-semibold text-on-surface-variant">Quality Pass Rate (EE+ME)</span>
                 <span className="material-symbols-outlined text-amber-500 text-lg">award_star</span>
               </div>
               <p className="text-2xl font-black text-amber-600 mt-1">
@@ -919,14 +952,14 @@ export const MasterBroadsheetView: React.FC = () => {
       )}
 
       {/* Tabs Bar with School vs Class Toggle */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/30 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('marksheet')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'marksheet'
-                ? 'bg-[#500b1b] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                ? 'bg-primary-container text-white shadow-sm'
+                : 'bg-white hover:bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
             }`}
           >
             <span className="material-symbols-outlined text-base">table_rows</span>
@@ -937,8 +970,8 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('classRanking')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'classRanking'
-                ? 'bg-[#500b1b] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                ? 'bg-primary-container text-white shadow-sm'
+                : 'bg-white hover:bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
             }`}
           >
             <span className="material-symbols-outlined text-base">military_tech</span>
@@ -949,8 +982,8 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('bestClassPerSubject')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'bestClassPerSubject'
-                ? 'bg-[#500b1b] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                ? 'bg-primary-container text-white shadow-sm'
+                : 'bg-white hover:bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
             }`}
           >
             <span className="material-symbols-outlined text-base">award_star</span>
@@ -961,8 +994,8 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('bestStudentPerSubject')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'bestStudentPerSubject'
-                ? 'bg-[#500b1b] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                ? 'bg-primary-container text-white shadow-sm'
+                : 'bg-white hover:bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
             }`}
           >
             <span className="material-symbols-outlined text-base">stars</span>
@@ -970,14 +1003,14 @@ export const MasterBroadsheetView: React.FC = () => {
           </button>
         </div>
 
-        {activeTab !== 'marksheet' && (
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        {activeTab !== 'marksheet' && user?.role!=='TEACHER' && (
+          <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl border border-outline-variant/30">
             <button
               onClick={() => setScopeFilter('CLASS')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 scopeFilter === 'CLASS'
-                  ? 'bg-[#500b1b] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-primary-container text-white shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               Class Level
@@ -986,8 +1019,8 @@ export const MasterBroadsheetView: React.FC = () => {
               onClick={() => setScopeFilter('SCHOOL')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 scopeFilter === 'SCHOOL'
-                  ? 'bg-[#500b1b] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-primary-container text-white shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               Whole School
@@ -1003,7 +1036,7 @@ export const MasterBroadsheetView: React.FC = () => {
             GRACE SEEDS SCHOOL
           </h2>
           <p className="text-xs text-slate-600 font-medium">
-            KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
+            P.O Box 12-20123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
           </p>
         </div>
 

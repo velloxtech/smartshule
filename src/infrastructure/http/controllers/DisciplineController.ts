@@ -174,7 +174,7 @@ export class DisciplineController {
   public getStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.user?.schoolId;
-      const stats = await this.disciplineUseCases.getDisciplineStats(schoolId);
+      const stats = await this.disciplineUseCases.getDisciplineStats(schoolId, (req as any).canAccessTeachingRecord);
       return res.status(200).json({
         success: true,
         data: stats

@@ -88,7 +88,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('The Future Begins Here', 14, 16);
-    doc.text('KEMRI Street, Kisian, Kisumu, Kenya | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 21);
+    doc.text('P.O Box 12-20123 | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 21);
 
     // Document Title Banner
     doc.setTextColor(122, 18, 40);

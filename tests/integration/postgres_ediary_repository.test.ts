@@ -2,7 +2,16 @@ import { Pool } from 'pg';
 import { PostgresEDiaryRepository } from '../../src/infrastructure/database/postgres/PostgresEDiaryRepository';
 import { EDiaryEntry } from '../../src/core/domain/ediary/EDiaryEntry';
 
-describe('PostgresEDiaryRepository Real PostgreSQL Integration Tests', () => {
+const testDatabaseUrl = process.env.EDIARY_TEST_DATABASE_URL;
+if (testDatabaseUrl) {
+  const target = new URL(testDatabaseUrl);
+  if (!['localhost', '127.0.0.1'].includes(target.hostname) ||
+      !['/smartshule_test', '/smartshule_investigation'].includes(target.pathname)) {
+    throw new Error('EDIARY_TEST_DATABASE_URL must identify a disposable localhost smartshule_test or smartshule_investigation database.');
+  }
+}
+
+(testDatabaseUrl ? describe : describe.skip)('PostgresEDiaryRepository Real PostgreSQL Integration Tests', () => {
   let pool: Pool;
   let repo: PostgresEDiaryRepository;
   const testEntryId = 'test-ediary-pg-001';
@@ -11,7 +20,7 @@ describe('PostgresEDiaryRepository Real PostgreSQL Integration Tests', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://don:1324@localhost:5432/smartshule',
+      connectionString: testDatabaseUrl,
     });
     repo = new PostgresEDiaryRepository(pool);
   });

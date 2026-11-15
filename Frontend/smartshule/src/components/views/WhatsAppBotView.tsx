@@ -515,7 +515,7 @@ export const WhatsAppBotView: React.FC = () => {
           </div>
 
           {/* 1,000 Free Conversations Meter */}
-          <div className="p-4 rounded-xl bg-black/25 backdrop-blur-xs border border-white/10 min-w-[280px] space-y-2.5">
+          <div className="p-4 rounded-xl bg-black/25 backdrop-blur-xs border border-white/10 min-w-0 w-full lg:min-w-[280px] lg:w-auto space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-emerald-200 uppercase tracking-wider text-[11px]">Free Tier Meter</span>
               <span className="font-bold font-data-mono text-white">

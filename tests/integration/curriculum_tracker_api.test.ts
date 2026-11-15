@@ -1,4 +1,7 @@
 import request from 'supertest';
+import { ClassRoom,Stream,LearningArea,EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { CBCGradeLevel } from '../../src/core/domain/user/Student';
+import { SubjectTeacherAssignment } from '../../src/core/domain/academic/TeacherAssignment';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
@@ -13,6 +16,11 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
   beforeAll(async () => {
     container = new AppContainer();
     await setupTestFixtures(container);
+    // The tracker belongs to a real, explicitly assigned cohort and learning area.
+    await container.academicRepository.saveClass(ClassRoom.create({schoolId:'school-001',name:'Grade 3',gradeLevel:CBCGradeLevel.GRADE_3,educationLevel:EducationLevel.LOWER_PRIMARY},'class-grade-3'));
+    await container.academicRepository.saveStream(Stream.create({classRoomId:'class-grade-3',name:'East',capacity:30},'stream-east'));
+    await container.academicRepository.saveLearningArea(LearningArea.create({schoolId:'school-001',name:'CRE',code:'G3CRE',gradeLevel:CBCGradeLevel.GRADE_3,educationLevel:EducationLevel.LOWER_PRIMARY,isElective:false},'la-cre-001'));
+    await container.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({schoolId:'school-001',academicYearId:'year-2026',classRoomId:'class-grade-3',streamId:'stream-east',learningAreaId:'la-cre-001',teacherId:'teacher-001',role:'SUBJECT_TEACHER',isActive:true,effectiveFrom:'2026-01-01'},'tracker-test-assignment'));
     app = createExpressApp(container);
 
     const adminLoginRes = await request(app)

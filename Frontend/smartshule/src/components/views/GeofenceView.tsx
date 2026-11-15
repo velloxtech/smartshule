@@ -80,8 +80,8 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
 
   useEffect(() => {
     loadGeofenceData();
-    loadClockInRecords();
-  }, [loadGeofenceData, loadClockInRecords]);
+    if (!isTeacher) loadClockInRecords();
+  }, [loadGeofenceData, loadClockInRecords, isTeacher]);
 
   // Capture Director's Live GPS Coordinates
   const handleDetectCurrentLocation = () => {
@@ -186,6 +186,8 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
 
   const clockedInCount = records.filter((r) => r.status === 'CLOCKED_IN').length;
   const clockedOutCount = records.filter((r) => r.status === 'CLOCKED_OUT').length;
+
+  if (isTeacher) return <TeacherGeofenceClockInCard teacherName={user?.fullName || 'Teacher'} />;
 
   return (
     <div className="space-y-6 pb-12">

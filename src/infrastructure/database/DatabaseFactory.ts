@@ -1,6 +1,7 @@
 import { IBiometricCredentialRepository } from '../../core/ports/repositories/IBiometricCredentialRepository';
 import { InMemoryBiometricCredentialRepository } from './in-memory/InMemoryBiometricCredentialRepository';
 import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiometricCredentialRepository';
+import { PlanningRepository, PostgresPlanningRepository } from '../../application/planning/PlanningRepository';
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
@@ -118,6 +119,7 @@ import { InMemoryParentConsentRepository } from './in-memory/InMemoryParentConse
 import { PostgresParentConsentRepository } from './postgres/PostgresParentConsentRepository';
 
 export interface RepositoryBundle {
+  planningRepository?: PlanningRepository;
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
   deletedStudentRepository?: IDeletedStudentRepository;
@@ -265,6 +267,7 @@ export class DatabaseFactory {
         academicRepository: new PostgresAcademicRepository(pool),
         CBCAssessmentRepository: new PostgresCBCAssessmentRepository(pool),
         schemeOfWorkRepository: new PostgresSchemeOfWorkRepository(pool),
+        planningRepository: new PostgresPlanningRepository(pool),
         lessonPlanRepository: new PostgresLessonPlanRepository(pool),
         timetableRepository: new PostgresTimetableRepository(pool),
         attendanceRepository: new PostgresAttendanceRepository(pool),

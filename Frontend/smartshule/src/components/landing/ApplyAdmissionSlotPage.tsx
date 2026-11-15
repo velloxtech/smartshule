@@ -1063,7 +1063,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               Grace Seeds School
             </h4>
             <p>Kisumu, Kisian, KEMRI Road</p>
-            <p className="mt-1">P.O. Box Private Bag, Kisumu, Kenya</p>
+            <p className="mt-1">P.O Box 12-20123</p>
           </div>
           <div>
             <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-[#f5c84a] mb-2">

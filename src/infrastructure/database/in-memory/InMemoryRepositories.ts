@@ -525,40 +525,15 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
   }
 
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    const normGrade = gradeLevel 
-      ? gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '')
-      : null;
-
-    const allStrands = Array.from(this.strands.values());
-    const areaStrands = allStrands.filter(s => 
-      s.learningAreaId === learningAreaId || 
-      s.code.startsWith(learningAreaId) ||
-      (learningAreaId.includes('math') && s.code.startsWith('MAT')) ||
-      (learningAreaId.includes('mat') && s.code.startsWith('MAT'))
-    );
-
-    let candidates = areaStrands.length > 0 ? areaStrands : allStrands;
-
-    if (normGrade) {
-      const gradeFiltered = candidates.filter(s => {
-        if (!s.gradeLevel) return true;
-        const sg = s.gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '');
-        return sg === normGrade;
-      });
-      if (gradeFiltered.length > 0) {
-        candidates = gradeFiltered;
-      }
-    }
-
     const seen = new Set<string>();
-    const result: Strand[] = [];
-    for (const s of candidates) {
-      const k = (s.title || '').trim().toLowerCase();
-      if (!k || seen.has(k)) continue;
-      seen.add(k);
-      result.push(s);
-    }
-    return result;
+    return Array.from(this.strands.values()).filter(strand =>
+      strand.learningAreaId === learningAreaId && (!gradeLevel || strand.gradeLevel === gradeLevel)
+    ).filter(strand => {
+      const title = strand.title.trim().toLowerCase();
+      if (seen.has(title)) return false;
+      seen.add(title);
+      return true;
+    });
   }
 
   public async saveStrand(strand: Strand): Promise<void> {

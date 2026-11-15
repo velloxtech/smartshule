@@ -169,8 +169,8 @@ describe('Library & Textbook System Integration Tests', () => {
         .send({
           bookId: singleCopyBookId,
           borrowerType: 'STUDENT',
-          borrowerId: 'stud-test-001',
-          borrowerName: 'John Kamau',
+          borrowerId: 'student-001',
+          borrowerName: 'Kevin Kamau Kariuki',
           borrowerAdmissionOrNumber: 'ADM-2024-001',
           borrowerGradeOrClass: 'Grade 7 East',
           dueDate: dueDate.toISOString().split('T')[0],
@@ -180,7 +180,7 @@ describe('Library & Textbook System Integration Tests', () => {
       expect(issueRes.status).toBe(201);
       expect(issueRes.body.success).toBe(true);
       expect(issueRes.body.data.status).toBe('ISSUED');
-      expect(issueRes.body.data.borrowerName).toBe('John Kamau');
+      expect(issueRes.body.data.borrowerName).toBe('Kevin Kamau Kariuki');
       loanId = issueRes.body.data.id;
 
       // Verify available copies is now 0

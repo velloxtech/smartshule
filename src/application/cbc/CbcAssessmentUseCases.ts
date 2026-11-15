@@ -1,3 +1,4 @@
+import { assessmentScore, assessmentResults } from '../../core/domain/cbc/AssessmentScore';
 import {
   ICBCAssessmentRepository,
   FormativeFilterCriteria,
@@ -32,6 +33,7 @@ import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
 import { BroadsheetUseCases } from '../academics/BroadsheetUseCases';
+import { TeacherAssignmentAccess } from '../shared/TeacherAssignmentAccess';
 
 export interface UserContext {
   userId: string;
@@ -176,11 +178,27 @@ export class CBCAssessmentUseCases {
   }
 
   // 1. Strands and SubStrands
-  public async createStrand(dto: CreateStrandDTO) {
+  private async assertStrandEditor(learningAreaId: string, actor?: UserContext, gradeLevel?: string) {
+    // Calls without an actor are reserved for trusted seed/import code.
+    if (!actor) return;
+    if (!this.teacherRepository) throw new ForbiddenError('Subject assignment verification is unavailable.');
+    await new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository).assertSubjectEditor(actor, learningAreaId, gradeLevel);
+  }
+
+  private async assertSubStrandEditor(strandId: string, actor?: UserContext) {
+    const strand = await this.CBCRepository.findStrandById(strandId);
+    if (!strand) throw new NotFoundError('Strand', strandId);
+    await this.assertStrandEditor(strand.learningAreaId, actor, strand.gradeLevel);
+  }
+
+  public async createStrand(dto: CreateStrandDTO, actor?: UserContext) {
+    await this.assertStrandEditor(dto.learningAreaId, actor, dto.gradeLevel);
     const existingStrands = await this.CBCRepository.findStrandsByLearningArea(dto.learningAreaId, dto.gradeLevel);
     const dup = existingStrands.find(
-      s => s.code.trim().toUpperCase() === dto.code.trim().toUpperCase() ||
-           s.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
+      s => s.learningAreaId === dto.learningAreaId && s.gradeLevel === dto.gradeLevel && (
+        s.code.trim().toUpperCase() === dto.code.trim().toUpperCase() ||
+        s.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
+      )
     );
     if (dup) {
       return dup.toJSON();
@@ -191,15 +209,17 @@ export class CBCAssessmentUseCases {
     return strand.toJSON();
   }
 
-  public async updateStrand(id: string, dto: UpdateStrandDTO) {
+  public async updateStrand(id: string, dto: UpdateStrandDTO, actor?: UserContext) {
     const strand = await this.CBCRepository.findStrandById(id);
     if (!strand) throw new NotFoundError('Strand', id);
+    await this.assertStrandEditor(strand.learningAreaId, actor, strand.gradeLevel);
 
     const targetAreaId = dto.learningAreaId || strand.learningAreaId;
     const targetGrade = dto.gradeLevel || strand.gradeLevel;
+    await this.assertStrandEditor(targetAreaId, actor, targetGrade);
     const existingStrands = await this.CBCRepository.findStrandsByLearningArea(targetAreaId, targetGrade);
     const dup = existingStrands.find(
-      s => s.id !== id && (
+      s => s.learningAreaId === targetAreaId && s.gradeLevel === targetGrade && s.id !== id && (
         (dto.code && s.code.trim().toUpperCase() === dto.code.trim().toUpperCase()) ||
         (dto.title && s.title.trim().toLowerCase() === dto.title.trim().toLowerCase())
       )
@@ -218,9 +238,10 @@ export class CBCAssessmentUseCases {
     return strands.map(s => s.toJSON());
   }
 
-  public async createSubStrand(dto: CreateSubStrandDTO) {
+  public async createSubStrand(dto: CreateSubStrandDTO, actor?: UserContext) {
     const strand = await this.CBCRepository.findStrandById(dto.strandId);
     if (!strand) throw new NotFoundError('Strand', dto.strandId);
+    await this.assertStrandEditor(strand.learningAreaId, actor, strand.gradeLevel);
 
     const existingSubs = await this.CBCRepository.findSubStrandsByStrand(dto.strandId);
     const dup = existingSubs.find(
@@ -236,11 +257,13 @@ export class CBCAssessmentUseCases {
     return subStrand.toJSON();
   }
 
-  public async updateSubStrand(id: string, dto: UpdateSubStrandDTO) {
+  public async updateSubStrand(id: string, dto: UpdateSubStrandDTO, actor?: UserContext) {
     const subStrand = await this.CBCRepository.findSubStrandById(id);
     if (!subStrand) throw new NotFoundError('SubStrand', id);
+    await this.assertSubStrandEditor(subStrand.strandId, actor);
 
     const targetStrandId = dto.strandId || subStrand.strandId;
+    await this.assertSubStrandEditor(targetStrandId, actor);
     const existingSubs = await this.CBCRepository.findSubStrandsByStrand(targetStrandId);
     const dup = existingSubs.find(
       sub => sub.id !== id && (
@@ -278,7 +301,8 @@ export class CBCAssessmentUseCases {
         dto.learningAreaId,
         dto.academicYearId || '',
         userToAssert,
-        student.gradeLevel
+        student.gradeLevel,
+        dto.termId
       );
     }
 
@@ -356,7 +380,7 @@ export class CBCAssessmentUseCases {
     return assessment.toJSON();
   }
 
-  public async listFormativeAssessments(filters: FormativeFilterCriteria & { requestingUser?: UserContext }) {
+  public async listFormativeAssessments(filters: FormativeFilterCriteria & { requestingUser?: UserContext; authorize?: (record:any)=>Promise<boolean> }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
     let targetRecords: FormativeAssessment[] = [];
 
@@ -588,17 +612,19 @@ export class CBCAssessmentUseCases {
         dto.learningAreaId,
         dto.academicYearId || '',
         userToAssert,
-        student.gradeLevel
+        student.gradeLevel,
+        dto.termId
       );
     }
 
     if (dto.strandScores && Array.isArray(dto.strandScores)) {
       for (const item of dto.strandScores) {
         if (item && item.rawScore !== undefined) {
-          if (item.rawScore < 0) {
+          if (!Number.isFinite(item.rawScore) || item.rawScore < 0) {
             throw new ValidationError('Assessment score cannot be negative.');
           }
-          const max = item.maxScore !== undefined && item.maxScore > 0 ? item.maxScore : 100;
+          const max = item.maxScore ?? 100;
+          if (!Number.isFinite(max) || max <= 0) throw new ValidationError('Maximum marks must be a finite positive number.');
           if (item.rawScore > max) {
             throw new ValidationError(`Assessment score (${item.rawScore}) cannot exceed maximum allowed marks (${max}).`);
           }
@@ -643,13 +669,13 @@ export class CBCAssessmentUseCases {
           strandTitle: strand ? strand.title : 'General Strand',
           performanceLevel: item.performanceLevel,
           rawScore: item.rawScore,
-          maxScore: item.maxScore
+          maxScore: item.maxScore ?? 100
         });
       }
     }
 
     const existing = await this.CBCRepository.findSummatives({
-      studentId: dto.studentId,
+      studentId: student.id,
       learningAreaId: validLearningAreaId,
       termId: termId || 'term-default',
       academicYearId: academicYearId || 'year-default'
@@ -658,7 +684,7 @@ export class CBCAssessmentUseCases {
 
     const assessment = SummativeAssessment.create(
       {
-        studentId: dto.studentId,
+        studentId: student.id,
         teacherId,
         learningAreaId: validLearningAreaId,
         termId: termId || 'term-default',
@@ -684,7 +710,7 @@ export class CBCAssessmentUseCases {
     return results;
   }
 
-  public async listSummativeAssessments(filters: SummativeFilterCriteria & { requestingUser?: UserContext }) {
+  public async listSummativeAssessments(filters: SummativeFilterCriteria & { requestingUser?: UserContext; authorize?: (record:any)=>Promise<boolean> }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
     if (isParent && filters.requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
@@ -702,12 +728,12 @@ export class CBCAssessmentUseCases {
           });
           results.push(...studentSummatives);
         }
-        return results.map(r => r.toJSON());
+        return assessmentResults(results.map(r => r.toJSON()));
       }
     }
 
     const records = await this.CBCRepository.findSummatives(filters);
-    return records.map(r => typeof r.toJSON === 'function' ? r.toJSON() : r);
+    return assessmentResults(records.map(r => r.toJSON()));
   }
 
   public async computeStudentRankings(
@@ -896,19 +922,9 @@ export class CBCAssessmentUseCases {
       let subCount = 0;
 
       if (stSumms.length > 0) {
-        for (const sm of stSumms) {
-          let rawScore: number | undefined;
-          let maxScore: number | undefined;
-          if (sm.strandScores && sm.strandScores.length > 0) {
-            const valid = sm.strandScores.filter(x => x.rawScore !== undefined && x.maxScore !== undefined && x.maxScore > 0);
-            if (valid.length > 0) {
-              rawScore = valid.reduce((acc, x) => acc + (x.rawScore || 0), 0);
-              maxScore = valid.reduce((acc, x) => acc + (x.maxScore || 100), 0);
-            }
-          }
-          const pct = (rawScore !== undefined && maxScore !== undefined && maxScore > 0)
-            ? Math.min(100, Math.round((rawScore / maxScore) * 100))
-            : toPercent(sm.overallPerformanceLevel);
+        for (const sm of assessmentResults(stSumms.map(s => s.toJSON()))) {
+          if (sm.scoreIssue) continue;
+          const pct = sm.percentageScore ?? toPercent(sm.overallPerformanceLevel);
           totScore += pct;
           totPoints += pointsFromLevel(sm.overallPerformanceLevel);
           subCount++;
@@ -1004,6 +1020,9 @@ export class CBCAssessmentUseCases {
       academicYearId: dto.academicYearId
     });
 
+    const resultIssues = assessmentResults(summatives.map(s => s.toJSON())).filter(r => r.scoreIssue);
+    if (resultIssues.length) throw new ConflictError(`Results require verification: ${resultIssues.map(r => r.id).join(', ')}`);
+
     const allDbAreas = await this.academicRepository.findAllLearningAreas().catch(() => []);
     const dbAreaMap = new Map<string, any>(allDbAreas.map(a => [a.id, a]));
 
@@ -1033,9 +1052,8 @@ export class CBCAssessmentUseCases {
       const match = yearTerms.find(t => t.id === tid);
       if (match?.termNumber) return Number(match.termNumber);
       const lower = (tid || '').toLowerCase();
-      if (lower.includes('1') || lower.includes('t1')) return 1;
-      if (lower.includes('2') || lower.includes('t2')) return 2;
-      if (lower.includes('3') || lower.includes('t3')) return 3;
+      const suffix = lower.match(/(?:^|[-_])t?([1-3])$/);
+      if (suffix) return Number(suffix[1]);
       return 1;
     };
 
@@ -1065,19 +1083,12 @@ export class CBCAssessmentUseCases {
       }
 
       const canonKey = this.getCanonicalSubjectKey(area.code || area.name || area.id);
+      const verifiedScore = assessmentScore(summ.strandScores);
+      if (verifiedScore.scoreIssue) throw new ConflictError(`Assessment ${summ.id}: ${verifiedScore.scoreIssue}`);
       const rubricVal = PerformanceLevelScores[summ.overallPerformanceLevel].score;
-      let summRawScore: number | undefined;
-      let summMaxScore: number | undefined;
-      if (summ.strandScores && summ.strandScores.length > 0) {
-        const withScores = summ.strandScores.filter(s => s.rawScore !== undefined && s.maxScore !== undefined && s.maxScore > 0);
-        if (withScores.length > 0) {
-          summRawScore = withScores.reduce((acc, s) => acc + (s.rawScore || 0), 0);
-          summMaxScore = withScores.reduce((acc, s) => acc + (s.maxScore || 100), 0);
-        }
-      }
-      const pct = (summRawScore !== undefined && summMaxScore !== undefined && summMaxScore > 0)
-        ? Math.min(100, Math.round((summRawScore / summMaxScore) * 100))
-        : toPercent(rubricVal, summ.overallPerformanceLevel);
+      const summRawScore = verifiedScore.rawScore;
+      const summMaxScore = verifiedScore.maxScore;
+      const pct = verifiedScore.percentageScore ?? toPercent(rubricVal, summ.overallPerformanceLevel);
 
       const entry: LearningAreaReportEntry = {
         learningAreaId: area.id,
@@ -1473,6 +1484,16 @@ export class CBCAssessmentUseCases {
       }
     }
 
+    const currentSummatives = await this.CBCRepository.findSummatives({studentId, termId, academicYearId});
+    const currentResults = assessmentResults(currentSummatives.map(s => s.toJSON()));
+    const issues = currentResults.filter(r => r.scoreIssue);
+    if (issues.length) throw new ConflictError(`Results require verification: ${issues.map(r => r.id).join(', ')}`);
+    const currentAreas = await this.academicRepository.findAllLearningAreas().catch(() => []);
+    const currentPercentages = new Map(currentResults.map(r => {
+      const area = currentAreas.find(a => a.id === r.learningAreaId);
+      return [this.getCanonicalSubjectKey(area?.code || area?.name || r.learningAreaId), r];
+    }));
+
     let reportCard = await this.CBCRepository.findReportCard(studentId, termId, academicYearId);
     if (!reportCard) {
       try {
@@ -1502,9 +1523,8 @@ export class CBCAssessmentUseCases {
       const match = yearTerms.find(t => t.id === tid);
       if (match?.termNumber) return Number(match.termNumber);
       const lower = (tid || '').toLowerCase();
-      if (lower.includes('1') || lower.includes('t1')) return 1;
-      if (lower.includes('2') || lower.includes('t2')) return 2;
-      if (lower.includes('3') || lower.includes('t3')) return 3;
+      const suffix = lower.match(/(?:^|[-_])t?([1-3])$/);
+      if (suffix) return Number(suffix[1]);
       return 1;
     };
 
@@ -1557,10 +1577,8 @@ export class CBCAssessmentUseCases {
       const t3Rep = yearReports.find(r => getTermNumber(r.termId) === 3 && r.id !== reportCard.id);
 
       reportData.learningAreaAssessments = reportData.learningAreaAssessments.map((ev: any) => {
-        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : undefined;
-        const normalizedScore = rawScore !== undefined
-          ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 85 : rawScore === 3 ? 75 : rawScore === 2 ? 58 : 42) : rawScore)
-          : undefined;
+        const actual = currentPercentages.get(this.getCanonicalSubjectKey(ev.code || ev.learningAreaName || ev.learningAreaId));
+        const normalizedScore = actual?.percentageScore ?? (ev.score !== undefined && ev.score !== null ? Number(ev.score) : undefined);
 
         let t1Score = ev.term1Score !== undefined && ev.term1Score !== null ? Number(ev.term1Score) : undefined;
         let t2Score = ev.term2Score !== undefined && ev.term2Score !== null ? Number(ev.term2Score) : undefined;
@@ -1715,19 +1733,20 @@ export class CBCAssessmentUseCases {
     };
   }
 
-  public async getCBCAnalytics(filters: { gradeLevel?: CBCGradeLevel; learningAreaId?: string; termId: string; academicYearId: string; requestingUser?: UserContext }) {
+  public async getCBCAnalytics(filters: { gradeLevel?: CBCGradeLevel; learningAreaId?: string; termId: string; academicYearId: string; requestingUser?: UserContext; authorize?: (record:any)=>Promise<boolean> }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
     if (isParent) {
       throw new ForbiddenError('Access denied: CBC Analytics is restricted to teachers and administrators.');
     }
 
-    const summatives = await this.CBCRepository.findSummatives({
+    let summatives = await this.CBCRepository.findSummatives({
       learningAreaId: filters.learningAreaId,
       termId: filters.termId,
       academicYearId: filters.academicYearId
     });
 
-    const learningAreas = await this.academicRepository.findAllLearningAreas({ gradeLevel: filters.gradeLevel });
+    let learningAreas = await this.academicRepository.findAllLearningAreas({ schoolId:filters.requestingUser?.schoolId, gradeLevel: filters.gradeLevel });
+    if(filters.authorize){const permitted=[];for(const record of summatives)if(await filters.authorize(record))permitted.push(record);summatives=permitted;const areas=[];for(const area of learningAreas)if(await filters.authorize({learningAreaId:area.id}))areas.push(area);learningAreas=areas;}
 
     const total = summatives.length;
     const distribution = {
@@ -1768,11 +1787,15 @@ export class CBCAssessmentUseCases {
     };
   }
 
-  public async deleteStrand(id: string): Promise<void> {
+  public async deleteStrand(id: string, actor?: UserContext): Promise<void> {
+    await this.assertSubStrandEditor(id, actor);
     await this.CBCRepository.deleteStrand(id);
   }
 
-  public async deleteSubStrand(id: string): Promise<void> {
+  public async deleteSubStrand(id: string, actor?: UserContext): Promise<void> {
+    const subStrand = await this.CBCRepository.findSubStrandById(id);
+    if (!subStrand) throw new NotFoundError('SubStrand', id);
+    await this.assertSubStrandEditor(subStrand.strandId, actor);
     await this.CBCRepository.deleteSubStrand(id);
   }
 
@@ -1822,7 +1845,8 @@ export class CBCAssessmentUseCases {
     learningAreaId: string,
     academicYearId: string,
     requestingUser?: UserContext,
-    gradeLevel?: string
+    gradeLevel?: string,
+    termId?: string
   ): Promise<{ teacherId?: string }> {
     if (!requestingUser) return {};
 
@@ -1840,90 +1864,16 @@ export class CBCAssessmentUseCases {
     }
 
     if (role === UserRole.TEACHER) {
-      if (!this.teacherRepository) return {};
+      if (!this.teacherRepository) throw new ForbiddenError('Teaching assignments cannot be verified.');
       const teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
       if (!teacher) {
         throw new ForbiddenError('No teacher profile associated with your account.');
       }
 
-      // Check Lower Primary rule: PP1 to Grade 3 class teachers teach all learning areas
-      let effectiveClassRoomId = classRoomId;
-      if (!effectiveClassRoomId && streamId) {
-        try {
-          const stream = await this.academicRepository.findStreamById(streamId);
-          if (stream) effectiveClassRoomId = stream.classRoomId;
-        } catch {}
-      }
-
-      const lowerPrimaryGrades = ['PLAYGROUP', 'CRECHE', 'RECEPTION', 'PP1', 'PP2', 'GRADE_1', 'GRADE_2', 'GRADE_3'];
-      let isLowerPrimary = false;
-      if (gradeLevel) {
-        isLowerPrimary = lowerPrimaryGrades.includes(gradeLevel.toUpperCase().replace(/\s+/g, '_'));
-      } else if (effectiveClassRoomId) {
-        try {
-          const cls = await this.academicRepository.findClassById(effectiveClassRoomId);
-          if (cls && cls.gradeLevel) {
-            isLowerPrimary = lowerPrimaryGrades.includes(cls.gradeLevel.toUpperCase().replace(/\s+/g, '_'));
-          }
-        } catch {}
-      }
-
-      const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
-        teacherId: teacher.id,
-        classRoomId: effectiveClassRoomId || undefined,
-        academicYearId: academicYearId || undefined,
-        isActive: true
-      });
-      const isClassTeacher = classTeacherAssignments.some(a => !a.streamId || !streamId || a.streamId === streamId) ||
-        (streamId && teacher.assignedClassStreamIds.includes(streamId));
-
-      // Under the Class-Teacher model, an assigned class teacher is authorized to record marks for their class
-      if (isClassTeacher) {
-        return { teacherId: teacher.id };
-      }
-
-      // Resolve learning area ID and Code for flexible matching
-      let targetLaId = learningAreaId;
-      let targetLaCode = '';
-      try {
-        const la = await this.academicRepository.findLearningAreaById(learningAreaId);
-        if (la) {
-          targetLaId = la.id;
-          targetLaCode = la.code || '';
-        } else {
-          const allLas = await this.academicRepository.findAllLearningAreas();
-          const match = allLas.find((l: any) => l.code?.toLowerCase() === learningAreaId.toLowerCase() || l.id.toLowerCase() === learningAreaId.toLowerCase());
-          if (match) {
-            targetLaId = match.id;
-            targetLaCode = match.code || '';
-          }
-        }
-      } catch {}
-
-      // Under the Subject-Teacher model, verify active subject assignment for this learning area in this class/stream
-      const subjectAssignments = await this.academicRepository.findSubjectTeacherAssignments({
-        teacherId: teacher.id,
-        academicYearId: academicYearId || undefined,
-        isActive: true
-      });
-      const targetCanonicalKey = this.getCanonicalSubjectKey(learningAreaId);
-      const matchingSubj = subjectAssignments.find(s => {
-        const matchesClass = !s.classRoomId || s.classRoomId === effectiveClassRoomId || (streamId && s.streamId === streamId);
-        if (!matchesClass) return false;
-        const subjCanonicalKey = this.getCanonicalSubjectKey(s.learningAreaId);
-        return (
-          s.learningAreaId === targetLaId ||
-          (targetLaCode && s.learningAreaId === targetLaCode) ||
-          s.learningAreaId === learningAreaId ||
-          (targetCanonicalKey && subjCanonicalKey === targetCanonicalKey)
-        );
-      });
-
-      if (matchingSubj) {
-        return { teacherId: teacher.id };
-      }
-
-      throw new ForbiddenError('You are not authorized to upload or enter marks for this class/subject.');
+      const area=await this.academicRepository.findLearningAreaById(learningAreaId)
+        || (await this.academicRepository.findAllLearningAreas()).find(candidate=>candidate.code?.toLowerCase()===learningAreaId.toLowerCase());
+      await new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository).assert(requestingUser,{classRoomId:classRoomId||undefined,streamId,learningAreaId:area?.id||learningAreaId,academicYearId,termId});
+      return {teacherId:teacher.id};
     }
 
     throw new ForbiddenError('You are not authorized to upload or enter marks.');
@@ -1947,7 +1897,9 @@ export class CBCAssessmentUseCases {
       query.streamId,
       query.learningAreaId,
       query.academicYearId,
-      requestingUser
+      requestingUser,
+      undefined,
+      query.termId
     );
 
     const classRoom = await this.academicRepository.findClassById(query.classRoomId);
@@ -2030,7 +1982,9 @@ export class CBCAssessmentUseCases {
       dto.streamId,
       dto.learningAreaId,
       dto.academicYearId,
-      requestingUser
+      requestingUser,
+      undefined,
+      dto.termId
     );
 
     const classRoom = await this.academicRepository.findClassById(dto.classRoomId);
@@ -2275,7 +2229,9 @@ export class CBCAssessmentUseCases {
       dto.streamId,
       dto.learningAreaId,
       dto.academicYearId,
-      requestingUser
+      requestingUser,
+      undefined,
+      dto.termId
     );
 
     const validation = await this.validateMarksUpload(dto, requestingUser);

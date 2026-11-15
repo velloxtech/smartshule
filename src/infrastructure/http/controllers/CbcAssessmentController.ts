@@ -130,7 +130,7 @@ export class CBCAssessmentController {
 
   public createStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const strand = await this.CBCUseCases.createStrand(req.body);
+      const strand = await this.CBCUseCases.createStrand(req.body, (req as any).user);
       return res.status(201).json({ success: true, data: strand });
     } catch (err) {
       next(err);
@@ -139,7 +139,7 @@ export class CBCAssessmentController {
 
   public updateStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const strand = await this.CBCUseCases.updateStrand(req.params.id as string, req.body);
+      const strand = await this.CBCUseCases.updateStrand(req.params.id as string, req.body, (req as any).user);
       return res.status(200).json({ success: true, data: strand });
     } catch (err) {
       next(err);
@@ -162,7 +162,7 @@ export class CBCAssessmentController {
 
   public createSubStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const subStrand = await this.CBCUseCases.createSubStrand(req.body);
+      const subStrand = await this.CBCUseCases.createSubStrand(req.body, (req as any).user);
       return res.status(201).json({ success: true, data: subStrand });
     } catch (err) {
       next(err);
@@ -171,7 +171,7 @@ export class CBCAssessmentController {
 
   public updateSubStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const subStrand = await this.CBCUseCases.updateSubStrand(req.params.id as string, req.body);
+      const subStrand = await this.CBCUseCases.updateSubStrand(req.params.id as string, req.body, (req as any).user);
       return res.status(200).json({ success: true, data: subStrand });
     } catch (err) {
       next(err);
@@ -439,9 +439,10 @@ export class CBCAssessmentController {
       const analytics = await this.CBCUseCases.getCBCAnalytics({
         gradeLevel: gradeLevel as CBCGradeLevel,
         learningAreaId: learningAreaId as string,
-        termId: termId as string,
-        academicYearId: academicYearId as string,
-        requestingUser: (req as any).user
+        termId: (termId || (req as any).teachingContext?.termId) as string,
+        academicYearId: (academicYearId || (req as any).teachingContext?.academicYearId) as string,
+        requestingUser: (req as any).user,
+        authorize:(req as any).canAccessTeachingRecord
       });
       return res.status(200).json({ success: true, data: analytics });
     } catch (err) {
@@ -451,7 +452,7 @@ export class CBCAssessmentController {
 
   public deleteStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.CBCUseCases.deleteStrand(req.params.id as string);
+      await this.CBCUseCases.deleteStrand(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Strand deleted successfully' });
     } catch (err) {
       next(err);
@@ -460,7 +461,7 @@ export class CBCAssessmentController {
 
   public deleteSubStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.CBCUseCases.deleteSubStrand(req.params.id as string);
+      await this.CBCUseCases.deleteSubStrand(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Sub-strand deleted successfully' });
     } catch (err) {
       next(err);

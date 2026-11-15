@@ -452,15 +452,15 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   if (!isComponentActive) return null;
 
   const innerModal = (
-    <div className={`bg-white rounded-3xl ${isPage ? 'shadow-sm border border-slate-200' : 'shadow-2xl max-w-2xl max-h-[92vh] sm:max-h-[90vh] my-auto border border-slate-200'} w-full flex flex-col overflow-hidden text-slate-800`}>
+    <div className={`bg-surface-container-lowest rounded-3xl ${isPage ? 'shadow-sm border border-outline-variant/30' : 'shadow-2xl max-w-2xl max-h-[92vh] sm:max-h-[90vh] my-auto border border-outline-variant/30'} w-full flex flex-col overflow-hidden text-on-surface`}>
         {/* Header with Kenyan Flag Bar & Constitutional Reference */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 relative shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 relative shrink-0">
           {/* Top flag stripe accent (Black, Red, Green, White) */}
           <div className="absolute top-0 left-0 right-0 h-1.5 flex">
             <div className="flex-1 bg-black"></div>
-            <div className="w-1 bg-white"></div>
+            <div className="w-1 bg-surface-container-lowest"></div>
             <div className="flex-1 bg-[#c01823]"></div>
-            <div className="w-1 bg-white"></div>
+            <div className="w-1 bg-surface-container-lowest"></div>
             <div className="flex-1 bg-[#006600]"></div>
           </div>
 
@@ -533,9 +533,9 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <span
                       className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${
                         isCompleted
-                          ? 'bg-emerald-400 text-slate-900'
+                          ? 'bg-emerald-400 text-on-surface'
                           : isActive
-                          ? 'bg-amber-300 text-slate-900'
+                          ? 'bg-amber-300 text-on-surface'
                           : 'bg-white/20 text-white'
                       }`}
                     >
@@ -577,8 +577,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               </div>
 
               {/* Optional Learner Passport Photo */}
-              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                <div className="w-12 h-12 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center font-bold text-slate-600 shrink-0 overflow-hidden">
+              <div className="flex items-center gap-3 p-3 bg-surface border border-outline-variant/30 rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-variant/30 flex items-center justify-center font-bold text-on-surface-variant shrink-0 overflow-hidden">
                   {profilePhotoUrl ? (
                     <img src={profilePhotoUrl} alt="Learner Preview" className="w-full h-full object-cover" />
                   ) : (
@@ -586,10 +586,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-slate-800">Learner Passport Photo (Optional)</div>
-                  <div className="text-[10px] text-slate-500">Attach passport or ID photo for learner registration card</div>
+                  <div className="text-xs font-bold text-on-surface">Learner Passport Photo (Optional)</div>
+                  <div className="text-[10px] text-on-surface-variant">Attach passport or ID photo for learner registration card</div>
                 </div>
-                <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors">
+                <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface-variant cursor-pointer shadow-xs transition-colors">
                   <span className="material-symbols-outlined text-sm">photo_camera</span>
                   <span>{isUploadingPhoto ? 'Uploading...' : profilePhotoUrl ? 'Change' : 'Upload'}</span>
                   <input
@@ -605,7 +605,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                       School Admission Number <span className="text-rose-600">*</span>
                     </label>
                     <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
@@ -618,12 +618,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={admissionNumber}
                     onChange={(e) => setAdmissionNumber(e.target.value)}
                     placeholder="e.g. 0001"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Auto-generated 4-digit number (e.g. 0001, digits only)</span>
+                  <span className="text-[10px] text-on-surface-variant">Auto-generated 4-digit number (e.g. 0001, digits only)</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     MoE NEMIS / UPI Number <span className="text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <input
@@ -631,15 +631,15 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={nemisUpi}
                     onChange={(e) => setNemisUpi(e.target.value)}
                     placeholder="e.g. NEMIS-K9281A (leave blank if pending)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Ministry of Education UPI (not auto-generated)</span>
+                  <span className="text-[10px] text-on-surface-variant">Ministry of Education UPI (not auto-generated)</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     First Name <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -648,11 +648,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="e.g. Kiprono"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Middle Name
                   </label>
                   <input
@@ -660,11 +660,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={middleName}
                     onChange={(e) => setMiddleName(e.target.value)}
                     placeholder="e.g. David"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Last Name <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -673,27 +673,27 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="e.g. Omondi"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Gender (Article 27 Equality) <span className="text-rose-600">*</span>
                   </label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   >
                     <option value="MALE">Boy (Male)</option>
                     <option value="FEMALE">Girl (Female)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Date of Birth <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -701,14 +701,14 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     required
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                     Birth Certificate Entry #
                   </label>
                   <span className="text-[10px] text-slate-400 font-normal">(Optional / Pending)</span>
@@ -718,25 +718,25 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   value={birthCertNo}
                   onChange={(e) => setBirthCertNo(e.target.value)}
                   placeholder="e.g. 10482932 or leave blank if pending"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
                 />
-                <span className="text-[10px] text-slate-500">Ministry of Civil Registration entry number (optional if pending document)</span>
+                <span className="text-[10px] text-on-surface-variant">Ministry of Civil Registration entry number (optional if pending document)</span>
               </div>
 
               {/* Devolution: Kenyan County & Sub-county */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-xs font-bold text-[#7a1228] uppercase tracking-wider block mb-2">
+              <div className="p-3 bg-surface rounded-xl border border-outline-variant/30">
+                <span className="text-xs font-bold text-primary uppercase tracking-wider block mb-2">
                   Devolved Location (Chapter 11 · 47 Counties)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                       County of Residence
                     </label>
                     <select
                       value={selectedCounty}
                       onChange={(e) => setSelectedCounty(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228]"
+                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     >
                       {KENYAN_COUNTIES.map((c) => (
                         <option key={c.code} value={c.name}>
@@ -746,13 +746,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                       Sub-County / Education Zone
                     </label>
                     <select
                       value={selectedSubCounty}
                       onChange={(e) => setSelectedSubCounty(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228]"
+                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     >
                       {countyObj.subCounties.map((sc) => (
                         <option key={sc} value={sc}>
@@ -781,13 +781,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     CBC Class Level <span className="text-rose-600">*</span>
                   </label>
                   <select
                     value={selectedClassId}
                     onChange={(e) => setSelectedClassId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   >
                     {classes.length === 0 ? (
                       <option value="">No classes configured</option>
@@ -802,7 +802,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                       Stream (Optional)
                     </label>
                     <span className="text-[10px] text-slate-400">Optional</span>
@@ -810,7 +810,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <select
                     value={streamId}
                     onChange={(e) => setStreamId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   >
                     <option value="">-- No Stream (Single Class) --</option>
                     {streams.map((s) => (
@@ -823,7 +823,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               </div>
 
               {/* Class Fee Structure Card (Termly + Admission Fee) */}
-              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-slate-800 space-y-3">
+              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-on-surface space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-amber-700 text-lg">receipt_long</span>
@@ -836,7 +836,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-on-surface-variant">
                   Standard termly CBC fee items for this learner's grade level. Routine term bills apply strictly to tuition and term activities.
                 </p>
 
@@ -852,13 +852,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                              <span className="font-medium text-slate-800">{item.name}</span>
+                              <span className="font-medium text-on-surface">{item.name}</span>
                               <span className="text-[10px] text-slate-400 uppercase font-mono">({item.category})</span>
                             </div>
-                            <span className="font-mono font-semibold text-slate-900">KES {Number(item.amount).toLocaleString()}</span>
+                            <span className="font-mono font-semibold text-on-surface">KES {Number(item.amount).toLocaleString()}</span>
                           </div>
                           {(itemT1 !== undefined || itemT2 !== undefined || itemT3 !== undefined) && (
-                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono pl-3">
+                            <div className="flex items-center gap-2 text-[10px] text-on-surface-variant font-mono pl-3">
                               <span>T1: KES {Number(itemT1 || 0).toLocaleString()}</span>
                               <span>•</span>
                               <span>T2: KES {Number(itemT2 || 0).toLocaleString()}</span>
@@ -871,16 +871,16 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     })}
                     <div className="flex items-center justify-between text-xs pt-2.5 font-bold text-amber-950 border-t border-amber-200">
                       <span>Term Fee Subtotal:</span>
-                      <span className="font-mono text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
+                      <span className="font-mono text-sm text-primary">KES {Number(totalFee).toLocaleString()}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-white/90 rounded-xl p-3 border border-amber-100 text-xs flex items-center justify-between">
                     <div>
-                      <span className="font-semibold text-slate-800">Standard CBC Grade Fee Schedule</span>
-                      <p className="text-[11px] text-slate-500">Term fee configured for this grade level.</p>
+                      <span className="font-semibold text-on-surface">Standard CBC Grade Fee Schedule</span>
+                      <p className="text-[11px] text-on-surface-variant">Term fee configured for this grade level.</p>
                     </div>
-                    <span className="font-mono font-bold text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
+                    <span className="font-mono font-bold text-sm text-primary">KES {Number(totalFee).toLocaleString()}</span>
                   </div>
                 )}
 
@@ -892,12 +892,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900">One-Time Admission & Registration Fee</span>
+                        <span className="font-bold text-xs text-on-surface">One-Time Admission & Registration Fee</span>
                         <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full">
                           Admit Modal Exclusive
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">
                         Guaranteed one-time charge attached to new admissions. Cannot be billed twice on any continuing learner.
                       </p>
                     </div>
@@ -908,36 +908,36 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </div>
 
                 {/* Billing Authorization Control */}
-                <div className="p-3.5 rounded-xl border transition-colors bg-white border-amber-200 shadow-2xs">
+                <div className="p-3.5 rounded-xl border transition-colors bg-surface-container-lowest border-amber-200 shadow-2xs">
                   {isBillingAuthorized ? (
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={authorizeBillingImmediately}
                         onChange={(e) => setAuthorizeBillingImmediately(e.target.checked)}
-                        className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 cursor-pointer"
+                        className="mt-0.5 rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                       />
                       <div className="text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-on-surface">
                             Authorize & Bill Learner Now Upon Admission
                           </span>
                           <span className="text-[10px] bg-amber-100 text-amber-900 font-semibold px-1.5 py-0.2 rounded">
                             Role Authorized
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500 block mt-1 leading-relaxed">
+                        <span className="text-[11px] text-on-surface-variant block mt-1 leading-relaxed">
                           When checked, generates an invoice immediately (Term Fee + KES 1,500 Admission Fee).
                           <strong> Leave unchecked when importing or feeding data into the database</strong> so learners are registered cleanly without billing until later authorized.
                         </span>
                       </div>
                     </label>
                   ) : (
-                    <div className="flex items-start gap-2.5 text-xs text-slate-600">
+                    <div className="flex items-start gap-2.5 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">lock</span>
                       <div>
-                        <span className="font-bold text-slate-800 block">Billing Authorization Deferred</span>
-                        <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+                        <span className="font-bold text-on-surface block">Billing Authorization Deferred</span>
+                        <span className="text-[11px] text-on-surface-variant leading-relaxed block mt-0.5">
                           Your account role ({user?.role || 'Staff'}) does not have billing authority. This learner will be enrolled cleanly; invoice generation is deferred until authorized by Accounts, Headteacher, or School Admin.
                         </span>
                       </div>
@@ -948,7 +948,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               {/* SNE Inclusion Category */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Special Needs & Inclusion Category (Article 54)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -960,13 +960,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                         onClick={() => setSneCategory(acc.id)}
                         className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
                           isSelected
-                            ? 'bg-rose-50/70 border-[#7a1228] text-slate-900 shadow-xs'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                            ? 'bg-rose-50/70 border-primary text-on-surface shadow-xs'
+                            : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                         }`}
                       >
                         <span
                           className={`material-symbols-outlined text-[20px] shrink-0 mt-0.5 ${
-                            isSelected ? 'text-[#7a1228]' : 'text-slate-400'
+                            isSelected ? 'text-primary' : 'text-slate-400'
                           }`}
                         >
                           {acc.icon}
@@ -975,10 +975,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                           <div className="font-bold flex items-center gap-1.5">
                             <span>{acc.name}</span>
                             {isSelected && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#7a1228]"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                          <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
                             {acc.description}
                           </p>
                         </div>
@@ -990,7 +990,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               {sneCategory !== 'NONE' && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Individualized Education Plan (IEP) Accommodation Notes
                   </label>
                   <textarea
@@ -998,7 +998,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={sneNotes}
                     onChange={(e) => setSneNotes(e.target.value)}
                     placeholder="Specify learning accommodations: e.g. Front-row seating, extra 15 mins for CBA formative tasks, Braille notes..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
               )}
@@ -1006,7 +1006,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               {/* Health and Medical Safety */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Known Medical Allergies / Conditions
                   </label>
                   <input
@@ -1014,11 +1014,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={medicalConditions}
                     onChange={(e) => setMedicalConditions(e.target.value)}
                     placeholder="e.g. Asthma, peanut allergy, none"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Preferred Emergency Clinic / Doctor
                   </label>
                   <input
@@ -1026,7 +1026,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={emergencyClinic}
                     onChange={(e) => setEmergencyClinic(e.target.value)}
                     placeholder="e.g. Gertrude's Children's Hospital"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
               </div>
@@ -1048,7 +1048,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Parent / Guardian Full Name <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -1057,17 +1057,17 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianName}
                     onChange={(e) => setGuardianName(e.target.value)}
                     placeholder="e.g. Mary Wambui Kariuki"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     Relationship to Learner <span className="text-rose-600">*</span>
                   </label>
                   <select
                     value={guardianRelationship}
                     onChange={(e) => setGuardianRelationship(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                   >
                     <option value="MOTHER">Mother</option>
                     <option value="FATHER">Father</option>
@@ -1082,7 +1082,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     National ID / Alien ID / Passport #
                   </label>
                   <input
@@ -1090,12 +1090,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianNationalId}
                     onChange={(e) => setGuardianNationalId(e.target.value)}
                     placeholder="e.g. 28941029"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Kenyan National Identity Card number</span>
+                  <span className="text-[10px] text-on-surface-variant">Kenyan National Identity Card number</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                     M-Pesa Mobile # (Safaricom) <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -1104,14 +1104,14 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianPhone}
                     onChange={(e) => setGuardianPhone(e.target.value)}
                     placeholder="+2547XXXXXXXX"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
                   />
                   <span className="text-[10px] text-emerald-700 font-medium">For instant fee receipts, morning alerts & portal login (username & default password)</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   Email Address (Optional — For CBC Progress Reports)
                 </label>
                 <input
@@ -1119,19 +1119,19 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   value={guardianEmail}
                   onChange={(e) => setGuardianEmail(e.target.value)}
                   placeholder="e.g. parent.guardian@gmail.com (Optional)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
                 />
               </div>
 
               {/* Alternate / Authorized Pickup Person (Article 53(1)(d)) */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <div className="p-3 bg-surface rounded-xl border border-outline-variant/30 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                   <span className="material-symbols-outlined text-[16px] text-primary">security</span>
                   <span>Authorized Alternate Emergency Contact / Pickup Person</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
                       Full Name
                     </label>
                     <input
@@ -1139,11 +1139,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       value={alternateContactName}
                       onChange={(e) => setAlternateContactName(e.target.value)}
                       placeholder="e.g. Uncle John Kariuki"
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228]"
+                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
                       Emergency Phone #
                     </label>
                     <input
@@ -1151,7 +1151,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       value={alternateContactPhone}
                       onChange={(e) => setAlternateContactPhone(e.target.value)}
                       placeholder="+2547XXXXXXXX"
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228] font-mono"
+                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary font-mono"
                     />
                   </div>
                 </div>
@@ -1164,30 +1164,30 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     type="checkbox"
                     checked={createParentAccount}
                     onChange={(e) => setCreateParentAccount(e.target.checked)}
-                    className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 cursor-pointer"
+                    className="mt-0.5 rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                   />
-                  <div className="text-xs text-slate-800">
-                    <span className="font-bold block text-slate-900">
+                  <div className="text-xs text-on-surface">
+                    <span className="font-bold block text-on-surface">
                       Automatically provision Parent Portal account &amp; link siblings
                     </span>
-                    <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+                    <span className="text-[11px] text-on-surface-variant leading-relaxed block mt-0.5">
                       Creates a secure login account for the parent using their Phone number or National ID. If this parent already has an enrolled child, this pupil will be linked as a sibling automatically.
                     </span>
                   </div>
                 </label>
 
                 {createParentAccount && (
-                  <div className="pl-6.5 pt-1.5 border-t border-rose-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-600">
+                  <div className="pl-6.5 pt-1.5 border-t border-rose-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-on-surface-variant">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={sendWelcomeSms}
                         onChange={(e) => setSendWelcomeSms(e.target.checked)}
-                        className="rounded text-[#7a1228] focus:ring-[#7a1228] w-3.5 h-3.5 cursor-pointer"
+                        className="rounded text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
                       />
                       <span>Dispatch instant welcome SMS with login details upon admission</span>
                     </label>
-                    <span className="text-[10px] font-mono text-[#7a1228] font-semibold bg-white px-2 py-0.5 rounded border border-rose-200 shrink-0 self-start sm:self-auto">
+                    <span className="text-[10px] font-mono text-primary font-semibold bg-surface-container-lowest px-2 py-0.5 rounded border border-rose-200 shrink-0 self-start sm:self-auto">
                       Default: Enabled
                     </span>
                   </div>
@@ -1199,12 +1199,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           {/* ================= STEP 4: CONSTITUTIONAL DECLARATIONS & CONSENT ================= */}
           {currentStep === 4 && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="p-3 bg-[#7a1228]/10 border border-[#7a1228]/20 rounded-xl text-xs text-slate-800 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[22px] text-[#7a1228] shrink-0 mt-0.5">
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-xs text-on-surface flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-[22px] text-primary shrink-0 mt-0.5">
                   verified
                 </span>
                 <div>
-                  <strong className="font-bold text-[#7a1228] block text-sm">
+                  <strong className="font-bold text-primary block text-sm">
                     Constitution of Kenya (2010) Compliance Summary
                   </strong>
                   Review the learner admission dossier and provide mandatory parental consent under the Data Protection Act (2019) and Article 31.
@@ -1212,8 +1212,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               </div>
 
               {/* Dossier Preview Card */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 font-bold text-slate-900">
+              <div className="bg-surface border border-outline-variant/30 rounded-2xl p-4 text-xs space-y-2">
+                <div className="flex items-center justify-between pb-2 border-b border-outline-variant/30 font-bold text-on-surface">
                   <span className="text-sm">
                     {[firstName, middleName, lastName].filter(Boolean).join(' ')}
                   </span>
@@ -1222,55 +1222,55 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-600 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-on-surface-variant pt-1">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Class & Stream</span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-on-surface">
                       {currentClass?.name || 'CBC Grade'} {streamId ? `(${streams.find((s) => s.id === streamId)?.name})` : ''}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Gender & DOB</span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-on-surface">
                       {gender === 'MALE' ? 'Boy' : 'Girl'} · {dob}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Birth Cert #</span>
-                    <span className="font-mono font-semibold text-slate-800">{birthCertNo || 'Verified'}</span>
+                    <span className="font-mono font-semibold text-on-surface">{birthCertNo || 'Verified'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">County</span>
-                    <span className="font-semibold text-slate-800">{selectedCounty} ({selectedSubCounty})</span>
+                    <span className="font-semibold text-on-surface">{selectedCounty} ({selectedSubCounty})</span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">SNE Status</span>
-                    <span className="font-semibold text-slate-800">{sneCategory}</span>
+                    <span className="font-semibold text-on-surface">{sneCategory}</span>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Parent / Guardian</span>
-                    <span className="font-semibold text-slate-800">{guardianName} ({formatKenyanPhone(guardianPhone)})</span>
+                    <span className="font-semibold text-on-surface">{guardianName} ({formatKenyanPhone(guardianPhone)})</span>
                   </div>
                 </div>
               </div>
 
               {/* Constitutional Rights Guarantees Card */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl">
+                  <div className="font-bold text-on-surface flex items-center gap-1.5 mb-1">
                     <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
                     <span>Article 53(1)(b) & Article 43(1)(f)</span>
                   </div>
-                  <p className="text-slate-600">
+                  <p className="text-on-surface-variant">
                     Right to free & compulsory basic education. {schoolProfile?.name || 'Grace Seeds School CBE Portal'} ensures equal access without discrimination.
                   </p>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl">
+                  <div className="font-bold text-on-surface flex items-center gap-1.5 mb-1">
                     <span className="material-symbols-outlined text-[16px] text-emerald-600">shield</span>
                     <span>Article 53(2) Best Interests Standard</span>
                   </div>
-                  <p className="text-slate-600">
+                  <p className="text-on-surface-variant">
                     The child's best interests are paramount in all disciplinary, pedagogical, and administrative actions.
                   </p>
                 </div>
@@ -1278,30 +1278,30 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               {/* Mandatory Consent Checkboxes */}
               <div className="space-y-3 pt-2">
-                <label className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/80 transition-colors">
+                <label className="flex items-start gap-3 p-3 bg-surface border border-outline-variant/30 rounded-xl cursor-pointer hover:bg-surface-container-low/80 transition-colors">
                   <input
                     type="checkbox"
                     checked={consentDataProtection}
                     onChange={(e) => setConsentDataProtection(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                    className="mt-0.5 w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/30"
                   />
-                  <div className="text-xs text-slate-700 leading-snug">
-                    <strong className="text-slate-900 font-bold block mb-0.5">
+                  <div className="text-xs text-on-surface-variant leading-snug">
+                    <strong className="text-on-surface font-bold block mb-0.5">
                       Statutory Minor Data Consent (Article 31 & Section 33, Data Protection Act 2019)
                     </strong>
                     I explicitly consent as parent/guardian to the collection, cryptographic storage, and processing of the learner's biodata, assessment rubrics, and health records solely for Ministry of Education NEMIS, KNEC CBA, and institutional school administration.
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/80 transition-colors">
+                <label className="flex items-start gap-3 p-3 bg-surface border border-outline-variant/30 rounded-xl cursor-pointer hover:bg-surface-container-low/80 transition-colors">
                   <input
                     type="checkbox"
                     checked={consentChildProtection}
                     onChange={(e) => setConsentChildProtection(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                    className="mt-0.5 w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/30"
                   />
-                  <div className="text-xs text-slate-700 leading-snug">
-                    <strong className="text-slate-900 font-bold block mb-0.5">
+                  <div className="text-xs text-on-surface-variant leading-snug">
+                    <strong className="text-on-surface font-bold block mb-0.5">
                       Child Protection & Zero Abuse Declaration (Article 53(1)(d) & Children's Act)
                     </strong>
                     I certify that all details submitted are truthful. I understand {schoolProfile?.name || 'the institution'} enforces zero tolerance for corporal punishment, violence, exploitation, and discrimination against any learner.
@@ -1313,10 +1313,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     type="checkbox"
                     checked={consentSchoolDataUse}
                     onChange={(e) => setConsentSchoolDataUse(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                    className="mt-0.5 w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/30"
                   />
-                  <div className="text-xs text-slate-700 leading-snug">
-                    <strong className="text-slate-900 font-bold block mb-0.5">
+                  <div className="text-xs text-on-surface-variant leading-snug">
+                    <strong className="text-on-surface font-bold block mb-0.5">
                       School Use of Collected Admission Data
                     </strong>
                     I, {guardianName || 'the parent/guardian'}, authorize{' '}
@@ -1338,12 +1338,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           )}
 
           {/* Stepper Footer Controls */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+          <div className="pt-4 border-t border-outline-variant/30 flex items-center justify-between gap-3">
             {currentStep > 1 ? (
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-semibold rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                 <span>Previous Step</span>
@@ -1358,7 +1358,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     onClose();
                   }
                 }}
-                className="px-4 py-2.5 text-slate-500 hover:text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-on-surface-variant hover:text-on-surface-variant font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
               >
                 {isPage ? 'Back to Admissions' : 'Cancel'}
               </button>
@@ -1368,7 +1368,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
+                className="px-5 py-2.5 bg-primary hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
               >
                 <span>Continue</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

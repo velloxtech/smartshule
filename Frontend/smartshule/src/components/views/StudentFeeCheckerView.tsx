@@ -339,11 +339,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     UserRole.BURSAR,
     UserRole.ACCOUNTANT
   ].includes(user?.role as UserRole);
-  // Admin-only: credit utilization / overpayment application to new term invoices
+  // Admin & Finance: credit utilization / overpayment application to new term invoices
   const isAdminCreditAuthorized = [
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
     UserRole.BURSAR,
+    UserRole.ACCOUNTANT,
   ].includes(user?.role as UserRole);
 
   const [isAuthorizingBilling, setIsAuthorizingBilling] = useState(false);
@@ -877,7 +879,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('Official Learner Fee Statement & Ledger Advice', 14, 16);
-    doc.text('KEMRI Street, Kisian, Kisumu, Kenya | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 20);
+    doc.text('P.O Box 12-20123 | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 20);
 
     // Learner Details Card
     doc.setTextColor(30, 41, 59);
@@ -970,18 +972,18 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   return (
     <div className="space-y-4 pb-16 font-body">
       {/* 0. Top Mode Selector: Cashier Fast-Track Desk vs All Students Accounting Ledger */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#7a1228] text-white flex items-center justify-center font-bold shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold shrink-0">
             <span className="material-symbols-outlined text-[20px]">
               {viewMode === 'cashier_desk' ? 'point_of_sale' : 'table_rows'}
             </span>
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900">
+            <div className="text-xs font-bold text-on-surface">
               {viewMode === 'cashier_desk' ? 'Fee Collection & Cashier Desk' : 'Full Student Finances & Fee Register'}
             </div>
-            <div className="text-[11px] text-slate-500">
+            <div className="text-[11px] text-on-surface-variant">
               {viewMode === 'cashier_desk'
                 ? 'Search a learner, view fee position, record payment, and issue receipts'
                 : 'Comprehensive institutional accounting ledger with multi-column grid and PDF exports'}
@@ -989,14 +991,14 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           </div>
         </div>
 
-        <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold self-start sm:self-auto">
+        <div className="inline-flex flex-wrap p-1 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-bold self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setViewMode('cashier_desk')}
             className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'cashier_desk'
-                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
-                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+                ? 'bg-primary text-white shadow-xs font-bold'
+                : 'text-on-surface-variant hover:text-primary font-semibold'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
@@ -1007,8 +1009,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             onClick={() => setViewMode('full_roster')}
             className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'full_roster'
-                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
-                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+                ? 'bg-primary text-white shadow-xs font-bold'
+                : 'text-on-surface-variant hover:text-primary font-semibold'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">table_rows</span>
@@ -1019,8 +1021,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             onClick={() => setViewMode('reversals')}
             className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'reversals'
-                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
-                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+                ? 'bg-primary text-white shadow-xs font-bold'
+                : 'text-on-surface-variant hover:text-primary font-semibold'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">history</span>
@@ -1046,25 +1048,25 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       {/* 1. Header Toolbar with Title & Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 font-label-md text-label-md text-slate-500">
+          <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
             <span>/</span>
             <span>Finance &amp; Billing</span>
             <span>/</span>
-            <span className="text-[#7a1228] font-bold">Student Finances &amp; Ledger</span>
+            <span className="text-primary font-bold">Student Finances &amp; Ledger</span>
           </div>
           <div className="flex items-center gap-2.5 mt-1">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight">
               Student Finances &amp; Fee Register
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
               KCB Paybill 522533
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 font-mono">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-on-surface-variant border border-outline-variant/30 font-mono">
               Accounting Ledger
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-on-surface-variant mt-0.5">
             Single unified institutional ledger to manage all enrolled learners&apos; fee schedules, prior arrears, collections, overpayment advance credits, and official statements.
           </p>
         </div>
@@ -1076,7 +1078,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             type="button"
             onClick={loadStudentAccounts}
             disabled={isLoadingAccounts}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            className="px-3.5 py-2 bg-white hover:bg-surface text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             title="Refresh student fee accounts and payments from database"
           >
             <span className={`material-symbols-outlined text-[16px] text-primary ${isLoadingAccounts ? 'animate-spin' : ''}`}>
@@ -1089,10 +1091,10 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           <button
             type="button"
             onClick={handleDownloadLedgerPdf}
-            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            className="px-3.5 py-2 bg-white hover:bg-surface text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             title="Download Landscape A4 PDF Ledger of all filtered learners"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#7a1228]">picture_as_pdf</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
             <span>Export Ledger PDF</span>
           </button>
 
@@ -1120,7 +1122,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               setPaymentModalMode('PAYMENT');
               setIsRecordPaymentOpen(true);
             }}
-            className="px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             title="Open Cashier Desk to record payment or fee collections"
           >
             <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
@@ -1135,7 +1137,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               setPaymentModalMode('INVOICE');
               setIsRecordPaymentOpen(true);
             }}
-            className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             title="Create and issue fee invoice for a student"
           >
             <span className="material-symbols-outlined text-[16px]">post_add</span>
@@ -1163,27 +1165,27 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
       {/* 2. High-Density KPI Accounting Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
+          <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
             Learners
           </span>
-          <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+          <div className="text-lg font-bold font-mono text-on-surface mt-0.5">
             {filteredStudents.length} <span className="text-[10px] font-normal text-slate-400">/ {students.length}</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Active Roster</span>
         </div>
 
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
+          <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
             Billed Fees
           </span>
-          <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+          <div className="text-lg font-bold font-mono text-on-surface mt-0.5">
             KES {stats.totalBilled.toLocaleString()}
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Term Fee Schedules</span>
         </div>
 
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
             Prior Arrears
           </span>
@@ -1193,17 +1195,17 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           <span className="text-[10px] text-amber-700 mt-0.5 block truncate">Carried Balances</span>
         </div>
 
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
+          <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
             Total Receivables
           </span>
-          <div className="text-lg font-extrabold font-mono text-slate-900 mt-0.5">
+          <div className="text-lg font-extrabold font-mono text-on-surface mt-0.5">
             KES {stats.totalDue.toLocaleString()}
           </div>
-          <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Total Liability</span>
+          <span className="text-[10px] text-on-surface-variant mt-0.5 block truncate">Total Liability</span>
         </div>
 
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
             Paid &amp; Reconciled
           </span>
@@ -1215,7 +1217,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           </span>
         </div>
 
-        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+        <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
             Arrears Due
           </span>
@@ -1245,13 +1247,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           onClick={() => setSelectedStatus(selectedStatus === 'Sponsored' ? 'All' : 'Sponsored')}
           className={`p-3 rounded-xl border shadow-2xs cursor-pointer transition-all ${
             selectedStatus === 'Sponsored'
-              ? 'bg-[#7a1228] text-white border-[#7a1228] ring-2 ring-[#7a1228]/40'
-              : 'bg-rose-50/40 hover:bg-rose-50 border-rose-200 text-slate-900'
+              ? 'bg-primary text-white border-primary ring-2 ring-primary/40'
+              : 'bg-rose-50/40 hover:bg-rose-50 border-rose-200 text-on-surface'
           }`}
           title="Click to filter learners under the 100% Scholarship Program"
         >
           <span className={`text-[10px] font-bold uppercase tracking-wider block flex items-center gap-1 ${
-            selectedStatus === 'Sponsored' ? 'text-rose-100' : 'text-[#7a1228]'
+            selectedStatus === 'Sponsored' ? 'text-rose-100' : 'text-primary'
           }`}>
             <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
             Scholarship
@@ -1259,18 +1261,18 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           <div className="text-lg font-black font-mono mt-0.5">
             {stats.sponsoredCount} <span className={`text-[10px] font-normal ${selectedStatus === 'Sponsored' ? 'text-rose-200' : 'text-slate-400'}`}>Learner(s)</span>
           </div>
-          <span className={`text-[10px] mt-0.5 block truncate ${selectedStatus === 'Sponsored' ? 'text-rose-200 font-semibold' : 'text-slate-500'}`}>
+          <span className={`text-[10px] mt-0.5 block truncate ${selectedStatus === 'Sponsored' ? 'text-rose-200 font-semibold' : 'text-on-surface-variant'}`}>
             100% Fee Waived
           </span>
         </div>
       </div>
 
       {/* 3. Search & Filter Bar */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-300 shadow-2xs space-y-2.5">
+      <div className="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/30 shadow-2xs space-y-2.5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
           {/* Real-Time Search Input */}
           <div className="lg:col-span-4 relative w-full">
-            <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#7a1228] text-[18px]">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-primary text-[18px]">
               person_search
             </span>
             <input
@@ -1278,13 +1280,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search learner name, admission no, UPI, grade, stream, parent phone..."
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+              className="w-full pl-9 pr-8 py-2 bg-surface border border-outline-variant/30 rounded-lg text-xs text-on-surface placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+                className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-on-surface-variant rounded-full cursor-pointer"
                 title="Clear Search"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
@@ -1298,7 +1300,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value as any)}
-                className="w-full py-2 pl-7 pr-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+                className="w-full py-2 pl-7 pr-2.5 bg-surface border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                 title="Distinguish fee billed from fee structure according to term"
               >
                 <option value="term-1">Term 1 Schedule{currentContext?.currentTerm?.termNumber === 1 ? ' (Active Term)' : ''}</option>
@@ -1306,7 +1308,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 <option value="term-3">Term 3 Schedule{currentContext?.currentTerm?.termNumber === 3 ? ' (Active Term)' : ''}</option>
                 <option value="ALL">Whole Year (Annual Total)</option>
               </select>
-              <span className="material-symbols-outlined absolute left-2 top-2 text-[#7a1228] text-[15px] pointer-events-none">
+              <span className="material-symbols-outlined absolute left-2 top-2 text-primary text-[15px] pointer-events-none">
                 calendar_month
               </span>
             </div>
@@ -1317,7 +1319,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <select
               value={selectedGrade}
               onChange={(e) => setSelectedGrade(e.target.value)}
-              className="w-full py-2 px-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+              className="w-full py-2 px-2.5 bg-surface border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="All">All Grades ({distinctGrades.length})</option>
               {distinctGrades.map((g) => (
@@ -1333,7 +1335,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <select
               value={selectedStream}
               onChange={(e) => setSelectedStream(e.target.value)}
-              className="w-full py-2 px-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+              className="w-full py-2 px-2 bg-surface border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="All">All Streams</option>
               {distinctStreams.map((st) => (
@@ -1349,7 +1351,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as any)}
-              className="w-full py-2 px-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+              className="w-full py-2 px-2 bg-surface border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="All">All Financial Statuses</option>
               <option value="Has_Balance">Outstanding Arrears (Debtors)</option>
@@ -1364,7 +1366,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full py-2 px-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+              className="w-full py-2 px-1.5 bg-surface border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="balance_desc">Highest Arrears</option>
               <option value="overpaid_desc">Highest Overpaid</option>
@@ -1376,14 +1378,14 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         </div>
 
         {/* Quick Filter Buttons & Results strip */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-outline-variant/30">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-bold text-slate-400 mr-1">Quick Filter:</span>
             <button
               type="button"
               onClick={() => setSelectedStatus('All')}
               className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all ${
-                selectedStatus === 'All' ? 'bg-slate-800 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                selectedStatus === 'All' ? 'bg-slate-800 text-white shadow-2xs' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
               }`}
             >
               All ({students.length})
@@ -1419,7 +1421,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               type="button"
               onClick={() => setSelectedStatus('Sponsored')}
               className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
-                selectedStatus === 'Sponsored' ? 'bg-[#7a1228] text-white shadow-2xs' : 'bg-[#7a1228]/10 text-[#7a1228] hover:bg-[#7a1228]/20'
+                selectedStatus === 'Sponsored' ? 'bg-primary text-white shadow-2xs' : 'bg-primary/10 text-primary hover:bg-primary/20'
               }`}
             >
               <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
@@ -1427,10 +1429,10 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
             <span>
-              Showing <strong className="text-slate-900 font-mono">{filteredStudents.length}</strong> of{' '}
-              <strong className="text-slate-900 font-mono">{students.length}</strong> learner(s)
+              Showing <strong className="text-on-surface font-mono">{filteredStudents.length}</strong> of{' '}
+              <strong className="text-on-surface font-mono">{students.length}</strong> learner(s)
             </span>
             {(searchQuery || selectedGrade !== 'All' || selectedStream !== 'All' || selectedStatus !== 'All' || selectedTerm !== 'term-3') && (
               <button
@@ -1442,7 +1444,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   setSelectedTerm('term-3');
                   setSortBy('balance_desc');
                 }}
-                className="text-[#7a1228] hover:underline text-[11px] font-bold cursor-pointer ml-1"
+                className="text-primary hover:underline text-[11px] font-bold cursor-pointer ml-1"
               >
                 Reset Filters
               </button>
@@ -1452,77 +1454,77 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       </div>
 
       {/* 4. Full-Width Accounting Table (The List Form - Identical to Payroll) */}
-      <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
         <div className="overflow-x-auto max-h-[720px]">
           {filteredStudents.length === 0 ? (
             <div className="p-16 text-center">
               <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">table_rows</span>
-              <p className="text-slate-700 font-semibold text-sm">No student finance records found.</p>
+              <p className="text-on-surface-variant font-semibold text-sm">No student finance records found.</p>
               <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                 No learners match your search query or filter criteria. Click &quot;Reset Filters&quot; to restore the full school ledger roster.
               </p>
             </div>
           ) : (
-            <table className="w-full border-collapse border border-slate-300 text-left text-xs text-slate-800 font-mono table-auto">
+            <table className="w-full border-collapse border border-outline-variant/30 text-left text-xs text-on-surface font-mono table-auto">
               {/* Table Column Headers with Clear Dividing Lines & Self-Adjusting Column Sizes */}
-              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold border-b border-slate-300 uppercase text-[10px] select-none">
+              <thead className="sticky top-0 z-20 bg-surface-container-low text-on-surface-variant font-bold border-b border-outline-variant/30 uppercase text-[10px] select-none">
                 <tr>
-                  <th className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 w-8 whitespace-nowrap">#</th>
-                  <th className="px-2 py-1.5 border border-slate-300 whitespace-nowrap font-mono" title="Learner Admission Number">Adm No</th>
-                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Learner Name</th>
-                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Grade</th>
-                  <th className="px-1.5 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Stream</th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Billed Term Fee from Fee Structure">
+                  <th className="px-1.5 py-1.5 text-center bg-surface-container border border-outline-variant/30 w-8 whitespace-nowrap">#</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 whitespace-nowrap font-mono" title="Learner Admission Number">Adm No</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">Learner Name</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">Grade</th>
+                  <th className="px-1.5 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">Stream</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap" title="Billed Term Fee from Fee Structure">
                     <div>Billed Fees</div>
-                    <div className="text-[9px] font-normal text-slate-500">(KES)</div>
+                    <div className="text-[9px] font-normal text-on-surface-variant">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-amber-800" title="Opening / Prior Term Arrears (distinct from term billed fee)">
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-amber-800" title="Opening / Prior Term Arrears (distinct from term billed fee)">
                     <div>Prior Arrears</div>
                     <div className="text-[9px] font-normal text-amber-600">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right bg-slate-200/70 font-extrabold text-slate-900 whitespace-nowrap" title="Total Due = Billed Fees + Prior Arrears">
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right bg-surface-container/70 font-extrabold text-on-surface whitespace-nowrap" title="Total Due = Billed Fees + Prior Arrears">
                     <div>Total Due</div>
-                    <div className="text-[9px] font-normal text-slate-600">(KES)</div>
+                    <div className="text-[9px] font-normal text-on-surface-variant">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right text-emerald-800 bg-emerald-50/50 font-extrabold whitespace-nowrap" title="Collections Reconciled">
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right text-emerald-800 bg-emerald-50/50 font-extrabold whitespace-nowrap" title="Collections Reconciled">
                     <div>Paid Fees</div>
                     <div className="text-[9px] font-normal text-emerald-600">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right font-bold text-slate-800 bg-slate-100/70 whitespace-nowrap" title="Net Balance = Total Due - Paid Fees (Negative indicates exact overpayment credit)">
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right font-bold text-on-surface bg-surface-container-low/70 whitespace-nowrap" title="Net Balance = Total Due - Paid Fees (Negative indicates exact overpayment credit)">
                     <div>Balance</div>
-                    <div className="text-[9px] font-normal text-slate-500">(KES)</div>
+                    <div className="text-[9px] font-normal text-on-surface-variant">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-right font-bold text-teal-800 bg-teal-50/50 whitespace-nowrap" title="Prepayment / Advance Credit">
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-right font-bold text-teal-800 bg-teal-50/50 whitespace-nowrap" title="Prepayment / Advance Credit">
                     <div>Overpayment / Credit</div>
                     <div className="text-[9px] font-normal text-teal-600">(KES)</div>
                   </th>
-                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Financial Status</th>
-                  <th className="px-2 py-1.5 border border-slate-300 text-center font-sans whitespace-nowrap sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)]">Actions</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">Financial Status</th>
+                  <th className="px-2 py-1.5 border border-outline-variant/30 text-center font-sans whitespace-nowrap sticky right-0 z-30 bg-surface-container-low shadow-[-3px_0_5px_rgba(0,0,0,0.06)]">Actions</th>
                 </tr>
               </thead>
 
               {/* Table Rows with Explicit Cell Borders (Gridlines) & Self-Adjusting Dimensions */}
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-slate-200 bg-surface-container-lowest">
                 {filteredStudents.map((st, idx) => {
                   const fin = getStudentFinancials(st, selectedTerm, feeStructures, studentAccounts.get(st.id));
                   const rowNumber = idx + 1;
 
                   return (
-                    <tr key={st.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={st.id} className="hover:bg-surface transition-colors group">
                       {/* 1. Row Index */}
-                      <td className="px-1.5 py-1 text-center bg-slate-50 border border-slate-300 font-bold text-slate-500 text-[11px] select-none whitespace-nowrap">
+                      <td className="px-1.5 py-1 text-center bg-surface border border-outline-variant/30 font-bold text-on-surface-variant text-[11px] select-none whitespace-nowrap">
                         {rowNumber}
                       </td>
 
                       {/* 2. Admission Number */}
-                      <td className="px-2 py-1 border border-slate-300 text-slate-700 font-mono text-[11px] font-bold whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-on-surface-variant font-mono text-[11px] font-bold whitespace-nowrap">
                         {st.admNo || '--'}
                       </td>
 
                       {/* 3. Learner Name with Profile Avatar & Guardian */}
-                      <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 font-sans whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-200 text-[#7a1228] font-bold text-[10px] flex items-center justify-center shrink-0 overflow-hidden">
+                          <div className="w-6 h-6 rounded-full bg-surface-container text-primary font-bold text-[10px] flex items-center justify-center shrink-0 overflow-hidden">
                             {st.profilePhotoUrl ? (
                               <img src={st.profilePhotoUrl} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -1531,7 +1533,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                           </div>
                           <div className="leading-tight">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-slate-900 text-xs">{st.name}</span>
+                              <span className="font-bold text-on-surface text-xs">{st.name}</span>
                               {fin.isSponsored && (
                                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-950 border border-emerald-300" title="Fee is Cleared under Institutional Scholarship Scheme">
                                   <span className="material-symbols-outlined text-[11px] text-emerald-700">verified</span>
@@ -1540,7 +1542,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               )}
                             </div>
                             {st.guardianPhone && (
-                              <span className="text-[10px] text-slate-500 font-normal">
+                              <span className="text-[10px] text-on-surface-variant font-normal">
                                 ({st.guardianPhone})
                               </span>
                             )}
@@ -1549,17 +1551,17 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       </td>
 
                       {/* 4. Grade */}
-                      <td className="px-2 py-1 border border-slate-300 font-sans text-slate-800 text-[11px] font-medium whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 font-sans text-on-surface text-[11px] font-medium whitespace-nowrap">
                         {st.grade || '--'}
                       </td>
 
                       {/* 5. Stream */}
-                      <td className="px-1.5 py-1 border border-slate-300 font-sans text-slate-600 text-[11px] whitespace-nowrap">
+                      <td className="px-1.5 py-1 border border-outline-variant/30 font-sans text-on-surface-variant text-[11px] whitespace-nowrap">
                         {st.stream || '--'}
                       </td>
 
                       {/* 6. Billed Fees */}
-                      <td className="px-2 py-1 border border-slate-300 text-right text-slate-800 text-[11px] font-medium whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-right text-on-surface text-[11px] font-medium whitespace-nowrap">
                         {fin.isSponsored ? (
                           <span className="text-slate-400 font-normal">0 <span className="text-[9px] text-emerald-700 font-bold">(Waived)</span></span>
                         ) : (
@@ -1568,22 +1570,22 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       </td>
 
                       {/* 7. Prior Arrears */}
-                      <td className="px-2 py-1 border border-slate-300 text-right text-amber-800 text-[11px] font-medium whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-right text-amber-800 text-[11px] font-medium whitespace-nowrap">
                         {fin.isSponsored ? '0' : (fin.priorArrears > 0 ? fin.priorArrears.toLocaleString() : '--')}
                       </td>
 
                       {/* 8. Total Due */}
-                      <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-slate-900 bg-slate-50/70 text-[11px] whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-right font-extrabold text-on-surface bg-surface/70 text-[11px] whitespace-nowrap">
                         {fin.isSponsored ? '0' : fin.totalDue.toLocaleString()}
                       </td>
 
                       {/* 9. Paid Fees */}
-                      <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-emerald-800 bg-emerald-50/40 text-[11px] whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-right font-extrabold text-emerald-800 bg-emerald-50/40 text-[11px] whitespace-nowrap">
                         {fin.paid.toLocaleString()}
                       </td>
 
                       {/* 10. Balance (Amount still owed; KSh 0 when settled or overpaid) */}
-                      <td className={`px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap ${
+                      <td className={`px-2 py-1 border border-outline-variant/30 text-right font-bold text-[11px] whitespace-nowrap ${
                         fin.isSponsored
                           ? 'bg-emerald-50/20 text-emerald-800'
                           : fin.balance > 0
@@ -1605,7 +1607,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       </td>
 
                       {/* 11. Overpayment / Prepayment Credit */}
-                      <td className="px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap bg-teal-50/30">
+                      <td className="px-2 py-1 border border-outline-variant/30 text-right font-bold text-[11px] whitespace-nowrap bg-teal-50/30">
                         {fin.overpayment > 0 ? (
                           <span className="text-teal-800 font-extrabold inline-flex items-center gap-0.5" title={`Available Credit: KES ${fin.overpayment.toLocaleString()}`}>
                             <span className="material-symbols-outlined text-[13px]">savings</span>
@@ -1617,7 +1619,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       </td>
 
                       {/* 12. Financial Status Badge */}
-                      <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 font-sans whitespace-nowrap">
                         {fin.isSponsored ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs" title="100% Institutional Scholarship Scheme — Fee Cleared">
                             <span className="material-symbols-outlined text-[13px] text-emerald-700">verified</span>
@@ -1639,7 +1641,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                             PARTIAL
                           </span>
                         ) : fin.status === 'UNBILLED' ? (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-on-surface-variant">
                             UNBILLED
                           </span>
                         ) : (
@@ -1650,7 +1652,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         )}
                       </td>
 
-                      <td className="px-2 py-1 border border-slate-300 font-sans text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                      <td className="px-2 py-1 border border-outline-variant/30 font-sans text-center sticky right-0 z-10 bg-surface-container-lowest group-hover:bg-surface shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           {/* Cashier Modal – Receive Payment */}
                           <button
@@ -1676,7 +1678,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               setIsRecordPaymentOpen(true);
                             }}
                             title="Create or bill new term invoice for this student"
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer transition-colors"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-primary hover:bg-primary-container text-white shadow-xs cursor-pointer transition-colors"
                           >
                             <span className="material-symbols-outlined text-[13px]">post_add</span>
                             <span>Invoice</span>
@@ -1687,7 +1689,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                             type="button"
                             onClick={() => handleOpenStatementModal(st)}
                             title="View detailed invoices breakdown & payment history"
-                            className="p-1 text-slate-600 hover:text-[#7a1228] hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                            className="p-1 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[15px]">receipt_long</span>
                           </button>
@@ -1697,7 +1699,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                             type="button"
                             onClick={() => handleDownloadStudentStatementPdf(st)}
                             title="Download Official Fee Statement PDF Advice"
-                            className="p-1 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-on-surface-variant hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
                           </button>
@@ -1709,45 +1711,45 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               </tbody>
 
               {/* Accounting Totals Row with Clean Accounting Double Underlines */}
-              <tfoot className="sticky bottom-0 z-20 bg-slate-100 text-slate-900 border-t-2 border-b-4 border-double border-slate-700 font-bold text-xs select-none shadow-md">
+              <tfoot className="sticky bottom-0 z-20 bg-surface-container-low text-on-surface border-t-2 border-b-4 border-double border-slate-700 font-bold text-xs select-none shadow-md">
                 <tr>
-                  <td className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 font-black text-slate-800 whitespace-nowrap">
+                  <td className="px-1.5 py-1.5 text-center bg-surface-container border border-outline-variant/30 font-black text-on-surface whitespace-nowrap">
                     ∑
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-slate-700 font-sans uppercase text-[10px] whitespace-nowrap">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-on-surface-variant font-sans uppercase text-[10px] whitespace-nowrap">
                     TOTALS
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">
                     {filteredStudents.length} Learners
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-slate-500 font-sans whitespace-nowrap">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-on-surface-variant font-sans whitespace-nowrap">
                     --
                   </td>
-                  <td className="px-1.5 py-1.5 border border-slate-300 text-slate-500 font-sans whitespace-nowrap">
+                  <td className="px-1.5 py-1.5 border border-outline-variant/30 text-on-surface-variant font-sans whitespace-nowrap">
                     --
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px]">
                     {stats.totalBilled.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px] text-amber-800">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px] text-amber-800">
                     {stats.totalPriorArrears.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-slate-900 bg-slate-200/60 whitespace-nowrap text-[11px]">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right font-black text-on-surface bg-surface-container/60 whitespace-nowrap text-[11px]">
                     {stats.totalDue.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-emerald-900 bg-emerald-100/70 whitespace-nowrap text-[11px]">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right font-black text-emerald-900 bg-emerald-100/70 whitespace-nowrap text-[11px]">
                     {stats.totalPaid.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-rose-800 bg-rose-100/60 whitespace-nowrap text-[11px]">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right font-black text-rose-800 bg-rose-100/60 whitespace-nowrap text-[11px]">
                     {stats.totalArrears.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-teal-900 bg-teal-100/70 whitespace-nowrap text-[11px]">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-right font-black text-teal-900 bg-teal-100/70 whitespace-nowrap text-[11px]">
                     +{stats.totalOverpayment.toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 font-sans text-[10px] whitespace-nowrap text-slate-700">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 font-sans text-[10px] whitespace-nowrap text-on-surface-variant">
                     Cleared: <strong className="text-emerald-800">{stats.clearedCount}</strong> · Overpaid: <strong className="text-teal-800">{stats.overpaidCount}</strong>
                   </td>
-                  <td className="px-2 py-1.5 border border-slate-300 text-center font-sans text-[10px] text-slate-600 sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                  <td className="px-2 py-1.5 border border-outline-variant/30 text-center font-sans text-[10px] text-on-surface-variant sticky right-0 z-30 bg-surface-container-low shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
                     Audited
                   </td>
                 </tr>
@@ -1757,18 +1759,18 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         </div>
 
         {/* Ledger Summary Strip */}
-        <div className="bg-slate-100 text-slate-700 text-xs px-4 py-2 border-t border-slate-300 flex flex-wrap items-center justify-between gap-3 font-medium">
+        <div className="bg-surface-container-low text-on-surface-variant text-xs px-4 py-2 border-t border-outline-variant/30 flex flex-wrap items-center justify-between gap-3 font-medium">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm text-[#7a1228]">verified</span>
+            <span className="material-symbols-outlined text-sm text-primary">verified</span>
             <span>Showing {filteredStudents.length} learners for <strong>{selectedGrade === 'All' ? 'All Classes' : selectedGrade}</strong></span>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
-            <span>TOTAL BILLED: <strong className="text-slate-900 font-mono">KES {stats.totalBilled.toLocaleString()}</strong></span>
+            <span>TOTAL BILLED: <strong className="text-on-surface font-mono">KES {stats.totalBilled.toLocaleString()}</strong></span>
             <span>TOTAL COLLECTED: <strong className="text-emerald-700 font-mono font-bold">KES {stats.totalPaid.toLocaleString()}</strong></span>
             <span>OUTSTANDING ARREARS: <strong className="text-rose-700 font-mono font-bold">KES {stats.totalArrears.toLocaleString()}</strong></span>
             <span>PREPAYMENT CREDITS: <strong className="text-teal-800 font-mono font-bold">+KES {stats.totalOverpayment.toLocaleString()}</strong></span>
-            <span>SCHOLARSHIP LEARNERS: <strong className="text-[#7a1228] font-mono font-bold">{stats.sponsoredCount} (100% Waived)</strong></span>
-            <span>COLLECTION RATE: <strong className="text-slate-900 font-mono font-bold">{stats.collectionRate}%</strong></span>
+            <span>SCHOLARSHIP LEARNERS: <strong className="text-primary font-mono font-bold">{stats.sponsoredCount} (100% Waived)</strong></span>
+            <span>COLLECTION RATE: <strong className="text-on-surface font-mono font-bold">{stats.collectionRate}%</strong></span>
           </div>
         </div>
       </div>
@@ -1776,9 +1778,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       {/* 5. MODAL: DETAILED STUDENT STATEMENT INSPECTION */}
       {isStatementModalOpen && statementStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 my-auto">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
             {/* Modal Header */}
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
                   {statementStudent.profilePhotoUrl ? (
@@ -1851,7 +1853,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     </div>
                     <div className="text-[11px] text-emerald-900 flex items-center gap-1.5 mt-0.5">
                       <span>Account Ref:</span>
-                      <strong className="font-mono bg-white px-1.5 py-0.2 rounded border border-emerald-300 text-emerald-950">
+                      <strong className="font-mono bg-surface-container-lowest px-1.5 py-0.2 rounded border border-emerald-300 text-emerald-950">
                         {kcbAccountRef}
                       </strong>
                       <button
@@ -1883,15 +1885,15 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 const fin = getStudentFinancials(statementStudent);
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-bold uppercase text-slate-500 block">Total Billed</span>
-                      <div className="text-base font-bold font-mono text-slate-900 mt-0.5">
+                    <div className="p-3 bg-surface rounded-xl border border-outline-variant/30">
+                      <span className="text-[10px] font-bold uppercase text-on-surface-variant block">Total Billed</span>
+                      <div className="text-base font-bold font-mono text-on-surface mt-0.5">
                         KES {fin.billed.toLocaleString()}
                       </div>
                       <span className="text-[10px] text-slate-400 mt-0.5 block">Approved Fees</span>
                     </div>
 
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="p-3 bg-surface rounded-xl border border-outline-variant/30">
                       <span className="text-[10px] font-bold uppercase text-emerald-700 block">Total Paid</span>
                       <div className="text-base font-bold font-mono text-emerald-800 mt-0.5">
                         KES {fin.paid.toLocaleString()}
@@ -1899,7 +1901,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       <span className="text-[10px] text-emerald-700 mt-0.5 block">Reconciled Collections</span>
                     </div>
 
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="p-3 bg-surface rounded-xl border border-outline-variant/30">
                       <span className="text-[10px] font-bold uppercase text-rose-700 block">Outstanding Arrears</span>
                       <div className="text-base font-extrabold font-mono text-rose-800 mt-0.5">
                         KES {fin.arrearsDue.toLocaleString()}
@@ -1922,14 +1924,14 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               })()}
 
               {/* Sub-Tabs: Invoices / Payments / Credits / Printable Statement */}
-              <div className="flex border-b border-slate-200 gap-2 pt-1 overflow-x-auto">
+              <div className="flex border-b border-outline-variant/30 gap-2 pt-1 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setStatementTab('invoices')}
                   className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'invoices'
-                      ? 'border-[#7a1228] text-[#7a1228]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">receipt_long</span>
@@ -1941,8 +1943,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   onClick={() => setStatementTab('payments')}
                   className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'payments'
-                      ? 'border-[#7a1228] text-[#7a1228]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">payments</span>
@@ -1954,8 +1956,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   onClick={() => setStatementTab('credits')}
                   className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'credits'
-                      ? 'border-[#7a1228] text-[#7a1228]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">savings</span>
@@ -1972,8 +1974,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   onClick={() => setStatementTab('statement')}
                   className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'statement'
-                      ? 'border-[#7a1228] text-[#7a1228]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">description</span>
@@ -1984,8 +1986,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               {/* Tab Contents */}
               <div>
                 {isLoadingStatement ? (
-                  <div className="py-12 text-center text-xs text-slate-500 space-y-2">
-                    <div className="w-7 h-7 rounded-full border-2 border-[#7a1228] border-t-transparent animate-spin mx-auto"></div>
+                  <div className="py-12 text-center text-xs text-on-surface-variant space-y-2">
+                    <div className="w-7 h-7 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto"></div>
                     <p>Loading real-time statement ledger...</p>
                   </div>
                 ) : statementError ? (
@@ -2016,10 +2018,10 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         )}
 
                         {invoicesList.length === 0 ? (
-                          <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 space-y-2">
+                          <div className="p-8 text-center bg-surface rounded-xl border border-dashed border-outline-variant/30 space-y-2">
                             <span className="material-symbols-outlined text-3xl text-amber-600">pending_actions</span>
-                            <h4 className="text-xs font-bold text-slate-800">Learner Not Yet Invoiced (Pending Authorization)</h4>
-                            <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                            <h4 className="text-xs font-bold text-on-surface">Learner Not Yet Invoiced (Pending Authorization)</h4>
+                            <p className="text-[11px] text-on-surface-variant max-w-md mx-auto">
                               In accordance with system policy, term billing will take place once authorized by Accounts or School Admin.
                             </p>
                             {isBillingAuthorized && (
@@ -2028,7 +2030,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   type="button"
                                   onClick={handleAuthorizeBilling}
                                   disabled={isAuthorizingBilling}
-                                  className="px-3.5 py-1.5 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                                  className="px-3.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
                                 >
                                   {isAuthorizingBilling ? 'Authorizing...' : 'Authorize & Bill Term 1'}
                                 </button>
@@ -2048,13 +2050,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               const isInvPaid = invBal <= 0;
 
                               return (
-                                <div key={inv.id} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                                <div key={inv.id} className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
                                   <div
                                     onClick={() => setExpandedInvoiceId(isExpanded ? null : inv.id)}
-                                    className="p-3 bg-slate-50 hover:bg-slate-100 flex flex-wrap items-center justify-between gap-3 cursor-pointer text-xs"
+                                    className="p-3 bg-surface hover:bg-surface-container-low flex flex-wrap items-center justify-between gap-3 cursor-pointer text-xs"
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <span className="font-mono font-bold text-[#7a1228]">#{inv.invoiceNumber}</span>
+                                      <span className="font-mono font-bold text-primary">#{inv.invoiceNumber}</span>
                                       <span
                                         className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
                                           isInvPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
@@ -2090,9 +2092,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   </div>
 
                                   {isExpanded && inv.items && inv.items.length > 0 && (
-                                    <div className="p-3 border-t border-slate-200 space-y-2 bg-white">
+                                    <div className="p-3 border-t border-outline-variant/30 space-y-2 bg-surface-container-lowest">
                                       <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-100 text-slate-600 font-semibold">
+                                        <thead className="bg-surface-container-low text-on-surface-variant font-semibold">
                                           <tr>
                                             <th className="p-2">Item Name</th>
                                             <th className="p-2">Category</th>
@@ -2103,7 +2105,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                           {inv.items.map((it: any, itemIdx: number) => (
                                             <tr key={itemIdx}>
                                               <td className="p-2 font-sans">{it.name}</td>
-                                              <td className="p-2 font-sans text-slate-500 text-[11px]">{it.category || 'Tuition / Levy'}</td>
+                                              <td className="p-2 font-sans text-on-surface-variant text-[11px]">{it.category || 'Tuition / Levy'}</td>
                                               <td className="p-2 text-right font-bold">{(it.amount || 0).toLocaleString()}</td>
                                             </tr>
                                           ))}
@@ -2123,9 +2125,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     {statementTab === 'payments' && (
                       <div className="space-y-3">
                         {paymentsList.length === 0 ? (
-                          <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+                          <div className="p-8 text-center text-xs text-on-surface-variant bg-surface rounded-xl border border-outline-variant/30">
                             <span className="material-symbols-outlined text-3xl text-slate-400 mb-1">credit_card_off</span>
-                            <p className="font-semibold text-slate-700">No payment records found for this learner yet.</p>
+                            <p className="font-semibold text-on-surface-variant">No payment records found for this learner yet.</p>
                             <div className="pt-2">
                               <button
                                 type="button"
@@ -2133,16 +2135,16 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   setSelectedStudentForPayment(statementStudent);
                                   setIsRecordPaymentOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-[#7a1228] text-white text-xs font-bold rounded-lg cursor-pointer shadow-xs"
+                                className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg cursor-pointer shadow-xs"
                               >
                                 Record Payment Now
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                          <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
                             <table className="w-full text-left text-xs font-mono">
-                              <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                              <thead className="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant/30">
                                 <tr>
                                   <th className="p-2.5">Receipt #</th>
                                   <th className="p-2.5">Date</th>
@@ -2155,8 +2157,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {paymentsList.map((p, pIdx) => (
-                                  <tr key={pIdx} className="hover:bg-slate-50">
-                                    <td className="p-2.5 font-bold text-[#7a1228]">
+                                  <tr key={pIdx} className="hover:bg-surface">
+                                    <td className="p-2.5 font-bold text-primary">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -2165,16 +2167,16 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                             setIsPaymentReceiptOpen(true);
                                           }
                                         }}
-                                        className="hover:underline cursor-pointer inline-flex items-center gap-1 text-[#7a1228] text-xs font-bold"
+                                        className="hover:underline cursor-pointer inline-flex items-center gap-1 text-primary text-xs font-bold"
                                         title="Click to view & print official payment receipt"
                                       >
                                         <span className="material-symbols-outlined text-[13px]">receipt_long</span>
                                         <span>{p.receiptNumber || `REC-${pIdx + 1000}`}</span>
                                       </button>
                                     </td>
-                                    <td className="p-2.5 text-slate-600">{p.paymentDate || 'Recent'}</td>
-                                    <td className="p-2.5 font-sans font-medium text-slate-800">{p.paymentMethod || 'KCB_BUNI'}</td>
-                                    <td className="p-2.5 text-slate-600">{p.transactionReference || '--'}</td>
+                                    <td className="p-2.5 text-on-surface-variant">{p.paymentDate || 'Recent'}</td>
+                                    <td className="p-2.5 font-sans font-medium text-on-surface">{p.paymentMethod || 'KCB_BUNI'}</td>
+                                    <td className="p-2.5 text-on-surface-variant">{p.transactionReference || '--'}</td>
                                     <td className="p-2.5 text-right font-extrabold text-emerald-700">
                                       +KES {(p.amount || 0).toLocaleString()}
                                     </td>
@@ -2223,44 +2225,44 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                     {/* 3. PRINTABLE STATEMENT ADVICE TAB */}
                     {statementTab === 'statement' && (
-                      <div className="bg-white p-5 rounded-xl border border-slate-300 space-y-5">
+                      <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 space-y-5">
                         <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
                           <div>
-                            <h3 className="text-sm font-extrabold uppercase text-slate-900">
+                            <h3 className="text-sm font-extrabold uppercase text-on-surface">
                               {user?.schoolName || 'Grace Seeds School'}
                             </h3>
-                            <p className="text-[11px] text-slate-500">Official Student Fee Statement &amp; Audit Slip</p>
+                            <p className="text-[11px] text-on-surface-variant">Official Student Fee Statement &amp; Audit Slip</p>
                           </div>
-                          <div className="text-right text-[11px] text-slate-600">
-                            <div>Date: <strong className="text-slate-900">{new Date().toLocaleDateString()}</strong></div>
+                          <div className="text-right text-[11px] text-on-surface-variant">
+                            <div>Date: <strong className="text-on-surface">{new Date().toLocaleDateString()}</strong></div>
                             <div>Paybill: <strong className="text-emerald-800">522533</strong></div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-lg text-xs border border-slate-200">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-surface rounded-lg text-xs border border-outline-variant/30">
                           <div>
-                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Learner</span>
-                            <strong className="text-slate-900">{statementStudent.name}</strong>
+                            <span className="text-on-surface-variant text-[10px] uppercase font-bold block">Learner</span>
+                            <strong className="text-on-surface">{statementStudent.name}</strong>
                           </div>
                           <div>
-                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Adm No</span>
-                            <strong className="text-slate-900 font-mono">{statementStudent.admNo}</strong>
+                            <span className="text-on-surface-variant text-[10px] uppercase font-bold block">Adm No</span>
+                            <strong className="text-on-surface font-mono">{statementStudent.admNo}</strong>
                           </div>
                           <div>
-                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Class / Stream</span>
-                            <strong className="text-slate-900">{statementStudent.grade} ({statementStudent.stream || 'Simba'})</strong>
+                            <span className="text-on-surface-variant text-[10px] uppercase font-bold block">Class / Stream</span>
+                            <strong className="text-on-surface">{statementStudent.grade} ({statementStudent.stream || 'Simba'})</strong>
                           </div>
                           <div>
-                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Guardian</span>
-                            <strong className="text-slate-900">{statementStudent.guardianName || '--'} ({statementStudent.guardianPhone || '--'})</strong>
+                            <span className="text-on-surface-variant text-[10px] uppercase font-bold block">Guardian</span>
+                            <strong className="text-on-surface">{statementStudent.guardianName || '--'} ({statementStudent.guardianPhone || '--'})</strong>
                           </div>
                         </div>
 
                         <div className="space-y-1">
-                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">Ledger Journal</h4>
-                          <div className="border border-slate-300 rounded-lg overflow-hidden">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface">Ledger Journal</h4>
+                          <div className="border border-outline-variant/30 rounded-lg overflow-hidden">
                             <table className="w-full text-left text-xs font-mono">
-                              <thead className="bg-slate-100 border-b border-slate-300 text-slate-700">
+                              <thead className="bg-surface-container-low border-b border-outline-variant/30 text-on-surface-variant">
                                 <tr>
                                   <th className="p-2 font-sans">Item / Description</th>
                                   <th className="p-2">Reference</th>
@@ -2273,10 +2275,10 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                 {invoicesList.map((inv, iIdx) => (
                                   <tr key={`inv-${iIdx}`}>
                                     <td className="p-2 font-sans">Invoice #{inv.invoiceNumber}</td>
-                                    <td className="p-2 text-slate-500">{inv.dueDate || 'Term Fee'}</td>
+                                    <td className="p-2 text-on-surface-variant">{inv.dueDate || 'Term Fee'}</td>
                                     <td className="p-2 text-right text-rose-700 font-bold">KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}</td>
                                     <td className="p-2 text-right text-slate-400">--</td>
-                                    <td className="p-2 text-right font-bold text-slate-800">KES {(inv.balance || 0).toLocaleString()}</td>
+                                    <td className="p-2 text-right font-bold text-on-surface">KES {(inv.balance || 0).toLocaleString()}</td>
                                   </tr>
                                 ))}
                                 {paymentsList.map((p, pIdx) => (
@@ -2285,7 +2287,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                     <td className="p-2 text-emerald-800">{p.receiptNumber}</td>
                                     <td className="p-2 text-right text-slate-400">--</td>
                                     <td className="p-2 text-right text-emerald-700 font-bold">+KES {(p.amount || 0).toLocaleString()}</td>
-                                    <td className="p-2 text-right font-bold text-slate-800">CR</td>
+                                    <td className="p-2 text-right font-bold text-on-surface">CR</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -2297,7 +2299,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleDownloadStudentStatementPdf(statementStudent)}
-                            className="px-4 py-2 bg-[#7a1228] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
                           >
                             <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
                             <span>Download Statement PDF</span>
@@ -2323,16 +2325,16 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                         {/* Credit Summary Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Credit Generated</span>
-                            <div className="text-base font-black font-mono text-slate-900 mt-1">
+                          <div className="p-3.5 bg-surface border border-outline-variant/30 rounded-xl">
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Total Credit Generated</span>
+                            <div className="text-base font-black font-mono text-on-surface mt-1">
                               KES {creditsList.reduce((sum: number, c: any) => sum + (c.status !== 'REVERSED' ? Number(c.amount) || 0 : 0), 0).toLocaleString()}
                             </div>
-                            <span className="text-[10px] text-slate-500 mt-0.5 block">{creditsList.length} overpayment / advance record(s)</span>
+                            <span className="text-[10px] text-on-surface-variant mt-0.5 block">{creditsList.length} overpayment / advance record(s)</span>
                           </div>
 
-                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Credit Applied</span>
+                          <div className="p-3.5 bg-surface border border-outline-variant/30 rounded-xl">
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Total Credit Applied</span>
                             <div className="text-base font-black font-mono text-emerald-700 mt-1">
                               KES {creditsList.reduce((sum: number, c: any) => sum + (c.status !== 'REVERSED' ? Number(c.amountUsed) || 0 : 0), 0).toLocaleString()}
                             </div>
@@ -2379,7 +2381,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   type="button"
                                   disabled={isReconcilingCredits || isApplyingCredit}
                                   onClick={() => setIsAdminCreditModalOpen(true)}
-                                  className="px-3.5 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                                  className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                                   title="Initiate custom fee credit allocation with audit reason and live preview (Admin only)"
                                 >
                                   <span className="material-symbols-outlined text-sm">tune</span>
@@ -2392,23 +2394,23 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                         {/* Credits List Table */}
                         <div className="space-y-2">
-                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm text-[#7a1228]">account_balance_wallet</span>
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm text-primary">account_balance_wallet</span>
                             <span>Credit &amp; Overpayment Ledger</span>
                           </h4>
 
                           {creditsList.length === 0 ? (
-                            <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface rounded-xl border border-dashed border-outline-variant/30">
                               <span className="material-symbols-outlined text-3xl text-slate-400 mb-1">savings</span>
-                              <p className="font-semibold text-slate-700">No advance credits or overpayments recorded.</p>
+                              <p className="font-semibold text-on-surface-variant">No advance credits or overpayments recorded.</p>
                               <p className="text-[11px] text-slate-400 mt-0.5">
                                 Overpayments recorded against invoices or advance deposits are automatically tracked here.
                               </p>
                             </div>
                           ) : (
-                            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                            <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
                               <table className="w-full text-left text-xs font-mono">
-                                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                <thead className="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant/30">
                                   <tr>
                                     <th className="p-2.5">Credit ID</th>
                                     <th className="p-2.5">Origin Receipt #</th>
@@ -2423,10 +2425,10 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   {creditsList.map((c: any, cIdx: number) => {
                                     const canApply = (c.balance || 0) > 0 && c.status !== 'REVERSED' && invoicesList.some(inv => (inv.balance || 0) > 0);
                                     return (
-                                      <tr key={c.id || cIdx} className="hover:bg-slate-50">
-                                        <td className="p-2.5 text-slate-700 font-bold">{c.id ? c.id.slice(0, 12) : `CR-${cIdx + 1}`}</td>
-                                        <td className="p-2.5 font-bold text-[#7a1228]">{c.originatingReceiptNumber || '--'}</td>
-                                        <td className="p-2.5 text-right font-bold text-slate-900">KES {(Number(c.amount) || 0).toLocaleString()}</td>
+                                      <tr key={c.id || cIdx} className="hover:bg-surface">
+                                        <td className="p-2.5 text-on-surface-variant font-bold">{c.id ? c.id.slice(0, 12) : `CR-${cIdx + 1}`}</td>
+                                        <td className="p-2.5 font-bold text-primary">{c.originatingReceiptNumber || '--'}</td>
+                                        <td className="p-2.5 text-right font-bold text-on-surface">KES {(Number(c.amount) || 0).toLocaleString()}</td>
                                         <td className="p-2.5 text-right text-emerald-700">KES {(Number(c.amountUsed) || 0).toLocaleString()}</td>
                                         <td className="p-2.5 text-right font-black text-teal-800 bg-teal-50/40">
                                           +KES {(Number(c.balance) || 0).toLocaleString()}
@@ -2438,7 +2440,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                               : c.status === 'PARTIALLY_USED'
                                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                               : c.status === 'FULLY_USED'
-                                              ? 'bg-slate-100 text-slate-600'
+                                              ? 'bg-surface-container-low text-on-surface-variant'
                                               : 'bg-rose-100 text-rose-800'
                                           }`}>
                                             {c.status}
@@ -2478,13 +2480,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         {/* Credit Applications Audit Trail */}
                         {applicationsList.length > 0 && (
                           <div className="space-y-2 pt-2">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1">
+                            <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface flex items-center gap-1">
                               <span className="material-symbols-outlined text-sm text-emerald-700">history</span>
                               <span>Credit Application History (Audit Trail)</span>
                             </h4>
-                            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                            <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
                               <table className="w-full text-left text-xs font-mono">
-                                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                <thead className="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant/30">
                                   <tr>
                                     <th className="p-2.5">Date</th>
                                     <th className="p-2.5">Application Ref</th>
@@ -2500,21 +2502,21 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {applicationsList.map((app: any, aIdx: number) => (
-                                    <tr key={app.id || aIdx} className="hover:bg-slate-50">
-                                      <td className="p-2.5 text-slate-600">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}</td>
-                                      <td className="p-2.5 text-slate-800 font-bold">{app.applicationReference || (app.id ? app.id.slice(0, 14) : '--')}</td>
-                                      <td className="p-2.5 text-slate-700 font-bold">{app.originatingPaymentReference || (app.creditId ? app.creditId.slice(0, 10) : '--')}</td>
-                                      <td className="p-2.5 font-bold text-[#7a1228]">{app.invoiceId ? app.invoiceId.slice(0, 14) : '--'}</td>
+                                    <tr key={app.id || aIdx} className="hover:bg-surface">
+                                      <td className="p-2.5 text-on-surface-variant">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}</td>
+                                      <td className="p-2.5 text-on-surface font-bold">{app.applicationReference || (app.id ? app.id.slice(0, 14) : '--')}</td>
+                                      <td className="p-2.5 text-on-surface-variant font-bold">{app.originatingPaymentReference || (app.creditId ? app.creditId.slice(0, 10) : '--')}</td>
+                                      <td className="p-2.5 font-bold text-primary">{app.invoiceId ? app.invoiceId.slice(0, 14) : '--'}</td>
                                       <td className="p-2.5 text-right font-black text-emerald-800">+KES {(Number(app.amountApplied) || 0).toLocaleString()}</td>
                                       <td className="p-2.5 text-right font-mono text-teal-800">
                                         {app.remainingCredit != null ? `KES ${(Number(app.remainingCredit) || 0).toLocaleString()}` : '--'}
                                       </td>
-                                      <td className="p-2.5 font-sans text-slate-600 text-[11px]">{app.triggerSource || 'MANUAL'}</td>
+                                      <td className="p-2.5 font-sans text-on-surface-variant text-[11px]">{app.triggerSource || 'MANUAL'}</td>
                                       <td className="p-2.5 font-sans text-center">
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                           app.isSystemGenerated
                                             ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                            : 'bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
                                         }`}>
                                           {app.isSystemGenerated ? 'AUTO' : 'MANUAL'}
                                         </span>
@@ -2533,7 +2535,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                               }
                                               setIsCreditReceiptModalOpen(true);
                                             }}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded text-[10px] transition-colors cursor-pointer"
                                             title="View Official Fee Credit Utilization Receipt"
                                           >
                                             <span className="material-symbols-outlined text-[13px]">receipt_long</span>
@@ -2585,14 +2587,14 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">
+            <div className="p-3 bg-surface border-t border-outline-variant/30 flex items-center justify-between text-xs">
+              <span className="text-on-surface-variant font-medium">
                 KCB Paybill 522533 · A/C: <strong className="font-mono text-emerald-800">{kcbAccountRef}</strong>
               </span>
               <button
                 type="button"
                 onClick={() => setIsStatementModalOpen(false)}
-                className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                className="px-3.5 py-1.5 bg-surface-container hover:bg-slate-300 text-on-surface rounded-lg text-xs font-bold cursor-pointer transition-colors"
               >
                 Close
               </button>
@@ -2641,7 +2643,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       {/* 7. MODAL: DELETE HANGING INVOICE CONFIRMATION */}
       {invoiceToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 my-auto">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
             <div className="bg-rose-700 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px]">warning</span>
@@ -2662,30 +2664,30 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs">
-              <p className="text-slate-800">
-                Are you sure you want to delete invoice <strong className="font-mono text-[#7a1228]">#{invoiceToDelete.invoiceNumber}</strong>?
+              <p className="text-on-surface">
+                Are you sure you want to delete invoice <strong className="font-mono text-primary">#{invoiceToDelete.invoiceNumber}</strong>?
               </p>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 font-mono">
-                <div className="flex justify-between text-slate-600 font-sans">
+              <div className="p-3 bg-surface rounded-xl border border-outline-variant/30 space-y-2 font-mono">
+                <div className="flex justify-between text-on-surface-variant font-sans">
                   <span>Student / Adm:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-on-surface">
                     {statementStudent?.name || invoiceToDelete.studentId} ({statementStudent?.admNo || ''})
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-600 font-sans">
+                <div className="flex justify-between text-on-surface-variant font-sans">
                   <span>Billed Amount:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-on-surface">
                     KES {(invoiceToDelete.amountPayable || invoiceToDelete.amountBilled || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-600 font-sans">
+                <div className="flex justify-between text-on-surface-variant font-sans">
                   <span>Amount Paid:</span>
                   <span className="font-bold text-emerald-700">
                     KES {(invoiceToDelete.amountPaid || 0).toLocaleString()} (0 Payments)
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-600 font-sans">
+                <div className="flex justify-between text-on-surface-variant font-sans">
                   <span>Status:</span>
                   <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase">
                     {invoiceToDelete.status} (Hanging)
@@ -2707,7 +2709,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => {
@@ -2715,7 +2717,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     setDeleteError(null);
                   }}
                   disabled={isDeletingInvoice}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>

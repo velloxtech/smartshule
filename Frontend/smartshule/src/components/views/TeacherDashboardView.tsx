@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { isPackagedClient } from '../../utils/runtime';
+import { LearnerProfileModal } from '../modals/LearnerProfileModal';
+import type { TeacherAuthorizedContext } from '../../services/api';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
@@ -25,6 +28,28 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   refreshTrigger = 0,
 }) => {
   const { user } = useAuth();
+  const web = !isPackagedClient();
+  const [authorized, setAuthorized] = useState<TeacherAuthorizedContext | null>(null);
+  const [selectedCohort, setSelectedCohort] = useState('');
+  const [assignmentRefresh, setAssignmentRefresh] = useState(0);
+  useEffect(() => {
+    if (!web) return;
+    const refresh = () => { if (document.visibilityState === 'visible') setAssignmentRefresh(n=>n+1); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const timer = window.setInterval(refresh, 60000);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(timer); };
+  }, [web]);
+  const [classError, setClassError] = useState('');
+  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const cohortOptions = (authorized?.assignedClasses || []).flatMap(c => [
+    ...(c.wholeClass ? [{key:c.id, classId:c.id, streamId:'', label:c.name}] : []),
+    ...c.streams.map(s=>({key:c.id+'::'+s.id,classId:c.id,streamId:s.id,label:c.name+' · '+s.name}))
+  ]);
+  const selected = cohortOptions.find(c=>c.key===selectedCohort) || cohortOptions[0];
+  const selectedClass = authorized?.assignedClasses.find(c=>c.id===selected?.classId);
+  const subjects = selectedClass?.subjectsByStream?.[selected?.streamId || ''] || [];
+
 
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [myStudents, setMyStudents] = useState<Student[]>([]);
@@ -65,8 +90,11 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function loadTeacherData() {
       setLoading(true);
+      setClassError('');
+      setMyStudents([]);
       try {
         // 1. Teacher Profile, Academic Context, Classes and School Info
         const [profileRes, ctxRes, classesRes, schoolRes] = await Promise.all([
@@ -105,6 +133,24 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           }
         }
 
+        let assignedStreamId: string | undefined;
+        let assignedClassId: string | undefined;
+        let hasAssignment = true;
+        if (web) {
+          const contextRes = await apiService.getTeacherAuthorizedContext(ctx?.currentYear?.id, ctx?.currentTerm?.id);
+          if (cancelled) return;
+          const context = contextRes.data;
+          setAuthorized(context);
+          const choices = context.assignedClasses.flatMap(c=>[
+            ...(c.wholeClass?[{key:c.id,classId:c.id,streamId:'',label:c.name}]:[]),
+            ...c.streams.map(s=>({key:c.id+'::'+s.id,classId:c.id,streamId:s.id,label:c.name+' · '+s.name}))
+          ]);
+          const chosen = choices.find(c=>c.key===selectedCohort) || choices[0];
+          hasAssignment = Boolean(chosen);
+          assignedStreamId = chosen?.streamId || undefined;
+          assignedClassId = chosen?.classId;
+          setResolvedAssignedClass(chosen?.label || 'No active class assignment');
+        } else {
         // Determine assigned stream IDs from DB profile or classTeacherId assignment
         let assignedStreamIds: string[] = Array.isArray(profile?.assignedClassStreamIds)
           ? profile.assignedClassStreamIds
@@ -125,13 +171,14 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         }
         setResolvedAssignedClass(resolvedClassName);
 
-        const assignedStreamId = assignedStreamIds[0];
+        assignedStreamId = assignedStreamIds[0];
+        }
         const teacherId = profile?.id;
         const termId = ctx?.currentTerm?.id;
 
         // 2. Parallel data fetching
         const [stRes, regRes, ttRes, schRes, lpRes, formRes, sumRes] = await Promise.all([
-          apiService.getStudents({ streamId: assignedStreamId || undefined }).catch(() => null),
+          hasAssignment ? apiService.getStudents({ classroomId:assignedClassId, streamId:assignedStreamId, academicYearId:web?ctx?.currentYear?.id:undefined, termId:web?ctx?.currentTerm?.id:undefined }) : Promise.resolve(null),
           assignedStreamId ? apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null) : Promise.resolve(null),
           teacherId ? apiService.getTeacherTimetable(teacherId, termId).catch(() => null) : Promise.resolve(null),
           teacherId ? apiService.getSchemes({ teacherId }).catch(() => null) : Promise.resolve(null),
@@ -140,6 +187,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           apiService.listSummatives().catch(() => null),
         ]);
 
+        if (cancelled) return;
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped: Student[] = stRes.data.map((s: any) => ({
             id: s.id,
@@ -193,14 +241,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         const totalAssessments = (formRes?.data?.length || 0) + (sumRes?.data?.length || 0);
         setMyAssessmentsCount(totalAssessments);
       } catch (err) {
+        if (!cancelled) {
+          setClassError(err instanceof Error ? err.message : 'Could not load your assigned class.');
+          if (web) setAuthorized(null);
+        }
         console.error('Error loading teacher dashboard data:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadTeacherData();
-  }, [todayDate, refreshTrigger]);
+    return () => { cancelled = true; };
+  }, [todayDate, refreshTrigger, selectedCohort, web, assignmentRefresh]);
 
   const currentTeacherUser = teacherProfile?.user || user;
   const teacherName = currentTeacherUser ? `${currentTeacherUser.firstName} ${currentTeacherUser.lastName}` : 'Teacher';
@@ -356,6 +409,14 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {web && <section aria-label="My assigned class" className="rounded-2xl border border-outline-variant/30 bg-white p-6 space-y-4">
+        <div className="flex flex-wrap justify-between gap-4"><div><h2 className="text-xl font-bold">My Classes</h2><p className="text-sm text-on-surface-variant">{currentContext?.currentYear?.name} · {currentContext?.currentTerm?.name} · Active teaching assignments</p></div>
+        <label className="text-sm font-semibold">Class and stream<select aria-label="My class and stream" value={selected?.key || ''} disabled={loading} onChange={e=>setSelectedCohort(e.target.value)} className="block mt-1 rounded-lg border p-2 min-w-60 bg-white">{cohortOptions.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}{!cohortOptions.length&&<option value="">No active assignment</option>}</select></label></div>
+        {classError && <p role="alert" className="text-red-700">{classError}</p>}
+        {loading ? <p role="status">Loading your assigned class…</p> : <><div className="flex flex-wrap gap-3 text-sm"><span className="rounded-full bg-slate-100 px-3 py-1">{myStudents.length} learners</span><span className="rounded-full bg-slate-100 px-3 py-1">{subjects.length} learning areas</span></div>
+        <div><h3 className="font-semibold mb-2">My subjects & learning areas</h3><div className="flex flex-wrap gap-2">{subjects.map(a=><span key={a.id} className="rounded-lg border px-3 py-2 text-sm">{a.name}</span>)}</div>{!subjects.length&&<p className="text-sm text-slate-500">No learning areas are assigned in this class and stream.</p>}</div></>}
+        <div className="flex flex-wrap gap-3 text-sm font-semibold text-[#7a1228]"><button disabled={loading} onClick={()=>setAssignmentRefresh(n=>n+1)}>Refresh assignments</button><button onClick={()=>document.getElementById('teacher-class-roster')?.scrollIntoView({behavior:'smooth'})}>View class learners</button><button onClick={()=>onNavigateTab('curriculum-tracker')}>Syllabus Coverage Plan</button><button onClick={()=>onNavigateTab('timetable')}>Class timetable</button></div>
+      </section>}
       {/* Teacher Welcome & Profile Banner */}
       <div className="bg-surface-container-lowest rounded-2xl p-5 sm:p-6 shadow-xs border border-outline-variant/30 flex flex-col lg:flex-row lg:items-start justify-between gap-5 sm:gap-6">
         <div className="flex-1 min-w-0">
@@ -431,7 +492,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             title="Track weekly syllabus progress & confirm coverage"
           >
             <span className="material-symbols-outlined text-[16px] text-emerald-700">fact_check</span>
-            <span>Curriculum Tracker</span>
+            <span>Syllabus Coverage Plan</span>
           </button>
           <button
             onClick={() => onOpenUploadMarks()}
@@ -616,7 +677,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <span className="material-symbols-outlined text-[20px]">fact_check</span>
           </div>
           <div>
-            <div className="font-bold text-xs text-on-surface">Curriculum Tracker</div>
+            <div className="font-bold text-xs text-on-surface">Syllabus Coverage Plan</div>
             <div className="text-[11px] text-on-surface-variant">Weekly syllabus progress</div>
           </div>
         </button>
@@ -833,6 +894,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       {/* Teacher Salary Payment & Digital Acknowledgement Section */}
       <TeacherSalaryAcknowledgementCard />
 
+      <div id="teacher-class-roster" className="scroll-mt-24" />
       {/* Class Learners Table (Partial Details Only: No Fees, No Financial Invoices) */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container pb-3">
@@ -895,7 +957,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                         Grade
                       </button>
                       <button
-                        onClick={() => onNavigateTab('students-guardians')}
+                        onClick={() => web ? setProfileStudent(st) : onNavigateTab('students-guardians')}
                         className="px-2.5 py-1 rounded bg-surface-container text-primary font-semibold text-xs hover:bg-surface-container-high transition-colors cursor-pointer"
                       >
                         Profile
@@ -915,6 +977,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         )}
       </div>
 
+      {web && <LearnerProfileModal isOpen={Boolean(profileStudent)} student={profileStudent} onClose={()=>setProfileStudent(null)} onGradeStudent={onOpenUploadMarks} />}
       {/* Edit Profile Modal */}
       <EditTeacherProfileModal
         isOpen={isEditProfileOpen}

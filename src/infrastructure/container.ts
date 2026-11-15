@@ -2,6 +2,10 @@ import { IBiometricCredentialRepository } from '../core/ports/repositories/IBiom
 import { InMemoryBiometricCredentialRepository } from './database/in-memory/InMemoryBiometricCredentialRepository';
 import { WebAuthnUseCases } from '../application/auth/WebAuthnUseCases';
 import { WebAuthnService } from './services/WebAuthnService';
+import { TermAllocationService } from '../application/planning/TermAllocationService';
+import { TeacherAssignmentAccess } from '../application/shared/TeacherAssignmentAccess';
+import { CalendarPlanningService } from '../application/planning/CalendarPlanningService';
+import { PlanningRepository, MemoryPlanningRepository } from '../application/planning/PlanningRepository';
 import { IUserRepository } from '../core/ports/repositories/IUserRepository';
 import { IStudentRepository } from '../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../core/ports/repositories/ITeacherRepository';
@@ -114,6 +118,10 @@ import { Guardian, GuardianRelationship } from '../core/domain/user/Guardian';
 
 export class AppContainer {
   // Repositories
+  public assignmentAccess!: TeacherAssignmentAccess;
+  public termAllocations!: TermAllocationService;
+  public calendarPlanning!: CalendarPlanningService;
+  public planningRepository: PlanningRepository;
   public userRepository: IUserRepository;
   public studentRepository: IStudentRepository;
   public deletedStudentRepository: IDeletedStudentRepository;
@@ -193,6 +201,7 @@ export class AppContainer {
   public parentConsentUseCases!: ParentConsentUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
+    this.planningRepository = customRepositories?.planningRepository || new MemoryPlanningRepository();
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
     this.studentRepository = customRepositories?.studentRepository || new InMemoryStudentRepository();
     this.deletedStudentRepository = customRepositories?.deletedStudentRepository || new InMemoryDeletedStudentRepository();
@@ -318,11 +327,16 @@ export class AppContainer {
       this.teacherRepository,
       this.feeRepository
     );
+    this.assignmentAccess = new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+    this.calendarPlanning = new CalendarPlanningService(this.planningRepository,this.academicRepository,this.timetableRepository,this.schemeOfWorkRepository,this.assignmentAccess);
     this.curriculumUseCases = new CurriculumPlanUseCases(
       this.schemeOfWorkRepository,
       this.lessonPlanRepository,
-      this.teacherRepository
+      this.teacherRepository,
+      this.assignmentAccess,
+      this.calendarPlanning
     );
+    this.termAllocations = new TermAllocationService(this);
     
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(
       this.recordOfWorkRepository,

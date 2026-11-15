@@ -111,7 +111,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-outline-variant/30">
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -148,32 +148,32 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
           )}
 
           {/* Request Metadata Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
+          <div className="bg-surface border border-outline-variant/30 rounded-xl p-4 space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-outline-variant/30">
               <div>
-                <span className="text-xs font-semibold text-slate-500 block">Learner</span>
-                <span className="font-bold text-slate-900">{request.studentName}</span>
-                <span className="text-xs text-slate-600 block">Adm: {request.admissionNumber}</span>
+                <span className="text-xs font-semibold text-on-surface-variant block">Learner</span>
+                <span className="font-bold text-on-surface">{request.studentName}</span>
+                <span className="text-xs text-on-surface-variant block">Adm: {request.admissionNumber}</span>
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-500 block">Original Transaction</span>
-                <span className="font-bold text-slate-900">
+                <span className="text-xs font-semibold text-on-surface-variant block">Original Transaction</span>
+                <span className="font-bold text-on-surface">
                   KES {Number(request.originalAmount).toLocaleString()} ({request.transactionType})
                 </span>
-                <span className="font-mono text-xs text-slate-600 block">
+                <span className="font-mono text-xs text-on-surface-variant block">
                   Ref: {request.originalReceiptNumber || request.transactionReference}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="flex items-center space-x-2 text-slate-600">
+              <div className="flex items-center space-x-2 text-on-surface-variant">
                 <User className="w-4 h-4 text-slate-400" />
                 <span>
                   <strong>Requested By:</strong> {request.requestedByName} ({request.requestedByRole})
                 </span>
               </div>
-              <div className="flex items-center space-x-2 text-slate-600">
+              <div className="flex items-center space-x-2 text-on-surface-variant">
                 <Clock className="w-4 h-4 text-slate-400" />
                 <span>
                   <strong>Date:</strong> {new Date(request.requestedAt).toLocaleDateString('en-GB')}
@@ -182,15 +182,15 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
             </div>
 
             {/* Bursar Reason */}
-            <div className="pt-2 border-t border-slate-200/80">
-              <span className="text-xs font-bold text-slate-700 block uppercase tracking-wider mb-1">
+            <div className="pt-2 border-t border-outline-variant/80">
+              <span className="text-xs font-bold text-on-surface-variant block uppercase tracking-wider mb-1">
                 Bursar's Reason for Reversal:
               </span>
-              <p className="text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200 text-sm">
+              <p className="text-on-surface bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/30 text-sm">
                 "{request.reason}"
               </p>
               {request.explanation && (
-                <p className="text-xs text-slate-600 mt-1 italic">
+                <p className="text-xs text-on-surface-variant mt-1 italic">
                   Additional Notes: {request.explanation}
                 </p>
               )}
@@ -217,27 +217,27 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
             ) : preview ? (
               <div className="space-y-3 text-sm">
                 {/* Balance Comparison Grid */}
-                <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-lg border border-indigo-100 text-xs">
+                <div className="grid grid-cols-2 gap-2 bg-surface-container-lowest p-3 rounded-lg border border-indigo-100 text-xs">
                   <div>
-                    <span className="text-slate-500 block font-medium">Current Outstanding Balance:</span>
-                    <span className="font-bold text-slate-900 text-sm">
+                    <span className="text-on-surface-variant block font-medium">Current Outstanding Balance:</span>
+                    <span className="font-bold text-on-surface text-sm">
                       KES {preview.currentOutstandingBalance.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-medium">Projected Post-Reversal:</span>
+                    <span className="text-on-surface-variant block font-medium">Projected Post-Reversal:</span>
                     <span className="font-bold text-indigo-700 text-sm">
                       KES {preview.projectedOutstandingBalance.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-medium">Current Available Credit:</span>
+                    <span className="text-on-surface-variant block font-medium">Current Available Credit:</span>
                     <span className="font-bold text-emerald-700 text-sm">
                       KES {preview.currentAvailableCredit.toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-medium">Projected Available Credit:</span>
+                    <span className="text-on-surface-variant block font-medium">Projected Available Credit:</span>
                     <span className="font-bold text-indigo-700 text-sm">
                       KES {preview.projectedCreditBalance.toLocaleString()}
                     </span>
@@ -254,13 +254,13 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                       {preview.dependentTransactions.map((dep, idx) => (
                         <div
                           key={idx}
-                          className="bg-white p-2 rounded border border-slate-200 text-xs flex justify-between items-center"
+                          className="bg-surface-container-lowest p-2 rounded border border-outline-variant/30 text-xs flex justify-between items-center"
                         >
                           <div>
-                            <span className="font-semibold text-slate-800">{dep.description}</span>
-                            <span className="text-slate-500 block text-[11px]">{dep.impactOnReversal}</span>
+                            <span className="font-semibold text-on-surface">{dep.description}</span>
+                            <span className="text-on-surface-variant block text-[11px]">{dep.impactOnReversal}</span>
                           </div>
-                          <span className="font-bold text-slate-900 shrink-0 ml-2">
+                          <span className="font-bold text-on-surface shrink-0 ml-2">
                             KES {dep.amount.toLocaleString()}
                           </span>
                         </div>
@@ -320,7 +320,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                 This action will atomically update the student's fee ledger, generate a formal Reversal Document, and update audit logs.
               </p>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">
                   Administrator Approval Comment (Optional)
                 </label>
                 <input
@@ -328,7 +328,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   placeholder="e.g. Approved following bank clearance verification"
                   value={approvalComment}
                   onChange={(e) => setApprovalComment(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-2">
@@ -336,7 +336,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   type="button"
                   onClick={() => setActiveAction('NONE')}
                   disabled={isProcessing}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container rounded-lg"
                 >
                   Back
                 </button>
@@ -377,7 +377,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   type="button"
                   onClick={() => setActiveAction('NONE')}
                   disabled={isProcessing}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container rounded-lg"
                 >
                   Back
                 </button>

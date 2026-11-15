@@ -410,7 +410,7 @@ export const ConcernsView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#7a1228] to-[#9e1c38] rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+      <div className="bg-gradient-to-r from-primary to-maroon-light rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none flex items-center pr-8">
           <span className="material-symbols-outlined text-[160px]">support_agent</span>
         </div>
@@ -433,13 +433,13 @@ export const ConcernsView: React.FC = () => {
               onClick={() => setActiveTab('list')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'list'
-                  ? 'bg-white text-[#7a1228] shadow'
+                  ? 'bg-white text-primary shadow'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
             >
               <span className="material-symbols-outlined text-sm">view_list</span>
               <span>{isParent ? 'My Tracked Concerns' : 'Active Concerns Queue'}</span>
-              <span className="ml-1 bg-[#7a1228] text-white text-[10px] px-2 py-0.5 rounded-full font-black">
+              <span className="ml-1 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-black">
                 {concerns.length}
               </span>
             </button>
@@ -448,7 +448,7 @@ export const ConcernsView: React.FC = () => {
               onClick={() => setActiveTab('submit')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'submit'
-                  ? 'bg-white text-[#7a1228] shadow'
+                  ? 'bg-white text-primary shadow'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
             >
@@ -461,7 +461,7 @@ export const ConcernsView: React.FC = () => {
                 onClick={() => setActiveTab('analytics')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                   activeTab === 'analytics'
-                    ? 'bg-white text-[#7a1228] shadow'
+                    ? 'bg-white text-primary shadow'
                     : 'bg-white/15 text-white hover:bg-white/25'
                 }`}
               >
@@ -476,40 +476,40 @@ export const ConcernsView: React.FC = () => {
       {/* KPI Cards (Visible to Staff & Admins) */}
       {!isParent && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="text-xs text-slate-500 font-bold uppercase">Total Logged</div>
-            <div className="text-2xl font-black text-slate-800 mt-1">{metrics.total}</div>
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm">
+            <div className="text-xs text-on-surface-variant font-bold uppercase">Total Logged</div>
+            <div className="text-2xl font-black text-on-surface mt-1">{metrics.total}</div>
             <div className="text-[10px] text-slate-400 mt-0.5">All CBC matters</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/30">
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/30">
             <div className="text-xs text-blue-700 font-bold uppercase">Active Pipeline</div>
             <div className="text-2xl font-black text-blue-800 mt-1">{metrics.active}</div>
             <div className="text-[10px] text-blue-600 mt-0.5">Under investigation</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-red-200 shadow-sm bg-red-50/30">
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-red-200 shadow-sm bg-red-50/30">
             <div className="text-xs text-red-700 font-bold uppercase">Escalated</div>
             <div className="text-2xl font-black text-red-800 mt-1">{metrics.escalated}</div>
             <div className="text-[10px] text-red-600 mt-0.5">Senior review</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-sm bg-amber-50/30">
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-amber-200 shadow-sm bg-amber-50/30">
             <div className="text-xs text-amber-700 font-bold uppercase">SLA Overdue</div>
             <div className="text-2xl font-black text-amber-800 mt-1">{metrics.overdue}</div>
             <div className="text-[10px] text-amber-600 mt-0.5">Deadline exceeded</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-sm bg-purple-50/30">
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-purple-200 shadow-sm bg-purple-50/30">
             <div className="text-xs text-purple-700 font-bold uppercase">Awaiting Parent</div>
             <div className="text-2xl font-black text-purple-800 mt-1">{metrics.awaitingParent}</div>
             <div className="text-[10px] text-purple-600 mt-0.5">Feedback requested</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/30">
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/30">
             <div className="text-xs text-emerald-700 font-bold uppercase">Resolved Cases</div>
             <div className="text-2xl font-black text-emerald-800 mt-1">{metrics.resolved}</div>
             <div className="text-[10px] text-emerald-600 mt-0.5">Ratified & closed</div>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm bg-slate-50/50">
-            <div className="text-xs text-slate-700 font-bold uppercase">Resolution Rate</div>
-            <div className="text-2xl font-black text-slate-800 mt-1">{metrics.resolutionRate}%</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Performance index</div>
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm bg-surface/50">
+            <div className="text-xs text-on-surface-variant font-bold uppercase">Resolution Rate</div>
+            <div className="text-2xl font-black text-on-surface mt-1">{metrics.resolutionRate}%</div>
+            <div className="text-[10px] text-on-surface-variant mt-0.5">Performance index</div>
           </div>
         </div>
       )}
@@ -518,7 +518,7 @@ export const ConcernsView: React.FC = () => {
       {activeTab === 'list' && (
         <div className="space-y-4">
           {/* Search & Filter Controls */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
             <div className="relative flex-1">
               <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">search</span>
               <input
@@ -526,10 +526,10 @@ export const ConcernsView: React.FC = () => {
                 placeholder={isParent ? 'Search by reference number, subject or child name...' : 'Search reference, learner, category or parent...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#7a1228] focus:border-[#7a1228] outline-none"
+                className="w-full pl-9 pr-4 py-2 border border-outline-variant/30 rounded-xl text-xs focus:ring-2 focus:ring-primary focus:border-primary outline-none"
               />
               {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-on-surface-variant">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
               )}
@@ -540,7 +540,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 font-medium focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="ACTIVE">Active Cases Only</option>
@@ -558,7 +558,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 font-medium focus:ring-2 focus:ring-[#7a1228] outline-none max-w-[180px] truncate"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none max-w-[180px] truncate"
               >
                 <option value="ALL">All Categories</option>
                 {CONCERN_CATEGORIES.map((cat) => (
@@ -570,7 +570,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 font-medium focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="ALL">All Priorities</option>
                 <option value="URGENT">Urgent (Safety)</option>
@@ -586,7 +586,7 @@ export const ConcernsView: React.FC = () => {
                   className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
                     overdueFilter === 'OVERDUE'
                       ? 'bg-red-600 text-white border-red-700 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-sm">schedule</span>
@@ -598,15 +598,15 @@ export const ConcernsView: React.FC = () => {
 
           {/* Table / List */}
           {loading ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <span className="material-symbols-outlined text-4xl text-[#7a1228] animate-spin">refresh</span>
-              <p className="mt-2 text-xs font-bold text-slate-600">Loading concerns registry...</p>
+            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center">
+              <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
+              <p className="mt-2 text-xs font-bold text-on-surface-variant">Loading concerns registry...</p>
             </div>
           ) : filteredConcerns.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center">
               <span className="material-symbols-outlined text-5xl text-slate-300">task_alt</span>
-              <h3 className="mt-2 text-sm font-bold text-slate-800">No Concerns Found</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              <h3 className="mt-2 text-sm font-bold text-on-surface">No Concerns Found</h3>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-md mx-auto">
                 {isParent
                   ? 'You currently have no open or resolved concerns matching your filter criteria. Use the "Log New Concern" button to reach out to the school.'
                   : 'No concerns match the selected criteria.'}
@@ -614,18 +614,18 @@ export const ConcernsView: React.FC = () => {
               {isParent && (
                 <button
                   onClick={() => setActiveTab('submit')}
-                  className="mt-4 px-4 py-2 bg-[#7a1228] text-white text-xs font-bold rounded-xl shadow hover:bg-[#9e1c38] transition-all"
+                  className="mt-4 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl shadow hover:bg-maroon-light transition-all"
                 >
                   Log New Concern
                 </button>
               )}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                    <tr className="bg-surface border-b border-outline-variant/30 text-on-surface-variant font-bold">
                       <th className="py-3 px-4">Ref Number</th>
                       <th className="py-3 px-4">Learner / Grade</th>
                       <th className="py-3 px-4">Category & Subject</th>
@@ -650,10 +650,10 @@ export const ConcernsView: React.FC = () => {
                             setSelectedConcern(c);
                             refreshSelectedConcern(c.id);
                           }}
-                          className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                          className="hover:bg-surface/80 cursor-pointer transition-colors"
                         >
                           {/* Reference Number */}
-                          <td className="py-3.5 px-4 font-mono font-black text-[#7a1228]">
+                          <td className="py-3.5 px-4 font-mono font-black text-primary">
                             {c.referenceNumber || `CON-${c.id.slice(0, 8)}`}
                             <div className="text-[10px] text-slate-400 font-sans font-normal">
                               {new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -662,24 +662,24 @@ export const ConcernsView: React.FC = () => {
 
                           {/* Child / Learner */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-800">
+                            <div className="font-bold text-on-surface">
                               {c.studentName || 'Unspecified Learner'}
                             </div>
-                            <div className="text-[11px] text-slate-500">
+                            <div className="text-[11px] text-on-surface-variant">
                               {c.gradeLevel || 'CBC Grade'} {c.admissionNumber ? `• Adm: ${c.admissionNumber}` : ''}
                             </div>
                           </td>
 
                           {/* Category & Subject */}
                           <td className="py-3.5 px-4 max-w-xs">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                              <span className="material-symbols-outlined text-[13px] text-[#7a1228]">{catDef.icon}</span>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-0.5">
+                              <span className="material-symbols-outlined text-[13px] text-primary">{catDef.icon}</span>
                               <span>{catDef.label}</span>
                             </div>
-                            <div className="font-bold text-slate-900 truncate">
+                            <div className="font-bold text-on-surface truncate">
                               {c.subject || c.title || 'Concern Inquiry'}
                             </div>
-                            <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                            <div className="text-[11px] text-on-surface-variant truncate mt-0.5">
                               {c.details || c.description || ''}
                             </div>
                           </td>
@@ -693,7 +693,7 @@ export const ConcernsView: React.FC = () => {
                                   : c.priority?.toUpperCase() === 'HIGH'
                                   ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                   : c.priority?.toUpperCase() === 'LOW'
-                                  ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                                  ? 'bg-surface-container-low text-on-surface-variant border border-outline-variant/30'
                                   : 'bg-blue-100 text-blue-800 border border-blue-200'
                               }`}
                             >
@@ -727,7 +727,7 @@ export const ConcernsView: React.FC = () => {
                                 Overdue SLA
                               </span>
                             ) : (
-                              <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
+                              <span className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm text-cyan-600">timer</span>
                                 On Track
                               </span>
@@ -742,7 +742,7 @@ export const ConcernsView: React.FC = () => {
                                 setSelectedConcern(c);
                                 refreshSelectedConcern(c.id);
                               }}
-                              className="px-3 py-1.5 bg-[#7a1228]/10 text-[#7a1228] hover:bg-[#7a1228] hover:text-white rounded-lg font-bold text-xs transition-colors inline-flex items-center gap-1"
+                              className="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold text-xs transition-colors inline-flex items-center gap-1"
                             >
                               <span>View Case</span>
                               <span className="material-symbols-outlined text-xs">arrow_forward</span>
@@ -761,13 +761,13 @@ export const ConcernsView: React.FC = () => {
 
       {/* TAB 2: SUBMIT CONCERN FORM */}
       {activeTab === 'submit' && (
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+        <div className="max-w-2xl mx-auto bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 md:p-8 shadow-sm">
+          <div className="flex items-center justify-between border-b border-outline-variant/30 pb-4 mb-6">
             <div>
-              <h2 className="text-lg font-black text-slate-900">
+              <h2 className="text-lg font-black text-on-surface">
                 {isParent ? 'Raise a Concern for Your Child' : 'Record Parent Concern / Inquiry'}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 {isParent
                   ? 'Your concern will be securely routed to the designated school educator and administrative office.'
                   : 'Ensure the correct student profile is linked for transparent record-keeping.'}
@@ -775,7 +775,7 @@ export const ConcernsView: React.FC = () => {
             </div>
             <button
               onClick={() => setActiveTab('list')}
-              className="px-3 py-1 text-xs font-bold text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg hover:bg-slate-50"
+              className="px-3 py-1 text-xs font-bold text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-lg hover:bg-surface"
             >
               Cancel
             </button>
@@ -790,7 +790,7 @@ export const ConcernsView: React.FC = () => {
                   <p className="text-xs text-emerald-800 mt-1">
                     Your unique tracking reference number is:
                   </p>
-                  <div className="mt-2 inline-block px-3 py-1 bg-white border border-emerald-300 font-mono font-black text-sm text-emerald-950 rounded-lg shadow-sm">
+                  <div className="mt-2 inline-block px-3 py-1 bg-surface-container-lowest border border-emerald-300 font-mono font-black text-sm text-emerald-950 rounded-lg shadow-sm">
                     {formSuccessRef}
                   </div>
                   <p className="text-[11px] text-emerald-700 mt-2">
@@ -828,14 +828,14 @@ export const ConcernsView: React.FC = () => {
           <form onSubmit={handleSubmitConcern} className="space-y-4">
             {/* Child Selector */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
                 Select Learner / Child <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.studentId}
                 onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">-- Choose child --</option>
                 {children.map((child: any) => {
@@ -851,14 +851,14 @@ export const ConcernsView: React.FC = () => {
 
             {/* Concern Category */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
                 Concern Category <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
               >
                 {CONCERN_CATEGORIES.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -870,7 +870,7 @@ export const ConcernsView: React.FC = () => {
 
             {/* Urgency / Priority */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
                 Priority / Urgency Level
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -886,12 +886,12 @@ export const ConcernsView: React.FC = () => {
                     onClick={() => setFormData({ ...formData, priority: p.id })}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       formData.priority === p.id
-                        ? 'border-[#7a1228] bg-[#7a1228]/5 text-[#7a1228] ring-1 ring-[#7a1228]'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary'
+                        : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
                     <div className="font-black text-xs">{p.label}</div>
-                    <div className="text-[10px] text-slate-500">{p.desc}</div>
+                    <div className="text-[10px] text-on-surface-variant">{p.desc}</div>
                   </button>
                 ))}
               </div>
@@ -899,7 +899,7 @@ export const ConcernsView: React.FC = () => {
 
             {/* Subject */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
                 Subject / Summary <span className="text-red-500">*</span>
               </label>
               <input
@@ -908,13 +908,13 @@ export const ConcernsView: React.FC = () => {
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
 
             {/* Details */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
                 Detailed Explanation & Request <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -923,16 +923,16 @@ export const ConcernsView: React.FC = () => {
                 value={formData.details}
                 onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-[#7a1228] outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
 
             {/* Supporting Attachment URL (Optional) */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+            <div className="bg-surface p-3.5 rounded-xl border border-outline-variant/30">
+              <label className="block text-xs font-bold text-on-surface-variant mb-1">
                 Supporting Attachment / Document Link (Optional)
               </label>
-              <p className="text-[11px] text-slate-500 mb-2">
+              <p className="text-[11px] text-on-surface-variant mb-2">
                 Provide an image link, PDF, medical note, receipt or scanned document supporting your concern.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -941,14 +941,14 @@ export const ConcernsView: React.FC = () => {
                   placeholder="Document Name (e.g. Doctor's Note)"
                   value={formData.attachmentName}
                   onChange={(e) => setFormData({ ...formData, attachmentName: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-[#7a1228] outline-none"
+                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary outline-none"
                 />
                 <input
                   type="url"
                   placeholder="Attachment URL (https://...)"
                   value={formData.attachmentUrl}
                   onChange={(e) => setFormData({ ...formData, attachmentUrl: e.target.value })}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-[#7a1228] outline-none"
+                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary outline-none"
                 />
               </div>
             </div>
@@ -957,7 +957,7 @@ export const ConcernsView: React.FC = () => {
               <button
                 type="submit"
                 disabled={formSubmitting}
-                className="w-full py-3 bg-[#7a1228] text-white font-black text-xs rounded-xl shadow-md hover:bg-[#9e1c38] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-primary text-white font-black text-xs rounded-xl shadow-md hover:bg-maroon-light transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {formSubmitting ? (
                   <>
@@ -979,16 +979,16 @@ export const ConcernsView: React.FC = () => {
       {/* TAB 3: SLA & RESOLUTION ANALYTICS (Staff Only) */}
       {activeTab === 'analytics' && !isParent && (
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#7a1228]">analytics</span>
+          <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-sm">
+            <h3 className="text-base font-black text-on-surface mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">analytics</span>
               <span>Case Resolution & SLA Compliance Breakdown</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Category Breakdown */}
-              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+              <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface/50">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">
                   Cases by Category
                 </h4>
                 <div className="space-y-2">
@@ -998,11 +998,11 @@ export const ConcernsView: React.FC = () => {
                     return (
                       <div key={cat.id} className="text-xs">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-slate-600 truncate max-w-[180px]">{cat.label}</span>
-                          <span className="font-bold text-slate-800">{count} ({pct}%)</span>
+                          <span className="text-on-surface-variant truncate max-w-[180px]">{cat.label}</span>
+                          <span className="font-bold text-on-surface">{count} ({pct}%)</span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-[#7a1228] h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-primary h-1.5 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                     );
@@ -1011,8 +1011,8 @@ export const ConcernsView: React.FC = () => {
               </div>
 
               {/* Status Breakdown */}
-              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+              <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface/50">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">
                   Lifecycle Distribution
                 </h4>
                 <div className="space-y-2.5">
@@ -1024,7 +1024,7 @@ export const ConcernsView: React.FC = () => {
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${stVal.badgeClass}`}>
                           {stVal.label}
                         </span>
-                        <span className="font-black text-slate-800">{count}</span>
+                        <span className="font-black text-on-surface">{count}</span>
                       </div>
                     );
                   })}
@@ -1032,29 +1032,29 @@ export const ConcernsView: React.FC = () => {
               </div>
 
               {/* SLA & Time Metrics */}
-              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+              <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface/50">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">
                   SLA Target Adherence
                 </h4>
                 <div className="space-y-4">
-                  <div className="p-3 bg-white rounded-lg border border-slate-200">
-                    <div className="text-[11px] text-slate-500">Average Response Time</div>
-                    <div className="text-xl font-black text-slate-800 mt-0.5">
+                  <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+                    <div className="text-[11px] text-on-surface-variant">Average Response Time</div>
+                    <div className="text-xl font-black text-on-surface mt-0.5">
                       {stats?.avgResponseTimeHours ? `${stats.avgResponseTimeHours} hrs` : '< 24 hrs'}
                     </div>
                     <div className="text-[10px] text-emerald-600 mt-1">Target SLA: 24h Acknowledgement</div>
                   </div>
 
-                  <div className="p-3 bg-white rounded-lg border border-slate-200">
-                    <div className="text-[11px] text-slate-500">Average Case Resolution Time</div>
-                    <div className="text-xl font-black text-slate-800 mt-0.5">
+                  <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+                    <div className="text-[11px] text-on-surface-variant">Average Case Resolution Time</div>
+                    <div className="text-xl font-black text-on-surface mt-0.5">
                       {stats?.avgResolutionTimeHours ? `${stats.avgResolutionTimeHours} hrs` : '~ 48 hrs'}
                     </div>
                     <div className="text-[10px] text-emerald-600 mt-1">Target SLA: 72h Final Resolution</div>
                   </div>
 
-                  <div className="p-3 bg-white rounded-lg border border-slate-200">
-                    <div className="text-[11px] text-slate-500">Overdue Concerns Requiring Action</div>
+                  <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+                    <div className="text-[11px] text-on-surface-variant">Overdue Concerns Requiring Action</div>
                     <div className="text-xl font-black text-red-600 mt-0.5">{metrics.overdue}</div>
                     <div className="text-[10px] text-slate-400 mt-1">Immediate intervention required</div>
                   </div>
@@ -1068,9 +1068,9 @@ export const ConcernsView: React.FC = () => {
       {/* DETAIL & RESOLUTION MODAL */}
       {selectedConcern && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30">
             {/* Modal Top Header */}
-            <div className="bg-[#7a1228] text-white px-6 py-4 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-2xl">chat_bubble</span>
                 <div>
@@ -1100,52 +1100,52 @@ export const ConcernsView: React.FC = () => {
             </div>
 
             {/* Modal Body: Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-700">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-on-surface-variant">
               {/* Concern Overview Box */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface p-4 rounded-xl border border-outline-variant/30">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Learner</span>
-                  <div className="font-black text-slate-900 text-sm mt-0.5">
+                  <div className="font-black text-on-surface text-sm mt-0.5">
                     {selectedConcern.studentName || 'Learner'}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-on-surface-variant">
                     {selectedConcern.gradeLevel || 'CBC Grade'} {selectedConcern.admissionNumber ? `• Adm: ${selectedConcern.admissionNumber}` : ''}
                   </div>
                 </div>
 
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Complainant / Parent</span>
-                  <div className="font-bold text-slate-900 mt-0.5">
+                  <div className="font-bold text-on-surface mt-0.5">
                     {selectedConcern.parentName || selectedConcern.complainantName || 'Parent / Guardian'}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-on-surface-variant">
                     {selectedConcern.parentPhone || selectedConcern.complainantPhone || 'Phone on file'}
                   </div>
                 </div>
 
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Assigned Staff</span>
-                  <div className="font-bold text-slate-900 mt-0.5">
+                  <div className="font-bold text-on-surface mt-0.5">
                     {selectedConcern.assignedToName || 'Unassigned'}
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-on-surface-variant">
                     {selectedConcern.assignedToRole || 'Awaiting dispatch'}
                   </div>
                 </div>
               </div>
 
               {/* Full Details & Attachments */}
-              <div className="bg-white p-4 rounded-xl border border-slate-200">
-                <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider mb-2">
+              <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30">
+                <h4 className="font-black text-on-surface text-xs uppercase tracking-wider mb-2">
                   Original Concern Description
                 </h4>
-                <p className="text-slate-800 text-xs leading-relaxed whitespace-pre-wrap">
+                <p className="text-on-surface text-xs leading-relaxed whitespace-pre-wrap">
                   {selectedConcern.details || selectedConcern.description}
                 </p>
 
                 {selectedConcern.attachments && selectedConcern.attachments.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                  <div className="mt-4 pt-3 border-t border-outline-variant/30">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
                       Supporting Attachments ({selectedConcern.attachments.length})
                     </span>
                     <div className="flex flex-wrap gap-2">
@@ -1155,9 +1155,9 @@ export const ConcernsView: React.FC = () => {
                           href={att.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-all border border-slate-200"
+                          className="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-all border border-outline-variant/30"
                         >
-                          <span className="material-symbols-outlined text-sm text-[#7a1228]">attach_file</span>
+                          <span className="material-symbols-outlined text-sm text-primary">attach_file</span>
                           <span>{att.name}</span>
                           <span className="material-symbols-outlined text-[10px] text-slate-400">open_in_new</span>
                         </a>
@@ -1169,8 +1169,8 @@ export const ConcernsView: React.FC = () => {
 
               {/* Chronological Message Thread */}
               <div className="space-y-3">
-                <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-[#7a1228]">forum</span>
+                <h4 className="font-black text-on-surface text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">forum</span>
                   <span>Two-Way Communication Thread & Investigation Log</span>
                 </h4>
 
@@ -1180,7 +1180,7 @@ export const ConcernsView: React.FC = () => {
                     <p className="text-xs mt-1">Syncing thread...</p>
                   </div>
                 ) : !selectedConcern.messages || selectedConcern.messages.length === 0 ? (
-                  <div className="p-4 bg-slate-50 rounded-xl text-center text-slate-500 text-xs">
+                  <div className="p-4 bg-surface rounded-xl text-center text-on-surface-variant text-xs">
                     No communication messages have been posted on this concern yet.
                   </div>
                 ) : (
@@ -1235,15 +1235,15 @@ export const ConcernsView: React.FC = () => {
 
               {/* Message Reply Input */}
               {selectedConcern.status !== 'CLOSED' && (
-                <form onSubmit={handleSendMessage} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <form onSubmit={handleSendMessage} className="bg-surface p-4 rounded-xl border border-outline-variant/30 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-xs">
+                    <span className="font-bold text-on-surface text-xs">
                       {isParent ? 'Send a Message / Provide Additional Information' : 'Post Reply / Investigation Note'}
                     </span>
 
                     {!isParent && (
                       <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer text-slate-600 font-bold">
+                        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer text-on-surface-variant font-bold">
                           <input
                             type="radio"
                             name="visibility"
@@ -1280,17 +1280,17 @@ export const ConcernsView: React.FC = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-[#7a1228] outline-none"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
                   />
 
                   <div className="flex items-center justify-between pt-1">
                     {!isParent && messageVisibility === 'PARENT_VISIBLE' && (
-                      <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium cursor-pointer">
+                      <label className="flex items-center gap-1.5 text-[11px] text-on-surface-variant font-medium cursor-pointer">
                         <input
                           type="checkbox"
                           checked={awaitParentResponse}
                           onChange={(e) => setAwaitParentResponse(e.target.checked)}
-                          className="rounded text-[#7a1228]"
+                          className="rounded text-primary"
                         />
                         <span>Require Parent Response (changes status to Awaiting Parent Response)</span>
                       </label>
@@ -1300,7 +1300,7 @@ export const ConcernsView: React.FC = () => {
                     <button
                       type="submit"
                       disabled={submittingMessage || !newMessage.trim()}
-                      className="px-4 py-2 bg-[#7a1228] text-white font-bold text-xs rounded-xl hover:bg-[#9e1c38] shadow transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-maroon-light shadow transition-all flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-sm">send</span>
                       <span>{isParent ? 'Send Reply' : 'Post Message'}</span>
@@ -1310,7 +1310,7 @@ export const ConcernsView: React.FC = () => {
               )}
 
               {/* Action Toolbar */}
-              <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2 justify-between items-center">
+              <div className="pt-2 border-t border-outline-variant/30 flex flex-wrap gap-2 justify-between items-center">
                 <div className="flex flex-wrap gap-2">
                   {/* Staff Actions */}
                   {!isParent && isHeadTeacherOrAdmin && selectedConcern.status === 'SUBMITTED' && (
@@ -1373,9 +1373,9 @@ export const ConcernsView: React.FC = () => {
       {/* DIALOG: Acknowledge */}
       {showAcknowledgeDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h4 className="font-black text-slate-900 text-sm">Acknowledge Concern #{selectedConcern.referenceNumber}</h4>
-            <p className="text-xs text-slate-600">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
+            <h4 className="font-black text-on-surface text-sm">Acknowledge Concern #{selectedConcern.referenceNumber}</h4>
+            <p className="text-xs text-on-surface-variant">
               Acknowledging stamps the concern with the current timestamp and sends an automatic notification to the parent confirming investigation has commenced.
             </p>
             <textarea
@@ -1383,10 +1383,10 @@ export const ConcernsView: React.FC = () => {
               placeholder="Optional notes for parent or audit log..."
               value={acknowledgeNotes}
               onChange={(e) => setAcknowledgeNotes(e.target.value)}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+              className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAcknowledgeDialog(false)} className="px-3 py-1.5 text-xs text-slate-600 font-bold">
+              <button onClick={() => setShowAcknowledgeDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
               <button onClick={handleAcknowledge} className="px-4 py-1.5 bg-cyan-700 text-white rounded-xl text-xs font-bold shadow">
@@ -1400,14 +1400,14 @@ export const ConcernsView: React.FC = () => {
       {/* DIALOG: Assign Staff */}
       {showAssignDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h4 className="font-black text-slate-900 text-sm">Assign Staff to Concern #{selectedConcern.referenceNumber}</h4>
+          <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
+            <h4 className="font-black text-on-surface text-sm">Assign Staff to Concern #{selectedConcern.referenceNumber}</h4>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Select Assignee</label>
+              <label className="block text-xs font-bold text-on-surface-variant mb-1">Select Assignee</label>
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white"
+                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white"
               >
                 <option value="">-- Choose Staff Member --</option>
                 {staffUsers.map((u) => (
@@ -1418,17 +1418,17 @@ export const ConcernsView: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Assignment / Investigation Instructions</label>
+              <label className="block text-xs font-bold text-on-surface-variant mb-1">Assignment / Investigation Instructions</label>
               <textarea
                 rows={2}
                 placeholder="Specific guidance for the assigned educator or officer..."
                 value={assignReason}
                 onChange={(e) => setAssignReason(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
               />
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAssignDialog(false)} className="px-3 py-1.5 text-xs text-slate-600 font-bold">
+              <button onClick={() => setShowAssignDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
               <button
@@ -1446,12 +1446,12 @@ export const ConcernsView: React.FC = () => {
       {/* DIALOG: Escalate */}
       {showEscalateDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h4 className="font-black text-slate-900 text-sm text-red-700 flex items-center gap-1.5">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
+            <h4 className="font-black text-on-surface text-sm text-red-700 flex items-center gap-1.5">
               <span className="material-symbols-outlined">priority_high</span>
               <span>Escalate Concern #{selectedConcern.referenceNumber}</span>
             </h4>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-on-surface-variant">
               Escalating routes this concern directly to Senior Administration & Head Teacher with High priority. A clear escalation reason is mandatory.
             </p>
             <textarea
@@ -1460,10 +1460,10 @@ export const ConcernsView: React.FC = () => {
               value={escalateReason}
               onChange={(e) => setEscalateReason(e.target.value)}
               required
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+              className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowEscalateDialog(false)} className="px-3 py-1.5 text-xs text-slate-600 font-bold">
+              <button onClick={() => setShowEscalateDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
               <button
@@ -1481,37 +1481,37 @@ export const ConcernsView: React.FC = () => {
       {/* DIALOG: Resolve */}
       {showResolveDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h4 className="font-black text-slate-900 text-sm text-emerald-800 flex items-center gap-1.5">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
+            <h4 className="font-black text-on-surface text-sm text-emerald-800 flex items-center gap-1.5">
               <span className="material-symbols-outlined">check_circle</span>
               <span>Resolve Concern #{selectedConcern.referenceNumber}</span>
             </h4>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-on-surface-variant">
               Specify the corrective action taken. This will be stamped into the permanent audit ledger and transmitted to the parent.
             </p>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Action Taken <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-bold text-on-surface-variant mb-1">Action Taken <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 placeholder="e.g. Remedial support session arranged, fee statement adjusted"
                 value={resolveAction}
                 onChange={(e) => setResolveAction(e.target.value)}
                 required
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Additional Resolution Notes</label>
+              <label className="block text-xs font-bold text-on-surface-variant mb-1">Additional Resolution Notes</label>
               <textarea
                 rows={3}
                 placeholder="Elaborate on any agreed preventative measures or follow-up timelines..."
                 value={resolveDetails}
                 onChange={(e) => setResolveDetails(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
               />
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowResolveDialog(false)} className="px-3 py-1.5 text-xs text-slate-600 font-bold">
+              <button onClick={() => setShowResolveDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
               <button
@@ -1529,12 +1529,12 @@ export const ConcernsView: React.FC = () => {
       {/* DIALOG: Reopen */}
       {showReopenDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h4 className="font-black text-slate-900 text-sm text-orange-700 flex items-center gap-1.5">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
+            <h4 className="font-black text-on-surface text-sm text-orange-700 flex items-center gap-1.5">
               <span className="material-symbols-outlined">replay</span>
               <span>Reopen Concern #{selectedConcern.referenceNumber}</span>
             </h4>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-on-surface-variant">
               Please explain why this concern requires reopening (e.g. agreed action not completed, recurrence of the issue). A mandatory reason is required.
             </p>
             <textarea
@@ -1543,10 +1543,10 @@ export const ConcernsView: React.FC = () => {
               value={reopenReason}
               onChange={(e) => setReopenReason(e.target.value)}
               required
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs"
+              className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowReopenDialog(false)} className="px-3 py-1.5 text-xs text-slate-600 font-bold">
+              <button onClick={() => setShowReopenDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
               <button

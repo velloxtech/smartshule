@@ -1,0 +1,784 @@
+{
+  "capturedAt": "2026-11-12T17:45:26.436Z",
+  "schoolId": "school-001",
+  "productionWritesApplied": false,
+  "evidenceFiles": [
+    {
+      "path": "backups/subject_catalogue_migration_20261104/summative_assessments.json",
+      "sha256": "589a1cf06d63b65f94d181bcdde7278fd3901610b6f6f7d34383f6cd5fd0cfa0"
+    },
+    {
+      "path": "backups/smartshule_supabase_backup_20261104_201329.dump",
+      "sha256": "70818586fcc5c792faa00da7ac54e8214c0245b135955628d9b1284a3a10a8b8"
+    },
+    {
+      "path": "supabase_grade3_assessment_2026.sql",
+      "sha256": "b0afce9300507e7df47f5317bc50fd1ca638642144327e09c4533e094d7a353e"
+    },
+    {
+      "path": "scripts/imports/pp1_term3_2026_marks.sql",
+      "sha256": "57411d189e848ede166450b41af018b57e65029ac748b91437605ccfe7f0b9dd"
+    }
+  ],
+  "overMaximum": {
+    "physicalRows": 22,
+    "logicalResults": 11,
+    "records": [
+      {
+        "assessmentId": "sum-g1-007-cre-t3",
+        "learner": "learner-3c01c4ed",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 110,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-010-cre-t3",
+        "learner": "learner-5de0b8f5",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-017-cre-t3",
+        "learner": "learner-debbddc2",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-018-cre-t3",
+        "learner": "learner-9d54356b",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 110,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-020-cre-t3",
+        "learner": "learner-6b575d96",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-021-cre-t3",
+        "learner": "learner-f8ade2e4",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 130,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-024-cre-t3",
+        "learner": "learner-c32e16ee",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-025-cre-t3",
+        "learner": "learner-ad62be15",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 120,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-003-cre-t3",
+        "learner": "learner-ee73bcaa",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-005-cre-t3",
+        "learner": "learner-1cbff95b",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 160,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-006-cre-t3",
+        "learner": "learner-b86f0d68",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-003-cre-3",
+        "learner": "learner-ee73bcaa",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-005-cre-3",
+        "learner": "learner-1cbff95b",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 160,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-006-cre-3",
+        "learner": "learner-b86f0d68",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-007-cre-3",
+        "learner": "learner-3c01c4ed",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 110,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-010-cre-3",
+        "learner": "learner-5de0b8f5",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-017-cre-3",
+        "learner": "learner-debbddc2",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-018-cre-3",
+        "learner": "learner-9d54356b",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 110,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-020-cre-3",
+        "learner": "learner-6b575d96",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 150,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-021-cre-3",
+        "learner": "learner-f8ade2e4",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 130,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-024-cre-3",
+        "learner": "learner-c32e16ee",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 140,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      },
+      {
+        "assessmentId": "sum-g1-025-cre-3",
+        "learner": "learner-ad62be15",
+        "subjectId": "la-g1-cre",
+        "scores": [
+          {
+            "raw": 120,
+            "max": 100
+          }
+        ],
+        "proposedCorrection": null,
+        "reason": "Correct score/maximum not established by available source evidence"
+      }
+    ]
+  },
+  "orphanedLegacyRecords": [
+    {
+      "assessmentId": "sum-g3-01",
+      "scores": {
+        "CRE": 100,
+        "ENG": 100,
+        "ENV": 95,
+        "KIS": 94,
+        "MAT": 80,
+        "CREA": 80
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-02",
+      "scores": {
+        "CRE": 70,
+        "ENG": 83,
+        "ENV": 88,
+        "KIS": 44,
+        "MAT": 73,
+        "CREA": 55
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-03",
+      "scores": {
+        "CRE": 90,
+        "ENG": 98,
+        "ENV": 87,
+        "KIS": 94,
+        "MAT": 68,
+        "CREA": 88
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-04",
+      "scores": {
+        "CRE": 90,
+        "ENG": 98,
+        "ENV": 93,
+        "KIS": 97,
+        "MAT": 68,
+        "CREA": 88
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-05",
+      "scores": {
+        "CRE": 60,
+        "ENG": 83,
+        "ENV": 87,
+        "KIS": 91,
+        "MAT": 72,
+        "CREA": 40
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-06",
+      "scores": {
+        "CRE": 100,
+        "ENG": 90,
+        "ENV": 87,
+        "KIS": 94,
+        "MAT": 56,
+        "CREA": 80
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-07",
+      "scores": {
+        "CRE": 100,
+        "ENG": 95,
+        "ENV": 93,
+        "KIS": 86,
+        "MAT": 52,
+        "CREA": 70
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-08",
+      "scores": {
+        "CRE": 50,
+        "ENG": 88,
+        "ENV": 47,
+        "KIS": 52,
+        "MAT": 68,
+        "CREA": 70
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-09",
+      "scores": {
+        "CRE": 100,
+        "ENG": 93,
+        "ENV": 100,
+        "KIS": 97,
+        "MAT": 60,
+        "CREA": 70
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-10",
+      "scores": {
+        "CRE": 50,
+        "ENG": 80,
+        "ENV": 67,
+        "KIS": 66,
+        "MAT": 64,
+        "CREA": 40
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-11",
+      "scores": {
+        "CRE": 80,
+        "ENG": 65,
+        "ENV": 60,
+        "KIS": 42,
+        "MAT": 44,
+        "CREA": 85
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-12",
+      "scores": {
+        "CRE": 100,
+        "ENG": 85,
+        "ENV": 87,
+        "KIS": 94,
+        "MAT": 56,
+        "CREA": 80
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-13",
+      "scores": {
+        "CRE": 10,
+        "ENG": 40,
+        "ENV": 40,
+        "KIS": 11,
+        "MAT": 32,
+        "CREA": 55
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    },
+    {
+      "assessmentId": "sum-g3-14",
+      "scores": {
+        "CRE": 100,
+        "ENG": 90,
+        "ENV": 100,
+        "KIS": 77,
+        "MAT": 44,
+        "CREA": 80
+      },
+      "proposedCorrection": null,
+      "reason": "Learner and subject mapping require verified identity reconciliation; do not infer from sequence alone"
+    }
+  ],
+  "conflictingResults": [
+    {
+      "learner": "learner-7d52edce",
+      "subjectId": "la-g3-senv",
+      "records": [
+        {
+          "assessmentId": "sum-g3-002-senv-t3",
+          "scores": [
+            {
+              "raw": 70,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-002-env-t3",
+          "scores": [
+            {
+              "raw": 10,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-002-senv",
+          "scores": [
+            {
+              "raw": 70,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-002-env-3",
+          "scores": [
+            {
+              "raw": 10,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-7d52edce",
+      "subjectId": "la-g3-mat",
+      "records": [
+        {
+          "assessmentId": "sum-g3-002-mat",
+          "scores": [
+            {
+              "raw": 44,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "AE"
+        },
+        {
+          "assessmentId": "sum-g3-002-mat-3",
+          "scores": [
+            {
+              "raw": 44,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-002-mat-t3",
+          "scores": [
+            {
+              "raw": 44,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-a0f414a8",
+      "subjectId": "la-g3-crea",
+      "records": [
+        {
+          "assessmentId": "sum-g3-003-crea",
+          "scores": [
+            {
+              "raw": 85,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-003-crea-3",
+          "scores": [
+            {
+              "raw": 88,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-003-crea-t3",
+          "scores": [
+            {
+              "raw": 88,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-30774352",
+      "subjectId": "la-g3-rea",
+      "records": [
+        {
+          "assessmentId": "sum-g3-010-rea",
+          "scores": [
+            {
+              "raw": 86,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-010-rea-t3",
+          "scores": [
+            {
+              "raw": 80,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-010-rea-3",
+          "scores": [
+            {
+              "raw": 80,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-30774352",
+      "subjectId": "la-g3-kis",
+      "records": [
+        {
+          "assessmentId": "sum-g3-010-kis",
+          "scores": [
+            {
+              "raw": 60,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-010-kis-t3",
+          "scores": [
+            {
+              "raw": 66,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-010-kis-3",
+          "scores": [
+            {
+              "raw": 66,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-a0f414a8",
+      "subjectId": "la-g3-cre",
+      "records": [
+        {
+          "assessmentId": "sum-g3-003-cre-t3",
+          "scores": [
+            {
+              "raw": 97,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-003-cre",
+          "scores": [
+            {
+              "raw": 100,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-003-cre-3",
+          "scores": [
+            {
+              "raw": 97,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    },
+    {
+      "learner": "learner-6306aaa3",
+      "subjectId": "la-g3-cre",
+      "records": [
+        {
+          "assessmentId": "sum-g3-005-cre-t3",
+          "scores": [
+            {
+              "raw": 80,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        },
+        {
+          "assessmentId": "sum-g3-005-cre",
+          "scores": [
+            {
+              "raw": 80,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "ME"
+        },
+        {
+          "assessmentId": "sum-g3-005-cre-3",
+          "scores": [
+            {
+              "raw": 80,
+              "max": 100
+            }
+          ],
+          "performanceLevel": "EE"
+        }
+      ],
+      "proposedCorrection": null,
+      "reason": "Original Grade 3 upload and later copies disagree, or performance levels differ; do not select the highest score"
+    }
+  ],
+  "duplicateSummary": {
+    "physicalRows": 1930,
+    "logicalResults": 981,
+    "duplicateGroups": 739,
+    "extraRows": 949
+  },
+  "restorationPolicy": "No blind restore. Original PP1 228/228 marks and Grade 3 168/168 logical source scores remain present. November snapshot lost no assessment IDs. October backup has a different cohort."
+}

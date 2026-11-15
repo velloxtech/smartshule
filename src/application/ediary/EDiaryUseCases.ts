@@ -78,6 +78,13 @@ export class EDiaryUseCases {
       throw new ValidationError('School ID is required for eDiary entry');
     }
 
+    // A stream identifies its classroom; storing the stream ID as a class ID makes
+    // the saved entry fail the same assignment checks that authorized its creation.
+    if (!dto.classRoomId && dto.streamId && this.academicRepository) {
+      const stream = await this.academicRepository.findStreamById(dto.streamId);
+      if (stream) dto = { ...dto, classRoomId: stream.classRoomId };
+    }
+
     // 1. Normalize homework tasks
     let normalizedTasks: EDiaryHomeworkTask[] = [];
     if (Array.isArray(dto.homeworkTasks)) {

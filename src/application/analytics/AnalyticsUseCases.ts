@@ -797,6 +797,7 @@ export class AnalyticsUseCases {
       academicYearId?: string;
       termId?: string;
       days?: number;
+      authorize?: (record:any)=>Promise<boolean>;
     },
     requestingUser?: UserContext
   ) {
@@ -807,7 +808,7 @@ export class AnalyticsUseCases {
     const startDateStr = dateLimit.toISOString().split('T')[0];
     const endDateStr = now.toISOString().split('T')[0];
 
-    const registers = await this.attendanceRepository.findRegisters({
+    let registers = await this.attendanceRepository.findRegisters({
       schoolId: options.schoolId,
       academicYearId: options.academicYearId,
       termId: options.termId,
@@ -815,6 +816,7 @@ export class AnalyticsUseCases {
       endDate: endDateStr
     });
 
+    if(options.authorize){const permitted=[];for(const record of registers)if(await options.authorize(record))permitted.push(record);registers=permitted;}
     const students = await this.studentRepository.findAll({ schoolId: options.schoolId });
     const studentMap = new Map<string, any>();
     students.forEach(s => studentMap.set(s.id, s));

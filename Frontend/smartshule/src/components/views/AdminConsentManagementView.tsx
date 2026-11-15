@@ -213,21 +213,21 @@ export const AdminConsentManagementView: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 pb-20">
       {/* Top Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center shadow-xs">
-              <ShieldCheck className="w-6 h-6 text-[#7a1228]" />
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+              <ShieldCheck className="w-6 h-6 text-primary" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">Administration & Legal</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">Administration & Legal</span>
                 <span className="text-xs bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
                   Parental Consent Hub
                 </span>
               </div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Parent Consent & Authorization Records</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-2xl font-black text-on-surface tracking-tight">Parent Consent & Authorization Records</h1>
+              <p className="text-xs text-on-surface-variant">
                 Publish configurable consent requests for field trips, medical authorizations, and monitor digital signatures.
               </p>
             </div>
@@ -237,14 +237,14 @@ export const AdminConsentManagementView: React.FC = () => {
             <button
               onClick={loadRequests}
               disabled={loading}
-              className="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-3.5 py-2.5 rounded-xl border border-outline-variant/30 hover:bg-surface text-xs font-bold text-on-surface-variant flex items-center gap-2 transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </button>
             <button
               onClick={handleOpenCreateModal}
-              className="px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#600e1f] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Create Consent Request</span>
@@ -253,11 +253,11 @@ export const AdminConsentManagementView: React.FC = () => {
         </div>
 
         {/* Global KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Published</span>
-            <span className="text-xl font-black text-slate-900">{totalRequests}</span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Active school authorisations</span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-outline-variant/30">
+          <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/30">
+            <span className="text-[10px] uppercase font-bold text-on-surface-variant block">Total Published</span>
+            <span className="text-xl font-black text-on-surface">{totalRequests}</span>
+            <span className="text-[10px] text-on-surface-variant block mt-0.5">Active school authorisations</span>
           </div>
           <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
             <span className="text-[10px] uppercase font-bold text-emerald-700 block">Consents Granted</span>
@@ -293,7 +293,7 @@ export const AdminConsentManagementView: React.FC = () => {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search by title or description..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant/30 text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
 
@@ -302,7 +302,7 @@ export const AdminConsentManagementView: React.FC = () => {
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="text-xs p-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-700"
+            className="text-xs p-2 rounded-xl border border-outline-variant/30 bg-white font-semibold text-on-surface-variant"
           >
             <option value="ALL">All Categories</option>
             <option value="TRIP">Field Trips & Excursions</option>
@@ -317,23 +317,23 @@ export const AdminConsentManagementView: React.FC = () => {
 
       {/* Requests Table */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#7a1228]" />
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-3">
+          <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
           <p className="text-sm font-semibold">Loading consent records...</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-2">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center text-on-surface-variant space-y-2">
           <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="font-bold text-base text-slate-800">No consent requests found</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <h3 className="font-bold text-base text-on-surface">No consent requests found</h3>
+          <p className="text-xs text-on-surface-variant max-w-md mx-auto">
             Click "Create Consent Request" to publish your first excursion, medical, or media authorization.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200 text-[10px] tracking-wider">
+              <thead className="bg-surface text-on-surface-variant uppercase font-bold border-b border-outline-variant/30 text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Consent Title & Version</th>
                   <th className="py-3 px-4">Category</th>
@@ -355,28 +355,28 @@ export const AdminConsentManagementView: React.FC = () => {
                   };
 
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <tr key={r.id} className="hover:bg-surface/70 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-on-surface">
                         <div>{r.title}</div>
                         <div className="text-[10px] text-slate-400 font-mono">
                           v{r.version}.0 · Created {new Date(r.createdAt).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-700 border-slate-300">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-surface-container-low text-on-surface-variant border-outline-variant/30">
                           {r.category}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-700 font-medium">
+                      <td className="py-3.5 px-4 text-on-surface-variant font-medium">
                         {r.targetType === 'WHOLE_SCHOOL' ? (
-                          <span className="font-bold text-slate-800">Whole School</span>
+                          <span className="font-bold text-on-surface">Whole School</span>
                         ) : (
-                          <span className="text-[11px] font-semibold text-slate-600">
+                          <span className="text-[11px] font-semibold text-on-surface-variant">
                             Grades: {(r.targetClassIds || []).join(', ') || 'Selected Classes'}
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
+                      <td className="py-3.5 px-4 text-on-surface-variant font-mono text-[11px]">
                         {r.deadline ? new Date(r.deadline).toLocaleDateString() : 'No Deadline'}
                       </td>
                       <td className="py-3.5 px-4">
@@ -385,7 +385,7 @@ export const AdminConsentManagementView: React.FC = () => {
                             <span className="text-emerald-700">{m.consentedCount} Consented</span>
                             <span className="text-slate-400">{m.totalEligible} Slots</span>
                           </div>
-                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+                          <div className="w-full bg-surface-container-low rounded-full h-2 overflow-hidden flex">
                             <div
                               className="bg-emerald-600 h-2"
                               style={{ width: `${m.totalEligible > 0 ? (m.consentedCount / m.totalEligible) * 100 : 0}%` }}
@@ -397,7 +397,7 @@ export const AdminConsentManagementView: React.FC = () => {
                               title={`${m.declinedCount} Declined`}
                             />
                           </div>
-                          <div className="flex items-center justify-between text-[9px] text-slate-500">
+                          <div className="flex items-center justify-between text-[9px] text-on-surface-variant">
                             <span>{m.declinedCount} declined</span>
                             <span>{m.pendingCount} pending</span>
                           </div>
@@ -430,16 +430,16 @@ export const AdminConsentManagementView: React.FC = () => {
       {/* MODAL 1: CREATE CONSENT REQUEST */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 my-auto max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-6 my-auto max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between border-b border-outline-variant/30 pb-3">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Publish Parent Consent Request</h2>
-                <p className="text-xs text-slate-500">Create an official excursion, medical, or media authorization form.</p>
+                <h2 className="text-xl font-black text-on-surface">Publish Parent Consent Request</h2>
+                <p className="text-xs text-on-surface-variant">Create an official excursion, medical, or media authorization form.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
+                className="text-slate-400 hover:text-on-surface-variant p-1 rounded-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -447,20 +447,20 @@ export const AdminConsentManagementView: React.FC = () => {
 
             <form onSubmit={handleCreateRequest} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">Consent Form Title</label>
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Consent Form Title</label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
                   placeholder="e.g. Year 4 National Museum Educational Excursion (2026)"
                   required
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-semibold"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-700 mb-1">Category</label>
+                  <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Category</label>
                   <select
                     value={newCategory}
                     onChange={e => {
@@ -468,7 +468,7 @@ export const AdminConsentManagementView: React.FC = () => {
                       setNewCategory(c);
                       applyTemplate(c);
                     }}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white font-semibold"
+                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-semibold"
                   >
                     <option value="TRIP">Field Trip & Excursion</option>
                     <option value="MEDICAL">Medical & Emergency Healthcare</option>
@@ -479,26 +479,26 @@ export const AdminConsentManagementView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-700 mb-1">Response Deadline</label>
+                  <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Response Deadline</label>
                   <input
                     type="date"
                     value={newDeadline}
                     onChange={e => setNewDeadline(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white font-mono"
+                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">Target Audience</label>
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Target Audience</label>
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <button
                     type="button"
                     onClick={() => setNewTargetType('WHOLE_SCHOOL')}
                     className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       newTargetType === 'WHOLE_SCHOOL'
-                        ? 'border-[#7a1228] bg-rose-50/50 text-[#7a1228]'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        ? 'border-primary bg-rose-50/50 text-primary'
+                        : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
                     Whole School
@@ -508,8 +508,8 @@ export const AdminConsentManagementView: React.FC = () => {
                     onClick={() => setNewTargetType('GRADE')}
                     className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       newTargetType === 'GRADE'
-                        ? 'border-[#7a1228] bg-rose-50/50 text-[#7a1228]'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        ? 'border-primary bg-rose-50/50 text-primary'
+                        : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
                     Specific Grade(s)
@@ -517,11 +517,11 @@ export const AdminConsentManagementView: React.FC = () => {
                 </div>
 
                 {newTargetType === 'GRADE' && (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="p-3 rounded-xl bg-surface border border-outline-variant/30 grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {ALL_GRADES.map(grade => {
                       const isSelected = selectedGrades.includes(grade);
                       return (
-                        <label key={grade} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                        <label key={grade} className="flex items-center gap-1.5 text-xs text-on-surface-variant cursor-pointer">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -532,7 +532,7 @@ export const AdminConsentManagementView: React.FC = () => {
                                 setSelectedGrades([...selectedGrades, grade]);
                               }
                             }}
-                            className="rounded text-[#7a1228]"
+                            className="rounded text-primary"
                           />
                           <span>{grade}</span>
                         </label>
@@ -543,19 +543,19 @@ export const AdminConsentManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">Event Summary / Overview</label>
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Event Summary / Overview</label>
                 <textarea
                   value={newDescription}
                   onChange={e => setNewDescription(e.target.value)}
                   placeholder="Provide context, itinerary details, dates, and requirements..."
                   rows={2}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] outline-hidden"
+                  className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase text-slate-700">
+                  <label className="block text-xs font-bold uppercase text-on-surface-variant">
                     Full Legal Terms & Statutory Conditions
                   </label>
                   <span className="text-[10px] text-slate-400">Verbatim legal text presented to parents</span>
@@ -565,33 +565,33 @@ export const AdminConsentManagementView: React.FC = () => {
                   onChange={e => setNewTerms(e.target.value)}
                   rows={4}
                   required
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 font-sans leading-relaxed focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] outline-hidden"
+                  className="w-full text-xs p-3 rounded-xl border border-outline-variant/30 font-sans leading-relaxed focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
                 />
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer">
                 <input
                   type="checkbox"
                   checked={newIsMandatory}
                   onChange={e => setNewIsMandatory(e.target.checked)}
-                  className="rounded text-[#7a1228]"
+                  className="rounded text-primary"
                 />
                 <span className="font-semibold">Mandatory Response (Parent must provide formal response before activity)</span>
               </label>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-outline-variant/30 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   disabled={creating}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-outline-variant/30 text-xs font-bold text-on-surface-variant cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-6 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#600e1f] text-white text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer"
                 >
                   {creating ? (
                     <>
@@ -614,14 +614,14 @@ export const AdminConsentManagementView: React.FC = () => {
       {/* MODAL 2: ROSTER VIEW & PRINTABLE CLEARANCE LIST */}
       {selectedRequestForRoster && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-6 my-auto max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-6 my-auto max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/30 pb-4">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#7a1228]">
+                <span className="text-[10px] font-black uppercase tracking-wider text-primary">
                   Official Student Consent Roster
                 </span>
-                <h2 className="text-xl font-black text-slate-900">{selectedRequestForRoster.title}</h2>
+                <h2 className="text-xl font-black text-on-surface">{selectedRequestForRoster.title}</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -633,7 +633,7 @@ export const AdminConsentManagementView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setSelectedRequestForRoster(null)}
-                  className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg cursor-pointer"
+                  className="text-slate-400 hover:text-on-surface-variant p-1.5 rounded-lg cursor-pointer"
                 >
                   ✕
                 </button>
@@ -642,13 +642,13 @@ export const AdminConsentManagementView: React.FC = () => {
 
             {/* Roster Summary Pills & Filter */}
             {rosterData && (
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-surface border border-outline-variant/30 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-500">Filter Status:</span>
+                  <span className="font-bold text-on-surface-variant">Filter Status:</span>
                   <button
                     onClick={() => setRosterStatusFilter('ALL')}
                     className={`px-2.5 py-1 rounded-lg font-bold text-xs cursor-pointer ${
-                      rosterStatusFilter === 'ALL' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                      rosterStatusFilter === 'ALL' ? 'bg-slate-900 text-white' : 'bg-white text-on-surface-variant border border-outline-variant/30'
                     }`}
                   >
                     All ({rosterData.summary.totalEligible})
@@ -685,7 +685,7 @@ export const AdminConsentManagementView: React.FC = () => {
                     value={rosterSearch}
                     onChange={e => setRosterSearch(e.target.value)}
                     placeholder="Search student name..."
-                    className="w-full text-xs p-1.5 rounded-lg border border-slate-200 bg-white"
+                    className="w-full text-xs p-1.5 rounded-lg border border-outline-variant/30 bg-white"
                   />
                 </div>
               </div>
@@ -693,16 +693,16 @@ export const AdminConsentManagementView: React.FC = () => {
 
             {/* Roster Table */}
             {rosterLoading ? (
-              <div className="py-12 text-center text-slate-500 space-y-2">
-                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#7a1228]" />
+              <div className="py-12 text-center text-on-surface-variant space-y-2">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-primary" />
                 <p className="text-xs font-semibold">Generating student consent roster...</p>
               </div>
             ) : !rosterData ? (
-              <div className="py-8 text-center text-slate-500 text-xs">Failed to load roster records.</div>
+              <div className="py-8 text-center text-on-surface-variant text-xs">Failed to load roster records.</div>
             ) : (
-              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <div className="overflow-x-auto border border-outline-variant/30 rounded-2xl">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200 text-[10px]">
+                  <thead className="bg-surface text-on-surface-variant uppercase font-bold border-b border-outline-variant/30 text-[10px]">
                     <tr>
                       <th className="py-3 px-4">Student & Adm No</th>
                       <th className="py-3 px-4">Grade</th>
@@ -728,16 +728,16 @@ export const AdminConsentManagementView: React.FC = () => {
                         const isPending = row.status === 'PENDING';
 
                         return (
-                          <tr key={row.studentId} className="hover:bg-slate-50/70">
-                            <td className="py-3 px-4 font-bold text-slate-900">
+                          <tr key={row.studentId} className="hover:bg-surface/70">
+                            <td className="py-3 px-4 font-bold text-on-surface">
                               <div>{row.studentName}</div>
                               <div className="text-[10px] text-slate-400 font-mono">Adm: {row.admissionNumber}</div>
                             </td>
-                            <td className="py-3 px-4 font-semibold text-slate-600">{row.gradeLevel}</td>
-                            <td className="py-3 px-4 text-slate-700 font-medium">
+                            <td className="py-3 px-4 font-semibold text-on-surface-variant">{row.gradeLevel}</td>
+                            <td className="py-3 px-4 text-on-surface-variant font-medium">
                               {row.parentName || <span className="text-slate-400 italic">Unassigned</span>}
                             </td>
-                            <td className="py-3 px-4 font-mono text-slate-600 text-[11px]">
+                            <td className="py-3 px-4 font-mono text-on-surface-variant text-[11px]">
                               {row.parentPhone || '—'}
                             </td>
                             <td className="py-3 px-4">
@@ -758,7 +758,7 @@ export const AdminConsentManagementView: React.FC = () => {
                                 </span>
                               )}
                             </td>
-                            <td className="py-3 px-4 text-slate-600 text-[11px] max-w-[180px]">
+                            <td className="py-3 px-4 text-on-surface-variant text-[11px] max-w-[180px]">
                               {row.notes ? (
                                 <span className="font-semibold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
                                   {row.notes}
@@ -771,7 +771,7 @@ export const AdminConsentManagementView: React.FC = () => {
                               {row.signatureData ? (
                                 <button
                                   onClick={() => setInspectedSignatureItem(row)}
-                                  className="text-xs text-blue-700 hover:underline font-bold inline-flex items-center gap-1"
+                                  className="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1"
                                 >
                                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                                   <span>View Stamp</span>
@@ -794,30 +794,30 @@ export const AdminConsentManagementView: React.FC = () => {
       {/* MODAL 3: SIGNATURE INSPECTION MODAL */}
       {inspectedSignatureItem && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 shadow-2xl border border-outline-variant/30 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-700" />
-                <h3 className="font-bold text-sm text-slate-900">Verified Electronic Signature</h3>
+                <h3 className="font-bold text-sm text-on-surface">Verified Electronic Signature</h3>
               </div>
               <button
                 onClick={() => setInspectedSignatureItem(null)}
-                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-[10px] text-slate-500 uppercase font-bold">Signatory</div>
-                <div className="font-bold text-slate-900 text-sm">{inspectedSignatureItem.parentName}</div>
-                <div className="text-[11px] text-slate-600 font-mono">
+              <div className="p-3 rounded-xl bg-surface border border-outline-variant/30 space-y-1">
+                <div className="text-[10px] text-on-surface-variant uppercase font-bold">Signatory</div>
+                <div className="font-bold text-on-surface text-sm">{inspectedSignatureItem.parentName}</div>
+                <div className="text-[11px] text-on-surface-variant font-mono">
                   {inspectedSignatureItem.parentRelationship || 'Parent'} · ID: {inspectedSignatureItem.parentNationalId || 'N/A'}
                 </div>
               </div>
 
-              <div className="border border-slate-300 rounded-xl p-4 bg-white text-center">
+              <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface-container-lowest text-center">
                 <div className="text-[10px] text-slate-400 uppercase font-mono mb-2">Signature Snapshot</div>
                 {inspectedSignatureItem.signatureData?.startsWith('data:image') ? (
                   <img
@@ -832,7 +832,7 @@ export const AdminConsentManagementView: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-1 text-[11px] font-mono text-slate-600">
+              <div className="space-y-1 text-[11px] font-mono text-on-surface-variant">
                 <div>Timestamp: {new Date(inspectedSignatureItem.submittedAt).toLocaleString()}</div>
                 <div className="break-all text-[9px] text-slate-400">
                   Hash: {inspectedSignatureItem.signatureHash}

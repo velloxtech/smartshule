@@ -18,9 +18,17 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
 }) => {
   if (!week) return null;
 
-  const isCovered = week.isCovered || week.status === 'APPROVED' || week.status === 'COVERED';
+  const isCovered = week.isCovered || week.status === 'COVERED';
 
-  const getStatusBadge = (status: WeekCoverageStatus, covered: boolean) => {
+  const getStatusBadge = (status: WeekCoverageStatus | 'APPROVED' | 'SUBMITTED' | 'RETURNED', covered: boolean) => {
+    if (status === 'EXEMPTED') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-800 border border-slate-300 flex items-center gap-1.5 shadow-xs">
+          <span className="material-symbols-outlined text-[15px]">event_busy</span>
+          <span>No instruction (exempt)</span>
+        </span>
+      );
+    }
     if (covered || status === 'APPROVED' || status === 'COVERED') {
       return (
         <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5 shadow-xs">

@@ -294,19 +294,19 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md w-full text-center space-y-4 shadow-lg">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 max-w-md w-full text-center space-y-4 shadow-lg">
           <div className="w-16 h-16 mx-auto rounded-full bg-rose-50 text-rose-800 flex items-center justify-center">
             <span className="material-symbols-outlined text-[36px]">lock</span>
           </div>
-          <h2 className="text-xl font-black text-slate-900">Access Restricted</h2>
-          <p className="text-xs text-slate-600">
+          <h2 className="text-xl font-black text-on-surface">Access Restricted</h2>
+          <p className="text-xs text-on-surface-variant">
             The Enterprise Archive Vault is strictly restricted to School Administrators, Directors, and the Head Teacher.
           </p>
           <button
             type="button"
             onClick={onBackToPortal}
-            className="w-full py-2.5 bg-[#800000] text-white rounded-xl text-xs font-bold hover:bg-[#600000] transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-[#600000] transition-colors cursor-pointer"
           >
             Return to School Portal
           </button>
@@ -316,9 +316,9 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800 antialiased selection:bg-rose-900 selection:text-white">
+    <div className="min-h-screen bg-surface flex flex-col font-sans text-on-surface antialiased selection:bg-rose-900 selection:text-white">
       {/* Top Standalone Header Bar */}
-      <header className="sticky top-0 z-40 bg-[#800000] text-white shadow-md border-b border-[#600000] print:hidden">
+      <header className="sticky top-0 z-40 bg-primary text-white shadow-md border-b border-[#600000] print:hidden">
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
           {/* Left Brand & Navigation Back */}
           <div className="flex items-center gap-4">
@@ -401,7 +401,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
             {/* Authenticated Admin Pill */}
             <div className="hidden xl:flex items-center gap-2.5 pl-2 border-l border-white/20">
-              <div className="w-8 h-8 rounded-full bg-white text-[#800000] flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center font-bold text-xs shadow-xs">
                 {currentUser ? `${currentUser.firstName[0]}${currentUser.lastName[0]}` : 'A'}
               </div>
               <div className="flex flex-col text-left">
@@ -420,29 +420,29 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       {/* Main Standalone Container */}
       <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Banner Notice */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
               <span>Grace Seeds School Isolated Archive System</span>
               <span>•</span>
               <span className="text-emerald-700 font-semibold">PostgreSQL & MongoDB Dual-Engine Ready</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight flex items-center gap-3">
               <span>Archived Accounts & Operational Data</span>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
                 <span className="material-symbols-outlined text-[15px]">security</span>
                 <span>Audit & Chapter 6 Certified</span>
               </span>
             </h1>
-            <p className="text-sm text-slate-600 mt-1 max-w-4xl">
+            <p className="text-sm text-on-surface-variant mt-1 max-w-4xl">
               Deleted learners, exclusive parent logins, fee invoices, CBE formative/summative marks, attendance registers, and welfare grievances are securely preserved in the isolated archive table. Restoring any record reinstates credentials and operational ledgers seamlessly.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-right">
-              <span className="text-[11px] font-bold text-slate-500 block uppercase">Archive Storage</span>
-              <span className="text-sm font-black text-slate-800 font-mono">
+            <div className="px-4 py-3 bg-surface rounded-xl border border-outline-variant/30 text-right">
+              <span className="text-[11px] font-bold text-on-surface-variant block uppercase">Archive Storage</span>
+              <span className="text-sm font-black text-on-surface font-mono">
                 {archivedRecords.length} Learner Dossiers
               </span>
             </div>
@@ -473,7 +473,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
             </div>
             <button
               onClick={() => setFeedback(null)}
-              className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">close</span>
             </button>
@@ -482,57 +482,57 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* KPI Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+          <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
+            <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Archived Learners</span>
               <span className="material-symbols-outlined text-[20px] text-rose-800">school</span>
             </div>
-            <div className="text-2xl font-black text-slate-900">{totalArchivedLearners}</div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">Full dossiers preserved</span>
+            <div className="text-2xl font-black text-on-surface">{totalArchivedLearners}</div>
+            <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Full dossiers preserved</span>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+          <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
+            <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Parent Accounts</span>
               <span className="material-symbols-outlined text-[20px] text-indigo-700">family_restroom</span>
             </div>
-            <div className="text-2xl font-black text-slate-900">{totalArchivedParents}</div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">Logins & credentials</span>
+            <div className="text-2xl font-black text-on-surface">{totalArchivedParents}</div>
+            <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Logins & credentials</span>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+          <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
+            <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Cleared Fee Debt</span>
               <span className="material-symbols-outlined text-[20px] text-emerald-700">money_off</span>
             </div>
             <div className="text-2xl font-black text-emerald-800 font-mono">
               KES {totalClearedDebt.toLocaleString()}
             </div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">Relieved on archive</span>
+            <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Relieved on archive</span>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+          <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
+            <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Preserved Invoices</span>
               <span className="material-symbols-outlined text-[20px] text-amber-700">receipt_long</span>
             </div>
-            <div className="text-2xl font-black text-slate-900">{totalPreservedInvoices}</div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">Historical billing data</span>
+            <div className="text-2xl font-black text-on-surface">{totalPreservedInvoices}</div>
+            <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Historical billing data</span>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
+          <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">CBC Marks Preserved</span>
               <span className="material-symbols-outlined text-[20px] text-sky-700">grade</span>
             </div>
-            <div className="text-2xl font-black text-slate-900">{totalAssessmentsPreserved}</div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 block">Formative & summative</span>
+            <div className="text-2xl font-black text-on-surface">{totalAssessmentsPreserved}</div>
+            <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Formative & summative</span>
           </div>
         </div>
 
         {/* Controls Bar: Sub-Tabs & Filters */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 flex flex-col gap-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-2xs p-4 flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
             {/* Sub-Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
               {[
@@ -551,15 +551,15 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     onClick={() => setActiveTab(tab.id as ArchiveSubTab)}
                     className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       isActive
-                        ? 'bg-[#800000] text-white shadow-xs'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[17px]">{tab.icon}</span>
                     <span>{tab.label}</span>
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                        isActive ? 'bg-white/20 text-white' : 'bg-surface-container-low text-on-surface-variant'
                       }`}
                     >
                       {tab.count}
@@ -571,7 +571,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2 self-end lg:self-auto shrink-0">
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-xs text-on-surface-variant font-medium">
                 Showing {activeTab === 'accounts' ? filteredAccounts.length : filteredLearners.length} records
               </span>
             </div>
@@ -588,13 +588,13 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by student name, parent name, admission #, email, phone, or reason..."
-                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-800/30 focus:border-rose-800 transition-all"
+                className="w-full pl-9 pr-8 py-2 bg-surface border border-outline-variant/30 rounded-xl text-xs font-medium text-on-surface placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-800/30 focus:border-rose-800 transition-all"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-on-surface-variant"
                 >
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
@@ -603,7 +603,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
             <div className="flex items-center gap-2.5 flex-wrap">
               {activeTab === 'accounts' && (
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <div className="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl">
                   {(['ALL', 'PARENT', 'STUDENT'] as const).map((filter) => (
                     <button
                       key={filter}
@@ -611,8 +611,8 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                       onClick={() => setAccountTypeFilter(filter)}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         accountTypeFilter === filter
-                          ? 'bg-white text-slate-900 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white text-on-surface shadow-2xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
                       {filter === 'ALL' ? 'All Accounts' : filter === 'PARENT' ? 'Parents Only' : 'Students Only'}
@@ -625,7 +625,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 <select
                   value={gradeFilter}
                   onChange={(e) => setGradeFilter(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-800/30"
+                  className="px-3 py-2 bg-surface border border-outline-variant/30 rounded-xl text-xs font-semibold text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-rose-800/30"
                 >
                   <option value="ALL">All Grades / Levels</option>
                   {gradeOptions.map((g) => (
@@ -641,10 +641,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 1: Archived Accounts Table */}
         {activeTab === 'accounts' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <thead className="bg-surface border-b border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3.5 px-4">Account Holder & Type</th>
                     <th className="py-3.5 px-4">Identifier / Role</th>
@@ -667,7 +667,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     </tr>
                   ) : filteredAccounts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500">
+                      <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                         <span className="material-symbols-outlined text-[36px] text-slate-400 mb-2 block">
                           person_off
                         </span>
@@ -681,7 +681,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     filteredAccounts.map((acc, idx) => {
                       const isParent = acc.accountType === 'PARENT';
                       return (
-                        <tr key={`${acc.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
+                        <tr key={`${acc.id}-${idx}`} className="hover:bg-surface/80 transition-colors">
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
                               <div
@@ -696,7 +696,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <span className="font-bold text-slate-900 block truncate text-sm">
+                                <span className="font-bold text-on-surface block truncate text-sm">
                                   {acc.fullName}
                                 </span>
                                 <span
@@ -711,10 +711,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="font-mono text-slate-800 font-semibold block">
+                            <span className="font-mono text-on-surface font-semibold block">
                               {acc.identifier}
                             </span>
-                            <span className="text-[11px] text-slate-500 block truncate max-w-[200px]">
+                            <span className="text-[11px] text-on-surface-variant block truncate max-w-[200px]">
                               {acc.relationshipOrGrade}
                             </span>
                           </td>
@@ -722,13 +722,13 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col gap-0.5">
                               {acc.email && acc.email !== 'N/A' && (
-                                <span className="flex items-center gap-1 text-slate-700 font-mono text-[11px]">
+                                <span className="flex items-center gap-1 text-on-surface-variant font-mono text-[11px]">
                                   <span className="material-symbols-outlined text-[13px] text-slate-400">email</span>
                                   <span>{acc.email}</span>
                                 </span>
                               )}
                               {acc.phone && acc.phone !== 'N/A' && (
-                                <span className="flex items-center gap-1 text-slate-700 font-mono text-[11px]">
+                                <span className="flex items-center gap-1 text-on-surface-variant font-mono text-[11px]">
                                   <span className="material-symbols-outlined text-[13px] text-slate-400">call</span>
                                   <span>{acc.phone}</span>
                                 </span>
@@ -740,12 +740,12 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="text-slate-700 italic max-w-xs block truncate" title={acc.reason || 'None specified'}>
+                            <span className="text-on-surface-variant italic max-w-xs block truncate" title={acc.reason || 'None specified'}>
                               {acc.reason || 'None specified'}
                             </span>
                           </td>
 
-                          <td className="py-3.5 px-4 font-mono text-slate-600">
+                          <td className="py-3.5 px-4 font-mono text-on-surface-variant">
                             {new Date(acc.deletedAt).toLocaleDateString('en-GB', {
                               day: '2-digit',
                               month: 'short',
@@ -754,7 +754,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-low border border-outline-variant/30 text-on-surface-variant text-[11px] font-semibold">
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                               <span>{acc.parentStatus || 'Archived Snapshot'}</span>
                             </span>
@@ -766,7 +766,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 type="button"
                                 onClick={() => setSelectedRecord(acc.record)}
                                 title="Inspect linked dossier details"
-                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
                               >
                                 <span className="material-symbols-outlined text-[18px]">visibility</span>
                               </button>
@@ -795,10 +795,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 2: Archived Learners Table */}
         {activeTab === 'learners' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <thead className="bg-surface border-b border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3.5 px-4">Learner Name</th>
                     <th className="py-3.5 px-4">Admission #</th>
@@ -822,7 +822,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     </tr>
                   ) : filteredLearners.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                      <td colSpan={8} className="py-12 text-center text-on-surface-variant">
                         <span className="material-symbols-outlined text-[36px] text-slate-400 mb-2 block">
                           school
                         </span>
@@ -836,43 +836,43 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                         (rec.pendingWorkCleared?.clearedLunchBalances || 0);
 
                       return (
-                        <tr key={rec.id} className="hover:bg-slate-50/80 transition-colors">
+                        <tr key={rec.id} className="hover:bg-surface/80 transition-colors">
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-center font-bold text-xs shrink-0">
                                 {rec.fullName[0] || 'L'}
                               </div>
                               <div>
-                                <span className="font-bold text-slate-900 block text-sm">
+                                <span className="font-bold text-on-surface block text-sm">
                                   {rec.fullName}
                                 </span>
-                                <span className="text-[10px] text-slate-500 font-mono">
+                                <span className="text-[10px] text-on-surface-variant font-mono">
                                   UPI: {rec.upiNumber || '--'}
                                 </span>
                               </div>
                             </div>
                           </td>
 
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                          <td className="py-3.5 px-4 font-mono font-bold text-on-surface">
                             {rec.admissionNumber}
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="font-semibold text-slate-800 block">
+                            <span className="font-semibold text-on-surface block">
                               {resolveGradeName(rec.gradeLevel)}
                             </span>
-                            <span className="text-[11px] text-slate-500 block">
+                            <span className="text-[11px] text-on-surface-variant block">
                               {resolveStreamName(rec.streamId, rec.streamName) || 'No stream'}
                             </span>
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="text-slate-700 italic max-w-xs block truncate" title={rec.reason || 'Not specified'}>
+                            <span className="text-on-surface-variant italic max-w-xs block truncate" title={rec.reason || 'Not specified'}>
                               {rec.reason || 'Not specified'}
                             </span>
                           </td>
 
-                          <td className="py-3.5 px-4 text-slate-700">
+                          <td className="py-3.5 px-4 text-on-surface-variant">
                             <span className="font-medium">{rec.deletedBy || 'System Administrator'}</span>
                           </td>
 
@@ -886,7 +886,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                             )}
                           </td>
 
-                          <td className="py-3.5 px-4 font-mono text-slate-600">
+                          <td className="py-3.5 px-4 font-mono text-on-surface-variant">
                             {new Date(rec.deletedAt).toLocaleDateString('en-GB', {
                               day: '2-digit',
                               month: 'short',
@@ -900,7 +900,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 type="button"
                                 onClick={() => setSelectedRecord(rec)}
                                 title="Inspect learner dossier"
-                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
                               >
                                 <span className="material-symbols-outlined text-[18px]">visibility</span>
                               </button>
@@ -928,10 +928,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 3: Preserved Invoices */}
         {activeTab === 'finances' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <thead className="bg-surface border-b border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3.5 px-4">Invoice #</th>
                     <th className="py-3.5 px-4">Learner Name & Adm</th>
@@ -945,7 +945,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 <tbody className="divide-y divide-slate-100">
                   {allArchivedInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500">
+                      <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                         <span className="material-symbols-outlined text-[36px] text-slate-400 mb-2 block">
                           receipt_long
                         </span>
@@ -954,15 +954,15 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     </tr>
                   ) : (
                     allArchivedInvoices.map((inv, idx) => (
-                      <tr key={`${inv.id || idx}`} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                      <tr key={`${inv.id || idx}`} className="hover:bg-surface/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-on-surface">
                           {inv.invoiceNumber || inv.id?.slice(0, 10) || 'INV-PRESERVED'}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-slate-900 block">{inv.studentName}</span>
-                          <span className="text-[11px] text-slate-500 font-mono">Adm: {inv.admissionNumber}</span>
+                          <span className="font-bold text-on-surface block">{inv.studentName}</span>
+                          <span className="text-[11px] text-on-surface-variant font-mono">Adm: {inv.admissionNumber}</span>
                         </td>
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-800">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-on-surface">
                           KES {(inv.totalAmount || inv.billed || 0).toLocaleString()}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-emerald-700 font-semibold">
@@ -972,7 +972,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           KES {(inv.balance || 0).toLocaleString()}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold uppercase">
+                          <span className="px-2.5 py-0.5 rounded-full bg-surface-container-low border border-outline-variant/30 text-on-surface-variant text-[10px] font-bold uppercase">
                             {inv.status || 'Preserved'}
                           </span>
                         </td>
@@ -980,7 +980,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                           <button
                             type="button"
                             onClick={() => setSelectedRecord(inv.record)}
-                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[18px]">visibility</span>
                           </button>
@@ -996,12 +996,12 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 4: Academic Assessments */}
         {activeTab === 'academic' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-6">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs p-6 space-y-6">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-base font-bold text-on-surface">
                 Preserved CBE Competency Marks & Term Report Cards
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 Archived assessments are retained for KNEC and MoE regulatory audits and can be restored anytime.
               </p>
             </div>
@@ -1013,33 +1013,33 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 const reportCards = rec.linkedData?.reportCards || [];
 
                 return (
-                  <div key={rec.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                  <div key={rec.id} className="p-4 rounded-xl border border-outline-variant/30 bg-surface/50 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{rec.fullName}</h3>
-                        <span className="text-[11px] text-slate-500 font-mono">Adm: {rec.admissionNumber}</span>
+                        <h3 className="font-bold text-on-surface text-sm">{rec.fullName}</h3>
+                        <span className="text-[11px] text-on-surface-variant font-mono">Adm: {rec.admissionNumber}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-surface-container-lowest border border-outline-variant/30 text-on-surface-variant text-[10px] font-bold">
                         {rec.gradeLevel}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-white p-2 rounded-lg border border-slate-200">
-                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Formative</span>
+                      <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
+                        <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Formative</span>
                         <span className="text-base font-black text-sky-700">{formatives.length}</span>
                       </div>
-                      <div className="bg-white p-2 rounded-lg border border-slate-200">
-                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Summative</span>
+                      <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
+                        <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Summative</span>
                         <span className="text-base font-black text-indigo-700">{summatives.length}</span>
                       </div>
-                      <div className="bg-white p-2 rounded-lg border border-slate-200">
-                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Reports</span>
+                      <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
+                        <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Reports</span>
                         <span className="text-base font-black text-emerald-700">{reportCards.length}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-outline-variant/30 text-xs">
                       <button
                         type="button"
                         onClick={() => setSelectedRecord(rec)}
@@ -1066,10 +1066,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 5: Attendance Logs */}
         {activeTab === 'attendance' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs p-6 space-y-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Historical Attendance Roll-Call Registers</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h2 className="text-base font-bold text-on-surface">Historical Attendance Roll-Call Registers</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 Preserved attendance records ensure full compliance with school safety and enrollment audit mandates.
               </p>
             </div>
@@ -1080,15 +1080,15 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 return (
                   <div key={rec.id} className="py-3.5 flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-slate-900 text-sm block">{rec.fullName}</span>
-                      <span className="text-xs text-slate-500">
+                      <span className="font-bold text-on-surface text-sm block">{rec.fullName}</span>
+                      <span className="text-xs text-on-surface-variant">
                         Adm #{rec.admissionNumber} · {rec.gradeLevel} · Preserved Attendance Logs: {attList.length} days
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedRecord(rec)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant text-xs font-bold transition-all cursor-pointer"
                     >
                       Inspect Logs
                     </button>
@@ -1101,10 +1101,10 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
         {/* Tab 6: Welfare & Complaints */}
         {activeTab === 'welfare' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs p-6 space-y-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Parent Grievances, Resolved Concerns & eDiary</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h2 className="text-base font-bold text-on-surface">Parent Grievances, Resolved Concerns & eDiary</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 Archived parent communications, concern logs, and eDiary activity logs.
               </p>
             </div>
@@ -1115,12 +1115,12 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 const ediary = rec.linkedData?.ediary || [];
 
                 return (
-                  <div key={rec.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                  <div key={rec.id} className="p-4 rounded-xl border border-outline-variant/30 bg-surface space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 text-sm">{rec.fullName}</span>
-                      <span className="text-xs text-slate-500">Adm #{rec.admissionNumber}</span>
+                      <span className="font-bold text-on-surface text-sm">{rec.fullName}</span>
+                      <span className="text-xs text-on-surface-variant">Adm #{rec.admissionNumber}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-600">
+                    <div className="flex items-center gap-3 text-xs text-on-surface-variant">
                       <span>Concerns: <strong>{complaints.length}</strong></span>
                       <span>•</span>
                       <span>eDiary Entries: <strong>{ediary.length}</strong></span>
@@ -1143,7 +1143,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       </main>
 
       {/* Standalone Footer */}
-      <footer className="mt-auto py-5 bg-[#800000] border-t border-[#600000] text-white text-xs print:hidden shadow-lg">
+      <footer className="mt-auto py-5 bg-primary border-t border-[#600000] text-white text-xs print:hidden shadow-lg">
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1168,9 +1168,9 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       {/* Inspection Drawer */}
       {selectedRecord && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl bg-white h-full shadow-2xl overflow-y-auto flex flex-col">
+          <div className="w-full max-w-2xl bg-surface-container-lowest h-full shadow-2xl overflow-y-auto flex flex-col">
             {/* Drawer Header */}
-            <div className="p-6 bg-[#800000] text-white flex items-center justify-between shrink-0">
+            <div className="p-6 bg-primary text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-sm border border-white/20">
                   <span className="material-symbols-outlined text-[22px]">inventory_2</span>
@@ -1196,45 +1196,45 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
             {/* Drawer Body */}
             <div className="p-6 space-y-6 flex-1 text-xs">
               {/* Demographics Card */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+              <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-3">
+                <h4 className="font-bold text-on-surface uppercase text-[11px] tracking-wider flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px] text-primary">person</span>
                   <span>Student Demographic Data</span>
                 </h4>
-                <div className="grid grid-cols-2 gap-3 text-slate-700">
+                <div className="grid grid-cols-2 gap-3 text-on-surface-variant">
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">Grade & Stream</span>
-                    <span className="font-bold text-slate-900">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">Grade & Stream</span>
+                    <span className="font-bold text-on-surface">
                       {resolveGradeName(selectedRecord.gradeLevel)} ({resolveStreamName(selectedRecord.streamId, selectedRecord.streamName) || 'No stream'})
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">UPI / NEMIS</span>
-                    <span className="font-mono font-bold text-slate-900">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">UPI / NEMIS</span>
+                    <span className="font-mono font-bold text-on-surface">
                       {selectedRecord.upiNumber || '--'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">Deletion Date</span>
-                    <span className="font-mono text-slate-900">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">Deletion Date</span>
+                    <span className="font-mono text-on-surface">
                       {new Date(selectedRecord.deletedAt).toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">Archived By</span>
-                    <span className="font-bold text-slate-900">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">Archived By</span>
+                    <span className="font-bold text-on-surface">
                       {selectedRecord.deletedBy || 'System Admin'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">Retention Policy</span>
-                    <span className="font-bold text-slate-900">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">Retention Policy</span>
+                    <span className="font-bold text-on-surface">
                       {selectedRecord.retentionPolicyYears || 7} Years (Legal Archive)
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block uppercase">Retention Expiration</span>
-                    <span className="font-mono text-slate-900 font-semibold">
+                    <span className="text-[10px] text-on-surface-variant block uppercase">Retention Expiration</span>
+                    <span className="font-mono text-on-surface font-semibold">
                       {selectedRecord.retentionExpiresAt
                         ? new Date(selectedRecord.retentionExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                         : 'Active Retention Gate'}
@@ -1242,8 +1242,8 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                   </div>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block uppercase">Deletion Reason</span>
-                  <p className="text-slate-800 italic mt-0.5">{selectedRecord.reason || 'None specified'}</p>
+                  <span className="text-[10px] text-on-surface-variant block uppercase">Deletion Reason</span>
+                  <p className="text-on-surface italic mt-0.5">{selectedRecord.reason || 'None specified'}</p>
                 </div>
               </div>
 
@@ -1266,7 +1266,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {completenessData.domainChecks?.map((dc: any, idx: number) => (
                       <div key={idx} className="p-2 rounded-lg bg-white/80 border border-indigo-100 flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-slate-800 truncate mr-1">{dc.domain}</span>
+                        <span className="text-[11px] font-semibold text-on-surface truncate mr-1">{dc.domain}</span>
                         <span className={`material-symbols-outlined text-[15px] ${dc.captured ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {dc.captured ? 'check_circle' : 'remove_circle_outline'}
                         </span>
@@ -1278,7 +1278,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
               {/* Linked Guardians */}
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                <h4 className="font-bold text-on-surface uppercase text-[11px] tracking-wider flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px] text-indigo-700">family_restroom</span>
                   <span>Associated Parent & Guardian Logins</span>
                 </h4>
@@ -1344,7 +1344,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
               {/* Raw JSON Snapshot */}
               <div>
-                <span className="font-bold text-slate-700 block mb-1 uppercase text-[10px]">
+                <span className="font-bold text-on-surface-variant block mb-1 uppercase text-[10px]">
                   Raw Dossier Snapshot (Inspection)
                 </span>
                 <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto text-[11px] font-mono max-h-60">
@@ -1354,12 +1354,12 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="p-4 bg-surface border-t border-outline-variant/30 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedRecord(null)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-slate-300 text-on-surface text-xs font-bold transition-all cursor-pointer"
                 >
                   Close
                 </button>
@@ -1367,7 +1367,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                   type="button"
                   onClick={() => handleVerifyCompleteness(selectedRecord)}
                   disabled={checkingCompleteness}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-fixed hover:bg-primary-fixed text-primary border border-primary rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                   title="Verify 12-domain preservation completeness"
                 >
                   <span className={`material-symbols-outlined text-[16px] ${checkingCompleteness ? 'animate-spin' : ''}`}>

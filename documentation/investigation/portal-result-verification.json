@@ -1,0 +1,62 @@
+[
+  {
+    "learner": "6b575d96",
+    "term": "term-2026-3",
+    "subject": "Christian Religious Education",
+    "roles": {
+      "Admin": {
+        "rawScore": 150,
+        "maxScore": 100,
+        "percentage": null,
+        "issue": "Raw score exceeds configured maximum; verification required"
+      },
+      "Teacher": {
+        "rawScore": 150,
+        "maxScore": 100,
+        "percentage": null,
+        "issue": "Raw score exceeds configured maximum; verification required"
+      },
+      "Parent": {
+        "rawScore": 150,
+        "maxScore": 100,
+        "percentage": null,
+        "issue": "Raw score exceeds configured maximum; verification required"
+      }
+    },
+    "parentUI": "Score requires verification",
+    "staffUI": {
+      "Admin": "Review",
+      "Teacher": "Review"
+    }
+  },
+  {
+    "learner": "57cecce8",
+    "term": "term-2026-3",
+    "subject": "Environmental Activities",
+    "roles": {
+      "Admin": {
+        "rawScore": 95,
+        "maxScore": 100,
+        "percentage": 95,
+        "issue": null
+      },
+      "Teacher": {
+        "rawScore": 95,
+        "maxScore": 100,
+        "percentage": 95,
+        "issue": null
+      },
+      "Parent": {
+        "rawScore": 95,
+        "maxScore": 100,
+        "percentage": 95,
+        "issue": null
+      }
+    },
+    "parentUI": "95%",
+    "staffUI": {
+      "Admin": "95%",
+      "Teacher": "95%"
+    }
+  }
+]

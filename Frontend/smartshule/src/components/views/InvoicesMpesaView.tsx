@@ -362,7 +362,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       </div>
 
       {/* Sub-Tabs: Invoices vs Transaction Feed vs Forwarded Queue */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2">
         <button
           onClick={() => setActiveSubTab('invoices')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${

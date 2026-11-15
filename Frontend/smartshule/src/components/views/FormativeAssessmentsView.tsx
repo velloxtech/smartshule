@@ -326,9 +326,9 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
 
       {/* Filter Bar */}
       <div className="bg-surface-container-lowest p-4 rounded-xl shadow-xs border border-outline-variant/30 flex flex-wrap gap-3 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-3 flex-1">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0 max-w-full">
           {/* Search Input */}
-          <div className="relative min-w-[220px] max-w-sm flex-1">
+          <div className="relative min-w-0 w-full sm:min-w-[220px] max-w-sm flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
               search
             </span>

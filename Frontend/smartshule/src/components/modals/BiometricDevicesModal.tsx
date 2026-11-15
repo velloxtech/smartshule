@@ -143,18 +143,18 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-surface-container-lowest w-full max-w-2xl rounded-3xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white shadow-inner">
+        <div className="bg-primary text-white p-4 sm:p-6 flex items-start justify-between gap-3 shrink-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="hidden sm:flex w-12 h-12 shrink-0 rounded-2xl bg-white/10 flex items-center justify-center text-white shadow-inner">
               <span className="material-symbols-outlined text-[28px]">
                 {capabilities?.iconName || 'fingerprint'}
               </span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold tracking-tight">Biometric & Passkey Devices</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight">Biometric & Passkey Devices</h2>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white">
                   FIDO2 / WebAuthn
                 </span>
@@ -167,7 +167,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 shrink-0 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -175,7 +175,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
         </div>
 
         {/* Modal Scrollable Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-on-surface">
           {/* Notifications */}
           {actionError && (
             <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2.5 animate-in fade-in">
@@ -193,14 +193,14 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
 
           {/* Current Device Capability Status */}
           {capabilities && (
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <div className="p-4 rounded-2xl bg-surface border border-outline-variant/80 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center text-[#7a1228] shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex items-center justify-center text-primary shrink-0">
                     <span className="material-symbols-outlined text-[20px]">{capabilities.iconName}</span>
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                    <div className="text-xs font-bold text-on-surface flex items-center gap-2">
                       <span>Current Device: {capabilities.platformName}</span>
                       {capabilities.isPlatformAuthenticatorAvailable ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -218,25 +218,25 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{capabilities.helperText}</p>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5">{capabilities.helperText}</p>
                   </div>
                 </div>
               </div>
 
               {/* Registration Form for This Device */}
               {capabilities.isWebAuthnSupported ? (
-                <form onSubmit={handleRegister} className="pt-2 border-t border-slate-200/60 flex flex-col sm:flex-row gap-2">
+                <form onSubmit={handleRegister} className="pt-2 border-t border-outline-variant/60 flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={customDeviceLabel}
                     onChange={(e) => setCustomDeviceLabel(e.target.value)}
                     placeholder="Enter device name (e.g. Work Laptop)..."
-                    className="flex-1 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228] transition-colors"
+                    className="flex-1 px-3.5 py-2 bg-white border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-primary transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={isRegistering}
-                    className="px-4 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60"
+                    className="px-4 py-2 bg-primary hover:bg-[#5c0a1a] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60"
                   >
                     {isRegistering ? (
                       <>
@@ -270,7 +270,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
           {/* Registered Devices List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Registered Devices ({devices.length})
               </h3>
               <span className="text-[11px] text-slate-400">Multiple authenticators supported</span>
@@ -278,14 +278,14 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
 
             {isLoadingDevices ? (
               <div className="py-8 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-                <span className="w-5 h-5 border-2 border-[#7a1228] border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
                 <span className="text-xs">Loading registered authenticators...</span>
               </div>
             ) : devices.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-1.5">
+              <div className="p-6 rounded-2xl bg-surface border border-dashed border-outline-variant/30 text-center space-y-1.5">
                 <span className="material-symbols-outlined text-[32px] text-slate-400">key_off</span>
-                <p className="text-xs font-semibold text-slate-700">No Biometric Passkeys Registered Yet</p>
-                <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                <p className="text-xs font-semibold text-on-surface-variant">No Biometric Passkeys Registered Yet</p>
+                <p className="text-[11px] text-on-surface-variant max-w-sm mx-auto">
                   Register this device above to enable instant one-touch login with Windows Hello, Touch ID, Face ID, or your phone sensor.
                 </p>
               </div>
@@ -294,18 +294,18 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
                 {devices.map((device) => (
                   <div
                     key={device.credentialId}
-                    className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 transition-colors bg-white flex items-center justify-between gap-3 shadow-2xs"
+                    className="p-3.5 rounded-2xl border border-outline-variant/30 hover:border-outline-variant/30 transition-colors bg-surface-container-lowest flex items-center justify-between gap-3 shadow-2xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant shrink-0">
                         <span className="material-symbols-outlined text-[22px]">
                           {getDeviceIcon(device.deviceType)}
                         </span>
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                        <div className="text-xs font-bold text-on-surface flex items-center gap-2">
                           <span>{device.deviceLabel}</span>
-                          <span className="text-[9px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[9px] font-semibold text-on-surface-variant bg-surface-container-low px-2 py-0.5 rounded-md">
                             {getDeviceTypeBadge(device.deviceType)}
                           </span>
                         </div>
@@ -337,7 +337,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
                             type="button"
                             disabled={isDeleting}
                             onClick={() => setConfirmDeleteId(null)}
-                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
+                            className="px-2 py-1 bg-surface-container-low hover:bg-surface-container text-on-surface-variant text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -381,14 +381,14 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <span className="text-[11px] text-slate-500">
+        <div className="p-4 bg-surface border-t border-outline-variant/30 flex items-center justify-between shrink-0">
+          <span className="text-[11px] text-on-surface-variant">
             SmartShule CBC Portal · Hardware-Backed Security
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-2 bg-surface-container hover:bg-slate-300 text-on-surface text-xs font-semibold rounded-xl transition-colors cursor-pointer"
           >
             Done
           </button>

@@ -52,7 +52,7 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
     },
     {
       id: 'curriculum-tracker',
-      label: 'Curriculum Tracker',
+      label: 'Syllabus Coverage Plan',
       shortLabel: 'Tracker',
       icon: 'fact_check',
       count: counts?.curriculumTrackers,
@@ -61,15 +61,15 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs mb-6">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-2 py-1.5 border-b border-slate-100 mb-2">
+    <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-2 shadow-xs mb-6">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-2 py-1.5 border-b border-outline-variant/30 mb-2">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-lg text-[#7a1228]">account_tree</span>
-          <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+          <span className="material-symbols-outlined text-lg text-primary">account_tree</span>
+          <span className="text-xs font-black uppercase tracking-wider text-on-surface">
             Curriculum Planning & Coverage Suite
           </span>
         </div>
-        <span className="text-[11px] text-slate-500 italic">
+        <span className="text-[11px] text-on-surface-variant italic">
           KICD Competency-Based Curriculum (CBC) Professional Pedagogical Records
         </span>
       </div>
@@ -84,15 +84,15 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
               onClick={() => onSelectTab(tab.id)}
               className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 isActive
-                  ? 'bg-gradient-to-r from-[#7a1228] to-[#9e1c38] text-white border-[#7a1228] shadow-sm'
-                  : 'bg-slate-50/70 hover:bg-slate-100/80 text-slate-700 border-slate-200'
+                  ? 'bg-gradient-to-r from-primary to-maroon-light text-white border-primary shadow-sm'
+                  : 'bg-surface/70 hover:bg-surface-container-low/80 text-on-surface-variant border-outline-variant/30'
               }`}
             >
               <div className="flex items-center justify-between gap-1 mb-1">
                 <div className="flex items-center gap-1.5">
                   <span
                     className={`material-symbols-outlined text-[18px] ${
-                      isActive ? 'text-white' : 'text-[#7a1228]'
+                      isActive ? 'text-white' : 'text-primary'
                     }`}
                   >
                     {tab.icon}
@@ -102,7 +102,7 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
                 {tab.count !== undefined && tab.count > 0 && (
                   <span
                     className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                      isActive ? 'bg-white/20 text-white' : 'bg-surface-container text-on-surface-variant'
                     }`}
                   >
                     {tab.count}
@@ -111,7 +111,7 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
               </div>
               <p
                 className={`text-[10px] truncate ${
-                  isActive ? 'text-white/80' : 'text-slate-500'
+                  isActive ? 'text-white/80' : 'text-on-surface-variant'
                 }`}
               >
                 {tab.description}

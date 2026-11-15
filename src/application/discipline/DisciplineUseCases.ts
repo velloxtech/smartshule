@@ -204,8 +204,9 @@ export class DisciplineUseCases {
     };
   }
 
-  public async getDisciplineStats(schoolId?: string) {
-    const incidents = await this.disciplineRepository.findIncidents({ schoolId });
+  public async getDisciplineStats(schoolId?: string, authorize?: (record:any)=>Promise<boolean>) {
+    let incidents = await this.disciplineRepository.findIncidents({ schoolId });
+    if(authorize){const permitted=[];for(const record of incidents)if(await authorize(record))permitted.push(record);incidents=permitted;}
     const clubs = await this.disciplineRepository.findAllClubs(schoolId);
 
     const commendations = incidents.filter(i => i.incidentType === 'MERIT_COMMENDATION').length;

@@ -1,3 +1,4 @@
+import { TeacherAssignmentAccess, TeachingScope } from '../shared/TeacherAssignmentAccess';
 import { IAttendanceRepository, AttendanceFilterCriteria } from '../../core/ports/repositories/ITimetableRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -44,9 +45,13 @@ export class AttendanceUseCases {
     private readonly academicRepository?: IAcademicRepository
   ) {}
 
-  private async assertTeacherAssignedToClass(classRoomId?: string, streamId?: string, requestingUser?: UserContext) {
+  private async assertTeacherAssignedToClass(classRoomId?: string, streamId?: string, requestingUser?: UserContext, period: TeachingScope = {}) {
     if (!requestingUser || requestingUser.role !== UserRole.TEACHER) return;
-    if (!this.teacherRepository) return;
+    if (this.academicRepository && this.teacherRepository) {
+      await new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository).assert(requestingUser, {...period,classRoomId,streamId});
+      return;
+    }
+    if (!this.teacherRepository) throw new ForbiddenError('Teacher assignment access is unavailable.');
 
     let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
     if (!teacher) teacher = await this.teacherRepository.findById(requestingUser.userId);
@@ -92,7 +97,7 @@ export class AttendanceUseCases {
 
   public async markAttendance(dto: MarkAttendanceDTO, requestingUser?: UserContext) {
     if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      await this.assertTeacherAssignedToClass(dto.classRoomId, dto.streamId, requestingUser);
+      await this.assertTeacherAssignedToClass(dto.classRoomId, dto.streamId, requestingUser, {academicYearId:dto.academicYearId,termId:dto.termId});
     }
 
     if ((!dto.academicYearId || !dto.termId) && this.academicRepository) {

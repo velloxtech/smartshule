@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "Grade 4-only teacher sees whole class and its streams, with no other grades",
+    "Class overview shows learners and all Grade 4 learning areas without a legacy profile assignment",
+    "Switching to an empty assigned stream clears the previous learner roster",
+    "Roster Profile opens the selected learner directly"
+  ],
+  "errors": [],
+  "failures": []
+}

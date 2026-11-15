@@ -8,10 +8,10 @@ export class AnalyticsController {
   public getDashboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
+      if (user?.role === UserRole.TEACHER || user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: School-wide analytics dashboard is restricted to staff.'
+          message: 'Access denied: School-wide analytics dashboard is requires school leadership.'
         });
       }
 
@@ -50,7 +50,7 @@ export class AnalyticsController {
       if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: Attendance trends are restricted to staff.'
+          message: 'Access denied: Attendance trends are requires school leadership.'
         });
       }
 
@@ -60,7 +60,7 @@ export class AnalyticsController {
       const days = req.query.days ? parseInt(req.query.days as string, 10) : 14;
 
       const data = await this.analyticsUseCases.getAttendanceTrends(
-        { schoolId, academicYearId, termId, days },
+        { schoolId, academicYearId, termId, days, authorize:(req as any).canAccessTeachingRecord },
         user
       );
 
@@ -76,10 +76,10 @@ export class AnalyticsController {
   public getWholeTermReport = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
+      if (user?.role === UserRole.TEACHER || user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied: Whole-term executive school reports are restricted to staff.'
+          message: 'Access denied: Whole-term executive school reports are requires school leadership.'
         });
       }
 

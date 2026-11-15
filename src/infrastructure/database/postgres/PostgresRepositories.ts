@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { ensurePlanningSchema } from './PostgresPlanningSchema';
 import { PhoneUtils } from '../../utils/PhoneUtils';
 import { IUserRepository } from '../../../core/ports/repositories/IUserRepository';
 import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/repositories/IStudentRepository';
@@ -91,7 +92,7 @@ import {
   CreditStatus
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
-import { IdGenerator } from '../../../core/domain/shared/Errors';
+import { IdGenerator, ConflictError } from '../../../core/domain/shared/Errors';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -1409,9 +1410,11 @@ export class PostgresDatabaseInitializer {
     `;
 
     await pool.query(ddl);
+    await ensurePlanningSchema(pool);
 
     // Schema migrations for lesson_plans status & reviews, nullability, and foreign key constraint fixes
     await pool.query(`
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS lesson_details JSONB NOT NULL DEFAULT '{}';
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
@@ -1464,11 +1467,31 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans DROP CONSTRAINT IF EXISTS fk_lesson_plans_teacher;
       ALTER TABLE payments DROP CONSTRAINT IF EXISTS fk_payments_invoice;
 
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_code ON strands (learning_area_id, grade_level, code);
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_code ON strands (learning_area_id, grade_level, code);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_strands_area_grade_code deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_strands_area_grade_title deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_sub_strands_strand_code deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_sub_strands_strand_title deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_summative_student_area_term_year deferred: existing duplicate records require review';
+      END $$;
 
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(50);
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
@@ -2330,13 +2353,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findCurrentYear(schoolId?: string): Promise<AcademicYear | null> {
-    const res = await this.pool.query('SELECT * FROM academic_years WHERE is_current = true LIMIT 1');
+    const res = await this.pool.query('SELECT * FROM academic_years WHERE is_current = true'+(schoolId?' AND school_id=$1':'')+' LIMIT 1',schoolId?[schoolId]:[]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findAllYears(schoolId?: string): Promise<AcademicYear[]> {
-    const res = await this.pool.query('SELECT * FROM academic_years');
+    const res = await this.pool.query('SELECT * FROM academic_years'+(schoolId?' WHERE school_id=$1':''),schoolId?[schoolId]:[]);
     return res.rows.map(r => AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
   }
   public async saveYear(y: AcademicYear): Promise<void> {
@@ -2365,7 +2388,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
   public async saveTerm(t: AcademicTerm): Promise<void> {
     const q = `INSERT INTO academic_terms (id, academic_year_id, term_number, name, start_date, end_date, is_current, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (id) DO UPDATE SET is_current = EXCLUDED.is_current, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET
+                 name = EXCLUDED.name,
+                 term_number = EXCLUDED.term_number,
+                 start_date = EXCLUDED.start_date,
+                 end_date = EXCLUDED.end_date,
+                 is_current = EXCLUDED.is_current,
+                 updated_at = NOW()`;
     await this.pool.query(q, [t.id, t.academicYearId, t.termNumber, t.name, t.startDate, t.endDate, t.isCurrent, t.createdAt, t.updatedAt]);
   }
   public async updateTerm(t: AcademicTerm): Promise<void> { await this.saveTerm(t); }
@@ -2388,7 +2417,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return this.mapClassRoom(res.rows[0]);
   }
   public async findAllClasses(schoolId?: string): Promise<ClassRoom[]> {
-    const res = await this.pool.query('SELECT * FROM classrooms');
+    const res = await this.pool.query('SELECT * FROM classrooms'+(schoolId?' WHERE school_id=$1':''),schoolId?[schoolId]:[]);
     return res.rows.map(r => this.mapClassRoom(r));
   }
   public async saveClass(c: ClassRoom): Promise<void> {
@@ -2541,7 +2570,8 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                  effective_to = EXCLUDED.effective_to,
                  is_active = EXCLUDED.is_active,
                  updated_at = NOW()`;
-    await this.pool.query(q, [
+    try {
+      await this.pool.query(q, [
       a.id,
       a.schoolId,
       a.academicYearId,
@@ -2554,7 +2584,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       a.isActive,
       a.createdAt,
       a.updatedAt
-    ]);
+      ]);
+    } catch (error: any) {
+      if (error.code === '23505' && error.constraint === 'uq_class_teacher_one_active_duty') {
+        throw new ConflictError('This teacher already has an active class-teacher duty for this academic year. Refresh assignments and try again.');
+      }
+      throw error;
+    }
   }
 
   public async findClassTeacherAssignments(filters?: {
@@ -2759,101 +2795,24 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    // 1. Resolve candidate learning areas for this subject (by id, code, name, or canonical alias)
-    const candidateQuery = `
-      WITH target_la AS (
-        SELECT id, code, name FROM learning_areas
-        WHERE id = $1 
-           OR UPPER(code) = UPPER($1) 
-           OR UPPER(name) = UPPER($1)
-        LIMIT 1
-      )
-      SELECT id FROM learning_areas
-      WHERE id = $1
-         OR id IN (SELECT id FROM target_la)
-         OR (
-           (SELECT code FROM target_la) IS NOT NULL 
-           AND (
-             UPPER(code) = (SELECT UPPER(code) FROM target_la)
-             OR (UPPER(code) IN ('MATH', 'MAT') AND (SELECT UPPER(code) FROM target_la) IN ('MATH', 'MAT'))
-             OR (UPPER(code) IN ('KIS', 'KISW', 'KUSO') AND (SELECT UPPER(code) FROM target_la) IN ('KIS', 'KISW', 'KUSO'))
-             OR (UPPER(code) IN ('ENG', 'REA', 'LIT', 'LAN') AND (SELECT UPPER(code) FROM target_la) IN ('ENG', 'REA', 'LIT', 'LAN'))
-             OR (UPPER(code) IN ('AGR', 'AGRI') AND (SELECT UPPER(code) FROM target_la) IN ('AGR', 'AGRI'))
-             OR (UPPER(code) IN ('ARTS', 'CREA') AND (SELECT UPPER(code) FROM target_la) IN ('ARTS', 'CREA'))
-             OR (UPPER(code) IN ('CRE', 'IRE', 'HRE', 'SRE') AND (SELECT UPPER(code) FROM target_la) IN ('CRE', 'IRE', 'HRE', 'SRE'))
-             OR (UPPER(code) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV') AND (SELECT UPPER(code) FROM target_la) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV'))
-             OR (UPPER(code) IN ('PRETECH', 'PRET') AND (SELECT UPPER(code) FROM target_la) IN ('PRETECH', 'PRET'))
-             OR (UPPER(code) IN ('BUS') AND (SELECT UPPER(code) FROM target_la) IN ('BUS'))
-             OR (UPPER(code) IN ('HLTH') AND (SELECT UPPER(code) FROM target_la) IN ('HLTH'))
-           )
-         )
-    `;
-    let candidateIds: string[] = [learningAreaId];
-    try {
-      const candRes = await this.pool.query(candidateQuery, [learningAreaId]);
-      candidateIds = candRes.rows.map(r => r.id);
-      if (!candidateIds.includes(learningAreaId)) {
-        candidateIds.push(learningAreaId);
-      }
-    } catch {
-      candidateIds = [learningAreaId];
+    const params: any[] = [learningAreaId];
+    let query = 'SELECT * FROM strands WHERE learning_area_id = $1';
+    if (gradeLevel) {
+      params.push(gradeLevel);
+      query += ' AND grade_level = $2';
     }
-
-    const normGrade = gradeLevel 
-      ? gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '')
-      : null;
-
-    let res;
-    if (normGrade) {
-      const q = `
-        SELECT * FROM strands 
-        WHERE learning_area_id = ANY($1) OR code = ANY($1)
-        ORDER BY 
-          CASE 
-            WHEN UPPER(REPLACE(REPLACE(REPLACE(COALESCE(grade_level, ''), ' ', '_'), '-', '_'), 'GRADE_', '')) = $2 THEN 0
-            WHEN grade_level IS NULL OR grade_level = '' THEN 1
-            ELSE 2
-          END,
-          code, title
-      `;
-      res = await this.pool.query(q, [candidateIds, normGrade]);
-
-      const exactOrUniversal = res.rows.filter(r => {
-        const rowGradeNorm = (r.grade_level || '').trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '');
-        return !rowGradeNorm || rowGradeNorm === normGrade;
-      });
-
-      if (exactOrUniversal.length > 0) {
-        res.rows = exactOrUniversal;
-      }
-    } else {
-      const q = `
-        SELECT * FROM strands 
-        WHERE learning_area_id = ANY($1) OR code = ANY($1)
-        ORDER BY code, title
-      `;
-      res = await this.pool.query(q, [candidateIds]);
-    }
-
-    // Deduplicate strands by normalized title so no duplicates are returned
-    const seenTitles = new Set<string>();
-    const deduplicatedStrands: Strand[] = [];
-
-    for (const r of res.rows) {
-      const normTitle = (r.title || '').trim().toLowerCase();
-      if (!normTitle || seenTitles.has(normTitle)) continue;
-      seenTitles.add(normTitle);
-
-      deduplicatedStrands.push(Strand.create({ 
-        learningAreaId: r.learning_area_id, 
-        gradeLevel: r.grade_level, 
-        code: r.code, 
-        title: r.title, 
-        description: r.description 
-      }, r.id, r.created_at, r.updated_at));
-    }
-
-    return deduplicatedStrands;
+    query += ' ORDER BY code, title';
+    const res = await this.pool.query(query, params);
+    const seen = new Set<string>();
+    return res.rows.filter(r => {
+      const title = String(r.title).trim().toLowerCase();
+      if (seen.has(title)) return false;
+      seen.add(title);
+      return true;
+    }).map(r => Strand.create({
+      learningAreaId: r.learning_area_id, gradeLevel: r.grade_level,
+      code: r.code, title: r.title, description: r.description
+    }, r.id, r.created_at, r.updated_at));
   }
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)
@@ -2875,29 +2834,13 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1 OR code = $1 LIMIT 1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) }, r.id, r.created_at, r.updated_at);
+    return SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), suggestedExperiences: typeof r.suggested_experiences==='string'?JSON.parse(r.suggested_experiences):(r.suggested_experiences||[]) }, r.id, r.created_at, r.updated_at);
   }
   public async findSubStrandsByStrand(strandId: string): Promise<SubStrand[]> {
-    const q = `
-      SELECT * FROM sub_strands 
-      WHERE strand_id = $1 
-         OR strand_id IN (
-           SELECT id FROM strands 
-           WHERE code = $1 
-              OR code = (SELECT code FROM strands WHERE id = $1 LIMIT 1)
-              OR (
-                LOWER(title) = (SELECT LOWER(title) FROM strands WHERE id = $1 LIMIT 1)
-                AND grade_level = (SELECT grade_level FROM strands WHERE id = $1 LIMIT 1)
-              )
-         )
-      ORDER BY code, title
-    `;
-    let res;
-    try {
-      res = await this.pool.query(q, [strandId]);
-    } catch {
-      res = await this.pool.query('SELECT * FROM sub_strands WHERE strand_id = $1 ORDER BY code, title', [strandId]);
-    }
+    const res = await this.pool.query(
+      'SELECT * FROM sub_strands WHERE strand_id = $1 ORDER BY code, title',
+      [strandId]
+    );
 
     const seenTitles = new Set<string>();
     const deduplicatedSubs: SubStrand[] = [];
@@ -2911,7 +2854,7 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
         strandId: r.strand_id, 
         code: r.code, 
         title: r.title, 
-        specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) 
+        specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), suggestedExperiences: typeof r.suggested_experiences==='string'?JSON.parse(r.suggested_experiences):(r.suggested_experiences||[])
       }, r.id, r.created_at, r.updated_at));
     }
 
@@ -3111,10 +3054,9 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return res.rows.map(r => SummativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, termId: r.term_id, academicYearId: r.academic_year_id, strandScores: typeof r.strand_scores === 'string' ? JSON.parse(r.strand_scores) : r.strand_scores, overallPerformanceLevel: r.overall_performance_level, teacherRemarks: r.teacher_remarks, evaluationDate: r.evaluation_date }, r.id, r.created_at, r.updated_at));
   }
   public async saveSummative(s: SummativeAssessment): Promise<void> {
-    try {
       const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                 ON CONFLICT (student_id, learning_area_id, term_id, academic_year_id)
+                 ON CONFLICT (id)
                  DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`;
       await this.pool.query(q, [
         s.id,
@@ -3130,47 +3072,6 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
         s.createdAt,
         s.updatedAt
       ]);
-    } catch (err) {
-      // Robust fallback: query existing record by composite key
-      const altTerm = s.termId?.includes('-t') ? s.termId.replace('-t', '-') : s.termId?.replace(/-(\d)$/, '-t$1');
-      const existing = await this.pool.query(
-        'SELECT id FROM summative_assessments WHERE student_id = $1 AND learning_area_id = $2 AND (term_id = $3 OR term_id = $4) AND academic_year_id = $5 LIMIT 1',
-        [s.studentId, s.learningAreaId, s.termId, altTerm || s.termId, s.academicYearId]
-      );
-      if (existing.rows.length > 0) {
-        await this.pool.query(
-          `UPDATE summative_assessments SET overall_performance_level = $1, strand_scores = $2, teacher_remarks = $3, evaluation_date = $4, teacher_id = $5, updated_at = NOW() WHERE id = $6`,
-          [
-            s.overallPerformanceLevel,
-            JSON.stringify(s.strandScores || []),
-            s.teacherRemarks || 'Meeting expectations',
-            s.evaluationDate || new Date().toISOString().split('T')[0],
-            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
-            existing.rows[0].id
-          ]
-        );
-      } else {
-        await this.pool.query(
-          `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-             ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`,
-          [
-            s.id,
-            s.studentId,
-            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
-            s.learningAreaId,
-            (s.termId && s.termId.trim() !== '') ? s.termId : 'term-default',
-            (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : 'year-default',
-            JSON.stringify(s.strandScores || []),
-            s.overallPerformanceLevel,
-            s.teacherRemarks || 'Meeting expectations',
-            s.evaluationDate || new Date().toISOString().split('T')[0],
-            s.createdAt,
-            s.updatedAt
-          ]
-        );
-      }
-    }
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
   public async deleteSummative(id: string): Promise<void> {
@@ -3338,16 +3239,19 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     const res = await this.pool.query('SELECT * FROM schemes_of_work WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus }, r.id, r.created_at, r.updated_at);
+    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: SchemeFilterCriteria): Promise<SchemeOfWork[]> {
-    const res = await this.pool.query('SELECT * FROM schemes_of_work');
-    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus }, r.id, r.created_at, r.updated_at));
+    const clauses:string[]=[];const params:any[]=[];
+    for(const [key,column] of Object.entries({teacherId:'teacher_id',learningAreaId:'learning_area_id',classRoomId:'classroom_id',academicYearId:'academic_year_id',status:'status'})){const value=(filters as any)?.[key];if(value){params.push(value);clauses.push(`${column}=$${params.length}`);}}
+    if(filters?.termId){params.push(filters.termId.replace(/-t([1-3])$/,'-$1'));clauses.push(`(CASE WHEN term_id ~ '-t[1-3]$' THEN left(term_id,length(term_id)-3)||'-'||right(term_id,1) ELSE term_id END)=$${params.length}`);}
+    const res = await this.pool.query('SELECT * FROM schemes_of_work'+(clauses.length?' WHERE '+clauses.join(' AND '):''),params);
+    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined }, r.id, r.created_at, r.updated_at));
   }
   public async save(s: SchemeOfWork): Promise<void> {
     const q = `INSERT INTO schemes_of_work (id, teacher_id, learning_area_id, classroom_id, stream_id, academic_year_id, term_id, title, entries, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-               ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, status = EXCLUDED.status, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET entries = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) THEN schemes_of_work.entries ELSE EXCLUDED.entries END, status = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) AND EXCLUDED.status='DRAFT' THEN schemes_of_work.status ELSE EXCLUDED.status END, updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : null,
@@ -3368,7 +3272,13 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     ]);
   }
   public async update(s: SchemeOfWork): Promise<void> { await this.save(s); }
-  public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM schemes_of_work WHERE id = $1', [id]); }
+  public async savePlanning(s:SchemeOfWork, expectedRevision:number, expectedEntries?:any[]):Promise<void>{
+    const result=await this.pool.query(`UPDATE schemes_of_work SET entries=CASE WHEN $6 THEN $1::jsonb ELSE entries END, status=$2, planning_state=$3, updated_at=now()
+      WHERE id=$4 AND coalesce((planning_state->>'revision')::int,0)=$5 AND (NOT $6 OR entries::jsonb=$7::jsonb) RETURNING id`,
+      [JSON.stringify(s.entries),s.status,JSON.stringify(s.planningState),s.id,expectedRevision,expectedEntries!==undefined,JSON.stringify(expectedEntries||[])]);
+    if(!result.rowCount)throw new ConflictError('Planning changed; reload before saving.');
+  }
+  public async delete(id: string): Promise<void> { const r=await this.pool.query("DELETE FROM schemes_of_work WHERE id = $1 AND NOT coalesce((planning_state->>'locked')::boolean,false) RETURNING id", [id]);if(!r.rowCount)throw new ConflictError('Reopen the saved plan before deleting it.'); }
 }
 
 export class PostgresLessonPlanRepository implements ILessonPlanRepository {
@@ -3378,6 +3288,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3407,6 +3318,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
   public async findAll(filters?: LessonPlanFilterCriteria): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans');
     return res.rows.map(r => LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3436,6 +3348,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
   public async findBySchemeEntryId(schemeEntryId: string): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans WHERE scheme_of_work_entry_id = $1', [schemeEntryId]);
     return res.rows.map(r => LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3463,8 +3376,8 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     }, r.id, r.created_at, r.updated_at));
   }
   public async save(lp: LessonPlan): Promise<void> {
-    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at, lesson_details)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
                ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, reviewed_by_user_id = EXCLUDED.reviewed_by_user_id, reviewed_at = EXCLUDED.reviewed_at, review_remarks = EXCLUDED.review_remarks, updated_at = NOW()`;
     await this.pool.query(q, [
       lp.id,
@@ -3493,7 +3406,8 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
       lp.reviewedAt || null,
       lp.reviewRemarks || null,
       lp.createdAt,
-      lp.updatedAt
+      lp.updatedAt,
+      JSON.stringify({ weekNumber: lp.toJSON().weekNumber, lessonNumber: lp.toJSON().lessonNumber, lessonTime: lp.toJSON().lessonTime, pcis: lp.toJSON().pcis, otherLearningAreas: lp.toJSON().otherLearningAreas, communityServiceActivities: lp.toJSON().communityServiceActivities, nonFormalActivity: lp.toJSON().nonFormalActivity, assessmentRubric: lp.toJSON().assessmentRubric, learningExperiences: lp.toJSON().learningExperiences, assessmentMethods: lp.toJSON().assessmentMethods })
     ]);
   }
   public async update(lp: LessonPlan): Promise<void> { await this.save(lp); }

@@ -38,7 +38,7 @@ export const WholeTermSchoolReportModal: React.FC<WholeTermSchoolReportModalProp
         }
 
         if (yearIdToUse) {
-          const termsRes = await apiService.getTermsByYear(yearIdToUse);
+          const termsRes = await apiService.getTerms(yearIdToUse);
           const terms = termsRes.data || [];
           setAvailableTerms(terms);
           const currentTerm = terms.find((t: any) => t.isCurrent) || terms[0];
@@ -57,7 +57,7 @@ export const WholeTermSchoolReportModal: React.FC<WholeTermSchoolReportModalProp
   const handleYearChange = async (newYearId: string) => {
     setAcademicYearId(newYearId);
     try {
-      const termsRes = await apiService.getTermsByYear(newYearId);
+      const termsRes = await apiService.getTerms(newYearId);
       const terms = termsRes.data || [];
       setAvailableTerms(terms);
       if (terms.length > 0) {
@@ -255,7 +255,7 @@ export const WholeTermSchoolReportModal: React.FC<WholeTermSchoolReportModalProp
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-sm text-[#7a1228]">account_tree</span>
-                    Curriculum Tracker Controlled Coverage & Progression
+                    Syllabus Coverage Plan Controlled Coverage & Progression
                   </h3>
                   <span className="text-[11px] text-slate-500 font-semibold">{reportData.curriculum.activeTrackers} active syllabus plans</span>
                 </div>
