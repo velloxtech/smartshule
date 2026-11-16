@@ -339,7 +339,7 @@ export const LearningAreasView: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>Create Global Subject</span>
           </button>
-          <button onClick={() => setIsAddStreamOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
+          <button onClick={() => setIsAddStreamOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
             <span className="material-symbols-outlined text-[16px]">splitscreen</span>
             <span>Add Stream</span>
           </button>
@@ -383,13 +383,13 @@ export const LearningAreasView: React.FC = () => {
                 placeholder="Search subject or code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-xl focus:outline-primary"
+                className="pl-8 pr-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-xl focus:outline-primary"
               />
             </div>
             <select
               value={selectedGradeFilter}
               onChange={(e) => setSelectedGradeFilter(e.target.value)}
-              className="py-1.5 px-3 text-xs font-semibold bg-white border border-outline-variant/30 rounded-xl focus:outline-primary cursor-pointer"
+              className="py-1.5 px-3 text-xs font-semibold bg-surface border border-outline-variant/30 rounded-xl focus:outline-primary cursor-pointer"
             >
               <option value="ALL">All Grades ({learningAreas.length})</option>
               <option value="PLAYGROUP">Playgroup</option>
@@ -429,7 +429,7 @@ export const LearningAreasView: React.FC = () => {
                         {la.gradeLevel ? la.gradeLevel.replace('_', ' ') : 'General'}
                       </span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${la.isElective ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${la.isElective ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-emerald-100 text-emerald-800'}`}>
                       {la.isElective ? 'Elective' : 'Core Subject'}
                     </span>
                   </div>
@@ -437,7 +437,7 @@ export const LearningAreasView: React.FC = () => {
                   <h3 className="text-base font-bold text-on-surface mt-2.5">{la.name}</h3>
 
                   {(la.canonicalSubjectName || la.globalSubject?.name) && (
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1">
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-on-primary-fixed bg-primary-fixed border border-primary rounded-lg px-2.5 py-1">
                       <span className="material-symbols-outlined text-[14px]">auto_stories</span>
                       <span>Global: <strong>{la.canonicalSubjectName || la.globalSubject?.name}</strong> {la.canonicalSubjectCode ? `(${la.canonicalSubjectCode})` : ''}</span>
                     </div>
@@ -539,7 +539,7 @@ export const LearningAreasView: React.FC = () => {
                       if (!subjectCode) setSubjectCode(matched.code);
                     }
                   }}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary"
                 >
                   <option value="">-- Custom / Not Linked --</option>
                   {globalSubjects.map((g) => (
@@ -556,7 +556,7 @@ export const LearningAreasView: React.FC = () => {
                 <select
                   value={subjectGradeLevel}
                   onChange={(e) => setSubjectGradeLevel(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary"
                 >
                   <option value="PLAYGROUP">Playgroup</option>
                   <option value="PP1">Pre-Primary 1 (PP1)</option>
@@ -575,15 +575,15 @@ export const LearningAreasView: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Subject Title *</label>
-                <input type="text" required value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Mathematical Activities" className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary" />
+                <input type="text" required value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Mathematical Activities" className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary" />
               </div>
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Subject Code *</label>
-                <input type="text" required value={subjectCode} onChange={(e) => setSubjectCode(e.target.value.toUpperCase())} placeholder="e.g. MAT" className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 font-mono uppercase focus:outline-primary" />
+                <input type="text" required value={subjectCode} onChange={(e) => setSubjectCode(e.target.value.toUpperCase())} placeholder="e.g. MAT" className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 font-mono uppercase focus:outline-primary" />
               </div>
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Assign Lead Educator (Optional)</label>
-                <select value={assignedTeacherId} onChange={(e) => setAssignedTeacherId(e.target.value)} className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary">
+                <select value={assignedTeacherId} onChange={(e) => setAssignedTeacherId(e.target.value)} className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 focus:outline-primary">
                   <option value="">-- Select Teacher --</option>
                   {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
@@ -629,7 +629,7 @@ export const LearningAreasView: React.FC = () => {
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                   placeholder="e.g. Grade 7, Grade 8, Pre-Primary 1"
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                 />
               </div>
 
@@ -640,7 +640,7 @@ export const LearningAreasView: React.FC = () => {
                 <select
                   value={classGradeLevel}
                   onChange={(e) => setClassGradeLevel(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                 >
                   <option value="PLAYGROUP">Playgroup</option>
                   <option value="PP1">Pre-Primary 1 (PP1)</option>
@@ -664,7 +664,7 @@ export const LearningAreasView: React.FC = () => {
                 <select
                   value={classEducationLevel}
                   onChange={(e) => setClassEducationLevel(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                 >
                   <option value="PRE_PRIMARY">Pre-Primary (Playgroup - PP2)</option>
                   <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
@@ -720,7 +720,7 @@ export const LearningAreasView: React.FC = () => {
                   required
                   value={streamClassRoomId}
                   onChange={(e) => setStreamClassRoomId(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                 >
                   <option value="">-- Select Class --</option>
                   {classes.map((cls) => (
@@ -742,7 +742,7 @@ export const LearningAreasView: React.FC = () => {
                     value={streamName}
                     onChange={(e) => setStreamName(e.target.value)}
                     placeholder="e.g. East, West, Alpha"
-                    className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                   />
                 </div>
                 <div>
@@ -755,7 +755,7 @@ export const LearningAreasView: React.FC = () => {
                     max="100"
                     value={streamCapacity}
                     onChange={(e) => setStreamCapacity(e.target.value)}
-                    className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                   />
                 </div>
               </div>
@@ -767,7 +767,7 @@ export const LearningAreasView: React.FC = () => {
                 <select
                   value={streamTeacherId}
                   onChange={(e) => setStreamTeacherId(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                 >
                   <option value="">-- Select Class Teacher (Optional) --</option>
                   {teachers.map((t) => (
@@ -788,7 +788,7 @@ export const LearningAreasView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-primary hover:bg-black text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Save Stream into Database
                 </button>
@@ -829,7 +829,7 @@ export const LearningAreasView: React.FC = () => {
               {assignmentError && <p role="alert" className="rounded-lg bg-red-50 border border-red-200 p-3 text-red-800">{assignmentError}</p>}
               <div>
                 <label htmlFor="subject-assignment-class" className="block font-bold text-on-surface-variant mb-1 uppercase">Class *</label>
-                <select id="subject-assignment-class" required value={leadClassId} onChange={e => { setLeadClassId(e.target.value); setLeadStreamId(''); }} className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface">
+                <select id="subject-assignment-class" required value={leadClassId} onChange={e => { setLeadClassId(e.target.value); setLeadStreamId(''); }} className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface">
                   <option value="">Choose class</option>
                   {classes.filter(c => c.gradeLevel === learningAreas.find(a => a.id === assigningLeadTarget.learningAreaId)?.gradeLevel).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -837,7 +837,7 @@ export const LearningAreasView: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="subject-assignment-stream" className="block font-bold text-on-surface-variant mb-1 uppercase">Stream</label>
-                <select id="subject-assignment-stream" disabled={!leadClassId} value={leadStreamId} onChange={e => setLeadStreamId(e.target.value)} className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface">
+                <select id="subject-assignment-stream" disabled={!leadClassId} value={leadStreamId} onChange={e => setLeadStreamId(e.target.value)} className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface">
                   <option value="">All streams in this class</option>
                   {(streamsMap[leadClassId] || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -850,7 +850,7 @@ export const LearningAreasView: React.FC = () => {
                   required
                   value={leadTeacherId}
                   onChange={(e) => setLeadTeacherId(e.target.value)}
-                  className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface font-semibold focus:outline-primary"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface font-semibold focus:outline-primary"
                 >
                   <option value="">-- Choose Educator --</option>
                   {teachers.map((t) => (
@@ -868,7 +868,7 @@ export const LearningAreasView: React.FC = () => {
                     id="subject-assignment-role"
                     value={leadRole}
                     onChange={(e) => setLeadRole(e.target.value as any)}
-                    className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface font-semibold focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface font-semibold focus:outline-primary"
                   >
                     <option value="SUBJECT_LEAD">Subject Lead (HOD)</option>
                     <option value="SUBJECT_TEACHER">Subject Teacher</option>
@@ -882,7 +882,7 @@ export const LearningAreasView: React.FC = () => {
                     required
                     value={leadEffectiveFrom}
                     onChange={(e) => setLeadEffectiveFrom(e.target.value)}
-                    className="w-full bg-white border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
                   />
                 </div>
               </div>
@@ -989,7 +989,7 @@ export const LearningAreasView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsSubjectHistoryOpen(false)}
-                className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-black cursor-pointer text-xs"
+                className="px-4 py-1.5 bg-primary text-white rounded-xl font-bold hover:bg-black cursor-pointer text-xs"
               >
                 Close
               </button>

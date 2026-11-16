@@ -42,7 +42,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
   return (
     <div className="space-y-6 pb-12">
       {/* Super Admin Top Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#4a0010] via-[#7a1228] to-[#9b1d36] p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -78,7 +78,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
       {/* Infrastructure & Multi-Database Health Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Active School Tenant</span>
             <span className="material-symbols-outlined text-primary text-[20px]">apartment</span>
@@ -94,10 +94,10 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Storage & DB Engines</span>
-            <span className="material-symbols-outlined text-blue-600 text-[20px]">database</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">database</span>
           </div>
           <div className="mt-3">
             <div className="text-lg font-bold text-on-surface truncate">Hexagonal Multi-DB</div>
@@ -107,7 +107,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Platform Availability</span>
             <span className="material-symbols-outlined text-emerald-600 text-[20px]">verified</span>
@@ -118,10 +118,10 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Aggregated Cashflow</span>
-            <span className="material-symbols-outlined text-amber-600 text-[20px]">payments</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">
@@ -133,7 +133,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
       </div>
 
       {/* Global User Matrix Breakdown */}
-      <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">
+      <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-on-surface">System Role Accounts & Access Boundaries</h2>
@@ -150,12 +150,12 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           {[
             { role: 'Super Admin', handle: 'superadmin', desc: 'Root governance & system architecture', icon: 'admin_panel_settings', color: 'border-rose-200 bg-rose-50/50 text-rose-900', tab: 'dashboard' },
             { role: 'Admin', handle: 'admin', desc: 'School executive & WhatsApp desk controller', icon: 'shield_person', color: 'border-red-200 bg-red-50/50 text-red-900', tab: 'dashboard' },
-            { role: 'Head Teacher', handle: 'headteacher', desc: 'Curriculum oversight & academic leadership', icon: 'school', color: 'border-purple-200 bg-purple-50/50 text-purple-900', tab: 'schemes-lesson-plans' },
-            { role: 'Deputy Head', handle: 'deputy', desc: 'Lesson plan approval queue & timetables', icon: 'fact_check', color: 'border-indigo-200 bg-indigo-50/50 text-indigo-900', tab: 'schemes-lesson-plans' },
-            { role: 'Admissions', handle: 'admissions', desc: 'Learner intake & teacher account onboarding', icon: 'person_add', color: 'border-blue-200 bg-blue-50/50 text-blue-900', tab: 'students-guardians' },
-            { role: 'Bursar', handle: 'bursar', desc: 'Isolated finance, ledgers, & fee collection', icon: 'account_balance_wallet', color: 'border-amber-200 bg-amber-50/50 text-amber-900', tab: 'cashflow-ledger' },
-            { role: 'Teacher', handle: 'teacher', desc: 'CBC rubrics, eDiary, & lesson plan submission', icon: 'menu_book', color: 'border-emerald-200 bg-emerald-50/50 text-emerald-900', tab: 'formative-assessments' },
-            { role: 'Parent', handle: 'parent', desc: 'Fee clearance, child report cards, & eDiary', icon: 'family_restroom', color: 'border-sky-200 bg-sky-50/50 text-sky-900', tab: 'report-cards' },
+            { role: 'Head Teacher', handle: 'headteacher', desc: 'Curriculum oversight & academic leadership', icon: 'school', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'schemes-lesson-plans' },
+            { role: 'Deputy Head', handle: 'deputy', desc: 'Lesson plan approval queue & timetables', icon: 'fact_check', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'schemes-lesson-plans' },
+            { role: 'Admissions', handle: 'admissions', desc: 'Learner intake & teacher account onboarding', icon: 'person_add', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'students-guardians' },
+            { role: 'Bursar', handle: 'bursar', desc: 'Isolated finance, ledgers, & fee collection', icon: 'account_balance_wallet', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'cashflow-ledger' },
+            { role: 'Teacher', handle: 'teacher', desc: 'CBC rubrics, eDiary, & lesson plan submission', icon: 'menu_book', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'formative-assessments' },
+            { role: 'Parent', handle: 'parent', desc: 'Fee clearance, child report cards, & eDiary', icon: 'family_restroom', color: 'border-primary bg-primary-fixed/50 text-on-primary-fixed', tab: 'report-cards' },
           ].map((item) => (
             <div
               key={item.role}
@@ -181,9 +181,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div
           onClick={() => onNavigateTab('user-management')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 group"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 group"
         >
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <span className="material-symbols-outlined text-[26px]">manage_accounts</span>
           </div>
           <div>
@@ -196,9 +196,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('students-guardians')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">groups</span>
           </div>
           <div>
@@ -211,9 +211,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">badge</span>
           </div>
           <div>
@@ -226,7 +226,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('geofencing')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
           <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">share_location</span>
@@ -241,9 +241,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('cashflow-ledger')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">receipt_long</span>
           </div>
           <div>
@@ -256,9 +256,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('forwarded-payments')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-emerald-600/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-emerald-600/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">forward_to_inbox</span>
           </div>
           <div>
@@ -271,9 +271,9 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('fee-deadline-banner')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">notification_important</span>
           </div>
           <div>
@@ -286,7 +286,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('sponsored-students')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
           <div className="w-12 h-12 rounded-xl bg-rose-50 text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">volunteer_activism</span>

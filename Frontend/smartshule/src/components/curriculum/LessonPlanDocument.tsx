@@ -44,13 +44,13 @@ export function templateLessonSections(plan:LessonPlan,context:Context) {
 }
 export function LessonPlanDocument({plan,context}:{plan:LessonPlan;context:Context}) {
   const s=templateLessonSections(plan,context);
-  const table=(head:string[],rows:string[][])=><div className="overflow-x-auto"><table className="w-full min-w-[650px] table-fixed border-collapse text-left text-sm"><thead><tr>{head.map(label=><th key={label} className="border border-[#7a1228] bg-[#7a1228] p-2 align-top font-bold text-white">{label}</th>)}</tr></thead><tbody>{rows.map((row,i)=><tr key={i}>{row.map((value,j)=><td key={j} className="min-h-10 whitespace-pre-wrap break-words border border-[#7a1228]/50 p-2 align-top">{value}</td>)}</tr>)}</tbody></table></div>;
+  const table=(head:string[],rows:string[][])=><div className="overflow-x-auto"><table className="w-full min-w-[650px] table-fixed border-collapse text-left text-sm"><thead><tr>{head.map(label=><th key={label} className="border border-primary bg-primary p-2 align-top font-bold text-white">{label}</th>)}</tr></thead><tbody>{rows.map((row,i)=><tr key={i}>{row.map((value,j)=><td key={j} className="min-h-10 whitespace-pre-wrap break-words border border-primary/50 p-2 align-top">{value}</td>)}</tr>)}</tbody></table></div>;
   return <article className="space-y-4 bg-white p-4 font-sans text-gray-950 sm:p-6" aria-label="CBC Lesson Plan document">
     <SchoolDocumentHeader school={context.school} title="CBC Lesson Plan"/>
-    <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{s.identity.map(([label,value])=><div key={label} className="flex gap-2 text-sm"><dt className="font-bold">{label}:</dt><dd className="min-w-16 flex-1 whitespace-pre-wrap border-b border-dotted border-[#7a1228]/50">{value}</dd></div>)}</dl>
-    {s.focus.map(([label,value])=><section key={label}><h4 className="font-bold text-[#7a1228]">{label}:</h4><p className="mt-1 min-h-7 whitespace-pre-wrap border-b border-dotted border-[#7a1228]/40 pb-2 text-sm">{value}</p></section>)}
-    <section><h4 className="mb-2 font-bold text-[#7a1228]">Lesson flow</h4>{table(flowHead,s.flow)}</section>
-    {s.application.map(([label,value])=><section key={label}><h4 className="font-bold text-[#7a1228]">{label}:</h4><p className="mt-1 min-h-9 whitespace-pre-wrap border-b border-dotted border-[#7a1228]/40 text-sm">{value}</p></section>)}
+    <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{s.identity.map(([label,value])=><div key={label} className="flex gap-2 text-sm"><dt className="font-bold">{label}:</dt><dd className="min-w-16 flex-1 whitespace-pre-wrap border-b border-dotted border-primary/50">{value}</dd></div>)}</dl>
+    {s.focus.map(([label,value])=><section key={label}><h4 className="font-bold text-primary">{label}:</h4><p className="mt-1 min-h-7 whitespace-pre-wrap border-b border-dotted border-primary/40 pb-2 text-sm">{value}</p></section>)}
+    <section><h4 className="mb-2 font-bold text-primary">Lesson flow</h4>{table(flowHead,s.flow)}</section>
+    {s.application.map(([label,value])=><section key={label}><h4 className="font-bold text-primary">{label}:</h4><p className="mt-1 min-h-9 whitespace-pre-wrap border-b border-dotted border-primary/40 text-sm">{value}</p></section>)}
     <section><h4 className="mb-2 font-bold text-[#7a1228]">Assessment rubric</h4>{table(rubricHead,s.rubric)}<p className="mt-2 text-xs">At least three assessment criteria. Blank cells have not been recorded.</p></section>
   </article>;
 }

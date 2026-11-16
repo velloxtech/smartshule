@@ -495,7 +495,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div className="relative w-full max-w-4xl bg-surface rounded-2xl shadow-2xl border border-outline/20 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-5 py-4 bg-gradient-to-r from-rose-950 via-[#800000] to-rose-900 text-white flex items-center justify-between shrink-0">
+        <div className="px-5 py-4 bg-gradient-to-r from-rose-950 via-primary to-rose-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
               <span className="material-symbols-outlined text-white text-xl">menu_book</span>
@@ -525,7 +525,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
             </button>
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 rounded-lg bg-white text-[#800000] hover:bg-rose-50 text-xs font-bold transition flex items-center gap-1 shadow-sm"
+              className="px-3 py-1.5 rounded-lg bg-white text-primary hover:bg-rose-50 text-xs font-bold transition flex items-center gap-1 shadow-sm"
               title="Print Requirements List"
             >
               <span className="material-symbols-outlined text-sm">print</span>
@@ -550,12 +550,12 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
                 onClick={() => setSelectedGradeId(r.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-[#800000] text-white shadow-sm ring-2 ring-[#800000]/30'
+                    ? 'bg-primary text-white shadow-sm ring-2 ring-primary/30'
                     : 'bg-surface text-on-surface hover:bg-surface-container-high border border-outline/20'
                 }`}
               >
                 <span>{r.label}</span>
-                <span className={`px-1.5 py-0.2 rounded text-[10px] ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                <span className={`px-1.5 py-0.2 rounded text-[10px] ${isSelected ? 'bg-white/20 text-white' : 'bg-surface-container-low text-gray-700'}`}>
                   {r.badge}
                 </span>
               </button>
@@ -569,15 +569,15 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
           <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-lg font-black text-[#800000]">{selectedReq.label}</h4>
-                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#800000] text-white">
+                <h4 className="text-lg font-black text-primary">{selectedReq.label}</h4>
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-white">
                   {selectedReq.badge}
                 </span>
               </div>
               <p className="text-xs text-gray-600 mt-0.5">{selectedReq.sublabel}</p>
             </div>
-            <div className="bg-white px-3 py-2 rounded-lg border border-rose-200 text-xs text-gray-700 shadow-sm">
-              <span className="font-semibold text-gray-900">M-Pesa Paybill:</span> <strong className="text-[#800000]">522533</strong><br/>
+            <div className="bg-surface-container-lowest px-3 py-2 rounded-lg border border-rose-200 text-xs text-gray-700 shadow-sm">
+              <span className="font-semibold text-gray-900">M-Pesa Paybill:</span> <strong className="text-primary">522533</strong><br/>
               <span className="font-semibold text-gray-900">Account:</span> <span className="font-mono text-xs">8048859# [LEARNER NAME]</span>
             </div>
           </div>
@@ -586,7 +586,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-xs">1</span>
+                <span className="w-6 h-6 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-xs">1</span>
                 <h5 className="font-black text-sm text-gray-900 uppercase tracking-wide">
                   Approved Workbooks &amp; Textbooks ({selectedReq.workbooks.length})
                 </h5>
@@ -597,20 +597,20 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
             <div className="rounded-xl border border-gray-200 overflow-hidden shadow-xs">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gray-100/80 text-gray-700 uppercase text-[11px] font-bold border-b border-gray-200">
+                  <tr className="bg-surface-container-low/80 text-gray-700 uppercase text-[11px] font-bold border-b border-gray-200">
                     <th className="py-2.5 px-3">Learning Area</th>
                     <th className="py-2.5 px-3">Book / Workbook Title</th>
                     <th className="py-2.5 px-3">Publisher</th>
                     <th className="py-2.5 px-3">Authors / Notes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-surface-container-lowest">
                   {selectedReq.workbooks.map((b, idx) => (
                     <tr key={idx} className="hover:bg-rose-50/30 transition-colors">
                       <td className="py-2 px-3 font-bold text-gray-900">{b.learningArea}</td>
                       <td className="py-2 px-3 text-gray-800">{b.bookTitle}</td>
                       <td className="py-2 px-3">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-[#800000] border border-rose-200">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-primary border border-rose-200">
                           {b.publisher}
                         </span>
                       </td>
@@ -637,13 +637,13 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
             <div className="rounded-xl border border-gray-200 overflow-hidden shadow-xs">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gray-100/80 text-gray-700 uppercase text-[11px] font-bold border-b border-gray-200">
+                  <tr className="bg-surface-container-low/80 text-gray-700 uppercase text-[11px] font-bold border-b border-gray-200">
                     <th className="py-2.5 px-3">Stationery Item</th>
                     <th className="py-2.5 px-3">Quantity Required</th>
                     <th className="py-2.5 px-3">Specification / Brand Recommended</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-surface-container-lowest">
                   {selectedReq.stationeries.map((s, idx) => (
                     <tr key={idx} className="hover:bg-emerald-50/30 transition-colors">
                       <td className="py-2 px-3 font-semibold text-gray-900">{s.item}</td>
@@ -664,7 +664,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-xs">3</span>
+                <span className="w-6 h-6 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-xs">3</span>
                 <h5 className="font-black text-sm text-gray-900 uppercase tracking-wide">
                   Available in School Office / Store
                 </h5>
@@ -674,14 +674,14 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {selectedReq.schoolStoreItems.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-purple-50/40 border border-purple-200 flex flex-col justify-between">
+                <div key={idx} className="p-3 rounded-xl bg-primary-fixed/40 border border-primary flex flex-col justify-between">
                   <div>
-                    <h6 className="font-bold text-xs text-purple-950">{item.item}</h6>
+                    <h6 className="font-bold text-xs text-on-primary-fixed">{item.item}</h6>
                     <p className="text-[11px] text-gray-600 mt-0.5">{item.notes}</p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-purple-200/60 flex items-center justify-between">
+                  <div className="mt-3 pt-2 border-t border-primary/60 flex items-center justify-between">
                     <span className="text-[11px] text-gray-500 font-medium">Official Rate</span>
-                    <strong className="text-sm font-black text-purple-900">KES {item.price.toLocaleString()}</strong>
+                    <strong className="text-sm font-black text-on-primary-fixed">KES {item.price.toLocaleString()}</strong>
                   </div>
                 </div>
               ))}
@@ -697,7 +697,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs transition"
+            className="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-gray-800 font-bold text-xs transition"
           >
             Close
           </button>

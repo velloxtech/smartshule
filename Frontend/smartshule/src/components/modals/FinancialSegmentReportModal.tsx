@@ -57,7 +57,7 @@ export const FinancialSegmentReportModal: React.FC<FinancialSegmentReportModalPr
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">account_balance</span>
             </div>
             <div>

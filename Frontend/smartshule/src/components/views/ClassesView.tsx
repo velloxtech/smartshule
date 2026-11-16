@@ -344,7 +344,7 @@ export const ClassesView: React.FC = () => {
             <h3 className="font-bold text-sm text-primary uppercase tracking-wider">
               Active Registered CBE Grades ({classes.length})
             </h3>
-            <span className="text-xs text-secondary font-semibold">
+            <span className="text-xs text-success font-semibold">
               Live Backend & Teacher Assignment Synced
             </span>
           </div>
@@ -369,7 +369,7 @@ export const ClassesView: React.FC = () => {
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-secondary uppercase tracking-wider bg-secondary-container/40 px-2 py-0.5 rounded">
+                      <span className="text-xs font-bold text-success uppercase tracking-wider bg-success-container/40 px-2 py-0.5 rounded">
                         {c.educationLevel.replace('_', ' ')}
                       </span>
                       <span className="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-xs font-semibold">
@@ -558,7 +558,7 @@ export const ClassesView: React.FC = () => {
       {isAssignTeacherOpen && assigningTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-semibold text-sm">Assign Official Class Teacher</h3>
                 <p className="text-rose-100 text-[11px] mt-0.5">
@@ -714,7 +714,7 @@ export const ClassesView: React.FC = () => {
                                 Currently Active
                               </span>
                             ) : (
-                              <span className="bg-slate-200 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              <span className="bg-surface-container text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                 Historical
                               </span>
                             )}
@@ -740,7 +740,7 @@ export const ClassesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsHistoryOpen(false)}
-                className="px-4 py-1.5 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-900 cursor-pointer text-xs"
+                className="px-4 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-container cursor-pointer text-xs"
               >
                 Close
               </button>
@@ -753,7 +753,7 @@ export const ClassesView: React.FC = () => {
       {isAddClassOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Add New CBE Class / Grade</h3>
               <button onClick={() => setIsAddClassOpen(false)} className="text-rose-100 hover:text-white cursor-pointer shrink-0">
                 <span className="material-symbols-outlined text-[18px]">close</span>
@@ -832,7 +832,7 @@ export const ClassesView: React.FC = () => {
       {isAddStreamOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Add Stream to Class</h3>
               <button onClick={() => setIsAddStreamOpen(false)} className="text-rose-100 hover:text-white cursor-pointer shrink-0">
                 <span className="material-symbols-outlined text-[18px]">close</span>

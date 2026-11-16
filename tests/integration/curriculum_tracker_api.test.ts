@@ -103,15 +103,15 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     const week1 = res.body.data.items.find((i: any) => i.weekNumber === 1);
-    expect(week1.isCovered).toBe(true);
-    expect(['COVERED', 'APPROVED']).toContain(week1.status);
-    expect(week1.coveredAt).toBe(today);
+    expect(week1.isCovered).toBe(false);
+    expect(week1.status).toBe('SUBMITTED');
+    expect(week1.coveredAt).toBeUndefined();
     expect(week1.lessonsTaught).toBe(5);
     expect(week1.teacherComment).toContain('mastered the concept of honesty');
 
     // Stats should reflect 1 of 12 covered (8%)
-    expect(res.body.data.stats.coveredWeeks).toBe(1);
-    expect(res.body.data.stats.completionPercentage).toBe(8);
+    expect(res.body.data.stats.coveredWeeks).toBe(0);
+    expect(res.body.data.stats.completionPercentage).toBe(0);
     expect(res.body.data.stats.commentsCount).toBe(1);
   });
 
@@ -181,8 +181,8 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.stats.coveredWeeks).toBe(2);
-    expect(res.body.data.stats.completionPercentage).toBe(17);
+    expect(res.body.data.stats.coveredWeeks).toBe(0);
+    expect(res.body.data.stats.completionPercentage).toBe(0);
   });
 
   it('7. GET /api/v1/curriculum-tracker lists trackers with progress statistics', async () => {
@@ -195,7 +195,7 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.body.count).toBeGreaterThanOrEqual(1);
     const tracker = res.body.data.find((t: any) => t.id === trackerId);
     expect(tracker).toBeDefined();
-    expect(tracker.stats.coveredWeeks).toBe(2);
+    expect(tracker.stats.coveredWeeks).toBe(0);
   });
 
   it('8. GET /api/v1/curriculum-tracker/summary returns school-wide progress summary', async () => {
@@ -206,7 +206,7 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.totalTrackers).toBeGreaterThanOrEqual(1);
-    expect(res.body.data.coveredWeeksAll).toBeGreaterThanOrEqual(2);
+    expect(res.body.data.coveredWeeksAll).toBe(0);
     expect(res.body.data.subjects).toBeDefined();
     expect(res.body.data.subjects.length).toBeGreaterThanOrEqual(1);
   });

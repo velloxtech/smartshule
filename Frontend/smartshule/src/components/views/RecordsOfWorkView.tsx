@@ -291,11 +291,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
         onSelectTab={(tab) => {
           if (tab === 'records-of-work') return;
           if (onNavigateTab) {
-            if (tab === 'curriculum-tracker') {
-              onNavigateTab('curriculum-tracker');
-            } else {
-              onNavigateTab('schemes-lesson-plans');
-            }
+            onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
           }
         }}
         counts={{
@@ -332,7 +328,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           </button>
           <button
             onClick={() => user?.role === 'TEACHER' ? setIsLinkedCreateOpen(true) : setIsCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-[#901530] transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-container transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">{user?.role === 'TEACHER' ? 'post_add' : 'add_notes'}</span>
             {user?.role === 'TEACHER' ? 'Record Work from Lesson' : 'New Diary Entry'}
@@ -350,10 +346,10 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           <p className="text-[11px] text-gray-400 mt-1">Across all registered classes</p>
         </div>
 
-        <div className="bg-surface-container-lowest border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/30 rounded-2xl p-4 shadow-xs">
+        <div className="bg-surface-container-lowest border border-primary/80 bg-gradient-to-br from-white to-primary-fixed/30 rounded-2xl p-4 shadow-xs">
           <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Official Curriculum Coverage</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            <h3 className="text-2xl font-extrabold text-emerald-900">
+            <h3 className="text-2xl font-extrabold text-on-primary-fixed">
               {summary ? `${summary.officialCoveragePercentage}%` : '0%'}
             </h3>
             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
@@ -363,10 +359,10 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           <p className="text-[11px] text-emerald-700 mt-1">Drives Official CBC Progress</p>
         </div>
 
-        <div className="bg-surface-container-lowest border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/30 rounded-2xl p-4 shadow-xs">
+        <div className="bg-surface-container-lowest border border-primary/80 bg-gradient-to-br from-white to-primary-fixed/30 rounded-2xl p-4 shadow-xs">
           <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Pending Review</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            <h3 className="text-2xl font-extrabold text-amber-900">
+            <h3 className="text-2xl font-extrabold text-on-primary-fixed">
               {summary ? summary.submittedCount : records.filter(r => r.status === 'SUBMITTED').length}
             </h3>
             {summary && summary.submittedCount > 0 && isSupervisor && (
@@ -441,7 +437,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           <select
             value={weekFilter}
             onChange={(e) => setWeekFilter(e.target.value)}
-            className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-on-surface-variant cursor-pointer"
+            className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-surface font-medium text-on-surface-variant cursor-pointer"
           >
             <option value="ALL">All Weeks</option>
             {uniqueWeeks.map((w) => (
@@ -471,7 +467,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                   <th className="px-5 py-4 w-32">Status</th>
                   <th className="px-5 py-4 min-w-[240px] bg-amber-50/40 text-amber-900">
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-amber-600 text-[16px]">psychology</span>
+                      <span className="material-symbols-outlined text-primary text-[16px]">psychology</span>
                       Teacher Reflection
                     </div>
                   </th>
@@ -594,7 +590,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                           {(record.status === 'DRAFT' || record.status === 'RETURNED') && (
                             <button
                               onClick={() => handleSubmitForReview(record)}
-                              className="px-3 py-1 bg-primary text-white rounded-lg hover:bg-[#901530] text-[11px] font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                              className="px-3 py-1 bg-primary text-white rounded-lg hover:bg-primary-container text-[11px] font-bold flex items-center gap-1 shadow-xs cursor-pointer"
                               title="Submit entry for supervisor review"
                             >
                               <span className="material-symbols-outlined text-[14px]">send</span>
@@ -603,7 +599,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                           )}
 
                           {/* Supervisor Actions: Approve & Return */}
-                          {isSupervisor&&(record.weekNumber||record.week)>1&&<button onClick={()=>handleExemptPreviousWeek(record)} className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-900 hover:bg-amber-100" title="Mark the immediately preceding week as exempt because no instruction took place">Mark Week {(record.weekNumber||record.week)-1} as No Instruction</button>}
+                          {isSupervisor&&(record.weekNumber||record.week)>1&&<button onClick={()=>handleExemptPreviousWeek(record)} className="rounded-lg border border-primary bg-primary-fixed px-2.5 py-1 text-[11px] font-bold text-on-primary-fixed hover:bg-primary-fixed" title="Mark the immediately preceding week as exempt because no instruction took place">Mark Week {(record.weekNumber||record.week)-1} as No Instruction</button>}
                           {record.status === 'SUBMITTED' && isSupervisor && (
                             <div className="flex items-center gap-1">
                               {canApprove ? (
@@ -612,7 +608,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                                     setApprovingRecord(record);
                                     setApprovalRemarks('Endorsed; lesson delivery meets curriculum standards.');
                                   }}
-                                  className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                                  className="px-2.5 py-1 bg-primary text-white rounded-lg hover:bg-primary-container text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                                   title="Approve diary entry and increment curriculum coverage"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">check</span>
@@ -727,7 +723,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                   value={approvalRemarks}
                   onChange={(e) => setApprovalRemarks(e.target.value)}
                   placeholder="e.g. Approved; clear lesson objectives and learner activities demonstrated."
-                  className="w-full px-3.5 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                  className="w-full px-3.5 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
               <p className="text-[11px] text-on-surface-variant">
@@ -744,7 +740,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
               <button
                 onClick={handleConfirmApproval}
                 disabled={actionLoading}
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 shadow-sm flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-bold text-white bg-primary rounded-xl hover:bg-primary-container shadow-sm flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">check</span>
                 {actionLoading ? 'Approving...' : 'Confirm Approval'}

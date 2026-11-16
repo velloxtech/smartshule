@@ -807,7 +807,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedClassId}
                 onChange={(e) => handleClassChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -822,7 +822,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedStreamId}
                 onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 <option value="all">
                   ⭐ {user?.role==='TEACHER'?'Permitted streams':'All Streams'} ({classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'})
@@ -840,7 +840,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedExamType}
                 onChange={(e) => setSelectedExamType(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 <option value="End of Term Examination">End of Term Examination</option>
                 <option value="Mid-Term Assessment">Mid-Term Assessment</option>
@@ -854,7 +854,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {academicTerms.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -869,7 +869,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
               >
                 {academicYears.map((y) => (
                   <option key={y.id} value={y.id}>
@@ -920,10 +920,10 @@ export const MasterBroadsheetView: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-blue-200 transition-all">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-primary transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface-variant">Meeting (ME)</span>
-                <span className="material-symbols-outlined text-blue-500 text-lg">check_circle</span>
+                <span className="material-symbols-outlined text-primary text-lg">check_circle</span>
               </div>
               <p className="text-2xl font-black text-blue-600 mt-1">{overallStats.ME}</p>
               <p className="text-xs text-slate-400 mt-1">
@@ -936,7 +936,7 @@ export const MasterBroadsheetView: React.FC = () => {
             <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm hover:border-amber-200 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-on-surface-variant">Quality Pass Rate (EE+ME)</span>
-                <span className="material-symbols-outlined text-amber-500 text-lg">award_star</span>
+                <span className="material-symbols-outlined text-primary text-lg">award_star</span>
               </div>
               <p className="text-2xl font-black text-amber-600 mt-1">
                 {broadsheet.totalStudents
@@ -1030,7 +1030,7 @@ export const MasterBroadsheetView: React.FC = () => {
       </div>
 
       {/* Main Tab Views */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6 print:border-none print:shadow-none print:p-0">
+      <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6 print:border-none print:shadow-none print:p-0">
         <div className="text-center border-b pb-4 mb-6">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-wider">
             GRACE SEEDS SCHOOL
@@ -1042,7 +1042,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
         {loading ? (
           <div className="p-16 text-center text-slate-500">
-            <span className="material-symbols-outlined animate-spin text-4xl mb-3 text-[#7a1228]">
+            <span className="material-symbols-outlined animate-spin text-4xl mb-3 text-primary">
               progress_activity
             </span>
             <p className="font-semibold">Aggregating marks from database records...</p>
@@ -1060,11 +1060,11 @@ export const MasterBroadsheetView: React.FC = () => {
           <div className="space-y-8">
             {/* 1. MARKSHEET TABLE */}
             {activeTab === 'marksheet' && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-surface-container-lowest">
                 <div className="w-full overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-center">
+                      <tr className="bg-surface-container-low text-slate-800 font-bold border-b border-slate-300 text-center">
                         <th className="p-2 border whitespace-nowrap text-center">Pos</th>
                         <th className="p-2 border whitespace-nowrap text-left">Learner Full Name</th>
                         <th className="p-2 border whitespace-nowrap text-center">Stream</th>
@@ -1072,18 +1072,18 @@ export const MasterBroadsheetView: React.FC = () => {
                         {prioritizedLearningAreas.map((la) => (
                           <th
                             key={la.id}
-                            className="p-2 border text-center font-black text-xs font-mono text-[#7a1228] bg-rose-50/40 whitespace-nowrap"
+                            className="p-2 border text-center font-black text-xs font-mono text-primary bg-rose-50/40 whitespace-nowrap"
                             title={la.name}
                           >
                             {getSubjectInitials(la.code || la.name)}
                           </th>
                         ))}
 
-                        <th className="p-2 border text-center whitespace-nowrap bg-slate-100">Total Marks</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-slate-100">Mean %</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">Pts</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">GPA</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">Level</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-surface-container-low">Total Marks</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-surface-container-low">Mean %</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-primary">Pts</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-primary">GPA</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-primary">Level</th>
                         <th className="p-2 border text-left whitespace-nowrap">Remarks</th>
                       </tr>
                     </thead>
@@ -1105,7 +1105,7 @@ export const MasterBroadsheetView: React.FC = () => {
                               {row.studentName}
                             </td>
                             <td className="p-2 border text-center whitespace-nowrap">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container-low text-slate-700 border border-slate-200">
                                 {row.streamName || broadsheet.streamName}
                               </span>
                             </td>
@@ -1131,13 +1131,13 @@ export const MasterBroadsheetView: React.FC = () => {
                             <td className="p-2 border text-center font-mono font-bold text-slate-900 whitespace-nowrap">
                               {row.totalScore}
                             </td>
-                            <td className="p-2 border text-center font-mono font-black text-[#7a1228] whitespace-nowrap">
+                            <td className="p-2 border text-center font-mono font-black text-primary whitespace-nowrap">
                               {row.averageScore}%
                             </td>
                             <td className="p-2 border text-center font-mono font-bold text-slate-900 bg-rose-50/20 whitespace-nowrap">
                               {row.totalPoints || 0}
                             </td>
-                            <td className="p-2 border text-center font-mono font-extrabold text-[#7a1228] bg-rose-50/20 text-xs whitespace-nowrap">
+                            <td className="p-2 border text-center font-mono font-extrabold text-primary bg-rose-50/20 text-xs whitespace-nowrap">
                               {row.meanPoints || 0}
                             </td>
                             <td className="p-2 border text-center bg-rose-50/20 whitespace-nowrap">
@@ -1150,7 +1150,7 @@ export const MasterBroadsheetView: React.FC = () => {
                         );
                       })}
 
-                      <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                      <tr className="bg-surface-container-low font-bold border-t-2 border-slate-300">
                         <td colSpan={3} className="p-2 border text-right uppercase tracking-wider text-[11px] text-slate-700 whitespace-nowrap">
                           Subject Mean (%)
                         </td>
@@ -1163,12 +1163,12 @@ export const MasterBroadsheetView: React.FC = () => {
                               getSubjectInitials(s.learningAreaName || s.learningAreaId) === targetInitials
                           );
                           return (
-                            <td key={la.id} className="p-2 border text-center font-mono font-black text-[#7a1228] text-xs whitespace-nowrap">
+                            <td key={la.id} className="p-2 border text-center font-mono font-black text-primary text-xs whitespace-nowrap">
                               {sumObj?.averageScore ? `${sumObj.averageScore}%` : '--'}
                             </td>
                           );
                         })}
-                        <td colSpan={6} className="p-2 border text-center font-mono font-black text-[#7a1228] text-xs whitespace-nowrap">
+                        <td colSpan={6} className="p-2 border text-center font-mono font-black text-primary text-xs whitespace-nowrap">
                           {broadsheet.streamMeanScore}% Overall Mean
                         </td>
                       </tr>
@@ -1180,8 +1180,8 @@ export const MasterBroadsheetView: React.FC = () => {
 
             {/* 2. BEST PERFORMING CLASSES */}
             {activeTab === 'classRanking' && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-surface-container-lowest">
+                <div className="p-4 bg-surface border-b border-slate-200">
                   <h3 className="text-base font-extrabold text-slate-900">
                     {scopeFilter === 'SCHOOL' ? 'Best Performing Classes in the Entire School' : 'Class & Stream Ranking (Current Grade)'}
                   </h3>
@@ -1192,7 +1192,7 @@ export const MasterBroadsheetView: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                      <tr className="bg-surface-container-low text-slate-800 font-bold border-b border-slate-200">
                         <th className="p-2.5 border text-center w-16">Rank</th>
                         <th className="p-2.5 border">Class / Stream</th>
                         <th className="p-2.5 border text-center w-24">Learners</th>
@@ -1204,7 +1204,7 @@ export const MasterBroadsheetView: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {displayedClassRankings.map((cr) => (
-                        <tr key={cr.classId + (cr.streamId || cr.streamName)} className="hover:bg-slate-50">
+                        <tr key={cr.classId + (cr.streamId || cr.streamName)} className="hover:bg-surface">
                           <td className="p-2.5 border text-center font-bold font-mono">
                             {cr.rank === 1 ? '1st' : cr.rank === 2 ? '2nd' : cr.rank === 3 ? '3rd' : `#${cr.rank}`}
                           </td>
@@ -1212,7 +1212,7 @@ export const MasterBroadsheetView: React.FC = () => {
                             {cr.className} {cr.streamName !== 'Whole Grade' ? `(${cr.streamName})` : ''}
                           </td>
                           <td className="p-2.5 border text-center font-mono">{cr.totalStudents}</td>
-                          <td className="p-2.5 border text-center font-mono font-black text-[#7a1228]">
+                          <td className="p-2.5 border text-center font-mono font-black text-primary">
                             {cr.meanScore}%
                           </td>
                           <td className="p-2.5 border text-center">{getLevelBadge(cr.overallPerformanceLevel)}</td>
@@ -1232,15 +1232,15 @@ export const MasterBroadsheetView: React.FC = () => {
 
             {/* 3. BEST CLASS PER SUBJECT */}
             {activeTab === 'bestClassPerSubject' && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-surface-container-lowest">
+                <div className="p-4 bg-surface border-b border-slate-200">
                   <h3 className="text-base font-extrabold text-slate-900">Best Performing Class Per Subject</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Top performing streams for each learning area</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                      <tr className="bg-surface-container-low text-slate-800 font-bold border-b border-slate-200">
                         <th className="p-2.5 border text-center w-12">#</th>
                         <th className="p-2.5 border">Subject / Learning Area</th>
                         <th className="p-2.5 border">Leading Stream</th>
@@ -1252,11 +1252,11 @@ export const MasterBroadsheetView: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {broadsheet.bestClassesPerSubject.map((sub, idx) => (
-                        <tr key={sub.learningAreaId} className="hover:bg-slate-50">
+                        <tr key={sub.learningAreaId} className="hover:bg-surface">
                           <td className="p-2.5 border text-center font-mono font-bold text-slate-500">{idx + 1}</td>
                           <td className="p-2.5 border font-extrabold text-slate-900">{sub.learningAreaName}</td>
                           <td className="p-2.5 border font-bold text-slate-900">{sub.bestClassName} - {sub.bestStreamName}</td>
-                          <td className="p-2.5 border text-center font-mono font-black text-[#7a1228]">{sub.meanScore}%</td>
+                          <td className="p-2.5 border text-center font-mono font-black text-primary">{sub.meanScore}%</td>
                           <td className="p-2.5 border text-center">{getLevelBadge(sub.performanceLevel)}</td>
                           <td className="p-2.5 border text-center font-mono">{sub.totalStudents}</td>
                           <td className="p-2.5 border text-slate-700">
@@ -1272,8 +1272,8 @@ export const MasterBroadsheetView: React.FC = () => {
 
             {/* 4. BEST STUDENT PER SUBJECT */}
             {activeTab === 'bestStudentPerSubject' && (
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-surface-container-lowest">
+                <div className="p-4 bg-surface border-b border-slate-200">
                   <h3 className="text-base font-extrabold text-slate-900">
                     {scopeFilter === 'SCHOOL' ? 'Best Students Per Subject in the Whole School' : 'Best Students Per Subject in Class'}
                   </h3>
@@ -1284,7 +1284,7 @@ export const MasterBroadsheetView: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                      <tr className="bg-surface-container-low text-slate-800 font-bold border-b border-slate-200">
                         <th className="p-2.5 border text-center w-12">#</th>
                         <th className="p-2.5 border">Subject / Learning Area</th>
                         <th className="p-2.5 border">Top Learner Full Name</th>
@@ -1295,7 +1295,7 @@ export const MasterBroadsheetView: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {displayedStudentsPerSubject.map((champ, idx) => (
-                        <tr key={champ.learningAreaId} className="hover:bg-slate-50">
+                        <tr key={champ.learningAreaId} className="hover:bg-surface">
                           <td className="p-2.5 border text-center font-mono font-bold text-slate-500">{idx + 1}</td>
                           <td className="p-2.5 border font-extrabold text-slate-900">{champ.learningAreaName}</td>
                           <td className="p-2.5 border font-extrabold text-slate-950">{champ.studentName}</td>

@@ -289,7 +289,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             </span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight flex items-center gap-2.5">
-            <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7a1228] to-[#500b1a] text-white flex items-center justify-center shadow-md">
+            <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary-container text-white flex items-center justify-center shadow-md">
               <span className="material-symbols-outlined text-[24px]">forward_to_inbox</span>
             </span>
             <span>Parent Forwarded Payments &amp; Verification</span>
@@ -317,14 +317,14 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             className="px-3.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border border-outline-variant/40 disabled:opacity-40"
             title="Export filtered records to CSV"
           >
-            <span className="material-symbols-outlined text-[16px] text-emerald-700">download</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">download</span>
             <span>Export CSV</span>
           </button>
 
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('arrears')}
-              className="px-3.5 py-2 rounded-xl bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-[#7a1228]/20"
+              className="px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-primary/20"
             >
               <span className="material-symbols-outlined text-[16px]">assignment_late</span>
               <span>Fee Arrears Ledger</span>
@@ -360,10 +360,10 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
       {/* KPI Metrics Dashboard Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Pending Verification Card */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80 shadow-xs flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary-fixed to-primary-fixed border border-primary/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-900">Pending Verification</span>
-            <span className="w-8 h-8 rounded-xl bg-amber-200/70 text-amber-900 flex items-center justify-center font-bold">
+            <span className="w-8 h-8 rounded-xl bg-primary-fixed-dim/70 text-on-primary-fixed flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-[18px]">pending_actions</span>
             </span>
           </div>
@@ -385,7 +385,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
         </div>
 
         {/* Approved & Credited Card */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 shadow-xs flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary-fixed to-primary-fixed border border-primary/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">Approved &amp; Credited</span>
             <span className="w-8 h-8 rounded-xl bg-emerald-200/70 text-emerald-900 flex items-center justify-center font-bold">
@@ -460,7 +460,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             onClick={() => setStatusFilter('ALL')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'ALL'
-                ? 'bg-[#7a1228] text-white shadow-xs'
+                ? 'bg-primary text-white shadow-xs'
                 : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -472,7 +472,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             onClick={() => setStatusFilter('PENDING')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'PENDING'
-                ? 'bg-amber-600 text-white shadow-xs'
+                ? 'bg-primary text-white shadow-xs'
                 : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -485,7 +485,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             onClick={() => setStatusFilter('COMPLETED')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'COMPLETED'
-                ? 'bg-emerald-700 text-white shadow-xs'
+                ? 'bg-primary text-white shadow-xs'
                 : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -720,7 +720,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
                         </div>
                         {tx.mpesaPhoneNumber ? (
                           <div className="text-[11px] font-data-mono text-on-surface-variant flex items-center gap-1 mt-0.5">
-                            <span className="material-symbols-outlined text-[13px] text-emerald-700">call</span>
+                            <span className="material-symbols-outlined text-[13px] text-primary">call</span>
                             <span>{tx.mpesaPhoneNumber}</span>
                           </div>
                         ) : (
@@ -779,7 +779,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
                             <button
                               onClick={() => handleApprove(tx)}
                               disabled={isProcessing}
-                              className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:shadow-xs disabled:opacity-50"
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-primary-container to-maroon-light hover:from-primary-container hover:to-maroon-light text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:shadow-xs disabled:opacity-50"
                               title="1-Click Approve and credit to fee ledger"
                             >
                               {isProcessing ? (
@@ -1078,7 +1078,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
                       setAuditModalTx(null);
                       handleApprove(target);
                     }}
-                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    className="px-3.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                   >
                     <span className="material-symbols-outlined text-[14px]">check</span>
                     <span>Approve &amp; Credit</span>

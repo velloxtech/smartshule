@@ -1,3 +1,4 @@
+import {SchoolCalendarPlanView} from './components/views/SchoolCalendarPlanView';
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -104,7 +105,6 @@ export default function App() {
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
-  const [schemesInitialTab, setSchemesInitialTab] = useState<'schemes' | 'lesson-plans'>('schemes');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSidebarCompact, setIsSidebarCompact] = useState<boolean>(() => {
     try {
@@ -760,7 +760,7 @@ export default function App() {
       title: `Learner Admitted: ${studentWithId.name}`,
       description: `Adm #${studentWithId.admNo} · ${studentWithId.grade}${studentWithId.stream ? ` (${studentWithId.stream})` : ''} · ${studentWithId.upi && studentWithId.upi !== '--' ? `UPI: ${studentWithId.upi}` : 'NEMIS: Pending'}`,
       timestamp: 'Just now',
-      badgeColor: 'bg-tertiary-container text-white',
+      badgeColor: 'bg-warning-container text-white',
     };
     setActivities((prev) => [newAct, ...prev]);
 
@@ -806,7 +806,7 @@ export default function App() {
       title: `Staff Onboarded: ${newT.name}`,
       description: `Role: ${newT.role} · Emp #: ${newT.employeeNumber} · TSC: ${newT.tscNumber} · Class: ${newT.assignedClass}`,
       timestamp: 'Just now',
-      badgeColor: 'bg-secondary text-white',
+      badgeColor: 'bg-success text-white',
     };
     setActivities((prev) => [newAct, ...prev]);
   };
@@ -1007,7 +1007,6 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         onSelectTab={(tab) => {
-          if (tab === 'schemes-lesson-plans') setSchemesInitialTab('schemes');
           if (tab === 'archived-records') {
             setAppView('archive');
             window.location.hash = '/archive';
@@ -1065,9 +1064,9 @@ export default function App() {
           <div
             className={`no-print print:hidden term-lifecycle-banner px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
               currentContext.termNotice.type === 'TERM_ENDED'
-                ? 'bg-[#550000] text-rose-100 border-b border-[#770000]'
+                ? 'bg-primary-container text-rose-100 border-b border-[#770000]'
                 : currentContext.termNotice.type === 'ENDING_SOON'
-                ? 'bg-[#660000] text-amber-100 border-b border-[#880000]'
+                ? 'bg-primary-container text-amber-100 border-b border-[#880000]'
                 : 'bg-[#770000] text-white/90 border-b border-[#990000]'
             }`}
           >
@@ -1170,7 +1169,7 @@ export default function App() {
                         setUploadMarksInitialType('SUMMATIVE');
                         setUploadMarksModalOpen(true);
                       }}
-                      onOpenNewLessonPlan={() => { setSchemesInitialTab('lesson-plans'); setCurrentTab('schemes-lesson-plans'); }}
+                      onOpenNewLessonPlan={() => setCurrentTab('lesson-plans')}
                       onOpenNewScheme={() => setCurrentTab('scheme-of-work-builder')}
                       refreshTrigger={marksRefreshTrigger}
                     />
@@ -1214,7 +1213,7 @@ export default function App() {
           {currentTab === 'students-guardians' && (
             user?.role === UserRole.BURSAR || user?.role === UserRole.ACCOUNTANT ? (
               <div className="p-8 my-8 text-center rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-3 max-w-lg mx-auto">
-                <span className="material-symbols-outlined text-[48px] text-amber-700">account_balance_wallet</span>
+                <span className="material-symbols-outlined text-[48px] text-primary">account_balance_wallet</span>
                 <h3 className="text-base font-bold">Finance Department Access Isolation</h3>
                 <p className="text-xs text-amber-800">
                   The finance department is strictly isolated to fee structures, invoices, student accounts, cash flow ledgers, and expenses.
@@ -1222,13 +1221,13 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                   <button
                     onClick={() => setCurrentTab('student-fee-search')}
-                    className="px-4 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-primary-container text-white font-bold text-xs hover:bg-primary-container transition-colors cursor-pointer"
                   >
                     Fee Collection & Accounts
                   </button>
                   <button
                     onClick={() => setCurrentTab('cashflow-ledger')}
-                    className="px-4 py-2 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-bold text-xs hover:bg-amber-200 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary font-bold text-xs hover:bg-primary-fixed-dim transition-colors cursor-pointer"
                   >
                     Cash Flow Ledger
                   </button>
@@ -1394,14 +1393,15 @@ export default function App() {
           {currentTab === 'CBC-analytics' && <CompetencyAnalyticsView />}
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
-          {currentTab === 'schemes-lesson-plans' && (
-            <SchemesView initialTab={schemesInitialTab} onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          {(currentTab === 'schemes-lesson-plans' || currentTab === 'lesson-plans') && (
+            <SchemesView key={currentTab} initialTab={currentTab === 'lesson-plans' ? 'lesson-plans' : 'schemes'} onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
 
           {currentTab === 'records-of-work' && (
             <RecordsOfWorkView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
 
+          {currentTab === 'school-calendar-plan' && <SchoolCalendarPlanView onNavigateTab={tab=>setCurrentTab(tab as any)} onOpenSettings={()=>setAcademicTermsModalOpen(true)}/>}
           {currentTab === 'timetable' && <TimetableView />}
 
           {currentTab === 'library' && <LibraryView />}
@@ -1518,7 +1518,7 @@ export default function App() {
                     setAppView('archive');
                     window.location.hash = '/archive';
                   }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">open_in_full</span>
                   <span>Open Standalone Archive Page</span>
@@ -1526,7 +1526,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/archive`, '_blank')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-low hover:bg-surface-container text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                   <span>New Window</span>
@@ -1558,13 +1558,13 @@ export default function App() {
             <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
           {currentTab === 'scheme-of-work-builder' && (
-            <SchemeOfWorkBuilderView onNavigateTab={(tab) => { if (tab === 'lesson-plans') { setSchemesInitialTab('lesson-plans'); setCurrentTab('schemes-lesson-plans'); } else setCurrentTab(tab as any); }} />
+            <SchemeOfWorkBuilderView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
           </Suspense>
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}
-        <footer className="mt-auto py-3.5 px-6 bg-[#800000] border-t border-[#660000] text-center text-xs text-white flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
+        <footer className="mt-auto py-3.5 px-6 bg-primary border-t border-primary-container text-center text-xs text-white flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Live"></span>
             <span className="font-semibold text-white">
@@ -1672,7 +1672,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setToastNotification(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-surface-container-low transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>

@@ -282,7 +282,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">upgrade</span>
@@ -535,7 +535,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
                 New Class Fee & Invoicing Preview
               </span>
               {matchedFeeStructure && (
-                <span className="text-[10px] bg-secondary/10 text-secondary font-bold px-2 py-0.5 rounded-full">
+                <span className="text-[10px] bg-success/10 text-success font-bold px-2 py-0.5 rounded-full">
                   Fee Schedule Linked
                 </span>
               )}

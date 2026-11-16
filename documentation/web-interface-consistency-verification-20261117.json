@@ -1,0 +1,63 @@
+{
+  "baselineCommit": "e06bd59f745e98dfb87cbfdb54eb44ceef49fda0",
+  "localOnly": true,
+  "productionChanged": false,
+  "reviewedTsxFiles": 158,
+  "changedTsxFiles": 133,
+  "nonStylingAstPreserved": true,
+  "remainingMigrationEdits": 0,
+  "excludedFiles": [
+    "Frontend/smartshule/src/components/landing/CloudSky.tsx",
+    "Frontend/smartshule/src/components/landing/InteractiveLearningLab.tsx",
+    "Frontend/smartshule/src/components/views/AppSyllabusCoveragePlanView.tsx"
+  ],
+  "frontendTypeCheck": "passed",
+  "webBuild": "passed with existing bundle warnings",
+  "whitespace": "passed",
+  "browserChecks": 28,
+  "screenStates": 27,
+  "roles": [
+    "SUPER_ADMIN",
+    "ADMIN",
+    "HEAD_TEACHER",
+    "DEPUTY_HEAD_TEACHER",
+    "ACCOUNTANT",
+    "TEACHER",
+    "GUARDIAN"
+  ],
+  "browserErrors": [],
+  "unexpectedActionColours": [],
+  "overflow": [],
+  "contrast": [
+    {
+      "foreground": "on-primary",
+      "background": "primary",
+      "ratio": 10.8
+    },
+    {
+      "foreground": "on-primary",
+      "background": "primary-container",
+      "ratio": 13.88
+    },
+    {
+      "foreground": "on-primary-fixed",
+      "background": "primary-fixed",
+      "ratio": 14.61
+    },
+    {
+      "foreground": "on-surface",
+      "background": "surface-container-lowest",
+      "ratio": 17.85
+    },
+    {
+      "foreground": "on-surface-variant",
+      "background": "surface",
+      "ratio": 7.03
+    },
+    {
+      "foreground": "on-success",
+      "background": "success",
+      "ratio": 6.48
+    }
+  ]
+}

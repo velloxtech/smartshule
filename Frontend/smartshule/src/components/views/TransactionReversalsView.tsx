@@ -257,7 +257,7 @@ export const TransactionReversalsView: React.FC = () => {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-outline-variant/30 rounded-lg outline-none bg-white font-medium"
+            className="px-3 py-1.5 text-xs border border-outline-variant/30 rounded-lg outline-none bg-surface font-medium"
           >
             <option value="ALL">All Types</option>
             <option value="PAYMENT">Original Payment</option>
@@ -333,14 +333,14 @@ export const TransactionReversalsView: React.FC = () => {
                         isAdmin ? (
                           <button
                             onClick={() => handleOpenReview(req)}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition shadow-xs inline-flex items-center space-x-1"
+                            className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white font-bold text-xs rounded-lg transition shadow-xs inline-flex items-center space-x-1"
                           >
                             <span>Review & Decide</span>
                           </button>
                         ) : (
                           <button
                             onClick={() => handleOpenReview(req)}
-                            className="px-3 py-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold text-xs rounded-lg border border-amber-200 transition"
+                            className="px-3 py-1.5 bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed font-semibold text-xs rounded-lg border border-primary transition"
                           >
                             View Details
                           </button>
@@ -348,7 +348,7 @@ export const TransactionReversalsView: React.FC = () => {
                       ) : req.status === 'COMPLETED' ? (
                         <button
                           onClick={() => handleOpenReceipt(req)}
-                          className="px-3 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold text-xs rounded-lg border border-emerald-200 transition inline-flex items-center space-x-1"
+                          className="px-3 py-1.5 bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed font-bold text-xs rounded-lg border border-primary transition inline-flex items-center space-x-1"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           <span>Reversal Doc</span>

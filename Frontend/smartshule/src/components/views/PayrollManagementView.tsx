@@ -1114,7 +1114,7 @@ export const PayrollManagementView: React.FC = () => {
           {stats.approvedCount > 0 && (
             <button
               onClick={() => setIsBulkPayModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md animate-pulse"
+              className="bg-primary hover:bg-primary-container text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md animate-pulse"
               title="Bulk disburse all approved payroll records with financial posting"
             >
               <span className="material-symbols-outlined text-lg">bolt</span>
@@ -1186,7 +1186,7 @@ export const PayrollManagementView: React.FC = () => {
           <span className="material-symbols-outlined text-lg">event_available</span>
           Staff Leaves
           {stats.pendingLeaves > 0 && (
-            <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+            <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full font-bold">
               {stats.pendingLeaves}
             </span>
           )}
@@ -1206,13 +1206,13 @@ export const PayrollManagementView: React.FC = () => {
                     type="month"
                     value={selectedMonth === 'ALL' ? '' : selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   {availableMonths.length > 0 && (
                     <select
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                       title="Select period from existing records"
                     >
                       <option value="ALL">All Periods ({availableMonths.reduce((acc, m) => acc + m.count, 0)} records)</option>
@@ -1231,7 +1231,7 @@ export const PayrollManagementView: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="ALL">All Statuses (Draft, Approved, Paid)</option>
                   <option value="DRAFT">Draft (Pending Approval)</option>
@@ -1245,7 +1245,7 @@ export const PayrollManagementView: React.FC = () => {
                 <select
                   value={ackFilter}
                   onChange={(e) => setAckFilter(e.target.value as any)}
-                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="ALL">All Acknowledgements</option>
                   <option value="ACKNOWLEDGED">✓ Acknowledged by Staff</option>
@@ -1263,7 +1263,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="Search name, TSC No, ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-7 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="pl-7 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -1301,7 +1301,7 @@ export const PayrollManagementView: React.FC = () => {
                 {availableMonths.length > 0 ? (
                   <div className="mt-4 p-4 max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl text-left shadow-sm">
                     <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-amber-600 text-sm">history</span>
+                      <span className="material-symbols-outlined text-primary text-sm">history</span>
                       Existing records found in database:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1309,7 +1309,7 @@ export const PayrollManagementView: React.FC = () => {
                         <button
                           key={m.month}
                           onClick={() => setSelectedMonth(m.month)}
-                          className="px-3 py-1.5 bg-white hover:bg-amber-100 text-primary border border-amber-300 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                          className="px-3 py-1.5 bg-white hover:bg-primary-fixed text-primary border border-primary rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-xs">calendar_month</span>
                           {m.month} ({m.count} records)
@@ -1472,7 +1472,7 @@ export const PayrollManagementView: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => setSelectedAckDossier(p)}
-                                  className="inline-flex items-center gap-1 text-[9.5px] text-teal-800 font-bold bg-teal-50 hover:bg-teal-100 px-1.5 py-0.5 rounded border border-teal-300 transition-colors cursor-pointer text-left"
+                                  className="inline-flex items-center gap-1 text-[9.5px] text-on-primary-fixed font-bold bg-primary-fixed hover:bg-primary-fixed px-1.5 py-0.5 rounded border border-primary transition-colors cursor-pointer text-left"
                                   title="Click to view verified teacher acknowledgement slip"
                                 >
                                   <span className="material-symbols-outlined text-[11px] text-teal-700">verified</span>
@@ -1490,7 +1490,7 @@ export const PayrollManagementView: React.FC = () => {
                                 </button>
                               ) : isPaid ? (
                                 <span className="inline-flex items-center gap-1 text-[9.5px] text-amber-800 font-medium bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                  <span className="material-symbols-outlined text-[11px] text-amber-700">schedule</span>
+                                  <span className="material-symbols-outlined text-[11px] text-primary">schedule</span>
                                   <span>Awaiting Acknowledgement</span>
                                 </span>
                               ) : (
@@ -1515,14 +1515,14 @@ export const PayrollManagementView: React.FC = () => {
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
                                 Approved
                               </span>
-                              <span className="text-[10px] text-blue-600 font-medium">Ready</span>
+                              <span className="text-[10px] text-primary font-medium">Ready</span>
                             </div>
                           ) : p.status === 'REVERSED' ? (
                             <div className="flex items-center gap-1">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">
                                 Reversed
                               </span>
-                              <span className="text-[10px] text-purple-600">Refunded</span>
+                              <span className="text-[10px] text-primary">Refunded</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
@@ -1554,12 +1554,12 @@ export const PayrollManagementView: React.FC = () => {
                               title={isPaid ? 'Payment details recorded' : 'Issue Payment / Disburse Funds'}
                               className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all ${
                                 isPaid
-                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300'
+                                  ? 'bg-primary-fixed text-primary hover:bg-primary-fixed border border-primary'
                                   : p.status === 'PARTIALLY_PAID'
-                                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                  ? 'bg-primary hover:bg-primary-container text-white'
                                   : p.status === 'APPROVED'
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                  : 'bg-slate-500 hover:bg-slate-600 text-white'
+                                  ? 'bg-primary hover:bg-primary-container text-white'
+                                  : 'bg-surface0 hover:bg-slate-600 text-white'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">payments</span>
@@ -1575,7 +1575,7 @@ export const PayrollManagementView: React.FC = () => {
                                   setIsReverseModalOpen(true);
                                 }}
                                 title="Reverse Salary Payment (Restores School Financial Account Balance)"
-                                className="p-1 text-amber-600 hover:text-white hover:bg-amber-600 rounded transition-colors"
+                                className="p-1 text-primary hover:text-white hover:bg-primary-container rounded transition-colors"
                               >
                                 <span className="material-symbols-outlined text-[15px]">undo</span>
                               </button>
@@ -1730,12 +1730,12 @@ export const PayrollManagementView: React.FC = () => {
               <p className="text-[11px] text-emerald-600 mt-1">{stats.paidCount} paid · {stats.partialCount} partial</p>
             </div>
 
-            <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl">
-              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide">Financial Cash Outflows</p>
-              <p className="text-xl font-black text-blue-700 font-mono mt-1">
+            <div className="bg-primary-fixed/60 border border-primary p-4 rounded-xl">
+              <p className="text-xs font-medium text-on-primary-fixed uppercase tracking-wide">Financial Cash Outflows</p>
+              <p className="text-xl font-black text-primary font-mono mt-1">
                 KES {(reconciliationData?.totalFinancialExpenseAmount ?? stats.totalDisbursedAmount).toLocaleString()}
               </p>
-              <p className="text-[11px] text-blue-600 mt-1">Expense category: SALARIES_WAGES</p>
+              <p className="text-[11px] text-primary mt-1">Expense category: SALARIES_WAGES</p>
             </div>
 
             <div className={`p-4 rounded-xl border ${
@@ -1829,7 +1829,7 @@ export const PayrollManagementView: React.FC = () => {
                           ) : p.status === 'APPROVED' ? (
                             <span className="text-blue-600 font-medium text-[11px]">Approved Commitment (Undeducted)</span>
                           ) : p.status === 'REVERSED' ? (
-                            <span className="text-purple-700 font-medium text-[11px]">Reversed & Refunded</span>
+                            <span className="text-primary font-medium text-[11px]">Reversed & Refunded</span>
                           ) : (
                             <span className="text-slate-400 text-[11px]">Draft Preparation</span>
                           )}
@@ -1885,7 +1885,7 @@ export const PayrollManagementView: React.FC = () => {
                     <tr key={l.id} className="hover:bg-surface/50">
                       <td className="px-4 py-3 font-semibold text-on-surface">{l.teacherName}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-fixed text-primary">
                           {l.leaveType}
                         </span>
                       </td>
@@ -2009,7 +2009,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={selectedStaffId}
                   onChange={(e) => handleSelectStaffForPayroll(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- Select Registered Staff Member --</option>
                   {staffList.map((s) => (
@@ -2105,7 +2105,7 @@ export const PayrollManagementView: React.FC = () => {
                         placeholder="e.g., Peter Kamau"
                         value={customForm.teacherName}
                         onChange={(e) => setCustomForm({ ...customForm, teacherName: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       />
                     </div>
                     <div>
@@ -2115,7 +2115,7 @@ export const PayrollManagementView: React.FC = () => {
                         placeholder="e.g., 234567 or EMP-105"
                         value={customForm.teacherId}
                         onChange={(e) => setCustomForm({ ...customForm, teacherId: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
                       />
                     </div>
                   </div>
@@ -2130,7 +2130,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={customForm.month}
                   onChange={(e) => setCustomForm({ ...customForm, month: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
@@ -2146,7 +2146,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.basicSalary}
                     onChange={(e) => setCustomForm({ ...customForm, basicSalary: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
@@ -2158,7 +2158,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.houseAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, houseAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
@@ -2173,7 +2173,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.commuterAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, commuterAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
@@ -2185,7 +2185,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.responsibilityAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, responsibilityAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
@@ -2199,7 +2199,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="0"
                   value={customForm.otherDeductions}
                   onChange={(e) => setCustomForm({ ...customForm, otherDeductions: e.target.value === '' ? '' : Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
@@ -2210,7 +2210,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="e.g., Remuneration schedule for regular teaching activities"
                   value={customForm.notes}
                   onChange={(e) => setCustomForm({ ...customForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
@@ -2228,7 +2228,7 @@ export const PayrollManagementView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setCustomForm(prev => ({ ...prev, applyPaye: true, applyShif: true, applyNssf: true, applyHousingLevy: true }))}
-                      className="text-[11px] text-emerald-700 hover:underline font-bold"
+                      className="text-[11px] text-primary hover:underline font-bold"
                     >
                       Select All
                     </button>
@@ -2400,7 +2400,7 @@ export const PayrollManagementView: React.FC = () => {
                     value={disburseAmount}
                     onChange={(e) => setDisburseAmount(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder={`e.g., ${remaining}`}
-                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-mono font-bold focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono font-bold focus:ring-2 focus:ring-primary"
                   />
                   <p className="text-[10px] text-on-surface-variant mt-1">
                     Enter full or partial payment amount to disburse and deduct from school accounts.
@@ -2412,7 +2412,7 @@ export const PayrollManagementView: React.FC = () => {
                   <select
                     value={fundingAccount}
                     onChange={(e: any) => setFundingAccount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-medium focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                   >
                     <option value="BANK">Bank Account (School Operating Bank Account)</option>
                     <option value="MPESA">M-Pesa Account (School Remittance Paybill / Till)</option>
@@ -2426,7 +2426,7 @@ export const PayrollManagementView: React.FC = () => {
                   <select
                     value={paymentMethod}
                     onChange={(e: any) => setPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-medium focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                   >
                     <option value="BANK_TRANSFER">Bank Transfer (EFT / RTGS / KCB Buni / Pesalink)</option>
                     <option value="MPESA">M-Pesa B2C / Paybill Remittance</option>
@@ -2442,7 +2442,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="e.g., MPESA-QK892348 or KCB-RTGS-991204"
                     value={paymentRef}
                     onChange={(e) => setPaymentRef(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-mono focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
@@ -2453,7 +2453,7 @@ export const PayrollManagementView: React.FC = () => {
                     required
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
@@ -2477,7 +2477,7 @@ export const PayrollManagementView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
+                    className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-md"
                   >
                     <span className="material-symbols-outlined text-sm">check_circle</span>
                     Confirm & Deduct Funds
@@ -2519,7 +2519,7 @@ export const PayrollManagementView: React.FC = () => {
                 <select
                   value={bulkPaymentMethod}
                   onChange={(e: any) => setBulkPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-medium focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                 >
                   <option value="BANK_TRANSFER">Bank Transfer (Batch EFT / RTGS)</option>
                   <option value="MPESA">M-Pesa B2C Bulk Disbursement</option>
@@ -2535,7 +2535,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="e.g., BATCH-OCT26-SALARIES"
                   value={bulkReference}
                   onChange={(e) => setBulkReference(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface font-mono focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -2546,7 +2546,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={bulkPaymentDate}
                   onChange={(e) => setBulkPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -2564,7 +2564,7 @@ export const PayrollManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-md"
                 >
                   <span className="material-symbols-outlined text-sm">payments</span>
                   Confirm Bulk Disbursal
@@ -2596,7 +2596,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="Explain why this disbursement is being reversed (e.g., Wrong bank account entered, payment bounced, administrative recalculation)..."
                   value={reversalReason}
                   onChange={(e) => setReversalReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-rose-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-rose-500"
                 />
               </div>
 
@@ -2735,7 +2735,7 @@ export const PayrollManagementView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-6">
                   {/* Earnings */}
                   <div className="border border-emerald-100 bg-emerald-50/20 rounded-xl p-3">
-                    <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider border-b border-emerald-200 pb-1 mb-2 flex items-center gap-1">
+                    <h4 className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider border-b border-primary pb-1 mb-2 flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">add_circle</span>
                       Earnings
                     </h4>
@@ -2921,7 +2921,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={selectedLeaveStaffId}
                   onChange={(e) => handleSelectApplicantForLeave(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- Select Registered Staff Member --</option>
                   {staffList.map((s) => (
@@ -2952,7 +2952,7 @@ export const PayrollManagementView: React.FC = () => {
                 <select
                   value={leaveForm.leaveType}
                   onChange={(e: any) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="ANNUAL">Annual Leave</option>
                   <option value="SICK">Sick / Medical Leave</option>
@@ -2971,7 +2971,7 @@ export const PayrollManagementView: React.FC = () => {
                     required
                     value={leaveForm.startDate}
                     onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
@@ -2981,7 +2981,7 @@ export const PayrollManagementView: React.FC = () => {
                     required
                     value={leaveForm.endDate}
                     onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
@@ -3003,7 +3003,7 @@ export const PayrollManagementView: React.FC = () => {
                 <select
                   value={selectedSubstituteId}
                   onChange={(e) => handleSelectSubstituteForLeave(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- No Substitute / Self-Managed Coverage --</option>
                   {staffList
@@ -3027,7 +3027,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="Specify reason or details for the head teacher / school director review..."
                   value={leaveForm.reason}
                   onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
@@ -3074,7 +3074,7 @@ export const PayrollManagementView: React.FC = () => {
                     onClick={() => setReviewStatus('APPROVED')}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       reviewStatus === 'APPROVED'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        ? 'bg-primary text-white border-primary shadow-md'
                         : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
@@ -3101,7 +3101,7 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="Remarks for the teacher..."
                   value={reviewRemarks}
                   onChange={(e) => setReviewRemarks(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface"
                 />
               </div>
 
@@ -3178,25 +3178,25 @@ export const PayrollManagementView: React.FC = () => {
 
             {/* Acknowledgement Status Information */}
             {selectedAckDossier.acknowledgementStatus === 'ACKNOWLEDGED' ? (
-              <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 space-y-3">
-                <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
+              <div className="p-4 rounded-2xl bg-primary-fixed border border-primary space-y-3">
+                <div className="flex items-center gap-2 text-on-primary-fixed font-bold text-xs">
                   <span className="material-symbols-outlined text-sm text-teal-700">verified</span>
                   <span>Officially Acknowledged by Staff Member</span>
                 </div>
-                <p className="text-[11px] text-teal-950 italic bg-surface-container-lowest p-3 rounded-xl border border-teal-200">
+                <p className="text-[11px] text-on-primary-fixed italic bg-surface-container-lowest p-3 rounded-xl border border-primary">
                   "{selectedAckDossier.acknowledgementStatement || 'I confirm receipt of salary payment.'}"
                 </p>
-                <div className="flex items-center justify-between text-[10px] text-teal-800 font-mono">
+                <div className="flex items-center justify-between text-[10px] text-on-primary-fixed font-mono">
                   <span>Timestamp: {selectedAckDossier.acknowledgedAt ? new Date(selectedAckDossier.acknowledgedAt).toLocaleString() : 'N/A'}</span>
                   <span>Method: {selectedAckDossier.acknowledgementMethod || 'PORTAL_AUTH'}</span>
                 </div>
                 {selectedAckDossier.acknowledgementSignature && (
-                  <div className="pt-2 border-t border-teal-200 text-center">
-                    <span className="text-[9px] uppercase font-mono text-teal-700 block mb-1">Digital Signature Record</span>
+                  <div className="pt-2 border-t border-primary text-center">
+                    <span className="text-[9px] uppercase font-mono text-primary block mb-1">Digital Signature Record</span>
                     {selectedAckDossier.acknowledgementSignature.startsWith('data:image') ? (
-                      <img src={selectedAckDossier.acknowledgementSignature} alt="Sig" className="h-10 mx-auto object-contain bg-surface-container-lowest px-2 py-0.5 rounded border border-teal-200" />
+                      <img src={selectedAckDossier.acknowledgementSignature} alt="Sig" className="h-10 mx-auto object-contain bg-surface-container-lowest px-2 py-0.5 rounded border border-primary" />
                     ) : (
-                      <span className="font-serif italic text-lg text-blue-900 font-bold">
+                      <span className="font-serif italic text-lg text-on-primary-fixed font-bold">
                         {selectedAckDossier.acknowledgementSignature}
                       </span>
                     )}
@@ -3218,7 +3218,7 @@ export const PayrollManagementView: React.FC = () => {
               </div>
             ) : (
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm text-amber-700">schedule</span>
+                <span className="material-symbols-outlined text-sm text-primary">schedule</span>
                 <span>Payment disbursed by school accounts; awaiting teacher acknowledgement in Teacher Portal.</span>
               </div>
             )}
@@ -3227,7 +3227,7 @@ export const PayrollManagementView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedAckDossier(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors cursor-pointer"
               >
                 Close Dossier
               </button>

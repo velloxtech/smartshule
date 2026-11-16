@@ -185,7 +185,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
   return (
     <div className="space-y-6 pb-16 max-w-7xl mx-auto">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-primary to-[#500b1a] text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-primary to-primary-container text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-white text-[11px] font-semibold tracking-wider uppercase">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -254,7 +254,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-on-surface">Parent / Guardian Profile</h2>
-                <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 text-[11px] font-bold uppercase tracking-wider">
+                <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed text-[11px] font-bold uppercase tracking-wider">
                   {guardian?.relationship || 'GUARDIAN'}
                 </span>
               </div>
@@ -354,7 +354,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                 <select
                   value={parentForm.relationship}
                   onChange={(e) => setParentForm({ ...parentForm, relationship: e.target.value })}
-                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-surface"
                 >
                   <option value="MOTHER">Mother</option>
                   <option value="FATHER">Father</option>
@@ -491,7 +491,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-outline-variant/30 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-outline-variant/30 gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-lg shrink-0">
               <span className="material-symbols-outlined text-[24px]">school</span>
             </div>
             <div>
@@ -569,7 +569,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
           /* CHILD EDIT FORM */
           <form onSubmit={handleSaveChild} className="space-y-5">
             <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-amber-700">info</span>
+              <span className="material-symbols-outlined text-[18px] text-primary">info</span>
               <span>
                 <strong>Correction Notice:</strong> You can edit learner names, birth date, gender, NEMIS UPI, and medical/special needs disclosures to fix input errors. Grade promotion or class stream changes must be verified by the school admissions office.
               </span>
@@ -616,7 +616,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                 <select
                   value={childForm.gender}
                   onChange={(e) => setChildForm({ ...childForm, gender: e.target.value })}
-                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-surface"
                 >
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>
@@ -811,14 +811,14 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200/70">
+              <div className="p-4 rounded-xl bg-primary-fixed/60 border border-primary/70">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-indigo-700">accessibility_new</span>
-                  <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[18px] text-primary">accessibility_new</span>
+                  <span className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider">
                     Special Educational Needs (SEN)
                   </span>
                 </div>
-                <p className="text-xs text-indigo-950 font-medium">
+                <p className="text-xs text-on-primary-fixed font-medium">
                   {currentChild.specialNeeds && currentChild.specialNeeds.trim() !== ''
                     ? currentChild.specialNeeds
                     : 'Standard learning accommodation'}
@@ -849,7 +849,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               <div className="p-4 rounded-xl bg-surface border border-outline-variant/30">
                 <div className="flex items-center justify-between text-xs text-on-surface-variant mb-1">
                   <span className="font-bold uppercase tracking-wider">Attendance Rate</span>
-                  <span className="material-symbols-outlined text-[18px] text-emerald-700">checklist</span>
+                  <span className="material-symbols-outlined text-[18px] text-primary">checklist</span>
                 </div>
                 <div className="text-lg font-black text-emerald-700 font-mono">
                   {currentChild.attendance?.attendanceRate ?? 100}%
@@ -862,7 +862,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               <div className="p-4 rounded-xl bg-surface border border-outline-variant/30">
                 <div className="flex items-center justify-between text-xs text-on-surface-variant mb-1">
                   <span className="font-bold uppercase tracking-wider">Lunch Program</span>
-                  <span className="material-symbols-outlined text-[18px] text-amber-700">lunch_dining</span>
+                  <span className="material-symbols-outlined text-[18px] text-primary">lunch_dining</span>
                 </div>
                 <div className="text-lg font-black text-on-surface">
                   {currentChild.lunch ? (

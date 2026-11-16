@@ -495,6 +495,13 @@ export function createApiRouter(container: AppContainer): Router {
   const planningController=new CalendarPlanningController(container);
   curriculumRouter.post('/lesson-plans/:id/reschedule',authMiddleware,planningController.rescheduleLesson);
   curriculumRouter.post('/planning/record-taught',authMiddleware,planningController.recordTaught);
+  curriculumRouter.get('/planning/curriculum-proposals',authMiddleware,planningController.proposals);
+  curriculumRouter.post('/planning/curriculum-proposals/review',authMiddleware,planningController.reviewProposal);
+  curriculumRouter.get('/planning/setup-context',authMiddleware,planningController.setupContext);
+  curriculumRouter.get('/planning/continuity',authMiddleware,planningController.continuity);
+  curriculumRouter.post('/planning/start',authMiddleware,planningController.decideStart);
+  curriculumRouter.post('/planning/carry-forward',authMiddleware,planningController.carryForward);
+  curriculumRouter.get('/planning/readiness',authMiddleware,planningController.readiness);
   curriculumRouter.get('/planning/calendar',authMiddleware,planningController.getCalendar);
   curriculumRouter.put('/planning/calendar',authMiddleware,planningController.saveCalendar);
   curriculumRouter.get('/planning/catalogue',authMiddleware,planningController.catalogue);
@@ -651,13 +658,14 @@ export function createApiRouter(container: AppContainer): Router {
   // 7. TIMETABLE ROUTES
   // ==========================================
   const timetableRouter = Router();
-  timetableRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateTimetableSchema), timetableController.createTimetable);
-  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
-  timetableRouter.post('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
-  timetableRouter.put('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
-  timetableRouter.delete('/:timetableId/slots/:slotId', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), timetableController.deleteSlot);
+  timetableRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(CreateTimetableSchema), timetableController.createTimetable);
+  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
+  timetableRouter.post('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.put('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.delete('/:timetableId/slots/:slotId', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), timetableController.deleteSlot);
   timetableRouter.get('/stream', authMiddleware, timetableController.getStreamTimetable);
   timetableRouter.get('/teacher', authMiddleware, timetableController.getTeacherTimetable);
+  timetableRouter.get('/access-options', authMiddleware, timetableController.getTeacherAccess);
   router.use('/timetables', timetableRouter);
 
   // ==========================================

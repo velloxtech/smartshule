@@ -195,7 +195,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
         {/* Filter controls */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Date Picker */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs">
+          <div className="flex items-center gap-1.5 bg-surface px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs">
             <span className="material-symbols-outlined text-slate-600 text-base">calendar_today</span>
             <input
               type="date"
@@ -207,7 +207,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           </div>
 
           {/* Class Filter */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs">
+          <div className="flex items-center gap-1.5 bg-surface px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs">
             <span className="material-symbols-outlined text-slate-600 text-base">meeting_room</span>
             <select
               aria-label="Filter by Class"
@@ -226,7 +226,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-2 rounded-xl bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-800 transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-surface border border-slate-300 hover:bg-surface-container-low text-slate-800 transition-all cursor-pointer"
             title="Refresh Attendance Stats"
             type="button"
           >
@@ -236,11 +236,11 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           {/* Attendance Trends Button */}
           <button
             onClick={loadTrends}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-800"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs bg-surface border border-slate-300 hover:bg-surface-container-low text-slate-800"
             type="button"
             title="View 14-day attendance trends, chronic absentees, and unresolved follow-ups"
           >
-            <span className="material-symbols-outlined text-[16px] text-amber-600">trending_up</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">trending_up</span>
             <span className="hidden sm:inline">Trends &amp; Absentees</span>
           </button>
 
@@ -248,7 +248,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           {canShowWholeTermReport && (
             <button
               onClick={() => setIsWholeTermReportModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-800"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs bg-surface border border-slate-300 hover:bg-surface-container-low text-slate-800"
               type="button"
               title="Generate official printable Grace Seeds School end-of-term summary report"
             >
@@ -272,7 +272,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
       {/* Attendance Not Yet Recorded Notification Banner */}
       {metrics.completedRegisters === 0 && metrics.present === 0 && metrics.absent === 0 && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-800">
-          <span className="material-symbols-outlined text-base text-amber-600">info</span>
+          <span className="material-symbols-outlined text-base text-primary">info</span>
           <span>Attendance not yet recorded for {selectedDate}. Class teachers mark roll calls through the Attendance Register portal.</span>
         </div>
       )}
@@ -280,7 +280,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
       {/* Daily Figures Grid: 7 Standard Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* 1. Expected Enrolled */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+        <div className="p-3.5 rounded-xl bg-surface border border-slate-200 flex flex-col justify-between">
           <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Expected Enrolled</span>
           <div className="my-1">
             <span className="text-xl font-black font-data-mono text-slate-900">{metrics.expectedLearners}</span>
@@ -346,27 +346,27 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
         {/* 5. Excused Absences */}
         <div
           onClick={() => metrics.excused > 0 && setIsDrillDownOpen(true)}
-          className={`p-3.5 rounded-xl bg-blue-50 border border-blue-300 flex flex-col justify-between ${metrics.excused > 0 ? 'cursor-pointer hover:bg-blue-100' : ''}`}
+          className={`p-3.5 rounded-xl bg-primary-fixed border border-primary flex flex-col justify-between ${metrics.excused > 0 ? 'cursor-pointer hover:bg-primary-fixed' : ''}`}
           title={metrics.excused > 0 ? 'Click to view excused absences drill-down' : ''}
         >
-          <span className="text-[10px] font-black text-blue-950 uppercase tracking-wider flex items-center justify-between">
+          <span className="text-[10px] font-black text-on-primary-fixed uppercase tracking-wider flex items-center justify-between">
             <span className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
               Excused
             </span>
-            {metrics.excused > 0 && <span className="text-[9px] text-blue-800 font-black underline">Notes →</span>}
+            {metrics.excused > 0 && <span className="text-[9px] text-on-primary-fixed font-black underline">Notes →</span>}
           </span>
           <div className="my-1">
-            <span className="text-xl font-black font-data-mono text-blue-800">
+            <span className="text-xl font-black font-data-mono text-on-primary-fixed">
               {metrics.completedRegisters > 0 ? metrics.excused : '--'}
             </span>
-            <span className="text-[10px] text-blue-800 font-bold ml-1">medical / leave</span>
+            <span className="text-[10px] text-on-primary-fixed font-bold ml-1">medical / leave</span>
           </div>
-          <span className="text-[10px] text-blue-950 font-bold">Documented reasons</span>
+          <span className="text-[10px] text-on-primary-fixed font-bold">Documented reasons</span>
         </div>
 
         {/* 6. Completed Registers */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+        <div className="p-3.5 rounded-xl bg-surface border border-slate-200 flex flex-col justify-between">
           <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Completed Registers</span>
           <div className="my-1">
             <span className="text-xl font-black font-data-mono text-slate-900">{metrics.completedRegisters}</span>
@@ -378,7 +378,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
         </div>
 
         {/* 7. Unmarked Registers */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+        <div className="p-3.5 rounded-xl bg-surface border border-slate-200 flex flex-col justify-between">
           <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Unmarked Registers</span>
           <div className="my-1">
             <span className={`text-xl font-black font-data-mono ${metrics.unmarkedRegisters > 0 ? 'text-amber-800' : 'text-slate-900'}`}>
@@ -403,7 +403,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           </div>
           <button
             onClick={() => setIsDrillDownOpen(true)}
-            className="px-3 py-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg text-xs font-bold hover:bg-surface-container text-[#7a1228] transition-colors cursor-pointer"
+            className="px-3 py-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg text-xs font-bold hover:bg-surface-container text-primary transition-colors cursor-pointer"
             type="button"
           >
             Open Absentee Drill-Down & Follow-Up Modal
@@ -414,9 +414,9 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
       {/* DRILL DOWN & FOLLOW-UP MODAL */}
       {isDrillDownOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
+          <div className="bg-surface-container-lowest text-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
             {/* Modal Header */}
-            <div className="px-6 py-4 bg-[#7a1228] text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-primary text-white flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold flex items-center gap-2">
                   <span className="material-symbols-outlined text-xl">contact_phone</span>
@@ -446,20 +446,20 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                 metrics.absentLearnersList.map((learner) => (
                   <div
                     key={`${learner.registerId}-${learner.studentId}`}
-                    className="p-4 rounded-xl border border-gray-200 bg-gray-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-4 rounded-xl border border-gray-200 bg-surface/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-sm text-gray-900">{learner.studentName}</span>
                         <span className="text-xs font-mono text-gray-500">({learner.admissionNumber || 'No Adm'})</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-800">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-container text-gray-800">
                           {learner.className} {learner.streamName ? `(${learner.streamName})` : ''}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${learner.status === 'ABSENT' ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'}`}>
                           {learner.status === 'ABSENT' ? 'Unexcused Absence' : 'Excused / Medical'}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-700 bg-white p-2 rounded-lg border border-gray-100">
+                      <div className="text-xs text-gray-700 bg-surface-container-lowest p-2 rounded-lg border border-gray-100">
                         <strong>Reason:</strong> {learner.remarks || 'No specific explanation entered'}
                       </div>
                       {learner.followUp ? (
@@ -483,7 +483,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                         setFollowUpAssignedTo(learner.followUp?.assignedTo || '');
                         setFollowUpNotes(learner.followUp?.notes || '');
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition-colors shrink-0 flex items-center gap-1 cursor-pointer self-end sm:self-auto"
+                      className="px-3 py-1.5 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors shrink-0 flex items-center gap-1 cursor-pointer self-end sm:self-auto"
                       type="button"
                     >
                       <span className="material-symbols-outlined text-[15px]">call</span>
@@ -495,10 +495,10 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-3 bg-gray-100 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-3 bg-surface-container-low border-t border-gray-200 flex justify-end">
               <button
                 onClick={() => { setIsDrillDownOpen(false); setSelectedLearnerForFollowUp(null); }}
-                className="px-4 py-2 bg-gray-300 text-gray-800 font-semibold text-xs rounded-xl hover:bg-gray-400 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-surface-container-high text-gray-800 font-semibold text-xs rounded-xl hover:bg-gray-400 transition-colors cursor-pointer"
                 type="button"
               >
                 Close
@@ -511,7 +511,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
       {/* FOLLOW-UP SUB-MODAL */}
       {selectedLearnerForFollowUp && (
         <div className="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden">
             <div className="px-5 py-3.5 bg-emerald-800 text-white flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-sm">Parent Contact & Absence Follow-Up</h4>
@@ -519,7 +519,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
               </div>
               <button
                 onClick={() => setSelectedLearnerForFollowUp(null)}
-                className="text-white hover:text-emerald-200 cursor-pointer"
+                className="text-white hover:text-on-primary cursor-pointer"
                 type="button"
               >
                 <span className="material-symbols-outlined">close</span>
@@ -538,7 +538,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                 <select
                   value={followUpContactMethod}
                   onChange={(e: any) => setFollowUpContactMethod(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg bg-white"
+                  className="w-full p-2 border border-gray-300 rounded-lg bg-surface"
                 >
                   <option value="PHONE_CALL">Direct Phone Call</option>
                   <option value="SMS">Official SMS Notification</option>
@@ -555,7 +555,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                   placeholder="e.g. Parent confirmed learner is sick with malaria and will return on Thursday with clinic note."
                   value={followUpGuardianResponse}
                   onChange={(e) => setFollowUpGuardianResponse(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-primary focus:outline-none"
                 />
               </div>
 
@@ -565,7 +565,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                   <select
                     value={followUpResolution}
                     onChange={(e: any) => setFollowUpResolution(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg bg-white"
+                    className="w-full p-2 border border-gray-300 rounded-lg bg-surface"
                   >
                     <option value="RESOLVED">Resolved (Excused)</option>
                     <option value="PENDING">Pending Further Follow-up</option>
@@ -606,7 +606,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                 <button
                   type="submit"
                   disabled={isSavingFollowUp}
-                  className="px-4 py-1.5 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer disabled:opacity-50"
+                  className="px-4 py-1.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-container transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isSavingFollowUp ? 'Saving...' : 'Save Follow-Up'}
                 </button>
@@ -627,7 +627,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
           <div className="bg-surface-container-lowest rounded-2xl max-w-4xl w-full border border-outline-variant shadow-2xl p-6 my-auto text-on-surface space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-600 text-2xl">trending_up</span>
+                <span className="material-symbols-outlined text-primary text-2xl">trending_up</span>
                 <div>
                   <h3 className="text-base font-black">14-Day Attendance Trends &amp; Chronic Absenteeism Analysis</h3>
                   <p className="text-xs text-on-surface-variant">Daily roll-call patterns, persistent absences, and open guardian communications</p>
@@ -665,7 +665,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                   </div>
                   <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/30">
                     <span className="text-[10px] text-on-surface-variant font-bold uppercase">Unresolved Follow-ups</span>
-                    <div className="text-lg font-black text-purple-700 mt-0.5">{trendsData.summaryMetrics.unresolvedFollowUpsCount}</div>
+                    <div className="text-lg font-black text-primary mt-0.5">{trendsData.summaryMetrics.unresolvedFollowUpsCount}</div>
                   </div>
                 </div>
 
@@ -682,7 +682,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                   {trendsData.chronicAbsentees.length === 0 ? (
                     <p className="text-xs text-slate-500 italic">No learners have reached the chronic absence threshold (3+ absences) in this period.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-rose-200 bg-white">
+                    <div className="overflow-x-auto rounded-lg border border-rose-200 bg-surface-container-lowest">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-rose-100/70 text-rose-950 font-black text-[11px]">
                           <tr>
@@ -723,7 +723,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                                       followUp: ca.latestFollowUp
                                     });
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-[10px] cursor-pointer"
                                 >
                                   Follow Up
                                 </button>
@@ -763,7 +763,7 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
                             <td className="p-2.5 text-center text-emerald-700 font-bold">{d.present}</td>
                             <td className="p-2.5 text-center text-amber-700 font-bold">{d.late}</td>
                             <td className="p-2.5 text-center text-rose-700 font-bold">{d.absent}</td>
-                            <td className="p-2.5 text-center text-blue-700 font-bold">{d.excused}</td>
+                            <td className="p-2.5 text-center text-primary font-bold">{d.excused}</td>
                             <td className="p-2.5 text-center font-bold text-slate-700">{d.totalMarked}</td>
                             <td className="p-2.5 text-right font-black">
                               <span className={d.attendanceRate >= 90 ? 'text-emerald-700' : d.attendanceRate >= 75 ? 'text-amber-700' : 'text-rose-700'}>

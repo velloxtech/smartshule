@@ -246,7 +246,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -262,7 +262,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   name="gradeLevel"
                   value={formData.gradeLevel}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   {GRADE_LEVELS.map(gr => (
                     <option key={gr} value={gr}>{gr}</option>
@@ -353,7 +353,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   name="condition"
                   value={formData.condition}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   <option value="NEW">New / Mint</option>
                   <option value="GOOD">Good / Intact</option>

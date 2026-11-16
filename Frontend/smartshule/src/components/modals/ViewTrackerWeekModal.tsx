@@ -23,7 +23,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
   const getStatusBadge = (status: WeekCoverageStatus | 'APPROVED' | 'SUBMITTED' | 'RETURNED', covered: boolean) => {
     if (status === 'EXEMPTED') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-800 border border-slate-300 flex items-center gap-1.5 shadow-xs">
+        <span className="px-3 py-1 rounded-full text-xs font-black bg-surface-container-low text-slate-800 border border-slate-300 flex items-center gap-1.5 shadow-xs">
           <span className="material-symbols-outlined text-[15px]">event_busy</span>
           <span>No instruction (exempt)</span>
         </span>
@@ -40,7 +40,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
     if (status === 'SUBMITTED') {
       return (
         <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 shadow-xs">
-          <span className="material-symbols-outlined text-[15px] text-amber-700">hourglass_top</span>
+          <span className="material-symbols-outlined text-[15px] text-primary">hourglass_top</span>
           <span>Pending Supervisory Approval</span>
         </span>
       );
@@ -55,14 +55,14 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
     }
     if (status === 'IN_PROGRESS') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1.5 shadow-xs">
+        <span className="px-3 py-1 rounded-full text-xs font-black bg-primary-fixed text-on-primary-fixed border border-primary flex items-center gap-1.5 shadow-xs">
           <span className="material-symbols-outlined text-[15px] text-blue-700">pending</span>
           <span>In Progress</span>
         </span>
       );
     }
     return (
-      <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1.5 shadow-xs">
+      <span className="px-3 py-1 rounded-full text-xs font-black bg-surface-container-low text-slate-700 border border-slate-300 flex items-center gap-1.5 shadow-xs">
         <span className="material-symbols-outlined text-[15px] text-slate-500">calendar_today</span>
         <span>Scheduled / Ready</span>
       </span>
@@ -71,10 +71,10 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         
         {/* Modal Header */}
-        <div className="bg-[#7a1228] text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-2xl text-rose-100">visibility</span>
             <div>
@@ -106,7 +106,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs text-slate-700">
           
           {/* Status & Coverage Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-surface border border-slate-200 rounded-xl">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-600">Current Status:</span>
               {getStatusBadge(week.status, isCovered)}
@@ -128,7 +128,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
           {/* Specific Learning Outcomes */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 font-black text-slate-800 text-xs uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[#7a1228] text-base">target</span>
+              <span className="material-symbols-outlined text-primary text-base">target</span>
               Specific Learning Outcomes:
             </div>
             <div className="p-3.5 bg-rose-50/40 border border-rose-100 rounded-xl text-slate-800 leading-relaxed text-xs font-medium">
@@ -138,7 +138,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
 
           {/* Suggested Activities & Resources */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="space-y-1.5 p-3.5 bg-surface border border-slate-200 rounded-xl">
               <div className="flex items-center gap-1.5 font-black text-slate-800 text-[11px] uppercase tracking-wider">
                 <span className="material-symbols-outlined text-slate-600 text-sm">psychology</span>
                 Learning Activities:
@@ -148,7 +148,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
               </p>
             </div>
 
-            <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="space-y-1.5 p-3.5 bg-surface border border-slate-200 rounded-xl">
               <div className="flex items-center gap-1.5 font-black text-slate-800 text-[11px] uppercase tracking-wider">
                 <span className="material-symbols-outlined text-slate-600 text-sm">menu_book</span>
                 Curriculum Resources:
@@ -163,7 +163,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
           {week.teacherComment && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 font-black text-slate-800 text-xs uppercase tracking-wider">
-                <span className="material-symbols-outlined text-amber-700 text-base">comment</span>
+                <span className="material-symbols-outlined text-primary text-base">comment</span>
                 Teacher Reflection & Coverage Notes:
               </div>
               <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl text-amber-950 leading-relaxed text-xs">
@@ -207,7 +207,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <div className="px-6 py-3.5 bg-surface border-t border-slate-200 flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -222,7 +222,7 @@ export const ViewTrackerWeekModal: React.FC<ViewTrackerWeekModalProps> = ({
                 onClose();
                 onEditPlan(week);
               }}
-              className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#901530] transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <span className="material-symbols-outlined text-[16px]">edit</span>
               <span>Edit Week Plan</span>

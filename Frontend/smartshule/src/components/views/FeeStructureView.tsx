@@ -372,7 +372,7 @@ export const FeeStructureView: React.FC = () => {
 
           <button
             onClick={downloadOfficialPDF}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
             title="Export official itemized schedule as PDF"
           >
             <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
@@ -381,7 +381,7 @@ export const FeeStructureView: React.FC = () => {
 
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Fee Schedule</span>
@@ -439,7 +439,7 @@ export const FeeStructureView: React.FC = () => {
                   key={t}
                   onClick={() => setSelectedTerm(t)}
                   className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                    selectedTerm === t ? 'bg-slate-800 text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                    selectedTerm === t ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                   }`}
                 >
                   {t === 'ALL' ? 'All Terms' : getTermName(t)}
@@ -458,7 +458,7 @@ export const FeeStructureView: React.FC = () => {
             placeholder="Search class or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1 bg-surface border border-outline-variant/30 rounded-lg text-xs focus:bg-white focus:outline-primary"
+            className="w-full pl-8 pr-3 py-1 bg-surface border border-outline-variant/30 rounded-lg text-xs focus:bg-surface focus:outline-primary"
           />
         </div>
       </div>
@@ -602,7 +602,7 @@ export const FeeStructureView: React.FC = () => {
                         <span className="text-xs font-bold text-primary bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                           {resolveGradeName(s.gradeLevel)}
                         </span>
-                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        <span className="text-[10px] font-bold text-on-primary-fixed bg-primary-fixed px-2 py-0.5 rounded border border-primary">
                           {getTermName(s.termId)}
                         </span>
                       </div>

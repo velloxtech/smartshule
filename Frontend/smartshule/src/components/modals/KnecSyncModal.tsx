@@ -54,9 +54,9 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-success flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">verified</span>
             </div>
             <div>
@@ -80,15 +80,15 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">NEMIS National Portal:</span>
-              <span className="inline-flex items-center gap-1 text-secondary font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>{' '}
+              <span className="inline-flex items-center gap-1 text-success font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-success"></span>{' '}
                 {studentCount > 0 ? `Connected (${studentCount} Active Learners)` : 'Connected (0 Learners Enrolled)'}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">CBA Summative Endpoint:</span>
-              <span className="inline-flex items-center gap-1 text-secondary font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> Operational
+              <span className="inline-flex items-center gap-1 text-success font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-success"></span> Operational
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
@@ -113,7 +113,7 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-on-surface-variant">NEMIS UPI Ready:</span>
-                  <span className="font-bold text-secondary">
+                  <span className="font-bold text-success">
                     {students.filter((s: any) => s.upiNumber || s.upi).length} Learners
                   </span>
                 </div>
@@ -128,11 +128,11 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
                 <span>Connecting to MoE CBA Secure Gateway...</span>
               </div>
               <div className="w-full bg-surface-container h-2 rounded-full mt-3 overflow-hidden">
-                <div className="bg-secondary h-full animate-[pulse_1s_infinite]" style={{ width: '78%' }}></div>
+                <div className="bg-success h-full animate-[pulse_1s_infinite]" style={{ width: '78%' }}></div>
               </div>
             </div>
           ) : synced ? (
-            <div className="p-3 bg-secondary-container rounded-lg text-xs text-on-secondary-container font-medium flex items-center gap-2">
+            <div className="p-3 bg-success-container rounded-lg text-xs text-on-success-container font-medium flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">verified</span>
               <span>
                 {studentCount > 0

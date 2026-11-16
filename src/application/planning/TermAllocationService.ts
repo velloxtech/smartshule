@@ -56,6 +56,8 @@ export class TermAllocationService {
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scope);
     const canonical=await this.c.assignmentAccess.context(actor,scope);scope={...scope,academicYearId:canonical.year.id,termId:canonical.term.id};
     await this.c.calendarPlanning.assertUnlocked(actor,scope);
+    const calendar=await this.c.calendarPlanning.calendar(actor,scope);
+    if(calendar?.data.guidedWorkflow){const continuity=await this.c.planningWorkflow.continuity(actor,scope);if(!continuity.canPlan)throw new ConflictError(continuity.message);}
     const scheduled=await this.c.calendarPlanning.draftSchedule(actor,scope);
     await this.checkAllocations(actor,scope,allocations);
     let scheme:SchemeOfWork;
@@ -73,6 +75,7 @@ export class TermAllocationService {
     if(['SUBMITTED','APPROVED'].includes(scheme.planningState?.coverageReviewStatus||''))throw new ConflictError('This coverage draft is with the reviewer or approved. Wait for it to be returned before editing.');
     await this.c.curriculumUseCases.assertSchemeAllocationsEditable(scheme.toJSON());
     const before=scheme.planningState;
+    allocations=allocations.map(a=>({...a,carriedFrom:a.carriedFrom||before?.allocations.find(old=>old.subStrandId===a.subStrandId)?.carriedFrom}));
     const state:SchemePlanningState={revision:revision+1,locked:false,allocations,scheduleFingerprint:scheduled.fingerprint,history:[...(before?.history||[]),{at:new Date().toISOString(),actorId:actor.userId,action:'DRAFT_SAVED',allocations:structuredClone(allocations),scheduleFingerprint:scheduled.fingerprint}],approvedEntryIds:before?.approvedEntryIds,coverageReviewStatus:'DRAFT',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined};
     scheme.setPlanningState(state);scheme.draft();
     await this.persist(scheme,revision);
@@ -258,6 +261,7 @@ export class TermAllocationService {
     const scheduledWeekdays=[...new Set(schedule.slots.map(slot=>new Date(`${slot.date}T00:00:00Z`).getUTCDay()))].sort((a,b)=>a-b);
     const plans=await this.c.curriculumUseCases.listLessonPlans({classRoomId:scheme.classRoomId,streamId:scheme.streamId,learningAreaId:scheme.learningAreaId},actor);
     const work=await this.c.recordOfWorkRepository.find({schoolId:actor.schoolId,academicYearId:scheme.academicYearId,termId:scheme.termId});
+    const reportedOutcomes=new Set<string>(),confirmedOutcomes=new Set<string>();
     const weeks=new Map<number,any>();
     for(const slot of schedule.slots){
       if(!weeks.has(slot.weekNumber)){
@@ -266,17 +270,23 @@ export class TermAllocationService {
       const entry=scheme.entries.find(e=>!e.archivedAt&&e.slotId===slot.id);
       const matching=plans.filter(p=>entry&&p.schemeOfWorkEntryId===entry.id&&p.lessonDate===slot.date&&p.lessonTime===`${slot.startTime}-${slot.endTime}`).sort((a:any,b:any)=>new Date(b.updatedAt||b.createdAt||0).getTime()-new Date(a.updatedAt||a.createdAt||0).getTime());
       const plan=matching.find(p=>this.isPlanned(p))||matching[0];
-      const linkedWork=work.map(record=>record.toJSON()).filter((r:any)=>entry&&r.classRoomId===scheme.classRoomId&&(r.streamId||'')===(scheme.streamId||'')&&r.learningAreaId===scheme.learningAreaId&&r.planningLink?.schemeId===id&&r.planningLink?.schemeEntryId===entry?.id&&r.planningLink?.slotId===slot.id&&r.lessonDate===slot.date);
-      const taught=linkedWork.some((r:any)=>r.status==='APPROVED');
+      const linkedWork=work.map(record=>record.toJSON()).filter((r:any)=>entry&&r.classRoomId===scheme.classRoomId&&(r.streamId||'')===(scheme.streamId||'')&&r.learningAreaId===scheme.learningAreaId&&r.planningLink?.schemeId===id&&r.planningLink?.schemeEntryId===entry?.id&&r.planningLink?.slotId===slot.id);
+      for(const record of linkedWork){
+        if(!entry||!['SUBMITTED','APPROVED'].includes(record.status)||['POSTPONED','CANCELLED'].includes(record.reflectionData?.teachingStatus||''))continue;
+        const covered=record.reflectionData?.outcomesCovered||(!record.reflectionData?.teachingStatus||record.reflectionData.teachingStatus==='COMPLETED'?entry.specificLearningOutcomes:[]);
+        for(const outcome of covered.filter((o:string)=>entry.specificLearningOutcomes.includes(o))){const key=JSON.stringify([entry.subStrandId||entry.subStrandTitle,outcome.trim().toLowerCase()]);reportedOutcomes.add(key);if(record.status==='APPROVED'&&record.isOfficialCoverage)confirmedOutcomes.add(key);}
+      }
+      const taught=linkedWork.some((r:any)=>r.status==='APPROVED'&&r.isOfficialCoverage&&(!r.reflectionData?.teachingStatus||r.reflectionData.teachingStatus==='COMPLETED'));
+      const reported=linkedWork.some((r:any)=>r.status==='SUBMITTED'||r.status==='APPROVED');
       const recordOfWorkStatus=linkedWork.sort((a:any,b:any)=>new Date(b.updatedAt||b.createdAt||0).getTime()-new Date(a.updatedAt||a.createdAt||0).getTime())[0]?.status;
       weeks.get(slot.weekNumber).endDate=slot.date;
-      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,statuses:{planned:matching.some(p=>this.isPlanned(p)),taught,reflection:matching.some(p=>['APPROVED','RECORDED'].includes(p.status)&&Boolean(p.teacherSelfReflection?.trim()))}});
+      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,statuses:{planned:matching.some(p=>this.isPlanned(p)),reported,taught,reflection:matching.some(p=>Boolean(p.teacherSelfReflection?.trim()))}});
     }
     const [school,cls,area,term,stream,year]=await Promise.all([this.c.academicRepository.getSchool(actor.schoolId!),this.c.academicRepository.findClassById(scheme.classRoomId),this.c.academicRepository.findLearningAreaById(scheme.learningAreaId),this.c.academicRepository.findTermById(scheme.termId),scheme.streamId?this.c.academicRepository.findStreamById(scheme.streamId):Promise.resolve(null),this.c.academicRepository.findYearById(scheme.academicYearId)]);
-    return {scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
+    return {coverageSummary:{reportedOutcomes:reportedOutcomes.size,confirmedOutcomes:confirmedOutcomes.size},scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
   }
 
   private isPlanned(p:any) {
-    return Boolean(['APPROVED','RECORDED'].includes(p.status)&&p.strand?.trim()&&p.subStrand?.trim()&&p.specificLearningOutcomes?.some((s:string)=>s.trim())&&p.steps?.length&&p.steps.every((s:any)=>s.teacherActivities?.trim()&&s.learnerActivities?.trim()&&s.durationMinutes>0)&&p.steps.reduce((n:number,s:any)=>n+s.durationMinutes,0)===p.durationMinutes);
+    return Boolean(p.strand?.trim()&&p.subStrand?.trim()&&p.specificLearningOutcomes?.some((s:string)=>s.trim())&&p.steps?.length&&p.steps.every((s:any)=>s.teacherActivities?.trim()&&s.learnerActivities?.trim()&&s.durationMinutes>0)&&p.steps.reduce((n:number,s:any)=>n+s.durationMinutes,0)===p.durationMinutes);
   }
 }

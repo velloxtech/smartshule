@@ -30,6 +30,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const isApprover = canReviewCurriculum(user?.role);
 
   const [activeTab, setActiveTab] = useState<'schemes' | 'lesson-plans'>(initialTab);
+  const navigatePlanningTab = (tab: string) => {
+    if (onNavigateTab) onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
+    else if (tab === 'schemes' || tab === 'lesson-plans') setActiveTab(tab);
+  };
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
@@ -166,6 +170,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
 
   return (
     <div className="space-y-6 pb-12">
+      {isTeacher&&<section className="rounded-xl border bg-rose-50 p-4"><h2 className="font-semibold">Plan and teach — one step at a time</h2><p className="my-2 text-sm">School Calendar → Timetable → Syllabus Coverage Plan → Scheme of Work → Lesson Plan → Record of Work</p><button className="ui-button ui-button-primary" onClick={()=>onNavigateTab?.('curriculum-tracker')}>Show my next teaching action</button></section>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
@@ -173,10 +178,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             <span>/</span>
             <span>Operations</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Schemes & Lesson Plans</span>
+            <span className="text-primary font-semibold">{activeTab === 'lesson-plans' ? 'Lesson Plans' : 'Schemes of Work'}</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            Teacher Schemes of Work & 40-Min CBE Lesson Plans
+            {activeTab === 'lesson-plans' ? '40-Min CBE Lesson Plans' : 'Teacher Schemes of Work'}
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isTeacher
@@ -189,7 +194,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
           {activeTab === 'schemes' ? (
             <button
               onClick={() => onNavigateTab?.('scheme-of-work-builder')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#7a1228] text-white rounded-lg hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>New Scheme of Work</span>
@@ -197,7 +202,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
           ) : (
             <button
               onClick={() => setIsCreatePlanOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">post_add</span>
               <span>New Lesson Plan</span>
@@ -209,13 +214,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       {/* Curriculum Planning & Coverage Suite Switcher */}
       <CurriculumSuiteSwitcher
         activeTab={activeTab}
-        onSelectTab={(tab) => {
-          if (tab === 'schemes' || tab === 'lesson-plans') {
-            setActiveTab(tab);
-          } else if (onNavigateTab) {
-            onNavigateTab(tab);
-          }
-        }}
+        onSelectTab={navigatePlanningTab}
         counts={{
           schemes: schemes.length,
           lessonPlans: lessonPlans.length,
@@ -236,7 +235,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-xs text-secondary font-data-mono bg-secondary-container px-2 py-0.5 rounded">
+                    <span className="font-bold text-xs text-success font-data-mono bg-success-container px-2 py-0.5 rounded">
                       {schemePeriodLabel(s)}
                     </span>
                     <button
@@ -245,7 +244,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       className="font-bold text-sm text-primary hover:underline cursor-pointer flex items-center gap-1.5 text-left"
                       title="Click to view full Scheme of Work details"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#7a1228]">visibility</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
                       <span>{s.title}</span>
                     </button>
                   </div>
@@ -274,7 +273,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     <p className="pt-1 text-xs font-medium text-amber-800">This term draft cannot be submitted yet. Complete the term scheme and finalize its scheduled lessons first.</p>
                   )}
                   {s.reviewRemarks && (
-                    <div className="text-[11px] text-secondary font-semibold bg-secondary/10 p-1.5 rounded">
+                    <div className="text-[11px] text-success font-semibold bg-success/10 p-1.5 rounded">
                       HOD / Head Teacher Remarks: {s.reviewRemarks}
                     </div>
                   )}
@@ -284,7 +283,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                   <span
                     className={`px-2.5 py-1 rounded text-xs font-bold ${
                       s.status === 'APPROVED'
-                        ? 'bg-secondary-container text-on-secondary-container'
+                        ? 'bg-success-container text-on-success-container'
                         : s.status === 'SUBMITTED'
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-surface-container text-on-surface-variant'
@@ -296,7 +295,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                   <div className="flex gap-2 items-center flex-wrap">
                     <button
                       onClick={() => setSelectedScheme(s)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs transition-colors cursor-pointer"
                       title="View complete Scheme of Work details and full syllabus matrix"
                     >
                       <span className="material-symbols-outlined text-[17px]">visibility</span>
@@ -304,7 +303,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     </button>
                     {s.entries?.some(entry => !entry.archivedAt) && <button
                       onClick={() => downloadSchemePDF(s)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       title="Download official Scheme of Work as PDF"
                     >
                       <span className="material-symbols-outlined text-[15px]">download</span>
@@ -319,7 +318,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       </button>
                     )}
                     {s.status === 'DRAFT' && !s.entries?.some(entry => !entry.archivedAt) && s.planningState && (
-                      <button onClick={() => onNavigateTab?.('scheme-of-work-builder')} className="px-3 py-1.5 rounded-lg border border-[#7a1228] text-xs font-semibold text-[#7a1228]">
+                      <button onClick={() => onNavigateTab?.('scheme-of-work-builder')} className="px-3 py-1.5 rounded-lg border border-primary text-xs font-semibold text-primary">
                         Continue term draft
                       </button>
                     )}
@@ -348,7 +347,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       {/* Lesson Plans View */}
       {activeTab === 'lesson-plans' && (
         <div>
-          {lessonPlans.length > 0 && <button onClick={() => lessonPlansPDF(lessonPlans, planContext).save('Lesson_Plans.pdf')} className="px-3 py-2 mb-3 bg-[#7a1228] text-white rounded-lg">Download all lesson plans (PDF)</button>}
+          {lessonPlans.length > 0 && <button onClick={() => lessonPlansPDF(lessonPlans, planContext).save('Lesson_Plans.pdf')} className="px-3 py-2 mb-3 bg-primary text-white rounded-lg">Download all lesson plans (PDF)</button>}
           {lessonPlans.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {lessonPlans.map((lp) => (
@@ -359,10 +358,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                   <div>
                     <div className="flex items-center justify-between border-b border-surface-container pb-2 flex-wrap gap-1.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-data-mono text-xs font-bold text-secondary bg-secondary-container px-2 py-0.5 rounded">
+                        <span className="font-data-mono text-xs font-bold text-success bg-success-container px-2 py-0.5 rounded">
                           {lp.durationMinutes} Mins · {lp.lessonDate}
                         </span>
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${lp.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : lp.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-800 border-amber-200' : lp.status === 'REJECTED' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${lp.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : lp.status === 'SUBMITTED' ? 'bg-amber-50 text-amber-800 border-amber-200' : lp.status === 'REJECTED' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-surface text-slate-700 border-slate-200'}`}>
                           <span className="material-symbols-outlined text-[13px]">save</span>
                           <span>{lp.status || 'DRAFT'}</span>
                         </span>
@@ -376,10 +375,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       <button
                         type="button"
                         onClick={() => setSelectedPlan(lp)}
-                        className="font-bold text-sm text-on-surface hover:text-[#7a1228] text-left flex items-center gap-1.5 cursor-pointer"
+                        className="font-bold text-sm text-on-surface hover:text-primary text-left flex items-center gap-1.5 cursor-pointer"
                         title="Click to view lesson plan details"
                       >
-                        <span className="material-symbols-outlined text-[16px] text-[#7a1228]">visibility</span>
+                        <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
                         <span>{lp.strand}</span>
                       </button>
                       <p className="text-xs text-primary font-medium">Sub-strand: {lp.subStrand}</p>
@@ -402,7 +401,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => downloadLessonPlanPDF(lp)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary-container text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                         title="Download official 40-Minute Lesson Plan as PDF"
                       >
                         <span className="material-symbols-outlined text-[14px]">download</span>
@@ -422,14 +421,14 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
 
                     <button
                       onClick={() => setSelectedPlan(lp)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs transition-colors cursor-pointer"
                       title="View complete 40-Minute CBE Lesson Plan details"
                     >
                       <span className="material-symbols-outlined text-[16px]">visibility</span>
                       <span>View Details</span>
                     </button>
-                    {isTeacher && ['DRAFT', 'REJECTED', 'RECORDED'].includes(lp.status || 'DRAFT') && <button onClick={() => handleSubmitLessonPlan(lp.id)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">Submit for Review</button>}
-                    {isApprover && lp.status === 'SUBMITTED' && <button onClick={() => setSelectedPlan(lp)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white">Review</button>}
+                    <span className="text-xs text-emerald-800">Saved · ready to use; no approval required</span>
+
                   </div>
                 </div>
               ))}
@@ -448,7 +447,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       {selectedPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-semibold text-sm">CBC 40-Minute Lesson Plan</h3>
                 <p className="text-xs text-rose-100">{selectedPlan.strand} · {selectedPlan.subStrand}</p>
@@ -462,7 +461,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             </div>
 
             <div className="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
-              <div className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${selectedPlan.status === 'APPROVED' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : selectedPlan.status === 'REJECTED' ? 'border-rose-200 bg-rose-50 text-rose-800' : selectedPlan.status === 'SUBMITTED' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-700'}`}><span className="material-symbols-outlined text-base">{selectedPlan.status === 'APPROVED' ? 'verified' : selectedPlan.status === 'SUBMITTED' ? 'pending_actions' : selectedPlan.status === 'REJECTED' ? 'edit_note' : 'draft'}</span><span><strong>{selectedPlan.status || 'DRAFT'}.</strong> {selectedPlan.status === 'APPROVED' ? 'The lesson is approved for teaching.' : selectedPlan.status === 'SUBMITTED' ? 'Awaiting school leadership review.' : selectedPlan.status === 'REJECTED' ? `Returned for changes: ${selectedPlan.reviewRemarks || 'See reviewer comments.'}` : 'Complete the plan and submit it for review.'}</span></div>
+              <div className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${selectedPlan.status === 'APPROVED' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : selectedPlan.status === 'REJECTED' ? 'border-rose-200 bg-rose-50 text-rose-800' : selectedPlan.status === 'SUBMITTED' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-surface text-slate-700'}`}><span className="material-symbols-outlined text-base">{selectedPlan.status === 'APPROVED' ? 'verified' : selectedPlan.status === 'SUBMITTED' ? 'pending_actions' : selectedPlan.status === 'REJECTED' ? 'edit_note' : 'draft'}</span><span><strong>{selectedPlan.status || 'DRAFT'}.</strong> {selectedPlan.status === 'APPROVED' ? 'The lesson is approved for teaching.' : selectedPlan.status === 'SUBMITTED' ? 'Awaiting school leadership review.' : selectedPlan.status === 'REJECTED' ? `Returned for changes: ${selectedPlan.reviewRemarks || 'See reviewer comments.'}` : 'Complete the plan and submit it for review.'}</span></div>
 
               <LessonPlanDocument plan={selectedPlan} context={planContext} />
             </div>
@@ -476,11 +475,11 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                 >
                   Close
                 </button>
-                {isTeacher && ['DRAFT', 'REJECTED', 'RECORDED'].includes(selectedPlan.status || 'DRAFT') && <button onClick={() => handleSubmitLessonPlan(selectedPlan.id)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">Submit for Review</button>}
-                {isApprover && selectedPlan.status === 'SUBMITTED' && <><button onClick={() => handleReviewLessonPlan(selectedPlan.id, false)} className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-bold text-rose-700">Return with comments</button><button onClick={() => handleReviewLessonPlan(selectedPlan.id, true)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">Approve lesson plan</button></>}
+                <span className="text-xs text-emerald-800">Saved · ready to use; no approval required</span>
+
                 <button
                   onClick={() => downloadLessonPlanPDF(selectedPlan)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs cursor-pointer"
                   title="Download 40-Minute Lesson Plan as PDF"
                 >
                   <span className="material-symbols-outlined text-[14px]">download</span>
@@ -514,7 +513,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         onDownloadPDF={downloadSchemePDF}
         onSubmitForReview={handleSubmitScheme}
         onRefresh={async () => { await loadCurriculum(); if (selectedScheme) { const result = await apiService.getSchemeById(selectedScheme.id); if (result.data) setSelectedScheme(result.data); } }}
-        onNavigateTab={(tab) => { setSelectedScheme(null); if (tab === 'lesson-plans') setActiveTab('lesson-plans'); else onNavigateTab?.(tab); }}
+        onNavigateTab={(tab) => { setSelectedScheme(null); navigatePlanningTab(tab); }}
       />
     </div>
   );

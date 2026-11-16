@@ -111,7 +111,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(persistedPlan.assessmentMethods).toEqual(content.assessmentMethods);
     const weekly = await c.termAllocations.weekly(teacher, draft.scheme.id);
     expect(weekly.weeks[0].lessons[0].lessonPlan!.id).toBe(plan.id);
-    expect(weekly.weeks[0].lessons[0].statuses).toEqual({ planned: false, taught: false, reflection: false });
+    expect(weekly.weeks[0].lessons[0].statuses).toEqual({ planned: false, reported: false, taught: false, reflection: false });
     const reopened = await c.termAllocations.reopen(teacher, draft.scheme.id, (await c.schemeOfWorkRepository.findById(draft.scheme.id))!.planningState!.revision, 'Review future coverage without changing the existing lesson');
     const resubmitted = await c.termAllocations.submitCoverage(teacher, draft.scheme.id, reopened.scheme.planningState!.revision);
     const reapproved = await c.termAllocations.reviewCoverage(admin, draft.scheme.id, resubmitted.scheme.planningState!.revision, true, 'Coverage retained');
@@ -161,7 +161,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
       const res: any = { json: resolve };
       new CalendarPlanningController(c).workspace(req, res, reject);
     });
-    expect(result.data.areas[0].coverage[0].lessons[0].statuses).toEqual({ planned: false, taught: false, reflection: false });
+    expect(result.data.areas[0].coverage[0].lessons[0].statuses).toEqual({ planned: false, reported: false, taught: false, reflection: false });
   });
 
   it('submits and approves one completed lesson while preserving unfinished work and earlier approvals', async () => {

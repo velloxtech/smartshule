@@ -94,7 +94,7 @@ export class TimetableController {
     try {
       const { streamId, termId, classRoomId } = req.query;
       const targetId = (streamId as string) || (classRoomId as string);
-      const timetable = await this.timetableUseCases.getStreamTimetable(targetId, termId as string, classRoomId as string);
+      const timetable = await this.timetableUseCases.getStreamTimetable(targetId, termId as string, classRoomId as string,(req as any).user,req.query.academicYearId as string);
       return res.status(200).json({ success: true, data: timetable });
     } catch (err) {
       next(err);
@@ -104,10 +104,14 @@ export class TimetableController {
   public getTeacherTimetable = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { teacherId, termId } = req.query;
-      const slots = await this.timetableUseCases.getTeacherTimetable(teacherId as string, termId as string);
+      const slots = await this.timetableUseCases.getTeacherTimetable(teacherId as string, termId as string,(req as any).user,req.query.academicYearId as string);
       return res.status(200).json({ success: true, count: slots.length, data: slots });
     } catch (err) {
       next(err);
     }
+  };
+
+  public getTeacherAccess = async (req:Request,res:Response,next:NextFunction) => {
+    try{return res.json({success:true,data:await this.timetableUseCases.getTeacherTimetableAccess((req as any).user,{academicYearId:req.query.academicYearId as string,termId:req.query.termId as string})});}catch(error){next(error);}
   };
 }

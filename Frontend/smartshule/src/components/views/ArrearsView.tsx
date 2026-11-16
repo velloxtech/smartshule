@@ -448,7 +448,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                 : '0%'}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary border border-primary flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">groups</span>
           </div>
         </div>
@@ -616,7 +616,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                                   {student.name}
                                 </span>
                                 {student.isSponsored && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/25" title="Student is under institutional scholarship scheme">
                                     <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
                                     <span>Scholarship</span>
                                   </span>
@@ -660,7 +660,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                             <span
                               className={`font-black font-data-mono text-sm ${
                                 student.isSponsored
-                                  ? 'text-[#7a1228]'
+                                  ? 'text-primary'
                                   : isHigh
                                   ? 'text-rose-700'
                                   : hasArrears
@@ -679,7 +679,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                         {/* Status Badge */}
                         <td className="py-3.5 px-4 text-center">
                           {student.isSponsored ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#7a1228] text-white shadow-2xs" title="100% Scholarship · Cannot be charged fee arrears">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-primary text-white shadow-2xs" title="100% Scholarship · Cannot be charged fee arrears">
                               <span className="material-symbols-outlined text-[12px]">lock</span>
                               Charge Exempt
                             </span>
@@ -739,7 +739,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                             {!student.isSponsored && (
                               <button
                                 onClick={() => handleOpenPaymentForStudent(student)}
-                                className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg hover:bg-primary-fixed text-primary hover:text-on-primary-fixed transition-colors cursor-pointer"
                                 title="Record Direct Payment Receipt"
                               >
                                 <span className="material-symbols-outlined text-[17px]">payments</span>
@@ -882,7 +882,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span>{st.name}</span>
                             {st.isSponsored && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/25" title="Student is under institutional scholarship scheme">
                                 <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
                                 <span>Scholarship</span>
                               </span>
@@ -923,7 +923,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                                   setBatchValues((prev) => ({ ...prev, [st.id]: val }));
                                   setSavedRowIds((prev) => ({ ...prev, [st.id]: false }));
                                 }}
-                                className="w-36 pl-10 pr-2.5 py-1 rounded-lg bg-surface-container-low border border-outline-variant/50 text-right font-data-mono font-bold text-xs focus:outline-hidden focus:border-primary focus:bg-white"
+                                className="w-36 pl-10 pr-2.5 py-1 rounded-lg bg-surface-container-low border border-outline-variant/50 text-right font-data-mono font-bold text-xs focus:outline-hidden focus:border-primary focus:bg-surface"
                               />
                             </div>
                           )}

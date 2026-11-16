@@ -3247,19 +3247,19 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     const res = await this.pool.query('SELECT * FROM schemes_of_work WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined }, r.id, r.created_at, r.updated_at);
+    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined,submittedAt:r.submitted_at||undefined,reviewedByUserId:r.reviewed_by_user_id||undefined,reviewedAt:r.reviewed_at||undefined,reviewRemarks:r.review_remarks||undefined }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: SchemeFilterCriteria): Promise<SchemeOfWork[]> {
     const clauses:string[]=[];const params:any[]=[];
     for(const [key,column] of Object.entries({teacherId:'teacher_id',learningAreaId:'learning_area_id',classRoomId:'classroom_id',academicYearId:'academic_year_id',status:'status'})){const value=(filters as any)?.[key];if(value){params.push(value);clauses.push(`${column}=$${params.length}`);}}
     if(filters?.termId){params.push(filters.termId.replace(/-t([1-3])$/,'-$1'));clauses.push(`(CASE WHEN term_id ~ '-t[1-3]$' THEN left(term_id,length(term_id)-3)||'-'||right(term_id,1) ELSE term_id END)=$${params.length}`);}
     const res = await this.pool.query('SELECT * FROM schemes_of_work'+(clauses.length?' WHERE '+clauses.join(' AND '):''),params);
-    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined,submittedAt:r.submitted_at||undefined,reviewedByUserId:r.reviewed_by_user_id||undefined,reviewedAt:r.reviewed_at||undefined,reviewRemarks:r.review_remarks||undefined }, r.id, r.created_at, r.updated_at));
   }
   public async save(s: SchemeOfWork): Promise<void> {
     const q = `INSERT INTO schemes_of_work (id, teacher_id, learning_area_id, classroom_id, stream_id, academic_year_id, term_id, title, entries, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-               ON CONFLICT (id) DO UPDATE SET entries = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) THEN schemes_of_work.entries ELSE EXCLUDED.entries END, status = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) AND EXCLUDED.status='DRAFT' THEN schemes_of_work.status ELSE EXCLUDED.status END, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET entries = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) THEN schemes_of_work.entries ELSE EXCLUDED.entries END, status = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) AND EXCLUDED.status='DRAFT' THEN schemes_of_work.status ELSE EXCLUDED.status END, submitted_at=EXCLUDED.submitted_at, reviewed_by_user_id=EXCLUDED.reviewed_by_user_id, reviewed_at=EXCLUDED.reviewed_at, review_remarks=EXCLUDED.review_remarks, updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : null,
@@ -3281,9 +3281,9 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
   }
   public async update(s: SchemeOfWork): Promise<void> { await this.save(s); }
   public async savePlanning(s:SchemeOfWork, expectedRevision:number, expectedEntries?:any[]):Promise<void>{
-    const result=await this.pool.query(`UPDATE schemes_of_work SET entries=CASE WHEN $6 THEN $1::jsonb ELSE entries END, status=$2, planning_state=$3, updated_at=now()
+    const result=await this.pool.query(`UPDATE schemes_of_work SET entries=CASE WHEN $6 THEN $1::jsonb ELSE entries END, status=$2, planning_state=$3, submitted_at=$8, reviewed_by_user_id=$9, reviewed_at=$10, review_remarks=$11, updated_at=now()
       WHERE id=$4 AND coalesce((planning_state->>'revision')::int,0)=$5 AND (NOT $6 OR entries::jsonb=$7::jsonb) RETURNING id`,
-      [JSON.stringify(s.entries),s.status,JSON.stringify(s.planningState),s.id,expectedRevision,expectedEntries!==undefined,JSON.stringify(expectedEntries||[])]);
+      [JSON.stringify(s.entries),s.status,JSON.stringify(s.planningState),s.id,expectedRevision,expectedEntries!==undefined,JSON.stringify(expectedEntries||[]),s.toJSON().submittedAt||null,s.toJSON().reviewedByUserId||null,s.toJSON().reviewedAt||null,s.reviewRemarks||null]);
     if(!result.rowCount)throw new ConflictError('Planning changed; reload before saving.');
   }
   public async delete(id: string): Promise<void> { const r=await this.pool.query("DELETE FROM schemes_of_work WHERE id = $1 AND NOT coalesce((planning_state->>'locked')::boolean,false) RETURNING id", [id]);if(!r.rowCount)throw new ConflictError('Reopen the saved plan before deleting it.'); }

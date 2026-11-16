@@ -234,7 +234,7 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Active Clubs</span>
- <span className="material-symbols-outlined text-indigo-600 text-lg">groups</span>
+ <span className="material-symbols-outlined text-primary text-lg">groups</span>
  </div>
  <p className="text-2xl font-bold text-on-surface mt-2">{stats.totalClubs}</p>
  <p className="text-xs text-on-surface-variant mt-1">{stats.totalMembers} enrolled learners</p>
@@ -243,7 +243,7 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Merits & Commendations</span>
- <span className="material-symbols-outlined text-emerald-600 text-lg">thumb_up</span>
+ <span className="material-symbols-outlined text-primary text-lg">thumb_up</span>
  </div>
  <p className="text-2xl font-bold text-emerald-600 mt-2">+{stats.merits}</p>
  <p className="text-xs text-on-surface-variant mt-1">Exemplary CBE values recognized</p>
@@ -252,7 +252,7 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Infractions Recorded</span>
- <span className="material-symbols-outlined text-amber-500 text-lg">priority_high</span>
+ <span className="material-symbols-outlined text-primary text-lg">priority_high</span>
  </div>
  <p className="text-2xl font-bold text-amber-600 mt-2">{stats.infractions}</p>
  <p className="text-xs text-on-surface-variant mt-1">Behavior warnings issued</p>
@@ -261,9 +261,9 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Counseling Referrals</span>
- <span className="material-symbols-outlined text-purple-600 text-lg">psychology</span>
+ <span className="material-symbols-outlined text-primary text-lg">psychology</span>
  </div>
- <p className="text-2xl font-bold text-purple-600 mt-2">{stats.counseling}</p>
+ <p className="text-2xl font-bold text-primary mt-2">{stats.counseling}</p>
  <p className="text-xs text-on-surface-variant mt-1">Guidance sessions arranged</p>
  </div>
  </div>
@@ -300,7 +300,7 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="space-y-4">
  {loading ? (
  <div className="p-12 text-center text-on-surface-variant">
- <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-indigo-600">progress_activity</span>
+ <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-primary">progress_activity</span>
  <p>Loading clubs...</p>
  </div>
  ) : clubs.length === 0 ? (
@@ -316,11 +316,11 @@ export const DisciplineClubsView: React.FC = () => {
  return (
  <div
  key={c.id}
- className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition-all"
+ className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-primary transition-all"
  >
  <div>
  <div className="flex items-center justify-between mb-2">
- <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 ">
+ <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary-fixed text-primary ">
  {c.category}
  </span>
  <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1">
@@ -337,7 +337,7 @@ export const DisciplineClubsView: React.FC = () => {
  Patron Teacher: <strong className="text-on-surface ">{c.patronTeacherName}</strong>
  </p>
  <p className="text-on-surface-variant ">
- Active Members: <strong className="text-indigo-600 ">{memberCount} learners</strong>
+ Active Members: <strong className="text-primary ">{memberCount} learners</strong>
  </p>
  </div>
  </div>
@@ -370,7 +370,7 @@ export const DisciplineClubsView: React.FC = () => {
  <select
  value={typeFilter}
  onChange={(e) => setTypeFilter(e.target.value)}
- className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="ALL">All Categories</option>
  <option value="MERIT_COMMENDATION">Merit Commendations (+)</option>
@@ -388,7 +388,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="Search student, value, title..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="pl-8 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="pl-8 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -403,7 +403,7 @@ export const DisciplineClubsView: React.FC = () => {
  <div className="overflow-x-auto">
  {loading ? (
  <div className="p-12 text-center text-on-surface-variant">
- <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-indigo-600">progress_activity</span>
+ <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-primary">progress_activity</span>
  <p>Loading incident records...</p>
  </div>
  ) : filteredIncidents.length === 0 ? (
@@ -442,7 +442,7 @@ export const DisciplineClubsView: React.FC = () => {
  Infraction
  </span>
  ) : (
- <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 ">
+ <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-fixed text-on-primary-fixed ">
  Counseling
  </span>
  )}
@@ -471,7 +471,7 @@ export const DisciplineClubsView: React.FC = () => {
  <td className="px-4 py-3 text-xs text-on-surface-variant">{i.loggedByTeacherName}</td>
  <td className="px-4 py-3 text-right">
  {i.parentInformed ? (
- <span className="text-xs text-blue-600 font-medium flex items-center justify-end gap-1">
+ <span className="text-xs text-primary font-medium flex items-center justify-end gap-1">
  <span className="material-symbols-outlined text-sm">done_all</span> Notified
  </span>
  ) : (
@@ -501,7 +501,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Scouts & Girl Guides Movement"
  value={clubForm.clubName}
  onChange={(e) => setClubForm({ ...clubForm, clubName: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -511,7 +511,7 @@ export const DisciplineClubsView: React.FC = () => {
  <select
  value={clubForm.category}
  onChange={(e: any) => setClubForm({ ...clubForm, category: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="SCOUTS_GIRLGUIDES">Scouts & Girl Guides</option>
  <option value="RED_CROSS">Kenya Red Cross</option>
@@ -530,7 +530,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Tr. Grace Njeri"
  value={clubForm.patronTeacherName}
  onChange={(e) => setClubForm({ ...clubForm, patronTeacherName: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -542,7 +542,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Wednesday 3:30 PM - 5:00 PM"
  value={clubForm.meetingDay}
  onChange={(e) => setClubForm({ ...clubForm, meetingDay: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -553,7 +553,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="Goals, activities, and CBE competencies nurtured..."
  value={clubForm.description}
  onChange={(e) => setClubForm({ ...clubForm, description: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -592,7 +592,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Samuel Ochieng"
  value={incidentForm.studentName}
  onChange={(e) => setIncidentForm({ ...incidentForm, studentName: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  <div>
@@ -601,7 +601,7 @@ export const DisciplineClubsView: React.FC = () => {
  type="text"
  value={incidentForm.gradeLevel}
  onChange={(e) => setIncidentForm({ ...incidentForm, gradeLevel: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -619,7 +619,7 @@ export const DisciplineClubsView: React.FC = () => {
  points: val === 'MERIT_COMMENDATION' ? 5 : val === 'INFRACTION_WARNING' ? -3 : 0,
  });
  }}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="MERIT_COMMENDATION">Merit Commendation (Positive)</option>
  <option value="INFRACTION_WARNING">Infraction Warning (Negative)</option>
@@ -631,7 +631,7 @@ export const DisciplineClubsView: React.FC = () => {
  <select
  value={incidentForm.CBCCoreValue}
  onChange={(e: any) => setIncidentForm({ ...incidentForm, CBCCoreValue: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="LOVE">Love / Compassion</option>
  <option value="RESPECT">Respect</option>
@@ -653,7 +653,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Handed over lost money / Unruly in dining hall"
  value={incidentForm.title}
  onChange={(e) => setIncidentForm({ ...incidentForm, title: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  <div>
@@ -662,7 +662,7 @@ export const DisciplineClubsView: React.FC = () => {
  type="number"
  value={incidentForm.points}
  onChange={(e) => setIncidentForm({ ...incidentForm, points: Number(e.target.value) })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm font-bold text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm font-bold text-on-surface "
  />
  </div>
  </div>
@@ -674,7 +674,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="Circumstances and observation..."
  value={incidentForm.description}
  onChange={(e) => setIncidentForm({ ...incidentForm, description: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -685,12 +685,12 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="e.g., Commended in morning assembly / Advised on teamwork"
  value={incidentForm.actionTaken}
  onChange={(e) => setIncidentForm({ ...incidentForm, actionTaken: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
- <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-200 ">
- <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-indigo-900 ">
+ <div className="bg-primary-fixed p-3 rounded-xl border border-primary ">
+ <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-on-primary-fixed ">
  <input
  type="checkbox"
  checked={incidentForm.parentInformed}
@@ -706,7 +706,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="Parent Phone Number (e.g. +254712345678)"
  value={incidentForm.parentPhoneNumber}
  onChange={(e) => setIncidentForm({ ...incidentForm, parentPhoneNumber: e.target.value })}
- className="w-full px-3 py-1.5 rounded-lg border text-xs bg-white "
+ className="w-full px-3 py-1.5 rounded-lg border text-xs bg-surface "
  />
  </div>
  )}
@@ -753,7 +753,7 @@ export const DisciplineClubsView: React.FC = () => {
  placeholder="Student ID or Admission No (e.g., STU-001)..."
  value={newMemberStudentId}
  onChange={(e) => setNewMemberStudentId(e.target.value)}
- className="flex-1 px-3 py-2 rounded-xl border border-outline-variant/30 bg-white text-xs text-on-surface "
+ className="flex-1 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-xs text-on-surface "
  />
  <button
  type="submit"
@@ -776,7 +776,7 @@ export const DisciplineClubsView: React.FC = () => {
  {selectedClubForMembers.memberStudentIds?.map((mId, idx) => (
  <div key={idx} className="py-2 flex items-center justify-between text-xs">
  <div className="flex items-center gap-2">
- <span className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-[10px]">
+ <span className="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-[10px]">
  {idx + 1}
  </span>
  <span className="font-semibold text-on-surface ">Learner ID: {mId}</span>

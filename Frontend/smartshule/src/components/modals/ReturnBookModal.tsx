@@ -78,7 +78,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined">library_add_check</span>
             </div>
             <div>
@@ -136,7 +136,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                   onClick={() => setConditionStatus('RETURNED')}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1 ${
                     conditionStatus === 'RETURNED'
-                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+                      ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
@@ -148,7 +148,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                   onClick={() => setConditionStatus('DAMAGED')}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1 ${
                     conditionStatus === 'DAMAGED'
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                      ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
@@ -179,7 +179,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                 required
                 value={returnDate}
                 onChange={e => setReturnDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white font-medium"
+                className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface font-medium"
               />
             </div>
 
@@ -200,7 +200,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                     step="1"
                     value={fineAmount}
                     onChange={e => setFineAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-full pl-12 pr-3 py-1.5 text-xs font-bold border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                    className="w-full pl-12 pr-3 py-1.5 text-xs font-bold border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface"
                   />
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface-variant select-none">
@@ -245,7 +245,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
             type="submit"
             form="return-book-form"
             disabled={saving}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-container rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

@@ -238,7 +238,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-      <nav className="sticky top-0 z-50 bg-[#7b1c35] shadow-lg">
+      <nav className="sticky top-0 z-50 bg-primary shadow-lg">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16 sm:h-20 transition-all">
           <button
             onClick={() => {
@@ -292,7 +292,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 setCurrentPage('apply-slot')
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
-              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold text-sm px-6 py-2 rounded-full transition-all duration-200 shadow hover:scale-105 cursor-pointer"
+              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold text-sm px-6 py-2 rounded-full transition-all duration-200 shadow hover:scale-105 cursor-pointer"
             >
               Apply for Slot
             </button>
@@ -306,7 +306,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         <div
-          className={`md:hidden bg-[#5a1226] border-t border-white/10 px-6 transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${
+          className={`md:hidden bg-primary-container border-t border-white/10 px-6 transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${
             menuOpen ? 'max-h-96 py-4 opacity-100 gap-4' : 'max-h-0 py-0 opacity-0 pointer-events-none'
           }`}
         >
@@ -338,7 +338,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 setCurrentPage('apply-slot')
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
-              className="bg-[#e8a92a] text-[#5a1226] font-bold text-sm px-6 py-2.5 rounded-full text-center cursor-pointer"
+              className="bg-[#e8a92a] text-primary-container font-bold text-sm px-6 py-2.5 rounded-full text-center cursor-pointer"
             >
               Apply for Slot
             </button>
@@ -430,7 +430,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
       ) : (
         <>
-          <section className="relative min-h-[92vh] flex items-center overflow-hidden bg-[#5a1226]">
+          <section className="relative min-h-[92vh] flex items-center overflow-hidden bg-primary-container">
             <div className="absolute inset-0">
               <img
                 src={logo}
@@ -457,7 +457,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setCurrentPage('apply-slot')
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
-                    className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-lg hover:scale-105 cursor-pointer"
+                    className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-lg hover:scale-105 cursor-pointer"
                   >
                     Apply for Admission Slot
                   </button>
@@ -494,7 +494,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </section>
 
-          <section className="bg-[#7b1c35] py-10">
+          <section className="bg-primary py-10">
             <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
               {STATS.map(s => (
                 <div key={s.label} className="text-center">
@@ -514,7 +514,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     title: 'Grace Seeds School Campus & Assembly',
                     subtitle: 'Our learners and educators gathered together outside classrooms in Kisian, Kisumu.'
                   })}
-                  className="rounded-3xl overflow-hidden aspect-[4/3] bg-[#f9eef1] shadow-lg cursor-pointer group relative"
+                  className="rounded-3xl overflow-hidden aspect-[4/3] bg-primary-fixed shadow-lg cursor-pointer group relative"
                 >
                   <img
                     src={heroSchool}
@@ -530,8 +530,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               <div>
-                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">About Grace Seeds</p>
-                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight mb-5">
+                <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">About Grace Seeds</p>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-primary-container leading-tight mb-5">
                   A school where every<br />
                   <em className="text-[#e8a92a] not-italic">seed flourishes</em>
                 </h2>
@@ -546,7 +546,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     setCurrentPage('programmes')
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
-                  className="inline-flex items-center gap-2 bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-white font-bold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm cursor-pointer"
                 >
                   View Academic Programmes →
                 </button>
@@ -555,15 +555,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </section>
 
           {/* School Life & Photo Highlights Section */}
-          <section id="school-life" className="py-20 bg-[#f9eef1] relative">
+          <section id="school-life" className="py-20 bg-primary-fixed relative">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
               <div className="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-6">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#f0d8df] text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-primary-fixed text-primary text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
                     <Camera className="w-3.5 h-3.5 text-[#e8a92a]" />
                     Life at Grace Seeds
                   </div>
-                  <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight">
+                  <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-primary-container leading-tight">
                     Where Excellence Meets<br />
                     <em className="text-[#e8a92a] not-italic">Character & Joy</em>
                   </h2>
@@ -575,14 +575,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Feature 1: Academic Excellence Celebration */}
-                <div className="bg-white rounded-3xl border border-[#f0d8df] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+                <div className="bg-white rounded-3xl border border-primary-fixed overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
                   <div
                     onClick={() => setPreviewImage({
                       src: graduationBannerImg,
                       title: '6th Annual Celebration of Academic Excellence',
                       subtitle: 'Honouring learner dedication and inspiring every child to reach their full potential.'
                     })}
-                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-slate-100"
+                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-surface-container-low"
                   >
                     <img
                       src={graduationBannerImg}
@@ -591,13 +591,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 opacity-60 group-hover:opacity-40 transition-opacity" />
 
-                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#7b1c35] text-white text-xs font-bold shadow-md">
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold shadow-md">
                       <Award className="w-3.5 h-3.5 text-[#f5c84a]" />
                       Annual Academic Honors
                     </span>
 
                     <button
-                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-[#5a1226] p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-primary-container p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
                       title="Click to view full image"
                     >
                       <Maximize2 className="w-4 h-4" />
@@ -611,14 +611,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         <span>•</span>
                         <span>Annual Event</span>
                       </div>
-                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-3">
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container mb-3">
                         Celebration of Academic Excellence
                       </h3>
                       <p className="text-[#8a6470] text-sm leading-relaxed mb-6">
                         We celebrate every learner's dedication, progress, and accomplishments. Our annual ceremony brings together learners, teachers, and parents in festive celebration of foundational CBE milestones.
                       </p>
 
-                      <div className="space-y-2.5 border-t border-[#f0d8df] pt-5">
+                      <div className="space-y-2.5 border-t border-primary-fixed pt-5">
                         <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                           <span><strong>Learner Recognition:</strong> Rewarding hard work, creativity, and moral discipline.</span>
@@ -634,14 +634,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-dashed border-[#f0d8df] flex items-center justify-between">
+                    <div className="mt-6 pt-4 border-t border-dashed border-primary-fixed flex items-center justify-between">
                       <span className="text-xs text-[#8a6470] italic">Grace Seeds Compound, Kisian</span>
                       <button
                         onClick={() => {
                           setCurrentPage('apply-slot')
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
-                        className="text-xs font-bold text-[#7b1c35] hover:text-[#e8a92a] transition-colors flex items-center gap-1"
+                        className="text-xs font-bold text-primary hover:text-[#e8a92a] transition-colors flex items-center gap-1"
                       >
                         Enrol Your Child →
                       </button>
@@ -650,14 +650,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 {/* Feature 2: Scouts Marching & Co-Curriculars */}
-                <div className="bg-white rounded-3xl border border-[#f0d8df] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+                <div className="bg-white rounded-3xl border border-primary-fixed overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
                   <div
                     onClick={() => setPreviewImage({
                       src: scoutsMarchingImg,
                       title: 'Grace Seeds Junior Scouts Troop',
                       subtitle: 'Marching parade, discipline, and active leadership training on school grounds.'
                     })}
-                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-slate-100"
+                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-surface-container-low"
                   >
                     <img
                       src={scoutsMarchingImg}
@@ -666,13 +666,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 opacity-60 group-hover:opacity-40 transition-opacity" />
 
-                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5a1226] text-white text-xs font-bold shadow-md">
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container text-white text-xs font-bold shadow-md">
                       <Compass className="w-3.5 h-3.5 text-[#f5c84a]" />
                       Co-Curriculars & Scouts
                     </span>
 
                     <button
-                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-[#5a1226] p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-primary-container p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
                       title="Click to view full image"
                     >
                       <Maximize2 className="w-4 h-4" />
@@ -686,14 +686,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         <span>•</span>
                         <span>12+ Extra-Curricular Clubs</span>
                       </div>
-                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-3">
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container mb-3">
                         Junior Scouts Troop & Outdoor Life
                       </h3>
                       <p className="text-[#8a6470] text-sm leading-relaxed mb-6">
                         Character is forged through action. Our accredited Scouts troop instills teamwork, respect, and civic duty, teaching young boys and girls self-reliance and community service.
                       </p>
 
-                      <div className="space-y-2.5 border-t border-[#f0d8df] pt-5">
+                      <div className="space-y-2.5 border-t border-primary-fixed pt-5">
                         <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                           <span><strong>Parades & Red Carpet Drills:</strong> Fostering poise, rhythm, and self-confidence.</span>
@@ -709,14 +709,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-dashed border-[#f0d8df] flex items-center justify-between">
+                    <div className="mt-6 pt-4 border-t border-dashed border-primary-fixed flex items-center justify-between">
                       <span className="text-xs text-[#8a6470] italic">Kenya Scouts Association Accredited</span>
                       <button
                         onClick={() => {
                           setCurrentPage('programmes')
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
-                        className="text-xs font-bold text-[#7b1c35] hover:text-[#e8a92a] transition-colors flex items-center gap-1"
+                        className="text-xs font-bold text-primary hover:text-[#e8a92a] transition-colors flex items-center gap-1"
                       >
                         Explore Programmes →
                       </button>
@@ -727,11 +727,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </section>
 
-          <section id="programmes" className="py-20 bg-[#f9eef1]">
+          <section id="programmes" className="py-20 bg-primary-fixed">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
               <div className="text-center mb-14">
-                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Academic Programmes</p>
-                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight">
+                <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Academic Programmes</p>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-primary-container leading-tight">
                   Growing together at<br />every stage
                 </h2>
               </div>
@@ -744,24 +744,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setCurrentPage('programmes')
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
-                    className="group bg-white hover:bg-[#7b1c35] border border-[#f0d8df] hover:border-[#7b1c35] rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between"
+                    className="group bg-white hover:bg-primary border border-primary-fixed hover:border-primary rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between"
                   >
                     <div>
-                      <div className="w-12 h-12 rounded-2xl bg-[#f9eef1] text-[#7b1c35] group-hover:bg-white/20 group-hover:text-white flex items-center justify-center mb-4 transition-colors">
+                      <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-primary group-hover:bg-white/20 group-hover:text-white flex items-center justify-center mb-4 transition-colors">
                         <p.icon className="w-6 h-6" />
                       </div>
                       <p className="text-[#e8a92a] text-xs font-bold tracking-widest uppercase mb-1 group-hover:text-[#f5c84a] transition-colors">{p.age}</p>
-                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226] group-hover:text-white transition-colors mb-3">{p.level}</h3>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container group-hover:text-white transition-colors mb-3">{p.level}</h3>
                       <p className="text-[#8a6470] group-hover:text-white/75 text-sm leading-relaxed transition-colors">{p.desc}</p>
                     </div>
-                    <div className="mt-5 text-[#7b1c35] group-hover:text-[#f5c84a] text-sm font-bold transition-colors">Find out more →</div>
+                    <div className="mt-5 text-primary group-hover:text-[#f5c84a] text-sm font-bold transition-colors">Find out more →</div>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="py-20 bg-[#5a1226] relative overflow-hidden">
+          <section className="py-20 bg-primary-container relative overflow-hidden">
             <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#f5c84a]/5 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none" />
 
@@ -835,7 +835,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     >
                       <div>
                         <div className="flex items-center justify-between mb-4">
-                          <span className="w-8 h-8 rounded-full bg-[#f5c84a] text-[#5a1226] font-bold text-sm flex items-center justify-center font-mono shadow-md">
+                          <span className="w-8 h-8 rounded-full bg-[#f5c84a] text-primary-container font-bold text-sm flex items-center justify-center font-mono shadow-md">
                             {obj.key})
                           </span>
                           <div className="w-9 h-9 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -881,11 +881,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <section className="py-20 bg-[#fdfaf6] relative">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
               <div className="text-center max-w-3xl mx-auto mb-10">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f9eef1] border border-[#f0d8df] text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary-fixed border border-primary-fixed text-primary text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
                   <Sparkles className="w-3.5 h-3.5 text-[#e8a92a]" />
                   Interactive Learning Lab
                 </span>
-                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#5a1226]">
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-container">
                   How We Learn at Grace Seeds
                 </h2>
                 <p className="text-[#8a6470] text-sm sm:text-base mt-2">
@@ -907,7 +907,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </section>
 
-          <section className="py-20 bg-[#7b1c35] relative overflow-hidden">
+          <section className="py-20 bg-primary relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-[#e8a92a]" />
               <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white" />
@@ -927,7 +927,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     setCurrentPage('apply-slot')
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
-                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm shadow-lg cursor-pointer"
+                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm shadow-lg cursor-pointer"
                 >
                   Apply for Admission Slot
                 </button>
@@ -938,7 +938,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </section>
 
-          <section id="contact" className="py-16 bg-[#5a1226] text-white border-t border-white/10">
+          <section id="contact" className="py-16 bg-primary-container text-white border-t border-white/10">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 grid md:grid-cols-3 gap-8 text-center md:text-left">
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
                 <div className="w-12 h-12 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center mb-3 mx-auto md:mx-0">
@@ -1080,7 +1080,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <div className="text-center mb-6">
               <img src={logo} alt="Grace Seeds Logo" className="w-16 h-16 mx-auto mb-2" />
-              <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226]">
+              <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container">
                 Enrol at Grace Seeds
               </h3>
               <p className="text-[#8a6470] text-xs mt-1">Fill out this quick form and our admissions office will reach out to schedule an interview.</p>
@@ -1095,57 +1095,57 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             ) : (
               <form onSubmit={handleModalSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Parent Full Name *</label>
+                  <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">Parent Full Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Jane Doe"
                     value={enrolForm.parentName}
                     onChange={e => setEnrolForm({ ...enrolForm, parentName: e.target.value })}
-                    className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Phone Number *</label>
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">Phone Number *</label>
                     <input
                       type="tel"
                       required
                       placeholder="0712345678"
                       value={enrolForm.phone}
                       onChange={e => setEnrolForm({ ...enrolForm, phone: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Email Address</label>
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">Email Address</label>
                     <input
                       type="email"
                       placeholder="parent@example.com"
                       value={enrolForm.email}
                       onChange={e => setEnrolForm({ ...enrolForm, email: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Child's Name *</label>
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">Child's Name *</label>
                     <input
                       type="text"
                       required
                       placeholder="Child's full name"
                       value={enrolForm.childName}
                       onChange={e => setEnrolForm({ ...enrolForm, childName: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Level / Grade *</label>
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">Level / Grade *</label>
                     <select
                       value={enrolForm.programme}
                       onChange={e => setEnrolForm({ ...enrolForm, programme: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     >
                       <option value="Playgroup">Playgroup (Ages 2-3)</option>
                       <option value="PP1">PP1 (Age 4)</option>
@@ -1158,7 +1158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors text-sm cursor-pointer mt-2"
+                  className="w-full bg-primary hover:bg-primary-container text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors text-sm cursor-pointer mt-2"
                 >
                   Submit Enrolment Request →
                 </button>

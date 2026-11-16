@@ -64,14 +64,14 @@ export default function FindUsPage({
           <div className="flex items-center gap-3">
             <button
               onClick={onNavigateHome}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5a1226] hover:text-[#7b1c35] bg-white border border-[#eedad7] hover:border-[#7b1c35] px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-container hover:text-primary bg-white border border-[#eedad7] hover:border-primary px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-xs"
             >
               ← Back to Home
             </button>
             <span className="text-gray-300">/</span>
             <h1
               style={{ fontFamily: 'Fraunces, serif' }}
-              className="text-xl sm:text-2xl font-bold text-[#5a1226]"
+              className="text-xl sm:text-2xl font-bold text-primary-container"
             >
               Find Our School
             </h1>
@@ -81,7 +81,7 @@ export default function FindUsPage({
             href={directionsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="self-start sm:self-auto inline-flex items-center gap-2 bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all hover:scale-105 cursor-pointer"
+            className="self-start sm:self-auto inline-flex items-center gap-2 bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all hover:scale-105 cursor-pointer"
           >
             <Navigation className="w-4 h-4 fill-current" />
             <span>Get Directions</span>
@@ -96,7 +96,7 @@ export default function FindUsPage({
           {/* Card 1: Interactive Live Location Map Card (7 cols) */}
           <section className="lg:col-span-7 bg-white rounded-3xl border border-[#eedad7] shadow-lg overflow-hidden flex flex-col h-full">
             {/* Header Bar */}
-            <div className="bg-[#7b1c35] text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
+            <div className="bg-primary text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-xs font-bold tracking-wider uppercase">
@@ -125,7 +125,7 @@ export default function FindUsPage({
             {/* Footer Bar */}
             <div className="px-6 py-3.5 bg-[#faf5f1] border-t border-[#eedad7] flex flex-wrap items-center justify-between gap-3 text-xs text-gray-600 shrink-0">
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#7b1c35] shrink-0" />
+                <MapPin className="w-4 h-4 text-primary shrink-0" />
                 <span className="font-semibold text-gray-800">GPS Coordinates:</span>
                 <span className="font-mono text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">
                   {activeLat.toFixed(5)}, {activeLng.toFixed(5)}
@@ -136,7 +136,7 @@ export default function FindUsPage({
                 href={directionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[#7b1c35] hover:text-[#5a1226] font-bold hover:underline"
+                className="inline-flex items-center gap-1.5 text-primary hover:text-primary-container font-bold hover:underline"
               >
                 <span>Navigate on Google Maps</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export default function FindUsPage({
           {/* Card 2: School Information & Direct Contacts Card (5 cols) */}
           <section className="lg:col-span-5 bg-white rounded-3xl border border-[#eedad7] shadow-lg overflow-hidden flex flex-col h-full">
             {/* Header Bar */}
-            <div className="bg-[#7b1c35] text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
+            <div className="bg-primary text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#f5c84a]" />
                 <span className="text-xs font-bold tracking-wider uppercase">
@@ -172,7 +172,7 @@ export default function FindUsPage({
                   <div>
                     <h2
                       style={{ fontFamily: 'Fraunces, serif' }}
-                      className="text-xl font-bold text-[#5a1226] leading-tight"
+                      className="text-xl font-bold text-primary-container leading-tight"
                     >
                       {schoolName}
                     </h2>
@@ -187,7 +187,7 @@ export default function FindUsPage({
                 <div className="space-y-4 text-xs">
                   {/* Physical Address */}
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#5a1226]/10 text-[#5a1226] flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
                       <MapPin className="w-4 h-4" />
                     </div>
                     <div className="flex-1">
@@ -200,12 +200,12 @@ export default function FindUsPage({
                       </p>
                       <button
                         onClick={handleCopyAddress}
-                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7b1c35] hover:underline cursor-pointer"
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
                       >
                         {copied ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="text-emerald-700 font-bold">Address Copied!</span>
+                            <Check className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-primary font-bold">Address Copied!</span>
                           </>
                         ) : (
                           <>
@@ -219,7 +219,7 @@ export default function FindUsPage({
 
                   {/* Visiting Hours */}
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#5a1226]/10 text-[#5a1226] flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
                       <Clock className="w-4 h-4" />
                     </div>
                     <div>
@@ -232,14 +232,14 @@ export default function FindUsPage({
 
                   {/* Phone */}
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#5a1226]/10 text-[#5a1226] flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
                       <Phone className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-xs">Telephone Inquiries</p>
                       <a
                         href={`tel:${SCHOOL_LOCATION_CONFIG.phoneClean}`}
-                        className="text-[#7b1c35] font-bold text-sm hover:underline mt-0.5 block"
+                        className="text-primary font-bold text-sm hover:underline mt-0.5 block"
                       >
                         {SCHOOL_LOCATION_CONFIG.phone}
                       </a>
@@ -248,14 +248,14 @@ export default function FindUsPage({
 
                   {/* Email */}
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#5a1226]/10 text-[#5a1226] flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
                       <Mail className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-xs">Official Email Desk</p>
                       <a
                         href={`mailto:${SCHOOL_LOCATION_CONFIG.email}`}
-                        className="text-gray-700 hover:text-[#7b1c35] hover:underline break-all mt-0.5 block"
+                        className="text-gray-700 hover:text-primary hover:underline break-all mt-0.5 block"
                       >
                         {SCHOOL_LOCATION_CONFIG.email}
                       </a>
@@ -271,7 +271,7 @@ export default function FindUsPage({
                   href={directionsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#5a1226] hover:bg-[#7b1c35] text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-2xl shadow-md transition-all cursor-pointer group"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-2xl shadow-md transition-all cursor-pointer group"
                 >
                   <Navigation className="w-4 h-4 text-[#f5c84a] group-hover:scale-110 transition-transform" />
                   <span>Get Directions (Google Maps)</span>
@@ -283,7 +283,7 @@ export default function FindUsPage({
                   href={`https://wa.me/254745436312?text=Hello%20Grace%20Seeds%20School,%20I%20am%20inquiring%20about%20directions%20to%20your%20campus.`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-2xl shadow transition-all cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-white font-bold text-xs py-2.5 px-4 rounded-2xl shadow transition-all cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Chat on WhatsApp for Route Help</span>
@@ -297,7 +297,7 @@ export default function FindUsPage({
         <section className="bg-white rounded-3xl border border-[#eedad7] p-6 sm:p-8 shadow-sm">
           <h3
             style={{ fontFamily: 'Fraunces, serif' }}
-            className="text-lg sm:text-xl font-bold text-[#5a1226] mb-4 flex items-center gap-2"
+            className="text-lg sm:text-xl font-bold text-primary-container mb-4 flex items-center gap-2"
           >
             <span>Getting to Grace Seeds School</span>
           </h3>
@@ -305,7 +305,7 @@ export default function FindUsPage({
           <div className="grid sm:grid-cols-3 gap-5">
             {/* Tile 1: Driving */}
             <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
-              <div className="w-9 h-9 rounded-xl bg-[#5a1226] text-white flex items-center justify-center mb-3">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
                 <Car className="w-4 h-4 text-[#f5c84a]" />
               </div>
               <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">
@@ -318,7 +318,7 @@ export default function FindUsPage({
 
             {/* Tile 2: Public Transport */}
             <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
-              <div className="w-9 h-9 rounded-xl bg-[#5a1226] text-white flex items-center justify-center mb-3">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
                 <Bus className="w-4 h-4 text-[#f5c84a]" />
               </div>
               <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">
@@ -331,7 +331,7 @@ export default function FindUsPage({
 
             {/* Tile 3: Security & Visitor Parking */}
             <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
-              <div className="w-9 h-9 rounded-xl bg-[#5a1226] text-white flex items-center justify-center mb-3">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
                 <ShieldCheck className="w-4 h-4 text-[#f5c84a]" />
               </div>
               <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">

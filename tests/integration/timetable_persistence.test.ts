@@ -1,3 +1,5 @@
+import {ClassRoom,EducationLevel} from '../../src/core/domain/academic/ClassRoom';
+import {CBCGradeLevel} from '../../src/core/domain/user/Student';
 import request from 'supertest';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
@@ -24,6 +26,7 @@ describe('Timetable Active Persistence Integration Tests', () => {
 
   it('should actively save timetable grid with periods, days, and slots to database and retrieve them', async () => {
     const classRoomId = 'test-class-' + Date.now();
+    await container.academicRepository.saveClass(ClassRoom.create({schoolId:'school-001',name:'Synthetic class',gradeLevel:CBCGradeLevel.GRADE_4,educationLevel:EducationLevel.UPPER_PRIMARY},classRoomId));
     const periodsPayload = [
       { periodNumber: 1, name: 'Morning Literacy', startTime: '08:00', endTime: '08:45', isBreak: false, isLunch: false },
       { periodNumber: 2, name: 'Numeracy Foundations', startTime: '08:45', endTime: '09:30', isBreak: false, isLunch: false },
@@ -117,6 +120,7 @@ describe('Timetable Active Persistence Integration Tests', () => {
   it('should revoke scheduling when a teacher is assigned to two classes at a go', async () => {
     const classRoom1 = 'clash-class-1-' + Date.now();
     const classRoom2 = 'clash-class-2-' + Date.now();
+    for(const id of [classRoom1,classRoom2])await container.academicRepository.saveClass(ClassRoom.create({schoolId:'school-001',name:id,gradeLevel:CBCGradeLevel.GRADE_4,educationLevel:EducationLevel.UPPER_PRIMARY},id));
     const sharedTeacherId = 'teacher-clash-test-01';
     const termId = 'term-2026-t1';
 

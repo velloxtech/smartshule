@@ -361,7 +361,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
               <select
                 value={selectedYearId}
                 onChange={(e) => handleYearChange(e.target.value)}
-                className="w-full bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
+                className="w-full bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
               >
                 {academicYears.length > 0 ? (
                   academicYears.map((y) => (
@@ -380,7 +380,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
               <select
                 value={selectedTermId}
                 onChange={handleTermSelect}
-                className="w-full bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
+                className="w-full bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
               >
                 {terms.length > 0 ? (
                   terms.map((t) => (
@@ -403,7 +403,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
               <select
                 value={gradeLevel}
                 onChange={(e) => handleGradeSelect(e.target.value)}
-                className="w-full bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
+                className="w-full bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
               >
                 {GRADE_OPTIONS.map((grp) => (
                   <optgroup key={grp.group} label={grp.group}>
@@ -427,7 +427,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   setTitle(e.target.value);
                 }}
                 placeholder="e.g. Grade 1 Term 1 Fee Schedule"
-                className="w-full bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
+                className="w-full bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
                 required
               />
             </div>
@@ -438,7 +438,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
+                className="w-full bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-semibold text-on-surface focus:outline-primary"
               />
             </div>
           </div>
@@ -474,7 +474,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                       )
                     }
                     placeholder="Description (e.g. Tuition Fee)"
-                    className="flex-1 bg-white border border-outline-variant/30 rounded-md px-2 py-1 text-xs font-semibold text-on-surface"
+                    className="flex-1 bg-surface border border-outline-variant/30 rounded-md px-2 py-1 text-xs font-semibold text-on-surface"
                     required
                   />
 
@@ -485,7 +485,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                         prev.map((item) => (item.id === it.id ? { ...item, category: e.target.value as any } : item))
                       )
                     }
-                    className="w-32 bg-white border border-outline-variant/30 rounded-md px-1.5 py-1 text-[11px] text-on-surface-variant font-medium"
+                    className="w-32 bg-surface border border-outline-variant/30 rounded-md px-1.5 py-1 text-[11px] text-on-surface-variant font-medium"
                   >
                     <option value="TUITION">Tuition</option>
                     <option value="ASSESSMENT">Assessment / CBC</option>
@@ -510,7 +510,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                           prev.map((item) => (item.id === it.id ? { ...item, amount: e.target.value } : item))
                         )
                       }
-                      className="w-full bg-white border border-outline-variant/30 rounded-md pl-8 pr-1 py-1 text-xs font-mono font-bold text-on-surface text-right placeholder:text-gray-400 placeholder:font-normal focus:outline-primary"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-md pl-8 pr-1 py-1 text-xs font-mono font-bold text-on-surface text-right placeholder:text-gray-400 placeholder:font-normal focus:outline-primary"
                     />
                   </div>
 
@@ -545,7 +545,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
           <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-700 text-[18px]">account_balance_wallet</span>
+                <span className="material-symbols-outlined text-primary text-[18px]">account_balance_wallet</span>
                 <span className="font-bold text-amber-950">Dynamic Previous Balance / Arrears Inclusion</span>
               </div>
               <label className="flex items-center gap-1.5 cursor-pointer font-bold text-amber-900 select-none">
@@ -655,7 +655,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   type="button"
                   onClick={handleSubmit as any}
                   disabled={isLoading || totalTermlyAmount <= 0}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? (
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -688,7 +688,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   type="button"
                   onClick={handleSubmit as any}
                   disabled={isLoading || totalTermlyAmount <= 0}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary hover:bg-[#5c0a1a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? (
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

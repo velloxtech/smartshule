@@ -122,7 +122,7 @@ export class DisciplineUseCases {
               ? 'Disciplinary Notice'
               : 'Counseling & Guidance Notice';
 
-          const msg = `SmartShule Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.CBCCoreValue}.`;
+          const msg = `Grace Seeds School Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.CBCCoreValue}.`;
           await this.notificationService.sendSms(phone, msg);
           parentInformed = true;
         }

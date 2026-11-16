@@ -388,7 +388,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   }}
                   className={`text-left p-1.5 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-white/20 text-white border-b-2 border-amber-300'
+                      ? 'bg-white/20 text-white border-b-2 border-primary'
                       : isPast
                       ? 'text-rose-100 hover:bg-white/10'
                       : 'text-rose-200/60'
@@ -443,7 +443,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-white border border-rose-300 rounded-xl p-2.5 text-xs text-on-surface font-semibold focus:outline-primary"
+                  className="w-full bg-surface border border-rose-300 rounded-xl p-2.5 text-xs text-on-surface font-semibold focus:outline-primary"
                 >
                   {STAFF_ROLES.map((r) => (
                     <option key={r.value} value={r.value}>
@@ -476,7 +476,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="e.g. David"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -489,7 +489,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="e.g. Kiprono"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
               </div>
@@ -505,7 +505,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={nationalId}
                     onChange={(e) => setNationalId(e.target.value)}
                     placeholder="e.g. 24891028"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Kenyan National ID Card number</span>
                 </div>
@@ -519,7 +519,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+2547XXXXXXXX"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-[12px]">key</span>
@@ -536,8 +536,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. david.kiprono@smartshule.ac.ke (Optional)"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  placeholder="e.g. david.kiprono@example.com (Optional)"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
 
@@ -550,7 +550,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   <select
                     value={selectedCounty}
                     onChange={(e) => setSelectedCounty(e.target.value)}
-                    className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                   >
                     {KENYAN_COUNTIES.map((c) => (
                       <option key={c.code} value={c.name}>
@@ -566,7 +566,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   <select
                     value={selectedSubCounty}
                     onChange={(e) => setSelectedSubCounty(e.target.value)}
-                    className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                   >
                     {countyObj.subCounties.map((sc) => (
                       <option key={sc} value={sc}>
@@ -582,8 +582,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           {/* SECTION 2: NON-TEACHING STAFF DETAILS */}
           {currentSection === 2 && !isTeachingRole(role) && (
             <div className="space-y-3.5 animate-in fade-in">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[20px] text-blue-700 shrink-0 mt-0.5">
+              <div className="p-3 bg-primary-fixed border border-primary rounded-xl text-xs text-on-primary-fixed flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
                   badge
                 </span>
                 <div>
@@ -602,7 +602,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     placeholder="e.g. Accounts & Finance, Admissions, Operations"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -619,7 +619,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={employeeNumber}
                     onChange={(e) => setEmployeeNumber(e.target.value)}
                     placeholder="e.g. EMP-01"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                 </div>
               </div>
@@ -631,7 +631,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                 <select
                   value={qualification}
                   onChange={(e) => setQualification(e.target.value)}
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 >
                   <option value="Bachelor of Commerce / Finance / CPA">Bachelor of Commerce / Finance / CPA</option>
                   <option value="Certified Public Accountant (CPA-K)">Certified Public Accountant (CPA-K)</option>
@@ -677,7 +677,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={tscNumber}
                     onChange={(e) => setTscNumber(e.target.value)}
                     placeholder="e.g. TSC/123456 (Leave blank if pending)"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Commission registration number (if already received)</span>
                 </div>
@@ -695,7 +695,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     value={employeeNumber}
                     onChange={(e) => setEmployeeNumber(e.target.value)}
                     placeholder="e.g. 01"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Auto-generated starting from 01 (editable if needed)</span>
                 </div>
@@ -709,7 +709,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   <select
                     value={qualification}
                     onChange={(e) => setQualification(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   >
                     <option value="Certificate in Early Childhood (ECDE)">Certificate in Early Childhood (ECDE)</option>
                     <option value="Diploma in Early Childhood (ECDE)">Diploma in Early Childhood (ECDE)</option>
@@ -823,12 +823,12 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                       if (e.key === 'Enter') handleAddCustomSubject(e);
                     }}
                     placeholder="Other specialization (e.g. French, Music)..."
-                    className="flex-1 bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-primary"
+                    className="flex-1 bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-primary"
                   />
                   <button
                     type="button"
                     onClick={handleAddCustomSubject}
-                    className="px-3 py-1.5 bg-surface-container hover:bg-slate-300 text-on-surface font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs rounded-lg transition-colors cursor-pointer"
                   >
                     Add
                   </button>
@@ -855,7 +855,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     <select
                       value={selectedClassId}
                       onChange={(e) => setSelectedClassId(e.target.value)}
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     >
                       <option value="">-- None (Subject Teacher Only) --</option>
                       {classes.map((c) => (
@@ -874,7 +874,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                       value={selectedStreamId}
                       onChange={(e) => setSelectedStreamId(e.target.value)}
                       disabled={!selectedClassId}
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary disabled:opacity-50"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary disabled:opacity-50"
                     >
                       <option value="">
                         {!selectedClassId
@@ -922,7 +922,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   value={dciClearanceNumber}
                   onChange={(e) => setDciClearanceNumber(e.target.value)}
                   placeholder="e.g. PCC-2026-928102"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
                 <span className="text-[10px] text-on-surface-variant">Directorate of Criminal Investigations clearance reference</span>
               </div>
@@ -1000,7 +1000,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     setCurrentSection((prev) => (prev + 1) as any);
                   }
                 }}
-                className="px-5 py-2.5 bg-primary hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
+                className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
               >
                 <span>Continue</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -1009,7 +1009,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 ml-auto"
+                className="px-6 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 ml-auto"
               >
                 {isLoading ? (
                   <>
@@ -1045,7 +1045,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <h1 className="font-headline-lg text-headline-lg text-on-surface">
                 School Staff & Faculty Onboarding
               </h1>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">verified</span>
                 <span>Article 237 (TSC) & Chapter 6 Certified</span>
               </span>

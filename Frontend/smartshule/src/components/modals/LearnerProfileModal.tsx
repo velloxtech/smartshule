@@ -64,7 +64,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Maroon Academic Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-base shrink-0 overflow-hidden border border-white/20">
               {(studentDetails?.profilePhotoUrl || (student as any).profilePhotoUrl) ? (
@@ -100,7 +100,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
                 <span className="material-symbols-outlined text-[16px]">visibility</span>
                 <span>Pedagogical & Emergency Profile</span>
               </span>
-              <span className="text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded font-bold">
+              <span className="text-[10px] bg-success-container text-on-success-container px-2 py-0.5 rounded font-bold">
                 Financial Data Hidden
               </span>
             </div>
@@ -110,7 +110,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
           {!isTeacher && feePosition?.financialPosition && (
             <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+                <span className="font-bold uppercase text-[11px] text-primary tracking-wider block">
                   Authoritative Fee Position
                 </span>
                 <span
@@ -122,7 +122,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
                       : feePosition.financialPosition.status === 'PARTIAL'
                       ? 'bg-amber-100 text-amber-800 border border-amber-200'
                       : feePosition.financialPosition.status === 'UNBILLED'
-                      ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                      ? 'bg-surface-container-low text-slate-700 border border-slate-300'
                       : 'bg-rose-100 text-rose-800 border border-rose-200'
                   }`}
                 >
@@ -154,7 +154,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
 
           {/* Academic Placement */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
-            <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+            <span className="font-bold uppercase text-[11px] text-primary tracking-wider block">
               Academic & Enrollment Details
             </span>
             <div className="grid grid-cols-2 gap-2 text-on-surface">
@@ -164,7 +164,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               </div>
               <div>
                 <span className="text-on-surface-variant block text-[10px]">MoE UPI / NEMIS:</span>
-                <span className="font-bold font-data-mono text-secondary">{student.upi}</span>
+                <span className="font-bold font-data-mono text-success">{student.upi}</span>
               </div>
               <div>
                 <span className="text-on-surface-variant block text-[10px]">Class & Stream:</span>
@@ -180,7 +180,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               </div>
               <div>
                 <span className="text-on-surface-variant block text-[10px]">Enrollment Status:</span>
-                <span className="font-bold text-secondary">{student.status}</span>
+                <span className="font-bold text-success">{student.status}</span>
               </div>
             </div>
           </div>
@@ -188,14 +188,14 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
           {/* Emergency & Guardian Contact */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+              <span className="font-bold uppercase text-[11px] text-primary tracking-wider block">
                 Parent / Guardian Emergency Contact
               </span>
               {onManageParents && !isTeacher && (
                 <button
                   type="button"
                   onClick={() => onManageParents(student)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] font-bold text-[11px] rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-[11px] rounded-lg transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[14px]">family_restroom</span>
                   <span>Link / Change Parent</span>
@@ -224,14 +224,14 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               </div>
               <div>
                 <span className="text-on-surface-variant block text-[10px]">Email Address:</span>
-                <span className="font-data-mono">{primaryGuardian?.user?.email || 'guardian@smartshule.ac.ke'}</span>
+                <span className="font-data-mono">{primaryGuardian?.user?.email || 'Not provided'}</span>
               </div>
             </div>
           </div>
 
           {/* Health & Special Needs */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
-            <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+            <span className="font-bold uppercase text-[11px] text-primary tracking-wider block">
               Medical & Learning Support
             </span>
             <div className="space-y-1.5 text-on-surface">
@@ -264,7 +264,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               <span className="text-on-surface-variant block text-[10px] uppercase font-bold">
                 Term Attendance Rate
               </span>
-              <span className="text-lg font-bold font-data-mono text-secondary block mt-0.5">
+              <span className="text-lg font-bold font-data-mono text-success block mt-0.5">
                 {student.attendanceRate}%
               </span>
             </div>
@@ -277,7 +277,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
                 onClose();
                 onGradeStudent?.(student);
               }}
-              className="flex-1 py-2.5 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+              className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-container text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[16px]">grade</span>
               <span>Upload Marks for this Learner</span>

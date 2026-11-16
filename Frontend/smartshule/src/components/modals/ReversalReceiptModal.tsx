@@ -145,7 +145,7 @@ export const ReversalReceiptModal: React.FC<ReversalReceiptModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200">
         {/* Header */}
         <div className="bg-slate-900 p-5 text-white flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -197,7 +197,7 @@ export const ReversalReceiptModal: React.FC<ReversalReceiptModalProps> = ({
           </div>
 
           {/* Document Reference Info */}
-          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-2 gap-2 text-xs bg-surface p-3 rounded-xl border border-slate-200">
             <div>
               <span className="text-slate-500 block">Reversal Document No:</span>
               <span className="font-mono font-bold text-slate-900">{receipt.reversalReceiptNumber}</span>
@@ -250,14 +250,14 @@ export const ReversalReceiptModal: React.FC<ReversalReceiptModalProps> = ({
             </div>
             <div className="py-1">
               <span className="text-slate-500 block mb-0.5">Bursar's Reason:</span>
-              <span className="text-slate-800 italic bg-slate-50 p-2 rounded block border border-slate-100">
+              <span className="text-slate-800 italic bg-surface p-2 rounded block border border-slate-100">
                 "{receipt.bursarReason}"
               </span>
             </div>
           </div>
 
           {/* Resulting Balances Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
+          <div className="bg-surface border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
             <span className="font-bold text-slate-700 block uppercase tracking-wider mb-1">
               Resulting Account Balances:
             </span>
@@ -291,16 +291,16 @@ export const ReversalReceiptModal: React.FC<ReversalReceiptModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end space-x-3">
+        <div className="p-4 bg-surface border-t border-slate-200 flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-surface-container rounded-xl transition"
           >
             Close
           </button>
           <button
             onClick={handleDownloadPdf}
-            className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition flex items-center space-x-1.5 shadow"
+            className="px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-container rounded-xl transition flex items-center space-x-1.5 shadow"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download PDF</span>

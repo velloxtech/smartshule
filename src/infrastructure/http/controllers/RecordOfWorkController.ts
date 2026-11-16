@@ -10,7 +10,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { RecordOfWorkFilterCriteria } from '../../../core/ports/repositories/IRecordOfWorkRepository';
 
 export const CreateRecordOfWorkSchema = z.object({
-  planningLink: z.object({lessonPlanId:z.string(),schemeId:z.string(),schemeEntryId:z.string(),slotId:z.string()}).optional(),
+  planningLink: z.object({lessonPlanId:z.string().optional(),schemeId:z.string(),schemeEntryId:z.string(),slotId:z.string()}).optional(),
   schoolId: z.string().optional(),
   teacherId: z.string().optional(),
   teacherName: z.string().optional(),
@@ -45,6 +45,9 @@ export const CreateRecordOfWorkSchema = z.object({
   reflection: z.string().optional(),
   reflectionData: z
     .object({
+      teachingStatus: z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).optional(),
+      outcomesCovered: z.array(z.string()).optional(),
+      remainingWork: z.string().optional(),
       comprehensionLevel: z.enum(['EXCELLENT', 'GOOD', 'AVERAGE', 'BELOW_AVERAGE', 'POOR']).optional(),
       whatWentWell: z.string().optional(),
       challengesFaced: z.string().optional(),

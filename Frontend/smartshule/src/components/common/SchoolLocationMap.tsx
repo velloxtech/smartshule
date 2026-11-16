@@ -110,7 +110,7 @@ const MarkerWithAutoPopup: React.FC<{
         <div className="p-1 font-sans text-left">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#7b1c35] shrink-0" />
-            <h4 className="font-bold text-[#5a1226] text-sm leading-tight m-0">
+            <h4 className="font-bold text-primary-container text-sm leading-tight m-0">
               {schoolName}
             </h4>
           </div>
@@ -125,7 +125,7 @@ const MarkerWithAutoPopup: React.FC<{
               href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#7b1c35] hover:text-[#5a1226] font-bold underline"
+              className="text-primary hover:text-primary-container font-bold underline"
             >
               Directions →
             </a>

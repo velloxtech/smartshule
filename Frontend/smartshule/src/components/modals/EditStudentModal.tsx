@@ -249,7 +249,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-[24px]">manage_accounts</span>
@@ -281,7 +281,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
           )}
 
           {success && (
-            <div className="p-3 bg-secondary-container/20 border border-secondary/30 rounded-lg text-secondary text-xs flex items-center gap-2 font-medium">
+            <div className="p-3 bg-success-container/20 border border-success/30 rounded-lg text-success text-xs flex items-center gap-2 font-medium">
               <span className="material-symbols-outlined text-[16px]">check_circle</span>
               <span>{success}</span>
             </div>
@@ -557,7 +557,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   <span className="material-symbols-outlined text-[16px] text-primary">diversity_3</span>
                   <span>Link Specific Guardian User ID</span>
                 </div>
-                <span className="text-[10px] text-secondary font-bold">Admin Linking</span>
+                <span className="text-[10px] text-success font-bold">Admin Linking</span>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -572,14 +572,14 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="button"
                   onClick={handleLinkGuardian}
                   disabled={isLinkingGuardian || !guardianId.trim()}
-                  className="px-3 py-1.5 bg-secondary text-white rounded-lg text-xs font-semibold hover:bg-secondary-container disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primary-container disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
                 >
                   {isLinkingGuardian ? 'Linking...' : 'Link'}
                 </button>
               </div>
 
               {guardianSuccess && (
-                <p className="text-[11px] text-secondary font-medium mt-1 flex items-center gap-1">
+                <p className="text-[11px] text-success font-medium mt-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">check</span>
                   {guardianSuccess}
                 </p>

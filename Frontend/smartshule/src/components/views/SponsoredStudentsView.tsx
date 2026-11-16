@@ -352,7 +352,7 @@ export const SponsoredStudentsView: React.FC = () => {
               <span>School Director &amp; Administrator Exclusive Access</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-[32px] text-amber-300">
+              <span className="material-symbols-outlined text-[32px] text-primary-fixed-dim">
                 volunteer_activism
               </span>
               <span>Fully Sponsored Students &amp; Scholarships Dossier</span>
@@ -365,7 +365,7 @@ export const SponsoredStudentsView: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             <button
               onClick={handleOpenEnrollModal}
-              className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-fixed-dim text-slate-950 font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[20px]">person_add</span>
               <span>+ Enroll Sponsored Learner</span>
@@ -418,7 +418,7 @@ export const SponsoredStudentsView: React.FC = () => {
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-rose-50 text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[28px]">groups</span>
           </div>
@@ -435,7 +435,7 @@ export const SponsoredStudentsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[28px]">verified</span>
           </div>
@@ -453,8 +453,8 @@ export const SponsoredStudentsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+        <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[28px]">payments</span>
           </div>
           <div>
@@ -470,15 +470,15 @@ export const SponsoredStudentsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+        <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[28px]">restaurant</span>
           </div>
           <div>
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Free Lunch Beneficiaries
             </div>
-            <div className="text-2xl font-black text-teal-700 font-data-mono mt-0.5">
+            <div className="text-2xl font-black text-primary font-data-mono mt-0.5">
               {stats?.lunchCoveredCount ?? sponsorships.filter(s => s.coverage?.lunchCovered).length}
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">
@@ -489,7 +489,7 @@ export const SponsoredStudentsView: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
             search
@@ -499,7 +499,7 @@ export const SponsoredStudentsView: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search learner by name, admission no, ref number, or sponsor..."
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-surface text-slate-900 outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
 
@@ -508,7 +508,7 @@ export const SponsoredStudentsView: React.FC = () => {
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-surface text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
           >
             <option value="ALL">All Grades</option>
             {GRADE_LEVELS.map((g) => (
@@ -522,7 +522,7 @@ export const SponsoredStudentsView: React.FC = () => {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-surface text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
           >
             <option value="ALL">All Sponsorship Types</option>
             {Object.entries(SPONSORSHIP_TYPE_CONFIG).map(([k, cfg]) => (
@@ -536,7 +536,7 @@ export const SponsoredStudentsView: React.FC = () => {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-surface text-slate-700 outline-none focus:ring-2 focus:ring-primary font-bold cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -548,13 +548,13 @@ export const SponsoredStudentsView: React.FC = () => {
       </div>
 
       {/* Main Content Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-extrabold text-slate-900">
               Institutional Sponsorship Roster
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-slate-600">
               {filteredSponsorships.length} Learners Found
             </span>
           </div>
@@ -584,7 +584,7 @@ export const SponsoredStudentsView: React.FC = () => {
             </p>
             <button
               onClick={handleOpenEnrollModal}
-              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-[#600e20] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-container transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
               <span>Enroll First Sponsored Learner</span>
@@ -594,7 +594,7 @@ export const SponsoredStudentsView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <tr className="border-b border-slate-200 bg-surface/75 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Learner &amp; Admission</th>
                   <th className="py-3 px-4">Grade &amp; Stream</th>
                   <th className="py-3 px-4">Sponsorship Scheme</th>
@@ -617,12 +617,12 @@ export const SponsoredStudentsView: React.FC = () => {
                   return (
                     <tr
                       key={s.id}
-                      className="hover:bg-slate-50/60 transition-colors"
+                      className="hover:bg-surface/60 transition-colors"
                     >
                       {/* Learner Info */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#500b1a] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-container text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             {s.studentName.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
@@ -668,11 +668,11 @@ export const SponsoredStudentsView: React.FC = () => {
                       {/* Coverage Scope */}
                       <td className="py-3.5 px-4">
                         <div className="flex flex-wrap gap-1">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/20">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/20">
                             100% Tuition
                           </span>
                           {s.coverage.lunchCovered && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-50 text-teal-700 border border-teal-200">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary-fixed text-primary border border-primary">
                               Free Lunch
                             </span>
                           )}
@@ -691,7 +691,7 @@ export const SponsoredStudentsView: React.FC = () => {
 
                       {/* Financial Value */}
                       <td className="py-3.5 px-4">
-                        <div className="font-extrabold font-data-mono text-[#7a1228] text-xs">
+                        <div className="font-extrabold font-data-mono text-primary text-xs">
                           KES {s.termlySubsidyAmount.toLocaleString()} / term
                         </div>
                         <div className="text-[10px] text-slate-500 font-data-mono mt-0.5">
@@ -718,7 +718,7 @@ export const SponsoredStudentsView: React.FC = () => {
                               : s.sponsorshipStatus === 'SUSPENDED'
                               ? 'bg-amber-100 text-amber-800'
                               : s.sponsorshipStatus === 'COMPLETED'
-                              ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                              ? 'bg-surface-container-low text-slate-800 border border-slate-200'
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
@@ -744,7 +744,7 @@ export const SponsoredStudentsView: React.FC = () => {
                               setActiveDossier(s);
                               setIsDossierModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
                             title="View Full Confidential Dossier & Certificate"
                           >
                             <span className="material-symbols-outlined text-[18px]">
@@ -754,7 +754,7 @@ export const SponsoredStudentsView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleOpenEditModal(s)}
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
                             title="Edit Sponsorship Details"
                           >
                             <span className="material-symbols-outlined text-[18px]">
@@ -766,8 +766,8 @@ export const SponsoredStudentsView: React.FC = () => {
                             onClick={() => handleToggleStatus(s)}
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               s.sponsorshipStatus === 'ACTIVE'
-                                ? 'text-amber-600 hover:bg-amber-50'
-                                : 'text-emerald-600 hover:bg-emerald-50'
+                                ? 'text-primary hover:bg-primary-fixed'
+                                : 'text-primary hover:bg-primary-fixed'
                             }`}
                             title={s.sponsorshipStatus === 'ACTIVE' ? 'Suspend Sponsorship' : 'Reactivate Sponsorship'}
                           >
@@ -799,11 +799,11 @@ export const SponsoredStudentsView: React.FC = () => {
       {/* MODAL 1: Enroll / Edit Sponsored Learner */}
       {isEnrollModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-primary to-[#500b1a] text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-gradient-to-r from-primary to-primary-container text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[24px] text-amber-300">
+                <span className="material-symbols-outlined text-[24px] text-primary-fixed-dim">
                   {editingId ? 'edit_note' : 'person_add'}
                 </span>
                 <div>
@@ -832,7 +832,7 @@ export const SponsoredStudentsView: React.FC = () => {
                   Select Registered Learner *
                 </label>
                 {editingId ? (
-                  <div className="p-2.5 rounded-xl bg-slate-100 text-slate-800 font-bold">
+                  <div className="p-2.5 rounded-xl bg-surface-container-low text-slate-800 font-bold">
                     {sponsorships.find(s => s.id === editingId)?.studentName} (Adm: {sponsorships.find(s => s.id === editingId)?.admissionNumber})
                   </div>
                 ) : (
@@ -840,7 +840,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     value={formData.studentId}
                     onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   >
                     <option value="">-- Choose active student from school roster --</option>
                     {availableStudents.map((st) => (
@@ -862,7 +862,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     value={formData.sponsorshipType}
                     onChange={(e) => setFormData({ ...formData, sponsorshipType: e.target.value as any })}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   >
                     {Object.entries(SPONSORSHIP_TYPE_CONFIG).map(([k, cfg]) => (
                       <option key={k} value={k}>
@@ -882,13 +882,13 @@ export const SponsoredStudentsView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, sponsorName: e.target.value })}
                     placeholder="e.g. School Director's Benevolence Fund"
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-xs outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
               {/* Coverage Checkboxes */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="p-3.5 rounded-xl bg-surface border border-slate-200 space-y-2">
                 <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
                   Institutional Coverage &amp; Benefits:
                 </div>
@@ -978,7 +978,7 @@ export const SponsoredStudentsView: React.FC = () => {
                       });
                     }}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-data-mono font-bold text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-data-mono font-bold text-xs"
                   />
                 </div>
 
@@ -990,7 +990,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     type="number"
                     value={formData.annualSubsidyAmount}
                     onChange={(e) => setFormData({ ...formData, annualSubsidyAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-data-mono font-bold text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-data-mono font-bold text-xs"
                   />
                 </div>
 
@@ -1004,7 +1004,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, approvalReference: e.target.value })}
                     placeholder="DIR-SCH-2026-001"
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-data-mono font-bold text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-data-mono font-bold text-xs"
                   />
                 </div>
               </div>
@@ -1020,7 +1020,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-xs"
                   />
                 </div>
 
@@ -1032,7 +1032,7 @@ export const SponsoredStudentsView: React.FC = () => {
                     type="date"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-xs"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-xs"
                   />
                 </div>
               </div>
@@ -1048,7 +1048,7 @@ export const SponsoredStudentsView: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, reasonNotes: e.target.value })}
                   placeholder="e.g. Awarded full institutional scholarship for exemplary CBE performance and community background."
                   required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs leading-relaxed"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 text-xs leading-relaxed"
                 />
               </div>
 
@@ -1064,7 +1064,7 @@ export const SponsoredStudentsView: React.FC = () => {
                   value={formData.confidentialNotes}
                   onChange={(e) => setFormData({ ...formData, confidentialNotes: e.target.value })}
                   placeholder="e.g. Family assessment verified by community visit; single-parent household; exceptional conduct."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs leading-relaxed"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 text-xs leading-relaxed"
                 />
               </div>
 
@@ -1073,14 +1073,14 @@ export const SponsoredStudentsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsEnrollModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-surface-container-low transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-primary hover:bg-[#600e20] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -1105,11 +1105,11 @@ export const SponsoredStudentsView: React.FC = () => {
       {/* MODAL 2: Full Confidential Dossier & Printable Certificate */}
       {isDossierModalOpen && activeDossier && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-primary to-[#500b1a] text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-gradient-to-r from-primary to-primary-container text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[24px] text-amber-300">
+                <span className="material-symbols-outlined text-[24px] text-primary-fixed-dim">
                   workspace_premium
                 </span>
                 <div>
@@ -1183,14 +1183,14 @@ export const SponsoredStudentsView: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-bold uppercase block">Subsidized Value</span>
-                  <span className="font-bold font-data-mono text-[#7a1228]">
+                  <span className="font-bold font-data-mono text-primary">
                     KES {activeDossier.termlySubsidyAmount.toLocaleString()} / term (KES {activeDossier.annualSubsidyAmount.toLocaleString()} / yr)
                   </span>
                 </div>
               </div>
 
               {/* Coverage Breakdown */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="p-4 rounded-xl bg-surface border border-slate-200 space-y-2 text-xs">
                 <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
                   Authorized Benefits &amp; Full Waivers:
                 </div>

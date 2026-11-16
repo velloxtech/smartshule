@@ -715,7 +715,7 @@ export const LunchFeeManagementView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `smartshule_lunch_roster_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Grace_Seeds_School_lunch_roster_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -752,7 +752,7 @@ export const LunchFeeManagementView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `smartshule_lunch_expenses_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Grace_Seeds_School_lunch_expenses_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -777,7 +777,7 @@ export const LunchFeeManagementView: React.FC = () => {
           className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 animate-bounce ${
             notification.type === 'success'
               ? 'bg-primary border-primary/40 text-white'
-              : 'bg-[#500b1a] border-white/20 text-white'
+              : 'bg-primary-container border-white/20 text-white'
           }`}
         >
           <span className="material-symbols-outlined text-[18px]">
@@ -1171,7 +1171,7 @@ export const LunchFeeManagementView: React.FC = () => {
               setDailyLearnerSearch('');
               setIsDailyPaymentModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
             title="Record Daily Lunch Collection"
           >
             <span className="material-symbols-outlined text-[16px]">add_card</span>
@@ -1214,7 +1214,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 });
                 setIsEnrollModalOpen(true);
               }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
               title="Enroll Individual Learner"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
@@ -1238,7 +1238,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 });
                 setIsRecordExpenseModalOpen(true);
               }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
               title="Record Lunch Expense"
             >
               <span className="material-symbols-outlined text-[16px]">add_shopping_cart</span>
@@ -1623,7 +1623,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   });
                   setIsRecordExpenseModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-[#600000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
                 <span>Record Expense</span>
@@ -1834,7 +1834,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   type="button"
                   onClick={handleFetchWeeklyReport}
                   disabled={reportLoading}
-                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-[#500b1a] transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-container transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {reportLoading ? 'Generating...' : 'Run Report'}
                 </button>
@@ -1873,7 +1873,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   type="button"
                   onClick={handleFetchMonthlyReport}
                   disabled={reportLoading}
-                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-[#500b1a] transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg font-bold hover:bg-primary-container transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {reportLoading ? 'Reconciling...' : 'Run Reconciliation'}
                 </button>
@@ -2317,7 +2317,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#500b1a] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Enroll Learner
                 </button>
@@ -2446,7 +2446,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Enroll {selectedStudentIds.length} Learners
                 </button>
@@ -2553,7 +2553,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Record Payment Receipt
                 </button>
@@ -2668,7 +2668,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#500b1a] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -2839,7 +2839,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Record Expense
                 </button>
@@ -3010,7 +3010,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#500b1a] shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -3282,7 +3282,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!dailyPaymentForm.studentId}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">receipt</span>
                   <span>Record & Generate Receipt</span>
@@ -3575,7 +3575,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!monthlyPaymentForm.studentId}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">receipt</span>
                   <span>Record & Generate Receipt</span>

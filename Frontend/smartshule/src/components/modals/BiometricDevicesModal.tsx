@@ -160,7 +160,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-rose-100 mt-0.5">
-                Universal device and platform authentication management for SmartShule
+                Universal device and platform authentication management for Grace Seeds School
               </p>
             </div>
           </div>
@@ -231,12 +231,12 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
                     value={customDeviceLabel}
                     onChange={(e) => setCustomDeviceLabel(e.target.value)}
                     placeholder="Enter device name (e.g. Work Laptop)..."
-                    className="flex-1 px-3.5 py-2 bg-white border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-primary transition-colors"
+                    className="flex-1 px-3.5 py-2 bg-surface border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-primary transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={isRegistering}
-                    className="px-4 py-2 bg-primary hover:bg-[#5c0a1a] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60"
+                    className="px-4 py-2 bg-primary hover:bg-primary-container text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-60"
                   >
                     {isRegistering ? (
                       <>
@@ -363,7 +363,7 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
           {/* Ecosystem Passkey Sync and Device Switching Advice */}
           <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2 text-xs text-amber-950">
             <div className="font-bold flex items-center gap-2 text-amber-900">
-              <span className="material-symbols-outlined text-[18px] text-amber-700">sync_alt</span>
+              <span className="material-symbols-outlined text-[18px] text-primary">sync_alt</span>
               <span>Cross-Device Registration & Switching Guidance</span>
             </div>
             <ul className="list-disc pl-4 space-y-1 text-[11px] text-amber-900 leading-relaxed">
@@ -383,12 +383,12 @@ export const BiometricDevicesModal: React.FC<BiometricDevicesModalProps> = ({
         {/* Modal Footer */}
         <div className="p-4 bg-surface border-t border-outline-variant/30 flex items-center justify-between shrink-0">
           <span className="text-[11px] text-on-surface-variant">
-            SmartShule CBC Portal · Hardware-Backed Security
+            Grace Seeds School CBC Portal · Hardware-Backed Security
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-surface-container hover:bg-slate-300 text-on-surface text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold rounded-xl transition-colors cursor-pointer"
           >
             Done
           </button>

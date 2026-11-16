@@ -694,7 +694,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     setInitStep('CONFIG');
                     setShowInitModal(true);
                   }}
-                  className="px-4 py-2 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/40"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/40"
                   title="Initialize a new academic term (Restricted to Super Admin, Admin, and Headteacher)"
                 >
                   <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -714,7 +714,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
                 <button
                   onClick={() => openReopenNotificationModal()}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   title="Broadcast official school reopening date and directives to all parents"
                 >
                   <span className="material-symbols-outlined text-[16px]">campaign</span>
@@ -758,7 +758,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     value={newYear.name}
                     onChange={(e) => setNewYear({ ...newYear, name: e.target.value })}
                     placeholder="2026"
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
@@ -769,7 +769,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={newYear.startDate}
                     onChange={(e) => setNewYear({ ...newYear, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
@@ -780,7 +780,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={newYear.endDate}
                     onChange={(e) => setNewYear({ ...newYear, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -844,7 +844,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={newTerm.academicYearId}
                     onChange={(e) => setNewTerm({ ...newTerm, academicYearId: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="" disabled>
                       -- Select Academic Year --
@@ -868,7 +868,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         name: `Term ${e.target.value}`,
                       })
                     }
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value={1}>Term 1</option>
                     <option value={2}>Term 2</option>
@@ -884,7 +884,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     value={newTerm.name}
                     onChange={(e) => setNewTerm({ ...newTerm, name: e.target.value })}
                     placeholder="Term 1 - 2026"
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
@@ -895,7 +895,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={newTerm.startDate}
                     onChange={(e) => setNewTerm({ ...newTerm, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
@@ -906,7 +906,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={newTerm.endDate}
                     onChange={(e) => setNewTerm({ ...newTerm, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
@@ -1048,7 +1048,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           {canManageTerms && (
                             <button
                               onClick={() => openReopenNotificationModal(term.id)}
-                              className="px-2.5 py-1 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold text-on-primary-fixed bg-primary-fixed hover:bg-primary-fixed rounded-lg border border-primary transition-colors flex items-center gap-1 cursor-pointer"
                               title="Broadcast reopening notice & directives to parents for this term"
                             >
                               <span className="material-symbols-outlined text-[14px]">campaign</span>
@@ -1106,7 +1106,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             <button
                               onClick={() => handleSaveTermDates(term.id)}
                               disabled={isSaving}
-                              className="w-full sm:w-auto px-4 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              className="w-full sm:w-auto px-4 py-1.5 bg-primary hover:bg-black text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined text-[15px]">save</span>
                               <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -1206,7 +1206,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   />
                   {notifyOpeningDate && (
                     <p className="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-emerald-700">event</span>
+                      <span className="material-symbols-outlined text-[14px] text-primary">event</span>
                       <span>
                         Reopening on:{' '}
                         <strong className="text-on-surface">
@@ -1347,7 +1347,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               {initStep === 'CONFIG' && (
                 <form onSubmit={handleProceedToConfirmInit} className="p-5 overflow-y-auto space-y-4">
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
-                    <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0">shield</span>
+                    <span className="material-symbols-outlined text-[20px] text-primary shrink-0">shield</span>
                     <div>
                       <span className="font-bold block text-amber-950">Safe Session Initialization & Historical Preservation:</span>
                       <span>
@@ -1470,7 +1470,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-5 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>Proceed to Confirmation</span>
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -1536,7 +1536,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                       type="button"
                       onClick={handleConfirmInitializeTerm}
                       disabled={initializingTerm}
-                      className="px-5 py-2.5 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[16px]">
                         {initializingTerm ? 'progress_activity' : 'check_circle'}
@@ -1611,7 +1611,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           openReopenNotificationModal(initializedTermData.id);
                         }
                       }}
-                      className="px-5 py-2.5 bg-primary hover:bg-[#600000] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">campaign</span>
                       <span>📢 Broadcast School Reopening Notice</span>

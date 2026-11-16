@@ -325,13 +325,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               if (fallback) (fallback as HTMLElement).style.display = 'flex';
             }}
           />
-          <div className="w-11 h-11 rounded-2xl bg-white text-[#7a1228] hidden items-center justify-center font-bold shadow-lg shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-surface-container-lowest text-primary hidden items-center justify-center font-bold shadow-lg shrink-0">
             <span className="material-symbols-outlined text-[26px]">school</span>
           </div>
           <div className="text-left">
             <div className="font-black text-xl tracking-tight text-white flex items-center gap-2">
               <span>Grace Seeds School</span>
-              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-xs">
+              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-primary text-on-primary-fixed shadow-xs">
                 CBC Portal
               </span>
             </div>
@@ -355,10 +355,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Main Container */}
       <main className="flex-1 flex items-center justify-center px-4 py-6 sm:py-10">
-        <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20 grid grid-cols-1 lg:grid-cols-12 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-full max-w-5xl bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden border border-white/20 grid grid-cols-1 lg:grid-cols-12 animate-in fade-in zoom-in-95 duration-200">
           
           {/* Left Column: School Institutional Showcase */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-[#7a1228] via-[#630b1e] to-[#450513] text-white p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden">
+          <div className="lg:col-span-5 bg-gradient-to-br from-primary via-[#630b1e] to-[#450513] text-white p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden">
             {/* Background Accent Rings */}
             <div className="absolute -top-16 -right-16 w-52 h-52 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
             <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -367,7 +367,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {/* Institutional Badge */}
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
-                  <span className="material-symbols-outlined text-[28px] text-amber-300">school</span>
+                  <span className="material-symbols-outlined text-[28px] text-primary-fixed-dim">school</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300 block">
@@ -403,11 +403,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </span>
                 <div className="space-y-2">
                   <div className="flex items-start gap-2.5 text-xs text-rose-100">
-                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0 mt-0.5">menu_book</span>
+                    <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim shrink-0 mt-0.5">menu_book</span>
                     <span><strong>Educators & Faculty:</strong> Schemes of work, continuous rubrics, lesson plans & salary records.</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-rose-100">
-                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0 mt-0.5">family_restroom</span>
+                    <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim shrink-0 mt-0.5">family_restroom</span>
                     <span><strong>Parents & Guardians:</strong> Live e-diary notices, attendance roll-call, CBC report cards & fee clearance.</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-rose-100">
@@ -421,15 +421,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* School Helpdesk Contact Info */}
             <div className="relative z-10 pt-6 mt-6 border-t border-white/15 space-y-1.5 text-[11px] text-rose-200/90">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[14px] text-amber-300">call</span>
+                <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">call</span>
                 <span>Admissions & Support: <strong>+254 745 436 312</strong></span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[14px] text-amber-300">mail</span>
+                <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">mail</span>
                 <span>Office: <strong>schoolgraceseeds@gmail.com</strong></span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[14px] text-amber-300">location_on</span>
+                <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">location_on</span>
                 <span>P.O Box 12-20123</span>
               </div>
             </div>
@@ -441,7 +441,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {/* Form Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-1 rounded-md bg-[#7a1228]/10 text-[#7a1228] text-[10px] font-extrabold uppercase tracking-wider">
+                  <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-extrabold uppercase tracking-wider">
                     Authorized Access
                   </span>
                   <span className="text-xs text-slate-400">•</span>
@@ -468,16 +468,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {/* Stakeholder Role Pills */}
               {authMode === 'login' && (
                 <div className="flex items-center gap-2 pb-5 mb-5 border-b border-slate-100 flex-wrap">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
-                    <span className="material-symbols-outlined text-[15px] text-[#7a1228]">person</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-primary">person</span>
                     <span>Staff & Teachers</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
-                    <span className="material-symbols-outlined text-[15px] text-emerald-700">family_restroom</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-primary">family_restroom</span>
                     <span>Parents & Guardians</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
-                    <span className="material-symbols-outlined text-[15px] text-indigo-700">admin_panel_settings</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-primary">admin_panel_settings</span>
                     <span>Administration</span>
                   </div>
                 </div>
@@ -511,13 +511,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 
                 {/* Guidance for Unsupported Devices / Insecure Contexts */}
                 {capabilities && !capabilities.isWebAuthnSupported && (
-                  <div className="p-3 mb-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
+                  <div className="p-3 mb-3 rounded-xl bg-surface border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">
                       info
                     </span>
                     <span>
                       {capabilities.insecureHttpDetected
-                        ? 'Biometric login requires accessing SmartShule via http://localhost:5173 or HTTPS. Please sign in using your password below.'
+                        ? 'Biometric login requires accessing Grace Seeds School via http://localhost:5173 or HTTPS. Please sign in using your password below.'
                         : 'WebAuthn biometric authentication is not supported on this browser or device. Please sign in using your password below.'}
                     </span>
                   </div>
@@ -530,7 +530,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="button"
                       disabled={isLoading || bioLoading}
                       onClick={handleBiometricLogin}
-                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-slate-700 disabled:opacity-60"
+                      className="w-full py-3 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-slate-700 disabled:opacity-60"
                     >
                       {bioLoading ? (
                         <>
@@ -539,7 +539,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined text-[19px] text-amber-400">
+                          <span className="material-symbols-outlined text-[19px] text-primary">
                             {capabilities.iconName}
                           </span>
                           <span>
@@ -553,7 +553,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                     {/* Intelligent Device & Status Feedback */}
                     {userBiometricStatus && (
-                      <div className="text-[11px] px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 animate-in fade-in">
+                      <div className="text-[11px] px-3.5 py-2.5 rounded-xl bg-surface border border-slate-200 text-slate-700 animate-in fade-in">
                         {userBiometricStatus.hasCredentials ? (
                           <div className="flex items-start gap-2">
                             <span className="material-symbols-outlined text-[16px] text-emerald-600 shrink-0 mt-0.5">
@@ -581,7 +581,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                     {bioError && (
                       <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 animate-in fade-in">
-                        <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0">
+                        <span className="material-symbols-outlined text-[18px] text-primary shrink-0">
                           info
                         </span>
                         <span>{bioError}</span>
@@ -613,7 +613,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="e.g. 0712345678 or teacher@graceseeds.ac.ke"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white focus:ring-1 focus:ring-[#7a1228] transition-all font-medium"
+                        className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface focus:ring-1 focus:ring-primary transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -631,7 +631,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                           setForgotSuccess(null);
                           setAuthMode('forgot_request');
                         }}
-                        className="text-xs text-[#7a1228] font-bold cursor-pointer hover:underline"
+                        className="text-xs text-primary font-bold cursor-pointer hover:underline"
                       >
                         Forgot password?
                       </button>
@@ -646,7 +646,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter password..."
-                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white focus:ring-1 focus:ring-[#7a1228] transition-all font-medium"
+                        className="w-full pl-10 pr-11 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface focus:ring-1 focus:ring-primary transition-all font-medium"
                       />
                       <button
                         type="button"
@@ -660,7 +660,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
-                      <span className="material-symbols-outlined text-[14px] text-amber-600">lightbulb</span>
+                      <span className="material-symbols-outlined text-[14px] text-primary">lightbulb</span>
                       <span>First-time sign in? Your default password is your registered mobile number.</span>
                     </div>
                   </div>
@@ -669,7 +669,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full py-3 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       {isLoading ? (
                         <>
@@ -692,7 +692,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {authMode === 'forgot_request' && (
                 <form onSubmit={handleRequestResetCode} className="space-y-4 animate-in fade-in">
                   <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-950 space-y-1">
-                    <div className="font-bold flex items-center gap-1.5 text-[#7a1228]">
+                    <div className="font-bold flex items-center gap-1.5 text-primary">
                       <span className="material-symbols-outlined text-[16px]">security</span>
                       <span>Grace Seeds School Security Verification</span>
                     </div>
@@ -715,7 +715,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
                         placeholder="e.g. 0712345678 or user@graceseeds.ac.ke"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                        className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface"
                       />
                     </div>
                   </div>
@@ -724,7 +724,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full py-3 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       {forgotLoading ? (
                         <>
@@ -747,7 +747,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         setAuthMode('login');
                       }}
                       disabled={forgotLoading}
-                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 bg-surface-container-low hover:bg-surface-container text-slate-700 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                       <span>Return to Sign In</span>
@@ -783,7 +783,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={resetCode}
                         onChange={(e) => setResetCode(e.target.value.trim())}
                         placeholder="e.g. 123456"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-center tracking-widest text-slate-900 focus:outline-[#7a1228] focus:bg-white font-bold"
+                        className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm font-mono text-center tracking-widest text-slate-900 focus:outline-primary focus:bg-surface font-bold"
                       />
                     </div>
                   </div>
@@ -802,7 +802,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={newResetPassword}
                         onChange={(e) => setNewResetPassword(e.target.value)}
                         placeholder="Minimum 6 characters..."
-                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                        className="w-full pl-10 pr-11 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface"
                       />
                       <button
                         type="button"
@@ -830,7 +830,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={confirmResetPassword}
                         onChange={(e) => setConfirmResetPassword(e.target.value)}
                         placeholder="Confirm password..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                        className="w-full pl-10 pr-4 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface"
                       />
                     </div>
                   </div>
@@ -839,7 +839,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full py-3 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       {forgotLoading ? (
                         <>
@@ -858,7 +858,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       <button
                         type="button"
                         onClick={() => setAuthMode('forgot_request')}
-                        className="text-[#7a1228] font-bold hover:underline cursor-pointer"
+                        className="text-primary font-bold hover:underline cursor-pointer"
                       >
                         Resend Code
                       </button>
@@ -909,7 +909,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={regFirstName}
                         onChange={(e) => setRegFirstName(e.target.value)}
                         placeholder="e.g. Director"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                        className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                       />
                     </div>
                     <div>
@@ -922,7 +922,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={regLastName}
                         onChange={(e) => setRegLastName(e.target.value)}
                         placeholder="e.g. Principal"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                        className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                       />
                     </div>
                   </div>
@@ -936,7 +936,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="e.g. admin@graceseeds.ac.ke"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                     />
                   </div>
 
@@ -949,7 +949,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
                       placeholder="e.g. 0712345678"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                     />
                   </div>
 
@@ -964,7 +964,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
                         placeholder="Min 6 chars"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                        className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                       />
                     </div>
                     <div>
@@ -977,18 +977,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         value={regConfirmPassword}
                         onChange={(e) => setRegConfirmPassword(e.target.value)}
                         placeholder="Repeat password"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                        className="w-full px-3 py-2 bg-surface border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-primary"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2 pt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="flex items-start gap-2 pt-1 bg-surface p-2.5 rounded-xl border border-slate-200">
                     <input
                       id="agreeTermsSetup"
                       type="checkbox"
                       checked={agreeToTerms}
                       onChange={(e) => setAgreeToTerms(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer shrink-0"
+                      className="mt-0.5 h-4 w-4 rounded text-primary focus:ring-primary cursor-pointer shrink-0"
                     />
                     <label htmlFor="agreeTermsSetup" className="text-[11px] text-slate-700 leading-snug cursor-pointer">
                       I agree to the Terms & Conditions and acknowledge data processing in compliance with the Kenya Data Protection Act, 2019.
@@ -999,7 +999,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <button
                       type="submit"
                       disabled={regLoading}
-                      className="w-full py-2.5 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
                       {regLoading ? 'Initializing Administrator...' : 'Initialize Super Administrator Account'}
                     </button>
@@ -1010,8 +1010,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             {/* School Account Provisioning Notice (Replacing public registration) */}
             <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-left flex items-start gap-3">
-                <span className="material-symbols-outlined text-[20px] text-[#7a1228] shrink-0 mt-0.5">verified_user</span>
+              <div className="bg-surface border border-slate-200/80 rounded-2xl p-3.5 text-left flex items-start gap-3">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">verified_user</span>
                 <div className="text-[11px] text-slate-600 leading-relaxed">
                   <strong className="text-slate-900 font-bold block mb-0.5">Official Account Provisioning Notice</strong>
                   Public self-registration is disabled for student safety and institutional security. Learner, parent, and staff accounts are provisioned exclusively by the School Administration upon admission or onboarding.

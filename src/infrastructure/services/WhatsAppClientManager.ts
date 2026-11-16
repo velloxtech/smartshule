@@ -133,7 +133,7 @@ export class WhatsAppClientManager {
     if (this.metaConfig.accessToken && this.metaConfig.phoneNumberId) {
       this.status = 'CONNECTED';
       this.connectedPhone = this.metaProfile.displayPhoneNumber || `ID: ${this.metaConfig.phoneNumberId}`;
-      this.connectedName = this.metaProfile.verifiedName || 'SmartShule Official (Meta Cloud)';
+      this.connectedName = this.metaProfile.verifiedName || 'Grace Seeds School Official (Meta Cloud)';
       this.lastConnectedAt = new Date().toISOString();
     }
   }
@@ -316,7 +316,7 @@ export class WhatsAppClientManager {
         ? this.metaProfile.displayPhoneNumber || this.connectedPhone || `Phone ID: ${this.metaConfig.phoneNumberId}`
         : this.connectedPhone,
       connectedName: isMetaConfigured
-        ? this.metaProfile.verifiedName || this.connectedName || 'SmartShule Official (Meta Cloud API)'
+        ? this.metaProfile.verifiedName || this.connectedName || 'Grace Seeds School Official (Meta Cloud API)'
         : this.connectedName,
       lastConnectedAt: this.lastConnectedAt,
       totalSent: this.totalSent,
@@ -381,14 +381,14 @@ export class WhatsAppClientManager {
 
       if (res.ok && data.id) {
         this.metaProfile = {
-          verifiedName: data.verified_name || 'SmartShule Official',
+          verifiedName: data.verified_name || 'Grace Seeds School Official',
           displayPhoneNumber: data.display_phone_number || '',
           qualityRating: data.quality_rating || 'GREEN',
           codeVerificationStatus: data.code_verification_status || 'VERIFIED',
         };
         this.status = 'CONNECTED';
         this.connectedPhone = data.display_phone_number || `Phone ID: ${phoneId}`;
-        this.connectedName = data.verified_name || 'SmartShule Official (Meta Cloud)';
+        this.connectedName = data.verified_name || 'Grace Seeds School Official (Meta Cloud)';
         this.lastConnectedAt = new Date().toISOString();
         this.savePersistedConfig();
 
@@ -675,7 +675,7 @@ export class WhatsAppClientManager {
                 id: msg.id || `in-${Date.now()}`,
                 direction: 'INBOUND',
                 from: fromPhone.startsWith('+') ? fromPhone : `+${fromPhone}`,
-                to: this.connectedPhone || 'SmartShule Official',
+                to: this.connectedPhone || 'Grace Seeds School Official',
                 text: text.trim(),
                 status: 'RECEIVED',
                 timestamp: new Date().toISOString(),
@@ -754,7 +754,7 @@ export class WhatsAppClientManager {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: ['SmartShule CBC Portal', 'Chrome', '1.0.0'],
+        browser: ['Grace Seeds School CBC Portal', 'Chrome', '1.0.0'],
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
       });

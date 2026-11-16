@@ -31,6 +31,7 @@ export interface SchemeOfWorkEntry {
 }
 
 export interface TermAllocation {
+  carriedFrom?: {schemeId:string;entryId:string}[];
   subStrandId: string;
   combinedSubStrandIds?: string[];
   lessons: number;

@@ -324,16 +324,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
       item = this._props.items.find(i => i.weekNumber === weekNumber)!;
     }
 
-    // Progression Rule: Sequentially check previous week unless week 1
-    if (weekNumber > 1) {
-      const prevWeek = this._props.items.find(i => i.weekNumber === weekNumber - 1);
-      if (prevWeek && !prevWeek.isCovered && prevWeek.status !== 'APPROVED' && prevWeek.status !== 'EXEMPTED') {
-        throw new Error(
-          `Week ${weekNumber} is locked. Previous Week ${weekNumber - 1} must be completed and officially approved before submitting this week.`
-        );
-      }
-    }
-
+    // Reporting this week does not depend on review of an earlier week.
     item.status = 'SUBMITTED';
     item.isCovered = false; // Never count as covered until approved
     item.lessonsTaught = submission.lessonsTaught || item.plannedLessons || 5;

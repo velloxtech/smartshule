@@ -25,7 +25,7 @@ import {
 } from '../../core/domain/shared/Errors';
 
 export interface CreateDiaryEntryDTO {
-  planningLink?: { lessonPlanId:string; schemeId:string; schemeEntryId:string; slotId:string };
+  planningLink?: { lessonPlanId?:string; schemeId:string; schemeEntryId:string; slotId:string };
 
   schoolId?: string;
   teacherId?: string;
@@ -171,6 +171,7 @@ export class RecordOfWorkUseCases {
     const rawUserId = this.resolveEffectiveUserId(requestingUser);
     const userRole = requestingUser?.role;
     const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    if(requestingUser?.schoolId&&schoolId!==requestingUser.schoolId)throw new ForbiddenError('School access denied.');
 
     let teacherId = dto.teacherId || rawUserId || 'teacher-001';
     let teacherName = dto.teacherName || requestingUser?.fullName || 'Assigned Teacher';
@@ -194,26 +195,15 @@ export class RecordOfWorkUseCases {
     let termId = dto.termId || dto.term;
     let term = dto.term;
 
-    if (this.academicRepo && (!academicYear || !term)) {
-      try {
-        const currentYear = await this.academicRepo.findCurrentYear(schoolId);
-        if (currentYear) {
-          academicYearId = academicYearId || currentYear.id;
-          academicYear = academicYear || currentYear.name;
-          const currentTerm = await this.academicRepo.findCurrentTerm(currentYear.id);
-          if (currentTerm) {
-            termId = termId || currentTerm.id;
-            term = term || currentTerm.name;
-          } else {
-            const terms = await this.academicRepo.findTermsByYear(currentYear.id);
-            if (terms && terms.length > 0) {
-              termId = termId || terms[0].id;
-              term = term || terms[0].name;
-            }
-          }
-        }
-      } catch {
-        // Fallback gracefully
+    if (this.academicRepo) {
+      const year=academicYearId?await this.academicRepo.findYearById(academicYearId):academicYear?(await this.academicRepo.findAllYears(schoolId)).find(y=>y.name===academicYear)||null:await this.academicRepo.findCurrentYear(schoolId);
+      if(academicYearId&&(!year||year.schoolId!==schoolId))throw new ValidationError('Select an academic year belonging to this school.');
+      if(year){
+        academicYearId=year.id;academicYear=year.name;
+        let selected=termId?await this.academicRepo.findTermById(termId):await this.academicRepo.findCurrentTerm(year.id);
+        if(!selected&&termId)selected=(await this.academicRepo.findTermsByYear(year.id)).find(t=>t.name===termId||String(t.termNumber)===termId!.replace(/^term[-_ ]*/i,'')||t.id.replace(/-t([1-3])$/,'-$1')===termId!.replace(/-t([1-3])$/,'-$1'))||null;
+        if(termId&&(!selected||selected.academicYearId!==year.id))throw new ValidationError('Select a term belonging to the selected academic year.');
+        if(selected){termId=selected.id;term=selected.name;}
       }
     }
 
@@ -225,6 +215,8 @@ export class RecordOfWorkUseCases {
     const lessonPeriod = dto.lessonPeriod || dto.period || 'Period 1';
     const lessonDate = dto.lessonDate || new Date().toISOString().split('T')[0];
     const initialStatus = dto.status || 'DRAFT';
+    if(initialStatus==='SUBMITTED'&&lessonDate>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
+    if (!['DRAFT','SUBMITTED'].includes(initialStatus)) throw new ValidationError('Create work as a draft or submit it. Approval is a separate leadership action.');
 
     // If attempting to submit immediately as SUBMITTED, enforce full lesson validation
     if (initialStatus === 'SUBMITTED') {
@@ -356,7 +348,10 @@ export class RecordOfWorkUseCases {
     }
 
     // A record can be submitted independently of preceding calendar weeks.
+    if (['APPROVED','RETURNED'].includes(dto.status || '')) throw new ValidationError('Use the leadership review action to approve or return work.');
+    if (existing.status === 'SUBMITTED') throw new ValidationError('Submitted work is awaiting review. Ask leadership to return it before editing.');
     const targetStatus = dto.status || existing.status;
+    if(targetStatus==='SUBMITTED'&&(dto.lessonDate||existing.lessonDate||'')>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
 
     const updatedProps: Partial<RecordOfWorkProps> = {
       ...dto,
@@ -378,6 +373,8 @@ export class RecordOfWorkUseCases {
     if (!existing) {
       throw new NotFoundError('Record of Work / Diary Entry', id);
     }
+
+    if((existing.lessonDate||'')>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
 
     const rawUserId = this.resolveEffectiveUserId(requestingUser);
     const userRole = requestingUser?.role;
@@ -472,12 +469,14 @@ export class RecordOfWorkUseCases {
       return existing;
     }
 
+    if (existing.status !== 'SUBMITTED') throw new ValidationError('Only submitted records of work can be approved.');
+    if (requestingUser?.schoolId && existing.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
     const reviewerName = requestingUser?.fullName || 'Academic Supervisor';
     existing.approve(rawUserId || 'admin-001', reviewerName, dto.remarks);
     const saved = await this.recordOfWorkRepo.update(id, existing);
 
     // Synchronize Official Curriculum Progression in CurriculumTracker
-    if (this.curriculumTrackerRepo && existing.classRoomId && existing.learningAreaId) {
+    if (this.curriculumTrackerRepo && existing.classRoomId && existing.learningAreaId && !existing.toJSON().planningLink) {
       try {
         let trackers = await this.curriculumTrackerRepo.findTrackers({
           schoolId: existing.schoolId,

@@ -38,14 +38,14 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Deputy Head Top Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-950 p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 text-white border border-white/30">
                 Deputy Head Teacher
               </span>
-              <span className="flex items-center gap-1 text-xs text-indigo-200 font-medium">
+              <span className="flex items-center gap-1 text-xs text-on-primary font-medium">
                 <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
                 Curriculum & Operations Active
               </span>
@@ -53,7 +53,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               Instructional Supervision & Teaching Records
             </h1>
-            <p className="mt-1 text-sm text-indigo-100 max-w-xl">
+            <p className="mt-1 text-sm text-on-primary max-w-xl">
               Recording lesson plans and work covered, managing the timetable roster, and coordinating teaching staff.
             </p>
           </div>
@@ -61,21 +61,21 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={() => onNavigateTab('schemes-lesson-plans')}
-              className="px-4 py-2.5 rounded-xl bg-white text-indigo-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white text-on-primary-fixed font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">rule</span>
               <span>Lesson Plan Records ({recordedPlans.length})</span>
             </button>
             <button
               onClick={() => onNavigateTab('timetable')}
-              className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-xs border border-indigo-400/30 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary-container/80 hover:bg-primary-container text-white font-semibold text-xs border border-primary/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
               <span>Timetable Grid</span>
             </button>
             <button
               onClick={() => onNavigateTab('teachers-staff')}
-              className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-xs border border-indigo-400/30 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary-container/80 hover:bg-primary-container text-white font-semibold text-xs border border-primary/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">badge</span>
               <span>Faculty Directory</span>
@@ -86,10 +86,10 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Lesson Plans in Workflow</span>
-            <span className="material-symbols-outlined text-amber-600 text-[20px]">pending_actions</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">pending_actions</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-emerald-700">{recordedPlans.length}</div>
@@ -99,10 +99,10 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">After-class Comments</span>
-            <span className="material-symbols-outlined text-emerald-600 text-[20px]">task_alt</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">task_alt</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-emerald-700">{recordedPlans.filter(lp => Boolean(lp.teacherSelfReflection?.trim())).length}</div>
@@ -110,7 +110,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Record of Work</span>
             <span className="material-symbols-outlined text-rose-600 text-[20px]">edit_note</span>
@@ -121,10 +121,10 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Active Teachers</span>
-            <span className="material-symbols-outlined text-indigo-600 text-[20px]">groups</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{teachers.length}</div>
@@ -137,7 +137,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
 
       {/* Lesson plan records */}
-      <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">
+      <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-on-surface">Lesson Plans for Reference</h2>
@@ -161,14 +161,14 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
             {recordedPlans.map((plan) => (
               <div
                 key={plan.id}
-                className="p-4 rounded-xl border border-indigo-200/80 bg-indigo-50/30 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                className="p-4 rounded-xl border border-primary/80 bg-primary-fixed/30 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-sm text-on-surface">
                       {plan.strand} · {plan.subStrand}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${plan.status==='APPROVED'?'bg-emerald-100 text-emerald-800 border-emerald-300':plan.status==='SUBMITTED'?'bg-amber-100 text-amber-800 border-amber-300':plan.status==='REJECTED'?'bg-rose-100 text-rose-800 border-rose-300':'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${plan.status==='APPROVED'?'bg-emerald-100 text-emerald-800 border-emerald-300':plan.status==='SUBMITTED'?'bg-amber-100 text-amber-800 border-amber-300':plan.status==='REJECTED'?'bg-rose-100 text-rose-800 border-rose-300':'bg-surface-container-low text-slate-700 border-slate-300'}`}>
                       {plan.status || 'DRAFT'}
                     </span>
                   </div>
@@ -184,14 +184,14 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
                 <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
                   <button
                     onClick={() => onNavigateTab('schemes-lesson-plans')}
-                    className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    className="px-3.5 py-2 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">check</span>
                     <span>View Records</span>
                   </button>
                   <button
                     onClick={() => onNavigateTab('records-of-work')}
-                    className="px-3.5 py-2 rounded-lg bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-lg bg-white border border-primary text-primary hover:bg-primary-fixed font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">close</span>
                     <span>Records of Work</span>
@@ -207,9 +207,9 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">badge</span>
           </div>
           <div>
@@ -222,9 +222,9 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
         <div
           onClick={() => onNavigateTab('timetable')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">calendar_view_week</span>
           </div>
           <div>
@@ -237,9 +237,9 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
         <div
           onClick={() => onNavigateTab('attendance-register')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">checklist</span>
           </div>
           <div>
@@ -252,9 +252,9 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
         <div
           onClick={() => onNavigateTab('classes-streams')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">meeting_room</span>
           </div>
           <div>

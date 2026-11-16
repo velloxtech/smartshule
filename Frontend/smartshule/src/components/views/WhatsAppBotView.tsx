@@ -499,11 +499,11 @@ export const WhatsAppBotView: React.FC = () => {
       </div>
 
       {/* BAN-IMMUNITY & 1,000 FREE CONVERSATIONS HERO BANNER */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-[#075E54] to-teal-900 text-white shadow-md border border-emerald-800/40">
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-primary-container via-primary to-maroon-light text-white shadow-md border border-primary/40">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
-              <span className="material-symbols-outlined text-sm text-emerald-300">shield</span>
+              <span className="material-symbols-outlined text-sm text-primary-fixed-dim">shield</span>
               <span>Meta WhatsApp Cloud API Protection Guarantee</span>
             </div>
             <h2 className="text-lg font-bold leading-snug">
@@ -573,12 +573,12 @@ export const WhatsAppBotView: React.FC = () => {
           <div className="text-2xl font-bold font-data-mono text-primary mt-1">
             {connectionState.totalSent}
           </div>
-          <span className="text-[11px] text-secondary font-semibold mt-1 block">Official WhatsApp notifications</span>
+          <span className="text-[11px] text-success font-semibold mt-1 block">Official WhatsApp notifications</span>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
           <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Inbound Queries</span>
-          <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
+          <div className="text-2xl font-bold font-data-mono text-success mt-1">
             {connectionState.totalReceived}
           </div>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Parent queries resolved</span>
@@ -600,7 +600,7 @@ export const WhatsAppBotView: React.FC = () => {
           onClick={() => setActiveTab('meta_cloud')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'meta_cloud'
-              ? 'bg-[#075E54] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -612,11 +612,11 @@ export const WhatsAppBotView: React.FC = () => {
           onClick={() => setActiveTab('ai_dispatch')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'ai_dispatch'
-              ? 'bg-[#075E54] text-white shadow-xs ring-2 ring-emerald-500/50'
+              ? 'bg-primary text-white shadow-xs ring-2 ring-primary/50'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
-          <span className="material-symbols-outlined text-[16px] text-amber-300">smart_toy</span>
+          <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">smart_toy</span>
           <span>2. Gemini AI Smart Dispatch</span>
         </button>
 
@@ -624,7 +624,7 @@ export const WhatsAppBotView: React.FC = () => {
           onClick={() => setActiveTab('send_message')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'send_message'
-              ? 'bg-[#075E54] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -636,7 +636,7 @@ export const WhatsAppBotView: React.FC = () => {
           onClick={() => setActiveTab('message_log')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'message_log'
-              ? 'bg-[#075E54] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -648,7 +648,7 @@ export const WhatsAppBotView: React.FC = () => {
           onClick={() => setActiveTab('anti_ban_guide')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'anti_ban_guide'
-              ? 'bg-[#075E54] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -658,7 +658,7 @@ export const WhatsAppBotView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('qr_legacy')}
-          className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ml-auto text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200`}
+          className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ml-auto text-on-primary-fixed bg-primary-fixed hover:bg-primary-fixed border border-primary`}
         >
           <span className="material-symbols-outlined text-[15px] text-amber-700">warning</span>
           <span>Legacy QR Pairing (High Risk)</span>
@@ -793,7 +793,7 @@ export const WhatsAppBotView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={savingConfig}
-                  className="flex-1 py-2.5 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-xs hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-xs hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-sm">save</span>
                   <span>{savingConfig ? 'Saving...' : 'Save Meta Credentials'}</span>
@@ -890,7 +890,7 @@ export const WhatsAppBotView: React.FC = () => {
             <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base text-emerald-700">timer</span>
+                  <span className="material-symbols-outlined text-base text-primary">timer</span>
                   <span>Active 24h Free Reply Windows</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold">
@@ -937,7 +937,7 @@ export const WhatsAppBotView: React.FC = () => {
           <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
             <div className="pb-3 border-b border-outline-variant/20">
               <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-500">smart_toy</span>
+                <span className="material-symbols-outlined text-primary">smart_toy</span>
                 <span>Command-to-WhatsApp Assistant</span>
               </h3>
               <p className="text-xs text-on-surface-variant mt-0.5">
@@ -993,7 +993,7 @@ export const WhatsAppBotView: React.FC = () => {
                     onClick={() => setAiTone(t)}
                     className={`py-2 px-3 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
                       aiTone === t
-                        ? 'bg-[#075E54] text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                     }`}
                   >
@@ -1007,7 +1007,7 @@ export const WhatsAppBotView: React.FC = () => {
               type="button"
               onClick={() => handleAiDraft()}
               disabled={isAiDrafting}
-              className="w-full py-2.5 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-xs hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-xs hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">auto_awesome</span>
               <span>{isAiDrafting ? 'Extracting Records & Drafting...' : 'Draft Message with Gemini AI'}</span>
@@ -1018,7 +1018,7 @@ export const WhatsAppBotView: React.FC = () => {
           <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
             <div className="pb-3 border-b border-outline-variant/20 flex items-center justify-between">
               <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-700">chat</span>
+                <span className="material-symbols-outlined text-primary">chat</span>
                 <span>Verified WhatsApp Message Preview</span>
               </h3>
               {aiDraftResult && (
@@ -1088,7 +1088,7 @@ export const WhatsAppBotView: React.FC = () => {
                     rows={6}
                     value={aiCustomMessage}
                     onChange={(e) => setAiCustomMessage(e.target.value)}
-                    className="w-full p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs text-on-surface font-body leading-relaxed focus:outline-primary"
+                    className="w-full p-3 bg-primary-fixed/50 border border-primary rounded-xl text-xs text-on-surface font-body leading-relaxed focus:outline-primary"
                   />
                 </div>
 
@@ -1096,7 +1096,7 @@ export const WhatsAppBotView: React.FC = () => {
                   type="button"
                   onClick={handleAiDispatch}
                   disabled={isAiDispatching}
-                  className="w-full py-3 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-md hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-primary text-white font-bold rounded-xl text-xs shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-sm">send</span>
                   <span>
@@ -1138,7 +1138,7 @@ export const WhatsAppBotView: React.FC = () => {
                 <span>Free 24h Window Active</span>
               </span>
             ) : (
-              <span className="px-2.5 py-1 rounded-full bg-sky-100 text-sky-900 text-[10px] font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-[10px] font-bold">
                 Template / Outbound Notice
               </span>
             )}
@@ -1217,7 +1217,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('ediary')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-teal-800 text-xs">Homefun &amp; Diary</span>
+                  <span className="font-bold block text-on-primary-fixed text-xs">Homefun &amp; Diary</span>
                   <span className="text-[10px] text-on-surface-variant">Homefun alert</span>
                 </button>
 
@@ -1226,7 +1226,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('attendance')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-emerald-800 text-xs">Attendance</span>
+                  <span className="font-bold block text-on-primary-fixed text-xs">Attendance</span>
                   <span className="text-[10px] text-on-surface-variant">Daily roll-call alert</span>
                 </button>
 
@@ -1235,7 +1235,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('announcement')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-purple-800 text-xs">Announcement</span>
+                  <span className="font-bold block text-on-primary-fixed text-xs">Announcement</span>
                   <span className="text-[10px] text-on-surface-variant">Academic circular</span>
                 </button>
               </div>
@@ -1260,7 +1260,7 @@ export const WhatsAppBotView: React.FC = () => {
             <button
               type="submit"
               disabled={isSendingMessage}
-              className="w-full py-3 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-md hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-primary text-white font-bold rounded-xl text-xs shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-sm">send</span>
               <span>
@@ -1329,7 +1329,7 @@ export const WhatsAppBotView: React.FC = () => {
                     <tr key={m.id} className="hover:bg-surface-container-low/40">
                       <td className="py-3 px-4">
                         {m.direction === 'INBOUND' ? (
-                          <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-900 font-bold text-[10px]">
+                          <span className="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-bold text-[10px]">
                             INBOUND (Parent)
                           </span>
                         ) : (
@@ -1375,7 +1375,7 @@ export const WhatsAppBotView: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs space-y-4">
             <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-700">security</span>
+              <span className="material-symbols-outlined text-primary">security</span>
               <span>Why Meta Official Cloud API Prevents Phone Number Bans</span>
             </h2>
 
@@ -1482,7 +1482,7 @@ export const WhatsAppBotView: React.FC = () => {
               </div>
             ) : isConnected && !isMetaMode ? (
               <div className="space-y-2">
-                <span className="material-symbols-outlined text-4xl text-amber-600">smartphone</span>
+                <span className="material-symbols-outlined text-4xl text-primary">smartphone</span>
                 <p className="font-bold text-on-surface">Connected via Unofficial Baileys Socket</p>
                 <p className="text-xs text-on-surface-variant">{connectionState.connectedPhone}</p>
                 <button
@@ -1498,7 +1498,7 @@ export const WhatsAppBotView: React.FC = () => {
                 type="button"
                 onClick={handleConnectLegacyQR}
                 disabled={isConnecting}
-                className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-xs hover:bg-amber-700 transition-all cursor-pointer"
+                className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl text-xs hover:bg-primary-container transition-all cursor-pointer"
               >
                 {isConnecting ? 'Generating QR Code...' : 'Proceed with QR Pairing (Not Recommended)'}
               </button>

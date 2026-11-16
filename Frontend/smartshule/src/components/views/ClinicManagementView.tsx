@@ -260,7 +260,7 @@ export const ClinicManagementView: React.FC = () => {
 
  <button
  onClick={() => setIsLogModalOpen(true)}
- className="bg-white text-teal-800 hover:bg-teal-50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm self-start md:self-auto"
+ className="bg-white text-on-primary-fixed hover:bg-primary-fixed px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm self-start md:self-auto"
  >
  <span className="material-symbols-outlined text-lg">local_hospital</span>
  Log Clinic Triage
@@ -272,7 +272,7 @@ export const ClinicManagementView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Visits Logged</span>
- <span className="material-symbols-outlined text-teal-600 text-lg">history_edu</span>
+ <span className="material-symbols-outlined text-primary text-lg">history_edu</span>
  </div>
  <p className="text-2xl font-bold text-on-surface mt-2">{stats.total}</p>
  <p className="text-xs text-on-surface-variant mt-1">{stats.resolved} resolved cases</p>
@@ -281,7 +281,7 @@ export const ClinicManagementView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Under Observation</span>
- <span className="material-symbols-outlined text-amber-500 text-lg">bed</span>
+ <span className="material-symbols-outlined text-primary text-lg">bed</span>
  </div>
  <p className="text-2xl font-bold text-amber-600 mt-2">{stats.underObs}</p>
  <p className="text-xs text-on-surface-variant mt-1">Resting in school sick bay</p>
@@ -299,9 +299,9 @@ export const ClinicManagementView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
  <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
  <span>Parent SMS Alerts</span>
- <span className="material-symbols-outlined text-blue-600 text-lg">sms</span>
+ <span className="material-symbols-outlined text-primary text-lg">sms</span>
  </div>
- <p className="text-2xl font-bold text-blue-600 mt-2">
+ <p className="text-2xl font-bold text-primary mt-2">
  {visits.filter((v) => v.parentNotified).length}
  </p>
  <p className="text-xs text-on-surface-variant mt-1">Guardians notified via SMS</p>
@@ -314,7 +314,7 @@ export const ClinicManagementView: React.FC = () => {
  onClick={() => setActiveTab('visits')}
  className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
  activeTab === 'visits'
- ? 'border-teal-600 text-teal-700'
+ ? 'border-primary text-primary'
  : 'border-transparent text-on-surface-variant hover:text-on-surface'
  }`}
  >
@@ -326,7 +326,7 @@ export const ClinicManagementView: React.FC = () => {
  onClick={() => setActiveTab('profiles')}
  className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
  activeTab === 'profiles'
- ? 'border-teal-600 text-teal-700'
+ ? 'border-primary text-primary'
  : 'border-transparent text-on-surface-variant hover:text-on-surface'
  }`}
  >
@@ -346,7 +346,7 @@ export const ClinicManagementView: React.FC = () => {
  <select
  value={statusFilter}
  onChange={(e) => setStatusFilter(e.target.value)}
- className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="ALL">All Cases</option>
  <option value="UNDER_OBSERVATION">Under Observation (Sick Bay)</option>
@@ -364,7 +364,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Search student, symptom, treatment..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="pl-8 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="pl-8 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -379,7 +379,7 @@ export const ClinicManagementView: React.FC = () => {
  <div className="overflow-x-auto">
  {loading ? (
  <div className="p-12 text-center text-on-surface-variant">
- <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-teal-600">progress_activity</span>
+ <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-primary">progress_activity</span>
  <p>Loading clinic records...</p>
  </div>
  ) : filteredVisits.length === 0 ? (
@@ -445,7 +445,7 @@ export const ClinicManagementView: React.FC = () => {
  <td className="px-4 py-3 text-xs">
  <div className="font-medium text-on-surface ">{v.treatmentAdministered}</div>
  {v.medicationDispensed && (
- <div className="text-teal-600 text-[11px]">
+ <div className="text-primary text-[11px]">
  Rx: {v.medicationDispensed}
  </div>
  )}
@@ -467,7 +467,7 @@ export const ClinicManagementView: React.FC = () => {
  </td>
  <td className="px-4 py-3">
  {v.parentNotified ? (
- <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium">
+ <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
  <span className="material-symbols-outlined text-sm">done_all</span> Sent
  </span>
  ) : (
@@ -509,11 +509,11 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Enter Student ID (e.g., STU-001)..."
  value={profileSearchStudentId}
  onChange={(e) => setProfileSearchStudentId(e.target.value)}
- className="flex-1 px-4 py-2 rounded-xl border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="flex-1 px-4 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  <button
  type="submit"
- className="bg-teal-700 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-teal-800 flex items-center gap-1.5"
+ className="bg-primary text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-primary-container flex items-center gap-1.5"
  >
  <span className="material-symbols-outlined text-base">search</span>
  Search
@@ -525,7 +525,7 @@ export const ClinicManagementView: React.FC = () => {
  <div className="border border-outline-variant/30 rounded-2xl p-5 bg-surface/50 space-y-4">
  <div className="flex items-center justify-between border-b pb-3">
  <div className="flex items-center gap-3">
- <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center text-teal-800 font-black text-lg">
+ <div className="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-black text-lg">
  {searchedProfile.bloodGroup || '??'}
  </div>
  <div>
@@ -550,7 +550,7 @@ export const ClinicManagementView: React.FC = () => {
  });
  setIsEditProfileModalOpen(true);
  }}
- className="bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-teal-800 flex items-center gap-1.5"
+ className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-primary-container flex items-center gap-1.5"
  >
  <span className="material-symbols-outlined text-base">edit</span>
  Edit Profile
@@ -609,7 +609,7 @@ export const ClinicManagementView: React.FC = () => {
  <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
  <div className="flex items-center justify-between border-b pb-3 mb-4">
  <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
- <span className="material-symbols-outlined text-teal-600">emergency</span>
+ <span className="material-symbols-outlined text-primary">emergency</span>
  Log Clinic Triage / Visit
  </h3>
  <button onClick={() => setIsLogModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
@@ -627,7 +627,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Amani Kiprono"
  value={visitForm.studentName}
  onChange={(e) => setVisitForm({ ...visitForm, studentName: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  <div>
@@ -636,7 +636,7 @@ export const ClinicManagementView: React.FC = () => {
  type="text"
  value={visitForm.gradeLevel}
  onChange={(e) => setVisitForm({ ...visitForm, gradeLevel: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -651,7 +651,7 @@ export const ClinicManagementView: React.FC = () => {
  max="43"
  value={visitForm.temperatureCelsius}
  onChange={(e) => setVisitForm({ ...visitForm, temperatureCelsius: Number(e.target.value) })}
- className="w-32 px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm font-bold text-on-surface "
+ className="w-32 px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm font-bold text-on-surface "
  />
  <span className="text-xs text-on-surface-variant">Normal range: 36.5°C - 37.4°C</span>
  </div>
@@ -669,7 +669,7 @@ export const ClinicManagementView: React.FC = () => {
  onClick={() => toggleSymptom(sym)}
  className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${
  isSelected
- ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+ ? 'bg-primary text-white border-primary shadow-sm'
  : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
  }`}
  >
@@ -684,7 +684,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Other symptom..."
  value={visitForm.customSymptom}
  onChange={(e) => setVisitForm({ ...visitForm, customSymptom: e.target.value })}
- className="flex-1 px-3 py-1.5 rounded-lg border text-xs bg-white text-on-surface "
+ className="flex-1 px-3 py-1.5 rounded-lg border text-xs bg-surface text-on-surface "
  />
  <button
  type="button"
@@ -705,7 +705,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Cleaned wound, bandaged, cold compress"
  value={visitForm.treatmentAdministered}
  onChange={(e) => setVisitForm({ ...visitForm, treatmentAdministered: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  <div>
@@ -715,7 +715,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Paracetamol 500mg syrup"
  value={visitForm.medicationDispensed}
  onChange={(e) => setVisitForm({ ...visitForm, medicationDispensed: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -727,13 +727,13 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Clinical observation notes..."
  value={visitForm.nurseRemarks}
  onChange={(e) => setVisitForm({ ...visitForm, nurseRemarks: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
  {/* SMS Notification Checkbox */}
- <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
- <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-blue-900 ">
+ <div className="bg-primary-fixed border border-primary p-3 rounded-xl">
+ <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-on-primary-fixed ">
  <input
  type="checkbox"
  checked={visitForm.notifyParent}
@@ -749,7 +749,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Parent Phone Number (e.g., +254712345678)"
  value={visitForm.parentPhoneNumber}
  onChange={(e) => setVisitForm({ ...visitForm, parentPhoneNumber: e.target.value })}
- className="w-full px-3 py-1.5 rounded-lg border text-xs bg-white "
+ className="w-full px-3 py-1.5 rounded-lg border text-xs bg-surface "
  />
  </div>
  )}
@@ -765,7 +765,7 @@ export const ClinicManagementView: React.FC = () => {
  </button>
  <button
  type="submit"
- className="px-5 py-2 bg-teal-700 text-white font-bold text-xs rounded-xl hover:bg-teal-800 shadow-md"
+ className="px-5 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container shadow-md"
  >
  Save & Log Case
  </button>
@@ -790,7 +790,7 @@ export const ClinicManagementView: React.FC = () => {
  <select
  value={newStatus}
  onChange={(e: any) => setNewStatus(e.target.value)}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="UNDER_OBSERVATION">Under Observation (In Sick Bay)</option>
  <option value="RESOLVED">Resolved (Discharged back to Class)</option>
@@ -807,7 +807,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Aga Khan Hospital / Nairobi Women's"
  value={referredHospital}
  onChange={(e) => setReferredHospital(e.target.value)}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  )}
@@ -822,7 +822,7 @@ export const ClinicManagementView: React.FC = () => {
  </button>
  <button
  type="submit"
- className="px-4 py-2 bg-teal-700 text-white font-bold text-xs rounded-xl hover:bg-teal-800"
+ className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container"
  >
  Update
  </button>
@@ -844,7 +844,7 @@ export const ClinicManagementView: React.FC = () => {
  <select
  value={profileForm.bloodGroup}
  onChange={(e: any) => setProfileForm({ ...profileForm, bloodGroup: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="UNKNOWN">Unknown</option>
  <option value="A+">A+</option>
@@ -862,7 +862,7 @@ export const ClinicManagementView: React.FC = () => {
  <select
  value={profileForm.immunizationUpToDate ? 'YES' : 'NO'}
  onChange={(e) => setProfileForm({ ...profileForm, immunizationUpToDate: e.target.value === 'YES' })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  >
  <option value="YES">Yes, Up to Date</option>
  <option value="NO">No, Pending Vaccines</option>
@@ -877,7 +877,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Peanuts, Penicillin, Dust"
  value={profileForm.allergies}
  onChange={(e) => setProfileForm({ ...profileForm, allergies: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -888,7 +888,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="e.g., Asthma, Diabetes, Epilepsy"
  value={profileForm.chronicConditions}
  onChange={(e) => setProfileForm({ ...profileForm, chronicConditions: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -900,7 +900,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Parent / Guardian"
  value={profileForm.emergencyContactName}
  onChange={(e) => setProfileForm({ ...profileForm, emergencyContactName: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  <div>
@@ -910,7 +910,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="+2547..."
  value={profileForm.emergencyContactPhone}
  onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
  </div>
@@ -922,7 +922,7 @@ export const ClinicManagementView: React.FC = () => {
  placeholder="Special instructions for cafeteria or sports..."
  value={profileForm.notes}
  onChange={(e) => setProfileForm({ ...profileForm, notes: e.target.value })}
- className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-white text-sm text-on-surface "
+ className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface "
  />
  </div>
 
@@ -936,7 +936,7 @@ export const ClinicManagementView: React.FC = () => {
  </button>
  <button
  type="submit"
- className="px-4 py-2 bg-teal-700 text-white font-bold text-xs rounded-xl hover:bg-teal-800"
+ className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container"
  >
  Save Profile
  </button>

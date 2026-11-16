@@ -202,7 +202,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const getRatingBadge = (rating: CBCRubric) => {
     switch (rating) {
       case 'EE':
-        return <span className="px-2 py-0.5 rounded bg-secondary text-white text-xs font-bold">EE · Exceeding</span>;
+        return <span className="px-2 py-0.5 rounded bg-success text-white text-xs font-bold">EE · Exceeding</span>;
       case 'ME':
         return <span className="px-2 py-0.5 rounded bg-primary text-white text-xs font-bold">ME · Meeting</span>;
       case 'AE':
@@ -248,7 +248,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     setIsGenerateInvoiceModalOpen(true);
                   }}
                   title="Generate term fee invoices from grade fee structures (Individual Pupil or Cohort)"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#7a1228] text-white hover:bg-[#600e1f] rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white hover:bg-primary-container rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">receipt_long</span>
                   <span>Generate Invoices</span>
@@ -325,7 +325,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       {deletionFeedback && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[24px] text-emerald-600 shrink-0 mt-0.5">
+            <span className="material-symbols-outlined text-[24px] text-primary shrink-0 mt-0.5">
               archive
             </span>
             <div>
@@ -353,14 +353,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 }
                 setDeletionFeedback(null);
               }}
-              className="text-xs font-semibold px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg cursor-pointer transition-colors"
+              className="text-xs font-semibold px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg cursor-pointer transition-colors"
             >
               Open Archive Table
             </button>
             <button
               type="button"
               onClick={() => setDeletionFeedback(null)}
-              className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+              className="text-primary hover:text-on-primary-fixed p-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
@@ -524,7 +524,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <div className="font-semibold text-on-surface flex items-center gap-1.5">
                           <span>{s.name}</span>
                           {s.specialNeeds && s.specialNeeds.includes('Article 54') && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200" title={s.specialNeeds}>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary" title={s.specialNeeds}>
                               Art. 54 SNE
                             </span>
                           )}
@@ -548,7 +548,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       <div className="group/g flex items-start justify-between gap-1">
                         <div>
                           <div className="font-semibold text-xs text-on-surface">{s.guardianName || 'Guardian'}</div>
-                          <div className="text-[11px] font-data-mono text-[#7a1228] font-bold">{s.guardianPhone}</div>
+                          <div className="text-[11px] font-data-mono text-primary font-bold">{s.guardianPhone}</div>
                         </div>
                         {!isTeacher && (
                           <button
@@ -558,7 +558,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                               setIsParentLinkingModalOpen(true);
                             }}
                             title={`Manage or switch linked parent for ${s.name}`}
-                            className="p-1 rounded text-slate-400 hover:text-[#7a1228] hover:bg-rose-50 transition-colors opacity-70 group-hover/g:opacity-100 cursor-pointer"
+                            className="p-1 rounded text-slate-400 hover:text-primary hover:bg-rose-50 transition-colors opacity-70 group-hover/g:opacity-100 cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[15px]">edit</span>
                           </button>
@@ -572,10 +572,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             setParentLinkingTargetStudent(s);
                             setIsParentLinkingModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-fixed text-on-primary-fixed border border-primary hover:bg-primary-fixed transition-colors cursor-pointer shadow-2xs"
                           title={`Search and link a parent account to ${s.name}`}
                         >
-                          <span className="material-symbols-outlined text-[14px] text-amber-700">link</span>
+                          <span className="material-symbols-outlined text-[14px] text-primary">link</span>
                           <span>+ Link Parent</span>
                         </button>
                       ) : (
@@ -587,7 +587,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   
                   {isTeacher ? (
                     <td className="py-3 px-4 text-right">
-                      <span className="font-data-mono font-bold text-secondary">
+                      <span className="font-data-mono font-bold text-success">
                         {s.attendanceRate}% Present
                       </span>
                     </td>
@@ -602,13 +602,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         </div>
                       ) : ((s.creditBalance && s.creditBalance > 0) || s.feeBalance < 0) ? (
                         <div>
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-on-primary-fixed bg-primary-fixed px-2 py-0.5 rounded-full border border-primary">
                             <span className="material-symbols-outlined text-[13px]">savings</span> +KES {Math.abs(s.creditBalance || s.feeBalance).toLocaleString()}
                           </span>
-                          <span className="text-[10px] text-teal-600 block mt-0.5">Advance Credit</span>
+                          <span className="text-[10px] text-primary block mt-0.5">Advance Credit</span>
                         </div>
                       ) : ((s.totalFee || 0) > 0 || (s.hasInvoices && !s.isUnbilled)) ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
                           <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
                         </span>
                       ) : (
@@ -620,7 +620,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                               setIsGenerateInvoiceModalOpen(true);
                             }
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 px-2 py-0.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-surface-container-low hover:bg-primary-fixed hover:text-on-primary-fixed px-2 py-0.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
                           title="Click to generate term fee invoice for this pupil"
                         >
                           <span className="material-symbols-outlined text-[13px]">receipt_long</span>
@@ -651,7 +651,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       <button
                         onClick={() => onOpenCBCWithStudent(s)}
                         title="Log CBE Rubric / Upload Marks"
-                        className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">rule</span>
                       </button>
@@ -663,7 +663,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             setIsGenerateInvoiceModalOpen(true);
                           }}
                           title={`Generate Term Fee Invoice for ${s.name} (${s.grade})`}
-                          className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-primary hover:bg-primary-fixed transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[18px]">receipt_long</span>
                         </button>
@@ -673,7 +673,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <button
                           onClick={() => onOpenMpesaWithStudent(s)}
                           title="Record Fee Payment"
-                          className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                         </button>
@@ -687,7 +687,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                               setIsParentLinkingModalOpen(true);
                             }}
                             title={`Search & link parent or manage family connections for ${s.name}`}
-                            className="p-1.5 rounded-lg text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-primary hover:bg-rose-50 transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[18px]">family_restroom</span>
                           </button>
@@ -807,7 +807,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       {studentToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
+            <div className="bg-primary text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-[24px]">
                   {exitActionType === 'withdraw' ? 'person_remove' : 'archive'}
@@ -969,7 +969,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   type="button"
                   onClick={exitActionType === 'withdraw' ? confirmWithdrawStudent : confirmDeleteStudent}
                   disabled={isDeleting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className={`material-symbols-outlined text-[16px] ${isDeleting ? 'animate-spin' : ''}`}>
                     {isDeleting ? 'progress_activity' : exitActionType === 'withdraw' ? 'person_remove' : 'archive'}

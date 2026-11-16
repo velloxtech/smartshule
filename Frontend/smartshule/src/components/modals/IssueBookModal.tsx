@@ -173,7 +173,7 @@ const specStr = Array.isArray(teach.specialization)
         {/* Header */}
         <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined">assignment_return</span>
             </div>
             <div>
@@ -210,7 +210,7 @@ const specStr = Array.isArray(teach.specialization)
                 value={bookId}
                 onChange={e => setBookId(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-white font-medium"
+                className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface font-medium"
               >
                 {books.map(b => (
                   <option 
@@ -372,7 +372,7 @@ const specStr = Array.isArray(teach.specialization)
                   required
                   value={issueDate}
                   onChange={e => setIssueDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface"
                 />
               </div>
 
@@ -386,7 +386,7 @@ const specStr = Array.isArray(teach.specialization)
                   value={dueDate}
                   min={issueDate}
                   onChange={e => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white font-semibold text-rose-800"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface font-semibold text-rose-800"
                 />
               </div>
 

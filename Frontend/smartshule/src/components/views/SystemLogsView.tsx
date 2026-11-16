@@ -228,7 +228,7 @@ export const SystemLogsView: React.FC = () => {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-slate-200 shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[22px]">manage_search</span>
           </div>
@@ -242,8 +242,8 @@ export const SystemLogsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-slate-200 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[22px]">payments</span>
           </div>
           <div>
@@ -256,8 +256,8 @@ export const SystemLogsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-slate-200 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[22px]">shield_person</span>
           </div>
           <div>
@@ -270,7 +270,7 @@ export const SystemLogsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-slate-200 shadow-xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[22px]">warning</span>
           </div>
@@ -286,7 +286,7 @@ export const SystemLogsView: React.FC = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+      <div className="p-4 rounded-2xl bg-surface-container-lowest border border-slate-200 shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Search */}
           <div className="lg:col-span-2 relative">
@@ -313,7 +313,7 @@ export const SystemLogsView: React.FC = () => {
                 setCategoryFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white cursor-pointer"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface cursor-pointer"
             >
               <option value="ALL">All Categories</option>
               <option value="AUTH">AUTH</option>
@@ -334,7 +334,7 @@ export const SystemLogsView: React.FC = () => {
                 setLevelFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white cursor-pointer"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface cursor-pointer"
             >
               <option value="ALL">All Levels</option>
               <option value="AUDIT">AUDIT</option>
@@ -352,7 +352,7 @@ export const SystemLogsView: React.FC = () => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white cursor-pointer"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="SUCCESS">SUCCESS</option>
@@ -364,7 +364,7 @@ export const SystemLogsView: React.FC = () => {
           <div className="flex items-center">
             <button
               onClick={handleClearFilters}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 hover:bg-surface text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">filter_alt_off</span>
               <span>Reset</span>
@@ -411,11 +411,11 @@ export const SystemLogsView: React.FC = () => {
       </div>
 
       {/* Main Logs Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <tr className="bg-surface border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 <th className="py-3 px-4">Timestamp</th>
                 <th className="py-3 px-3">Level</th>
                 <th className="py-3 px-3">Category</th>
@@ -461,7 +461,7 @@ export const SystemLogsView: React.FC = () => {
                   return (
                     <tr
                       key={log.id}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      className="hover:bg-surface/80 transition-colors group cursor-pointer"
                       onClick={() => setSelectedLog(log)}
                     >
                       {/* Timestamp */}
@@ -502,7 +502,7 @@ export const SystemLogsView: React.FC = () => {
                         </div>
                         <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
                           {log.actorRole && (
-                            <span className="px-1.5 py-0.2 rounded bg-slate-100 font-mono">
+                            <span className="px-1.5 py-0.2 rounded bg-surface-container-low font-mono">
                               {log.actorRole}
                             </span>
                           )}
@@ -543,7 +543,7 @@ export const SystemLogsView: React.FC = () => {
                             e.stopPropagation();
                             setSelectedLog(log);
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                          className="px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container text-slate-700 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <span className="material-symbols-outlined text-[14px]">visibility</span>
                           <span>{hasMeta ? 'Inspect' : 'View'}</span>
@@ -558,7 +558,7 @@ export const SystemLogsView: React.FC = () => {
         </div>
 
         {/* Pagination Footer */}
-        <div className="py-3 px-4 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+        <div className="py-3 px-4 border-t border-slate-200 bg-surface flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
           <div className="flex items-center gap-2">
             <span>Show</span>
             <select
@@ -567,7 +567,7 @@ export const SystemLogsView: React.FC = () => {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="px-2 py-1 text-xs rounded-lg border border-slate-200 bg-white cursor-pointer"
+              className="px-2 py-1 text-xs rounded-lg border border-slate-200 bg-surface cursor-pointer"
             >
               <option value={15}>15</option>
               <option value={25}>25</option>
@@ -586,7 +586,7 @@ export const SystemLogsView: React.FC = () => {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-surface-container-low text-slate-700 font-semibold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -596,7 +596,7 @@ export const SystemLogsView: React.FC = () => {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-surface-container-low text-slate-700 font-semibold text-xs disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
             >
               Next
             </button>
@@ -607,9 +607,9 @@ export const SystemLogsView: React.FC = () => {
       {/* Metadata Detail Inspection Modal */}
       {selectedLog && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-2xl w-full max-h-[85vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-surface">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">manage_search</span>
                 <div>
@@ -619,7 +619,7 @@ export const SystemLogsView: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 cursor-pointer transition-colors"
+                className="p-1.5 hover:bg-surface-container rounded-lg text-slate-500 cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
@@ -628,7 +628,7 @@ export const SystemLogsView: React.FC = () => {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-4 text-xs">
               {/* Summary Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-surface border border-slate-200 text-slate-700">
                 <div>
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block">Timestamp</span>
                   <span className="font-mono font-medium text-slate-800">{formatDateTime(selectedLog.timestamp)}</span>
@@ -654,20 +654,20 @@ export const SystemLogsView: React.FC = () => {
               </div>
 
               {/* Network & Hardware Device Accountability */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="p-3.5 rounded-xl bg-surface border border-slate-200 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[15px] text-primary">security</span>
                   Network & Hardware Device Accountability
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
-                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-slate-200">
                     <span className="text-[10px] uppercase font-semibold text-slate-400 block">Client IP Address</span>
                     <span className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5 mt-0.5">
                       <span className="material-symbols-outlined text-[15px] text-slate-500">lan</span>
                       {selectedLog.ipAddress || 'Internal / N/A'}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-slate-200">
                     <span className="text-[10px] uppercase font-semibold text-slate-400 block">Hardware MAC / Device Identifier</span>
                     <span className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5 mt-0.5">
                       <span className="material-symbols-outlined text-[15px] text-slate-500">fingerprint</span>
@@ -678,7 +678,7 @@ export const SystemLogsView: React.FC = () => {
               </div>
 
               {/* Actor Details */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="p-3 rounded-xl bg-surface border border-slate-200 space-y-1">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Operator / Actor</span>
                 <div className="font-medium text-slate-900">{selectedLog.actorEmail || 'System Automated Job'}</div>
                 <div className="text-[11px] text-slate-500 font-mono">
@@ -689,7 +689,7 @@ export const SystemLogsView: React.FC = () => {
               {/* Description */}
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-slate-700 block">Event Summary & Description</span>
-                <div className="p-3 rounded-xl bg-slate-100/70 border border-slate-200 text-slate-800 font-sans leading-relaxed">
+                <div className="p-3 rounded-xl bg-surface-container-low/70 border border-slate-200 text-slate-800 font-sans leading-relaxed">
                   {selectedLog.details}
                 </div>
               </div>
@@ -713,10 +713,10 @@ export const SystemLogsView: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+            <div className="px-6 py-3 border-t border-slate-200 bg-surface flex items-center justify-end">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Close Record
               </button>

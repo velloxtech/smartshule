@@ -611,7 +611,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
               Faculty & Staff Management Registry
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
               <span className="material-symbols-outlined text-[14px]">verified</span>
               <span>Article 237 (TSC) & Chapter 6 Compliant</span>
             </span>
@@ -644,8 +644,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             </button>
           )}
 
-          <span className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-secondary"></span>
+          <span className="px-3 py-1.5 rounded-lg bg-success-container text-on-success-container text-xs font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-success"></span>
             {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked In
           </span>
         </div>
@@ -778,7 +778,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                         </div>
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            isClockedIn ? 'bg-secondary text-white' : 'bg-surface-container text-outline'
+                            isClockedIn ? 'bg-success text-white' : 'bg-surface-container text-outline'
                           }`}
                         >
                           {t.status}
@@ -801,7 +801,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                         </div>
                         <div className="flex justify-between">
                           <span className="text-on-surface-variant">Specialization:</span>
-                          <span className="font-semibold text-secondary truncate max-w-[170px]">
+                          <span className="font-semibold text-success truncate max-w-[170px]">
                             {t.learningAreas.join(', ')}
                           </span>
                         </div>
@@ -831,10 +831,10 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
                         <button
                           onClick={() => handleOpenDirectEdit(t)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary text-xs font-bold transition-all cursor-pointer shadow-2xs"
                           title={`Edit and correct details for ${t.name}`}
                         >
-                          <span className="material-symbols-outlined text-[15px] text-amber-700">edit</span>
+                          <span className="material-symbols-outlined text-[15px] text-primary">edit</span>
                           <span>Edit</span>
                         </button>
 
@@ -993,7 +993,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleOpenReviewModal(req, 'APPROVE')}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition-colors shadow-xs cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[15px]">check</span>
                         <span>Approve</span>
@@ -1082,7 +1082,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   type="submit"
                   disabled={submittingReview}
                   className={`px-4 py-2 rounded-lg text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5 ${
-                    reviewAction === 'APPROVE' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
+                    reviewAction === 'APPROVE' ? 'bg-primary hover:bg-primary-container' : 'bg-rose-700 hover:bg-rose-800'
                   }`}
                 >
                   {submittingReview && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
@@ -1357,7 +1357,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
                   {/* Section 2: Biodata & Demographics */}
                   <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
-                    <h4 className="font-bold text-xs text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">person</span>
                       <span>Personal Demographics & Identification</span>
                     </h4>
@@ -1584,8 +1584,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             <form onSubmit={handleAssignClassAndStream} className="p-4 sm:p-5 space-y-4 overflow-y-auto text-xs">
               <p className="text-on-surface-variant">A teacher can lead one class and stream per academic year. Assigning another transfers their class-teacher duty and preserves the previous assignment history.</p>
               {assignSuccess && (
-                <div className="p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg flex items-center gap-2">
-                  <span className="material-symbols-outlined text-teal-700 text-[18px]">check_circle</span>
+                <div className="p-3 bg-primary-fixed border border-primary text-on-primary-fixed rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
                   <span>{assignSuccess}</span>
                 </div>
               )}
@@ -1642,7 +1642,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     value={customStreamName}
                     onChange={(e) => setCustomStreamName(e.target.value)}
                     placeholder="e.g. East, Blue, St. Peter"
-                    className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-primary rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     autoFocus
                   />
                 </div>

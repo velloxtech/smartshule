@@ -1,3 +1,5 @@
+import {CurriculumProposalService} from '../application/planning/CurriculumProposalService';
+import { PlanningWorkflowService } from '../application/planning/PlanningWorkflowService';
 import { IBiometricCredentialRepository } from '../core/ports/repositories/IBiometricCredentialRepository';
 import { InMemoryBiometricCredentialRepository } from './database/in-memory/InMemoryBiometricCredentialRepository';
 import { WebAuthnUseCases } from '../application/auth/WebAuthnUseCases';
@@ -120,6 +122,8 @@ export class AppContainer {
   // Repositories
   public assignmentAccess!: TeacherAssignmentAccess;
   public termAllocations!: TermAllocationService;
+  public curriculumProposals!: CurriculumProposalService;
+  public planningWorkflow!: PlanningWorkflowService;
   public calendarPlanning!: CalendarPlanningService;
   public planningRepository: PlanningRepository;
   public userRepository: IUserRepository;
@@ -275,7 +279,7 @@ export class AppContainer {
     );
     const webAuthnService = new WebAuthnService({
       rpId: process.env.WEBAUTHN_RP_ID || 'localhost',
-      rpName: process.env.WEBAUTHN_RP_NAME || 'SmartShule',
+      rpName: process.env.WEBAUTHN_RP_NAME || 'Grace Seeds School',
       expectedOrigin: process.env.WEBAUTHN_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173'
     });
     this.webAuthnUseCases = new WebAuthnUseCases(
@@ -337,6 +341,9 @@ export class AppContainer {
       this.calendarPlanning
     );
     this.termAllocations = new TermAllocationService(this);
+    this.planningWorkflow = new PlanningWorkflowService(this);
+    this.curriculumProposals = new CurriculumProposalService(this);
+    this.CBCUseCases.proposeChange = (a,k,p,id)=>this.curriculumProposals.propose(a,k,p,id);
     
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(
       this.recordOfWorkRepository,

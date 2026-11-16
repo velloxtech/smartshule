@@ -216,7 +216,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="e.g. David"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
               <div>
@@ -229,7 +229,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="e.g. Kiprono"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
             </div>
@@ -243,8 +243,8 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. teacher@smartshule.ac.ke (Optional)"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  placeholder="e.g. teacher@example.com (Optional)"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
               <div>
@@ -256,7 +256,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+2547XXXXXXXX"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
               </div>
             </div>
@@ -284,7 +284,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={tscNumber}
                   onChange={(e) => setTscNumber(e.target.value)}
                   placeholder="e.g. TSC/123456 (Leave blank if pending)"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
                 <span className="text-[10px] text-on-surface-variant">Teachers awaiting commission number can leave this blank</span>
               </div>
@@ -297,7 +297,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={employeeNumber}
                   onChange={(e) => setEmployeeNumber(e.target.value)}
                   placeholder="e.g. 01"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
               </div>
             </div>
@@ -309,7 +309,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
               <select
                 value={qualification}
                 onChange={(e) => setQualification(e.target.value)}
-                className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
               >
                 <option value="Certificate in Early Childhood (ECDE)">Certificate in Early Childhood (ECDE)</option>
                 <option value="Diploma in Early Childhood (ECDE)">Diploma in Early Childhood (ECDE)</option>
@@ -406,12 +406,12 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   if (e.key === 'Enter') handleAddCustomSubject(e);
                 }}
                 placeholder="Other area (e.g. French, Music)..."
-                className="flex-1 bg-white border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-primary"
+                className="flex-1 bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-primary"
               />
               <button
                 type="button"
                 onClick={handleAddCustomSubject}
-                className="px-3 py-1.5 bg-surface-container hover:bg-slate-300 text-on-surface font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs rounded-lg transition-colors cursor-pointer"
               >
                 Add
               </button>

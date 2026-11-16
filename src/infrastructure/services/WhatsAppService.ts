@@ -641,7 +641,7 @@ export class WhatsAppService {
       `*Homefun Activities / Instructions:*\n${latest.homework}\n\n` +
       `*Teacher Remarks:*\n${latest.teacherRemarks || 'Active participation in class today.'}\n\n` +
       `*Requirements for Tomorrow:*\n${latest.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
-      `_You can digitally acknowledge this entry in the SmartShule Parent Portal._`;
+      `_You can digitally acknowledge this entry in the Grace Seeds School Parent Portal._`;
 
     return {
       to: senderPhone,
@@ -752,7 +752,7 @@ export class WhatsAppService {
     const teacherRemarks =
       reportCard?.classTeacherRemarks ||
       formatives[0]?.teacherRemarks ||
-      'Competency assessments recorded in the SmartShule portal.';
+      'Competency assessments recorded in the Grace Seeds School portal.';
 
     const formativeHighlights = formatives.length > 0
       ? `• ${formatives.slice(0, 3).map(f => `${f.specificOutcomeTested || 'Continuous Assessment'}: ${f.performanceLevel}`).join('\n• ')}\n\n`
@@ -818,7 +818,7 @@ export class WhatsAppService {
       `*Grade Level:* ${student.gradeLevel}\n` +
       `*Schedule for:* *${todayDay}*\n\n` +
       `${slotsText}\n\n` +
-      `_For full weekly timetable schedules, please visit the SmartShule Parent Portal._`;
+      `_For full weekly timetable schedules, please visit the Grace Seeds School Parent Portal._`;
 
     return {
       to: senderPhone,
@@ -942,7 +942,7 @@ export class WhatsAppService {
       `*PARENT HELP DESK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName},\n\n` +
-      `You can ask homefun questions or upload textbook/problem photos directly to teachers using the *SmartShule Visual Help Desk* on your Parent Portal.\n\n` +
+      `You can ask homefun questions or upload textbook/problem photos directly to teachers using the *Grace Seeds School Visual Help Desk* on your Parent Portal.\n\n` +
       `Alternatively, reply to this message starting with *ASK:* followed by your question, and our educator will reply shortly.`;
 
     return {
@@ -1039,7 +1039,7 @@ export class WhatsAppService {
       if (!student) {
         return {
           found: false,
-          error: `No registered student or guardian was found matching your command in the database. SmartShule strictly restricts WhatsApp messaging to verified persons registered in the database.`,
+          error: `No registered student or guardian was found matching your command in the database. Grace Seeds School strictly restricts WhatsApp messaging to verified persons registered in the database.`,
         };
       }
     } else {

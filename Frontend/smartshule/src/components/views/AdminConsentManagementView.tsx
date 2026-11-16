@@ -293,7 +293,7 @@ export const AdminConsentManagementView: React.FC = () => {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search by title or description..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant/30 text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant/30 text-xs bg-surface focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
 
@@ -302,7 +302,7 @@ export const AdminConsentManagementView: React.FC = () => {
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="text-xs p-2 rounded-xl border border-outline-variant/30 bg-white font-semibold text-on-surface-variant"
+            className="text-xs p-2 rounded-xl border border-outline-variant/30 bg-surface font-semibold text-on-surface-variant"
           >
             <option value="ALL">All Categories</option>
             <option value="TRIP">Field Trips & Excursions</option>
@@ -412,7 +412,7 @@ export const AdminConsentManagementView: React.FC = () => {
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={() => handleOpenRoster(r)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-1 shadow-xs cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold inline-flex items-center gap-1 shadow-xs cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View Responses Roster</span>
@@ -454,7 +454,7 @@ export const AdminConsentManagementView: React.FC = () => {
                   onChange={e => setNewTitle(e.target.value)}
                   placeholder="e.g. Year 4 National Museum Educational Excursion (2026)"
                   required
-                  className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-surface font-semibold"
                 />
               </div>
 
@@ -468,7 +468,7 @@ export const AdminConsentManagementView: React.FC = () => {
                       setNewCategory(c);
                       applyTemplate(c);
                     }}
-                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-semibold"
+                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-surface font-semibold"
                   >
                     <option value="TRIP">Field Trip & Excursion</option>
                     <option value="MEDICAL">Medical & Emergency Healthcare</option>
@@ -484,7 +484,7 @@ export const AdminConsentManagementView: React.FC = () => {
                     type="date"
                     value={newDeadline}
                     onChange={e => setNewDeadline(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-white font-mono"
+                    className="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-surface font-mono"
                   />
                 </div>
               </div>
@@ -626,7 +626,7 @@ export const AdminConsentManagementView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Roster</span>
@@ -648,7 +648,7 @@ export const AdminConsentManagementView: React.FC = () => {
                   <button
                     onClick={() => setRosterStatusFilter('ALL')}
                     className={`px-2.5 py-1 rounded-lg font-bold text-xs cursor-pointer ${
-                      rosterStatusFilter === 'ALL' ? 'bg-slate-900 text-white' : 'bg-white text-on-surface-variant border border-outline-variant/30'
+                      rosterStatusFilter === 'ALL' ? 'bg-primary text-white' : 'bg-white text-on-surface-variant border border-outline-variant/30'
                     }`}
                   >
                     All ({rosterData.summary.totalEligible})
@@ -656,7 +656,7 @@ export const AdminConsentManagementView: React.FC = () => {
                   <button
                     onClick={() => setRosterStatusFilter('CONSENTED')}
                     className={`px-2.5 py-1 rounded-lg font-bold text-xs cursor-pointer ${
-                      rosterStatusFilter === 'CONSENTED' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-800 border border-emerald-200'
+                      rosterStatusFilter === 'CONSENTED' ? 'bg-primary text-white' : 'bg-white text-on-primary-fixed border border-primary'
                     }`}
                   >
                     Consented ({rosterData.summary.consented})
@@ -672,7 +672,7 @@ export const AdminConsentManagementView: React.FC = () => {
                   <button
                     onClick={() => setRosterStatusFilter('PENDING')}
                     className={`px-2.5 py-1 rounded-lg font-bold text-xs cursor-pointer ${
-                      rosterStatusFilter === 'PENDING' ? 'bg-amber-700 text-white' : 'bg-white text-amber-800 border border-amber-200'
+                      rosterStatusFilter === 'PENDING' ? 'bg-primary text-white' : 'bg-white text-on-primary-fixed border border-primary'
                     }`}
                   >
                     Pending ({rosterData.summary.pending})
@@ -685,7 +685,7 @@ export const AdminConsentManagementView: React.FC = () => {
                     value={rosterSearch}
                     onChange={e => setRosterSearch(e.target.value)}
                     placeholder="Search student name..."
-                    className="w-full text-xs p-1.5 rounded-lg border border-outline-variant/30 bg-white"
+                    className="w-full text-xs p-1.5 rounded-lg border border-outline-variant/30 bg-surface"
                   />
                 </div>
               </div>
@@ -773,7 +773,7 @@ export const AdminConsentManagementView: React.FC = () => {
                                   onClick={() => setInspectedSignatureItem(row)}
                                   className="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1"
                                 >
-                                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                                   <span>View Stamp</span>
                                 </button>
                               ) : (
@@ -797,7 +797,7 @@ export const AdminConsentManagementView: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 shadow-2xl border border-outline-variant/30 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                <ShieldCheck className="w-5 h-5 text-primary" />
                 <h3 className="font-bold text-sm text-on-surface">Verified Electronic Signature</h3>
               </div>
               <button
@@ -826,7 +826,7 @@ export const AdminConsentManagementView: React.FC = () => {
                     className="h-16 mx-auto object-contain"
                   />
                 ) : (
-                  <div className="font-serif italic text-2xl text-blue-900">
+                  <div className="font-serif italic text-2xl text-on-primary-fixed">
                     {inspectedSignatureItem.signatureData || inspectedSignatureItem.parentName}
                   </div>
                 )}

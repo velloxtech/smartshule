@@ -14,10 +14,17 @@ export function teacherAssignmentGuard(c:AppContainer){return async(req:Request,
   // BroadsheetUseCases calculates subject-limited totals and aggregates per stream.
   // Generic response filtering cannot safely recalculate those derived values.
   if(segments[0]==='broadsheets'&&segments[1]==='stream')return next();
+  // Timetable reads enforce self-only / class-teacher access in TimetableUseCases.
+  // Generic subject filtering must not authorize a complete subject-only class grid.
+  // Timetable mutations are restricted to leadership by their route role guards.
+  if(segments[0]==='timetables')return next();
   // This self-service portal resolves children from the authenticated guardian identity.
   // Staff can have children outside their teaching assignments; applying teaching scope
   // here would hide their own family. The endpoint accepts no alternate parent identity.
   if (segments[0] === 'students' && segments[1] === 'guardian' && segments[2] === 'me') return next();
+  // This endpoint independently enforces school/subject-editor access and returns only
+  // the teacher’s own pending proposals. Proposals have no teaching cohort yet.
+  if(segments[0]==='curriculum'&&segments[1]==='planning'&&segments[2]==='curriculum-proposals')return next();
   const privateWork=/^\/(curriculum(?:\/|$)|curriculum-trackers?(?:\/|$)|syllabus-coverage)/i.test(path);
   const access=new TeacherAssignmentAccess(c.academicRepository,c.teacherRepository);
   const years=await c.academicRepository.findAllYears(actor.schoolId);
@@ -101,7 +108,7 @@ export function teacherAssignmentGuard(c:AppContainer){return async(req:Request,
   }
   if(segments[0]==='cbc'&&segments[2]){if(segments[1]==='summative')resource=await c.CBCAssessmentRepository.findSummativeById(segments[2]);if(segments[1]==='formative')resource=await c.CBCAssessmentRepository.findFormativeById(segments[2]);}
   if(segments[0]==='ediary'&&segments[1]&&typeof (c.ediaryRepository as any).findById==='function')resource=await c.ediaryRepository.findById(segments[1]);
-  if(segments[0]==='curriculum'&&segments[1]==='planning'&&segments[2]==='record-taught')resource=await c.curriculumUseCases.getLessonPlanById(req.body.lessonPlanId,actor);
+  if(segments[0]==='curriculum'&&segments[1]==='planning'&&segments[2]==='record-taught'&&req.body.lessonPlanId)resource=await c.curriculumUseCases.getLessonPlanById(req.body.lessonPlanId,actor);
   if(segments[0]==='clinic'&&segments[1]==='profile'&&segments[2])await check({studentId:segments[2]},false);
   if(segments[0]==='clinic'&&segments[1]==='visits'&&segments[2])resource=await c.clinicRepository.findVisitById(segments[2]);
   if(segments[0]==='discipline'&&segments[1]==='incidents'&&segments[2])resource=await c.disciplineRepository.findIncidentById(segments[2]);
@@ -128,14 +135,16 @@ export function teacherAssignmentGuard(c:AppContainer){return async(req:Request,
     if(merged.memberStudentIds)for(const studentId of merged.memberStudentIds)await check({studentId},false);
     if(merged.classRoomId||merged.classroomId||merged.streamId||merged.studentId||merged.learningAreaId){await check(merged,privateWork || Boolean(merged.teacherId));}
     else if(actor.role==='TEACHER'&&privateWork&&!resource&&!(segments[1]==='planning'))throw new ForbiddenError('A class and learning area are required.');
-    if(segments[0]==='curriculum'&&segments[1]==='records-of-work'&&req.method==='POST'&&!resource&&!body.planningLink)throw new ValidationError('Create a teaching record from its linked lesson plan in Syllabus Coverage Plan.');
-    if(body.planningLink){
+    if(segments[0]==='curriculum'&&segments[1]==='records-of-work'&&req.method==='POST'&&!resource&&!body.planningLink)throw new ValidationError('Create a record from an approved scheduled scheme lesson. A detailed lesson plan is optional.');
+    if(body.planningLink||resource?.toJSON?.().planningLink){
+      const link=body.planningLink||resource.toJSON().planningLink;
       const existing=(resource?.toJSON?resource.toJSON():resource)?.planningLink;
-      if(existing && JSON.stringify(existing)!==JSON.stringify(body.planningLink))throw new ValidationError('Existing teaching links are immutable.');
-      const plan=await c.curriculumUseCases.getLessonPlanById(body.planningLink.lessonPlanId,actor);
-      const scheme=await c.curriculumUseCases.getSchemeById(body.planningLink.schemeId,actor);
-      const entry=scheme.entries.find(e=>e.id===body.planningLink.schemeEntryId);
-      if(!entry || plan.schemeOfWorkEntryId!==entry.id || entry.slotId!==body.planningLink.slotId || merged.classRoomId!==plan.classRoomId || merged.learningAreaId!==plan.learningAreaId || (merged.streamId || '')!==(plan.streamId || '') || merged.lessonDate!==plan.lessonDate)throw new ValidationError('Teaching record, scheme and lesson plan must refer to the same slot.');
+      if(existing && body.planningLink && ['lessonPlanId','schemeId','schemeEntryId','slotId'].some(key=>existing[key]!==body.planningLink[key]))throw new ValidationError('Existing teaching links are immutable.');
+      const plan=link.lessonPlanId?await c.curriculumUseCases.getLessonPlanById(link.lessonPlanId,actor):null;
+      const scheme=await c.curriculumUseCases.getSchemeById(link.schemeId,actor);
+      const entry=scheme.entries.find(e=>e.id===link.schemeEntryId);
+      if(entry&&body.reflectionData?.outcomesCovered?.some((o:string)=>!entry.specificLearningOutcomes.includes(o)))throw new ValidationError('Covered outcomes must come from the approved scheme lesson.');
+      if(!entry || entry.archivedAt || (scheme.planningState?.approvedEntryIds?!scheme.planningState.approvedEntryIds.includes(entry.id):scheme.status!=='APPROVED') || (plan&&plan.schemeOfWorkEntryId!==entry.id) || entry.slotId!==link.slotId || merged.classRoomId!==scheme.classRoomId || merged.learningAreaId!==scheme.learningAreaId || (merged.streamId || '')!==(scheme.streamId || '') || merged.academicYearId!==scheme.academicYearId || !sameTerm(merged.termId||'',scheme.termId) || (entry.scheduledDate&&merged.lessonDate<entry.scheduledDate))throw new ValidationError('Teaching record, scheme and lesson plan must refer to the same slot.');
     }
     for(const slot of [...(body.slots || []),...(body.slot?[body.slot]:[])])if(slot.learningAreaId)await check({...merged,learningAreaId:slot.learningAreaId},false);
     for(const entry of body.entries || [])if(entry.studentId)await check({studentId:entry.studentId},false);

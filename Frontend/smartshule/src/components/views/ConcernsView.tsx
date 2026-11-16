@@ -481,10 +481,10 @@ export const ConcernsView: React.FC = () => {
             <div className="text-2xl font-black text-on-surface mt-1">{metrics.total}</div>
             <div className="text-[10px] text-slate-400 mt-0.5">All CBC matters</div>
           </div>
-          <div className="bg-surface-container-lowest p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/30">
-            <div className="text-xs text-blue-700 font-bold uppercase">Active Pipeline</div>
-            <div className="text-2xl font-black text-blue-800 mt-1">{metrics.active}</div>
-            <div className="text-[10px] text-blue-600 mt-0.5">Under investigation</div>
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-primary shadow-sm bg-primary-fixed/30">
+            <div className="text-xs text-primary font-bold uppercase">Active Pipeline</div>
+            <div className="text-2xl font-black text-on-primary-fixed mt-1">{metrics.active}</div>
+            <div className="text-[10px] text-primary mt-0.5">Under investigation</div>
           </div>
           <div className="bg-surface-container-lowest p-4 rounded-xl border border-red-200 shadow-sm bg-red-50/30">
             <div className="text-xs text-red-700 font-bold uppercase">Escalated</div>
@@ -496,10 +496,10 @@ export const ConcernsView: React.FC = () => {
             <div className="text-2xl font-black text-amber-800 mt-1">{metrics.overdue}</div>
             <div className="text-[10px] text-amber-600 mt-0.5">Deadline exceeded</div>
           </div>
-          <div className="bg-surface-container-lowest p-4 rounded-xl border border-purple-200 shadow-sm bg-purple-50/30">
-            <div className="text-xs text-purple-700 font-bold uppercase">Awaiting Parent</div>
-            <div className="text-2xl font-black text-purple-800 mt-1">{metrics.awaitingParent}</div>
-            <div className="text-[10px] text-purple-600 mt-0.5">Feedback requested</div>
+          <div className="bg-surface-container-lowest p-4 rounded-xl border border-primary shadow-sm bg-primary-fixed/30">
+            <div className="text-xs text-primary font-bold uppercase">Awaiting Parent</div>
+            <div className="text-2xl font-black text-on-primary-fixed mt-1">{metrics.awaitingParent}</div>
+            <div className="text-[10px] text-primary mt-0.5">Feedback requested</div>
           </div>
           <div className="bg-surface-container-lowest p-4 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/30">
             <div className="text-xs text-emerald-700 font-bold uppercase">Resolved Cases</div>
@@ -540,7 +540,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="ACTIVE">Active Cases Only</option>
@@ -558,7 +558,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none max-w-[180px] truncate"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none max-w-[180px] truncate"
               >
                 <option value="ALL">All Categories</option>
                 {CONCERN_CATEGORIES.map((cat) => (
@@ -570,7 +570,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
+                className="px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface-variant font-medium focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="ALL">All Priorities</option>
                 <option value="URGENT">Urgent (Safety)</option>
@@ -728,7 +728,7 @@ export const ConcernsView: React.FC = () => {
                               </span>
                             ) : (
                               <span className="text-[11px] font-medium text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm text-cyan-600">timer</span>
+                                <span className="material-symbols-outlined text-sm text-primary">timer</span>
                                 On Track
                               </span>
                             )}
@@ -786,7 +786,7 @@ export const ConcernsView: React.FC = () => {
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span>
                 <div>
-                  <h4 className="text-sm font-black text-emerald-900">Concern Submitted Successfully!</h4>
+                  <h4 className="text-sm font-black text-on-primary-fixed">Concern Submitted Successfully!</h4>
                   <p className="text-xs text-emerald-800 mt-1">
                     Your unique tracking reference number is:
                   </p>
@@ -802,13 +802,13 @@ export const ConcernsView: React.FC = () => {
                         setFormSuccessRef(null);
                         setActiveTab('list');
                       }}
-                      className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm"
+                      className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container shadow-sm"
                     >
                       View in My Concerns
                     </button>
                     <button
                       onClick={() => setFormSuccessRef(null)}
-                      className="px-4 py-2 bg-white text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold hover:bg-emerald-50"
+                      className="px-4 py-2 bg-white text-on-primary-fixed border border-primary rounded-xl text-xs font-bold hover:bg-primary-fixed"
                     >
                       Log Another Concern
                     </button>
@@ -835,7 +835,7 @@ export const ConcernsView: React.FC = () => {
                 value={formData.studentId}
                 onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="">-- Choose child --</option>
                 {children.map((child: any) => {
@@ -858,7 +858,7 @@ export const ConcernsView: React.FC = () => {
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
+                className="w-full px-3 py-2.5 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface focus:ring-2 focus:ring-primary outline-none"
               >
                 {CONCERN_CATEGORIES.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -941,14 +941,14 @@ export const ConcernsView: React.FC = () => {
                   placeholder="Document Name (e.g. Doctor's Note)"
                   value={formData.attachmentName}
                   onChange={(e) => setFormData({ ...formData, attachmentName: e.target.value })}
-                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary outline-none"
+                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-surface focus:ring-2 focus:ring-primary outline-none"
                 />
                 <input
                   type="url"
                   placeholder="Attachment URL (https://...)"
                   value={formData.attachmentUrl}
                   onChange={(e) => setFormData({ ...formData, attachmentUrl: e.target.value })}
-                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-white focus:ring-2 focus:ring-primary outline-none"
+                  className="px-3 py-2 border border-outline-variant/30 rounded-lg text-xs bg-surface focus:ring-2 focus:ring-primary outline-none"
                 />
               </div>
             </div>
@@ -1196,7 +1196,7 @@ export const ConcernsView: React.FC = () => {
                             isInternal
                               ? 'bg-amber-50/70 border-amber-300 text-amber-950'
                               : isFromParent
-                              ? 'bg-blue-50/60 border-blue-200 text-blue-950 ml-0 md:mr-12'
+                              ? 'bg-primary-fixed/60 border-primary text-on-primary-fixed ml-0 md:mr-12'
                               : 'bg-emerald-50/60 border-emerald-200 text-emerald-950 ml-0 md:ml-12'
                           }`}
                         >
@@ -1208,7 +1208,7 @@ export const ConcernsView: React.FC = () => {
                                   isInternal
                                     ? 'bg-amber-200 text-amber-900'
                                     : isFromParent
-                                    ? 'bg-blue-200 text-blue-900'
+                                    ? 'bg-primary-fixed-dim text-on-primary-fixed'
                                     : 'bg-emerald-200 text-emerald-900'
                                 }`}
                               >
@@ -1280,7 +1280,7 @@ export const ConcernsView: React.FC = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-white text-on-surface focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl text-xs bg-surface text-on-surface focus:ring-2 focus:ring-primary outline-none"
                   />
 
                   <div className="flex items-center justify-between pt-1">
@@ -1316,7 +1316,7 @@ export const ConcernsView: React.FC = () => {
                   {!isParent && isHeadTeacherOrAdmin && selectedConcern.status === 'SUBMITTED' && (
                     <button
                       onClick={() => setShowAcknowledgeDialog(true)}
-                      className="px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-xs flex items-center gap-1"
+                      className="px-3 py-2 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-sm">mark_email_read</span>
                       <span>Acknowledge Concern</span>
@@ -1326,7 +1326,7 @@ export const ConcernsView: React.FC = () => {
                   {!isParent && isHeadTeacherOrAdmin && (
                     <button
                       onClick={() => setShowAssignDialog(true)}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1"
+                      className="px-3 py-2 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-sm">assignment_ind</span>
                       <span>{selectedConcern.assignedToUserId ? 'Reassign Staff' : 'Assign Staff'}</span>
@@ -1346,7 +1346,7 @@ export const ConcernsView: React.FC = () => {
                   {!isParent && isHeadTeacherOrAdmin && selectedConcern.status !== 'RESOLVED' && (
                     <button
                       onClick={() => setShowResolveDialog(true)}
-                      className="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs flex items-center gap-1"
+                      className="px-3 py-2 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-sm">check_circle</span>
                       <span>Mark as Resolved</span>
@@ -1358,7 +1358,7 @@ export const ConcernsView: React.FC = () => {
                 {(selectedConcern.status === 'RESOLVED' || selectedConcern.status === 'CLOSED') && (
                   <button
                     onClick={() => setShowReopenDialog(true)}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow-sm"
+                    className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">replay</span>
                     <span>Reopen Concern</span>
@@ -1389,7 +1389,7 @@ export const ConcernsView: React.FC = () => {
               <button onClick={() => setShowAcknowledgeDialog(false)} className="px-3 py-1.5 text-xs text-on-surface-variant font-bold">
                 Cancel
               </button>
-              <button onClick={handleAcknowledge} className="px-4 py-1.5 bg-cyan-700 text-white rounded-xl text-xs font-bold shadow">
+              <button onClick={handleAcknowledge} className="px-4 py-1.5 bg-primary text-white rounded-xl text-xs font-bold shadow">
                 Confirm Acknowledgment
               </button>
             </div>
@@ -1407,7 +1407,7 @@ export const ConcernsView: React.FC = () => {
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs bg-white"
+                className="w-full p-2.5 border border-outline-variant/30 rounded-xl text-xs bg-surface"
               >
                 <option value="">-- Choose Staff Member --</option>
                 {staffUsers.map((u) => (
@@ -1434,7 +1434,7 @@ export const ConcernsView: React.FC = () => {
               <button
                 disabled={!assigneeId}
                 onClick={handleAssign}
-                className="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
+                className="px-4 py-1.5 bg-primary text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
               >
                 Assign Case
               </button>
@@ -1482,7 +1482,7 @@ export const ConcernsView: React.FC = () => {
       {showResolveDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
-            <h4 className="font-black text-on-surface text-sm text-emerald-800 flex items-center gap-1.5">
+            <h4 className="font-black text-on-surface text-sm text-on-primary-fixed flex items-center gap-1.5">
               <span className="material-symbols-outlined">check_circle</span>
               <span>Resolve Concern #{selectedConcern.referenceNumber}</span>
             </h4>
@@ -1517,7 +1517,7 @@ export const ConcernsView: React.FC = () => {
               <button
                 disabled={!resolveAction.trim()}
                 onClick={handleResolve}
-                className="px-4 py-1.5 bg-emerald-700 text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
+                className="px-4 py-1.5 bg-primary text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
               >
                 Ratify & Resolve
               </button>
@@ -1530,7 +1530,7 @@ export const ConcernsView: React.FC = () => {
       {showReopenDialog && selectedConcern && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-surface-container-lowest rounded-2xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/30 space-y-4">
-            <h4 className="font-black text-on-surface text-sm text-orange-700 flex items-center gap-1.5">
+            <h4 className="font-black text-on-surface text-sm text-primary flex items-center gap-1.5">
               <span className="material-symbols-outlined">replay</span>
               <span>Reopen Concern #{selectedConcern.referenceNumber}</span>
             </h4>
@@ -1552,7 +1552,7 @@ export const ConcernsView: React.FC = () => {
               <button
                 disabled={!reopenReason.trim()}
                 onClick={handleReopen}
-                className="px-4 py-1.5 bg-orange-600 text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
+                className="px-4 py-1.5 bg-primary text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
               >
                 Reopen Concern
               </button>

@@ -5,7 +5,7 @@ import { AppContainer } from '../../container';
 import { AcademicActor, TeachingScope, sameTerm } from '../../../application/shared/TeacherAssignmentAccess';
 import { ForbiddenError, ValidationError, ConflictError } from '../../../core/domain/shared/Errors';
 const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const calendarSchema=z.object({revision:z.number().int().min(0),calendar:z.object({startDate:date,endDate:date,teachingDays:z.array(z.number().int().min(0).max(6)),extraTeachingDates:z.array(date).optional(),published:z.boolean(),exceptions:z.array(z.object({date,endDate:date.optional(),reason:z.string().min(1),kind:z.enum(['HOLIDAY','CLOSURE','ACTIVITY']),classRoomIds:z.array(z.string()).optional(),streamIds:z.array(z.string()).optional(),periodNumbers:z.array(z.number().int().positive()).optional(),startTime:z.string().regex(/^\d{2}:\d{2}$/).optional(),endTime:z.string().regex(/^\d{2}:\d{2}$/).optional()}))})});
+const calendarSchema=z.object({revision:z.number().int().min(0),calendar:z.object({guidedWorkflow:z.boolean().optional(),startDate:date,endDate:date,teachingDays:z.array(z.number().int().min(0).max(6)),extraTeachingDates:z.array(date).optional(),published:z.boolean(),exceptions:z.array(z.object({date,endDate:date.optional(),reason:z.string().min(1),kind:z.enum(['HOLIDAY','CLOSURE','ACTIVITY']),classRoomIds:z.array(z.string()).optional(),streamIds:z.array(z.string()).optional(),periodNumbers:z.array(z.number().int().positive()).optional(),startTime:z.string().regex(/^\d{2}:\d{2}$/).optional(),endTime:z.string().regex(/^\d{2}:\d{2}$/).optional()}))})});
 export class CalendarPlanningController {
  constructor(private c:AppContainer){}
  scope(req:Request):TeachingScope {return {schoolId:(req as any).user.schoolId,academicYearId:String(req.query.academicYearId || ''),termId:String(req.query.termId || ''),classRoomId:req.query.classRoomId?String(req.query.classRoomId):undefined,streamId:req.query.streamId?String(req.query.streamId):undefined,learningAreaId:req.query.learningAreaId?String(req.query.learningAreaId):undefined};}
@@ -41,21 +41,40 @@ export class CalendarPlanningController {
   res.type(format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   res.send(format==='pdf'?weeklySchemePDF(data):weeklySchemeDoc(data));
  }catch(e){next(e);}};
+ proposals=this.handle(async(req,a)=>this.c.curriculumProposals.list(a,String(req.query.learningAreaId||'')));
+ reviewProposal=this.handle(async(req,a)=>{const b=z.object({id:z.string(),revision:z.number().int().min(0),approved:z.boolean(),remarks:z.string().min(1)}).parse(req.body);return this.c.curriculumProposals.review(a,String(req.query.learningAreaId||''),b.id,b.revision,b.approved,b.remarks);});
+ setupContext=this.handle(async(req,a)=>{await this.c.calendarPlanning.admin(a,this.scope(req));const years=await this.c.academicRepository.findAllYears(a.schoolId);const currentYear=years.find(y=>y.isCurrent);const terms=(await Promise.all(years.map(async y=>(await this.c.academicRepository.findTermsByYear(y.id)).filter(t=>t.isCurrent).map(t=>({...t.toJSON(),yearName:y.name}))))).flat();return {currentYear:currentYear?.toJSON(),flaggedTerms:terms,disagreement:!currentYear||new Set(terms.filter(t=>t.academicYearId===currentYear.id).map(t=>t.id.replace(/-t([1-3])$/,'-$1'))).size!==1};});
+ continuity=this.handle(async(req,a)=>this.c.planningWorkflow.continuity(a,this.scope(req)));
+ decideStart=this.handle(async(req,a)=>{const b=z.object({decision:z.enum(['FIRST_TERM','MISSING_PRIOR']),reason:z.string().min(5),revision:z.number().int().min(0)}).parse(req.body);return this.c.planningWorkflow.decide(a,this.scope(req),b.decision,b.reason,b.revision);});
+ carryForward=this.handle(async(req,a)=>{const b=z.object({entryIds:z.array(z.string()).min(1),revision:z.number().int().min(0)}).parse(req.body);return this.c.planningWorkflow.carryForward(a,this.scope(req),b.entryIds,b.revision);});
+ readiness=this.handle(async(req,a)=>this.c.planningWorkflow.readiness(a,this.scope(req)));
  getCalendar=this.handle(async(req,a)=>this.c.calendarPlanning.calendar(a,this.scope(req)));
  saveCalendar=this.handle(async(req,a)=>{const body=calendarSchema.parse(req.body);return this.c.calendarPlanning.saveCalendar(a,this.scope(req),body.calendar,body.revision);});
  getSequence=this.handle(async(req,a)=>this.c.calendarPlanning.sequence(a,this.scope(req)));
  saveSequence=this.handle(async(req,a)=>{const data=z.object({revision:z.number().int().min(0),enabled:z.boolean(),learningAreaIds:z.array(z.string())}).parse(req.body);return this.c.calendarPlanning.saveSequence(a,this.scope(req),data,data.revision);});
  recordTaught=this.handle(async(req,a)=>{
-  const body=z.object({lessonPlanId:z.string(),notes:z.string().min(3)}).parse(req.body);
-  const plan=await this.c.curriculumUseCases.getLessonPlanById(body.lessonPlanId,a);
-  if(!['APPROVED','RECORDED'].includes(plan.status))throw new ValidationError('The lesson plan must be approved before recording work taught.');
-  const scheme=(await this.c.schemeOfWorkRepository.findAll()).find(s=>s.entries.some(e=>e.id===plan.schemeOfWorkEntryId));
-  if(!scheme)throw new ValidationError('This plan has no source scheme entry.');
-  const entry=scheme.entries.find(e=>e.id===plan.schemeOfWorkEntryId)!;
-  const scheduled=await this.c.calendarPlanning.slots(a,scheme.toJSON());
-  const slot=scheduled.slots.find(s=>s.id===entry.slotId);
-  if(!slot || slot.date!==plan.lessonDate || plan.lessonTime!==`${slot.startTime}-${slot.endTime}`)throw new ValidationError('Reschedule the cancelled lesson before recording new work.');
-  return this.c.recordOfWorkUseCases.createDiaryEntry({teacherId:plan.teacherId,schoolId:a.schoolId,classRoomId:plan.classRoomId,streamId:plan.streamId,learningAreaId:plan.learningAreaId,academicYearId:scheme.academicYearId,termId:scheme.termId,weekNumber:slot.weekNumber,lessonDate:slot.date,lessonPeriod:String(slot.periodNumber),strand:plan.strand,subStrand:plan.subStrand,lessonTopic:plan.subStrand,learningObjectives:plan.specificLearningOutcomes.join('; '),learningActivities:body.notes,comments:body.notes,status:'DRAFT',planningLink:{lessonPlanId:plan.id,schemeId:scheme.id,schemeEntryId:entry.id,slotId:slot.id}},a);
+  const body=z.object({lessonPlanId:z.string().optional(),schemeId:z.string().optional(),schemeEntryId:z.string().optional(),notes:z.string().trim().min(3),actualDate:date.optional(),teachingStatus:z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).default('COMPLETED'),outcomesCovered:z.array(z.string()).optional(),remainingWork:z.string().optional(),reflection:z.string().optional()}).parse(req.body);
+  const plan=body.lessonPlanId?await this.c.curriculumUseCases.getLessonPlanById(body.lessonPlanId,a):null;
+  const rawSource=body.schemeId?await this.c.curriculumUseCases.getSchemeById(body.schemeId,a):(await this.c.schemeOfWorkRepository.findAll()).find(s=>s.entries.some(e=>e.id===plan?.schemeOfWorkEntryId));
+  if(!rawSource)throw new ValidationError('Select an approved scheduled scheme lesson.');
+  const source:any=typeof (rawSource as any).toJSON==='function'?(rawSource as any).toJSON():rawSource;
+  await this.c.assignmentAccess.assertSubjectTeaching(a,source);
+  const entry=source.entries.find((e:any)=>e.id===(body.schemeEntryId||plan?.schemeOfWorkEntryId));
+  if(!entry||entry.archivedAt||(source.planningState?.approvedEntryIds?!source.planningState.approvedEntryIds.includes(entry.id):source.status!=='APPROVED'))throw new ValidationError('Leadership must approve this scheme lesson before teaching is recorded.');
+  if(plan&&plan.schemeOfWorkEntryId!==entry.id)throw new ValidationError('Lesson plan and scheme entry must match.');
+  const scheduled=await this.c.calendarPlanning.slots(a,source);const slot=scheduled.slots.find(s=>s.id===entry.slotId);
+  if(!slot)throw new ValidationError('Reschedule the cancelled lesson before recording new work.');
+  const actualDate=body.actualDate||slot.date;
+  const period=await this.c.assignmentAccess.context(a,source);
+  if(actualDate<period.term.startDate||actualDate>period.term.endDate)throw new ValidationError('The actual teaching date must be within this academic term. Schedule later follow-up work in the appropriate period.');
+  if(actualDate>new Date().toISOString().slice(0,10)||actualDate<slot.date)throw new ValidationError('Record actual teaching after the scheduled lesson, not in advance.');
+  const covered=body.outcomesCovered||(body.teachingStatus==='COMPLETED'?entry.specificLearningOutcomes:[]);
+  if(['POSTPONED','CANCELLED'].includes(body.teachingStatus)&&covered.length)throw new ValidationError('Postponed or cancelled lessons cannot claim taught outcomes.');
+  if(covered.some((outcome:string)=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Covered outcomes must come from the approved scheme lesson.');
+  if(body.teachingStatus==='COMPLETED'&&entry.specificLearningOutcomes.some((outcome:string)=>!covered.includes(outcome)))throw new ValidationError('Use PARTIAL when outcomes remain untaught.');
+  const existing=await this.c.recordOfWorkRepository.find({schoolId:a.schoolId,academicYearId:source.academicYearId,termId:source.termId});
+  if(existing.some(r=>{const d=r.toJSON();return d.planningLink?.schemeId===source.id&&d.planningLink?.schemeEntryId===entry.id&&d.status!=='RETURNED';}))throw new ConflictError('This lesson already has a work record. Continue that record or teach another scheduled lesson.');
+  return this.c.recordOfWorkUseCases.createDiaryEntry({teacherId:plan?.teacherId||source.teacherId,schoolId:a.schoolId,classRoomId:source.classRoomId,streamId:source.streamId,learningAreaId:source.learningAreaId,academicYearId:source.academicYearId,termId:source.termId,weekNumber:slot.weekNumber,lessonDate:actualDate,lessonPeriod:String(slot.periodNumber),strand:entry.strandTitle,subStrand:entry.subStrandTitle,subStrandId:entry.subStrandId,lessonTopic:entry.subStrandTitle,learningObjectives:entry.specificLearningOutcomes.join('; '),learningActivities:body.notes,comments:body.notes,reflection:body.reflection,reflectionData:{teachingStatus:body.teachingStatus,outcomesCovered:covered,remainingWork:body.remainingWork},status:'DRAFT',planningLink:{lessonPlanId:plan?.id,schemeId:source.id,schemeEntryId:entry.id,slotId:slot.id}},a);
  });
  archiveEntry=this.handle(async(req,a)=>this.c.curriculumUseCases.archiveCancelledEntry(String(req.params.id),String(req.params.entryId),a));
  rescheduleLesson=this.handle(async(req,a)=>this.c.curriculumUseCases.rescheduleLessonPlan(String(req.params.id),a));
@@ -95,8 +114,8 @@ export class CalendarPlanningController {
       const entry=rowData.entries.find((e:any)=>!e.archivedAt&&e.slotId===slot.id);
       const matching=plans.filter((p:any)=>entry&&p.schemeOfWorkEntryId===entry.id&&p.lessonDate===slot.date&&p.lessonTime===`${slot.startTime}-${slot.endTime}`);
       const isPlanned=(p:any)=>Boolean(p.strand?.trim()&&p.subStrand?.trim()&&p.specificLearningOutcomes?.some((x:string)=>x.trim())&&p.steps?.length&&p.steps.every((step:any)=>step.teacherActivities?.trim()&&step.learnerActivities?.trim()&&step.durationMinutes>0)&&p.steps.reduce((n:number,step:any)=>n+step.durationMinutes,0)===p.durationMinutes);
-      const taught=work.some((record:any)=>entry&&record.classRoomId===row.classRoomId&&(record.streamId||'')===(row.streamId||'')&&record.learningAreaId===row.learningAreaId&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry?.id&&record.planningLink?.slotId===slot.id&&record.lessonDate===slot.date&&record.status==='APPROVED');
-      return {weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,date:slot.date,strandTitle:entry?.strandTitle,subStrandTitle:entry?.subStrandTitle,statuses:{planned:matching.some((p:any)=>['APPROVED','RECORDED'].includes(p.status)&&isPlanned(p)),taught,reflection:matching.some((p:any)=>['APPROVED','RECORDED'].includes(p.status)&&Boolean(p.teacherSelfReflection?.trim()))}};
+      const taught=work.some((record:any)=>entry&&record.classRoomId===row.classRoomId&&(record.streamId||'')===(row.streamId||'')&&record.learningAreaId===row.learningAreaId&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry?.id&&record.planningLink?.slotId===slot.id&&record.lessonDate===slot.date&&record.status==='APPROVED'&&record.isOfficialCoverage&&(!record.reflectionData?.teachingStatus||record.reflectionData.teachingStatus==='COMPLETED'));
+      return {weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,date:slot.date,strandTitle:entry?.strandTitle,subStrandTitle:entry?.subStrandTitle,statuses:{planned:matching.some((p:any)=>isPlanned(p)),reported:work.some((record:any)=>entry&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry.id&&['SUBMITTED','APPROVED'].includes(record.status)),taught,reflection:matching.some((p:any)=>Boolean(p.teacherSelfReflection?.trim()))}};
      });
     }catch(e){if(!(e instanceof ConflictError))throw e;}
     coverage.push({teacherName:user?`${user.firstName} ${user.lastName}`:'Subject teacher',status:row.status,allocatedLessons:row.planningState?.allocations.reduce((n:number,x:any)=>n+x.lessons,0)||0,plannedLessons:row.entries.filter((e:any)=>!e.archivedAt).length,lessons});

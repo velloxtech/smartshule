@@ -131,7 +131,7 @@ export class OccurrenceUseCases {
           const primaryPhone = guardians[0]?.emergencyContact;
 
           if (primaryPhone) {
-            const smsText = `SmartShule Occurrence Notice: An incident (${dto.title}) involving ${sName} was recorded on ${incidentDate} at ${incidentTime}. Immediate action: ${dto.immediateActionTaken || 'Being addressed by duty staff'}.`;
+            const smsText = `Grace Seeds School Occurrence Notice: An incident (${dto.title}) involving ${sName} was recorded on ${incidentDate} at ${incidentTime}. Immediate action: ${dto.immediateActionTaken || 'Being addressed by duty staff'}.`;
             await this.notificationService.sendSms(primaryPhone, smsText);
             parentNotified = true;
             parentNotificationMethod = 'SMS';

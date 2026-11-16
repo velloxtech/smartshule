@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative shrink-0" ref={termRef}>
             <button
               onClick={() => setTermDropdownOpen(!termDropdownOpen)}
-              className="flex items-center gap-2 bg-primary-container hover:bg-[#550000] text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-white/20 shadow-xs"
+              className="flex items-center gap-2 bg-primary-container hover:bg-primary-container text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-white/20 shadow-xs"
               type="button"
               title="Academic Term Session"
             >
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Global Search with instant popover */}
           <div
-            className="relative flex-1 min-w-0 hidden md:flex items-center bg-primary-container rounded-xl px-3 border border-white/20 focus-within:border-white/40 focus-within:bg-[#550000] transition-all"
+            className="relative flex-1 min-w-0 hidden md:flex items-center bg-primary-container rounded-xl px-3 border border-white/20 focus-within:border-white/40 focus-within:bg-primary-container transition-all"
             ref={searchRef}
           >
             <span className="material-symbols-outlined text-white/70 text-[18px] mr-2 shrink-0">
@@ -473,7 +473,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-primary-container hover:bg-[#550000] transition-colors cursor-pointer border border-white/20 text-white"
+              className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-primary-container hover:bg-primary-container transition-colors cursor-pointer border border-white/20 text-white"
               title="User Account & Session"
               type="button"
             >
@@ -495,7 +495,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-3 shadow-2xl border border-outline-variant/30 text-on-surface z-50 animate-in fade-in">
                 <div className="p-2 border-b border-outline-variant/30">
                   <div className="font-bold text-sm text-on-surface">{user?.fullName || 'Current User'}</div>
-                  <div className="text-xs text-on-surface-variant font-mono truncate">{user?.email || 'admin@smartshule.ac.ke'}</div>
+                  <div className="text-xs text-on-surface-variant font-mono truncate">{user?.email || 'Email not available'}</div>
                   <div className="mt-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getRoleBadgeStyle(user?.role).bg} ${getRoleBadgeStyle(user?.role).text} uppercase tracking-wider`}>
                       {getRoleDisplayName(user?.role)}
@@ -595,7 +595,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-amber-700">lock_reset</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">lock_reset</span>
                       <span>Change My Password</span>
                     </button>
                   )}

@@ -268,11 +268,7 @@ export class CurriculumTrackerUseCases {
     const teacherName = requestingUser?.fullName || tracker.teacherName;
     const teacherId = requestingUser?.userId || tracker.teacherId;
 
-    tracker.confirmWeekCovered(weekNumber, {
-      ...data,
-      confirmedByTeacherId: teacherId,
-      confirmedByTeacherName: teacherName
-    });
+    tracker.submitWeekForApproval(weekNumber, {lessonsTaught:data.lessonsTaught,teacherComment:data.comment,submittedByTeacherId:teacherId,submittedByTeacherName:teacherName});
 
     await this.trackerRepo.update(tracker);
     return tracker.toJSON();
@@ -321,14 +317,7 @@ export class CurriculumTrackerUseCases {
       throw new ForbiddenError('Only Head Teacher, Deputy, or School Administrators can approve curriculum coverage.');
     }
 
-    tracker.approveWeekCoverage(weekNumber, {
-      approvedByUserId: requestingUser.userId || 'admin-01',
-      approvedByName: requestingUser.fullName || 'Academic Supervisor',
-      remarks: data.remarks
-    });
-
-    await this.trackerRepo.update(tracker);
-    return tracker.toJSON();
+    throw new ValidationError('Confirmed coverage comes from approved records of work. Review the actual work records instead of approving a whole week manually.');
   }
 
   public async returnWeekCoverage(

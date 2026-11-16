@@ -316,7 +316,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-      <section className="relative bg-[#5a1226] text-white pt-12 pb-20 overflow-hidden">
+      <section className="relative bg-primary-container text-white pt-12 pb-20 overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src={logo} alt="Background" className="w-full h-full object-cover" />
         </div>
@@ -369,7 +369,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
       </section>
 
       <section className="py-16 max-w-7xl mx-auto px-6 lg:px-12 -mt-10 relative z-10">
-        <div className="bg-white p-3 rounded-2xl shadow-xl border border-[#f0d8df] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-10">
+        <div className="bg-white p-3 rounded-2xl shadow-xl border border-primary-fixed grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-10">
           {PROGRAMMES_DATA.map((p) => {
             const isSelected = selectedProgramme.id === p.id
             return (
@@ -381,11 +381,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 }}
                 className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-300 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#7b1c35] text-white shadow-lg scale-[1.02]'
-                    : 'bg-[#fdfaf6] hover:bg-[#f9eef1] text-[#5a1226]'
+                    ? 'bg-primary text-white shadow-lg scale-[1.02]'
+                    : 'bg-[#fdfaf6] hover:bg-primary-fixed text-primary-container'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1 ${isSelected ? 'bg-white/20 text-white' : 'bg-[#f9eef1] text-[#7b1c35]'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1 ${isSelected ? 'bg-white/20 text-white' : 'bg-primary-fixed text-primary'}`}>
                   <p.icon className="w-4 h-4" />
                 </div>
                 <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-sm text-center line-clamp-1">
@@ -399,8 +399,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
           })}
         </div>
 
-        <div className="bg-white border border-[#f0d8df] rounded-3xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-[#5a1226] via-[#7b1c35] to-[#9e2644] text-white p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="bg-white border border-primary-fixed rounded-3xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light text-white p-8 lg:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
               <div className="inline-flex items-center gap-2 bg-[#e8a92a]/20 border border-[#e8a92a]/40 rounded-full px-3 py-1 mb-3">
                 <span className="text-[#f5c84a] text-xs font-bold uppercase tracking-wider">{selectedProgramme.age}</span>
@@ -423,19 +423,19 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   el?.scrollIntoView({ behavior: 'smooth' })
                 }
               }}
-              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-7 py-3 rounded-full text-sm shadow-md transition-transform hover:scale-105 shrink-0 cursor-pointer"
+              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-7 py-3 rounded-full text-sm shadow-md transition-transform hover:scale-105 shrink-0 cursor-pointer"
             >
               Enquire for {selectedProgramme.level} →
             </button>
           </div>
 
-          <div className="border-b border-[#f0d8df] bg-[#fdfaf6] px-6 lg:px-10 flex gap-2 sm:gap-6 overflow-x-auto">
+          <div className="border-b border-primary-fixed bg-[#fdfaf6] px-6 lg:px-10 flex gap-2 sm:gap-6 overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-4 font-bold text-sm transition-colors border-b-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'border-[#7b1c35] text-[#7b1c35]'
-                  : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-[#8a6470] hover:text-primary-container'
               }`}
             >
               Overview & Highlights
@@ -444,8 +444,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               onClick={() => setActiveTab('keyAreas')}
               className={`py-4 font-bold text-sm transition-colors border-b-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'keyAreas'
-                  ? 'border-[#7b1c35] text-[#7b1c35]'
-                  : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-[#8a6470] hover:text-primary-container'
               }`}
             >
               Learning & Subject Areas
@@ -454,8 +454,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               onClick={() => setActiveTab('competencies')}
               className={`py-4 font-bold text-sm transition-colors border-b-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'competencies'
-                  ? 'border-[#7b1c35] text-[#7b1c35]'
-                  : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-[#8a6470] hover:text-primary-container'
               }`}
             >
               Core Competencies
@@ -464,8 +464,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               onClick={() => setActiveTab('schedule')}
               className={`py-4 font-bold text-sm transition-colors border-b-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'schedule'
-                  ? 'border-[#7b1c35] text-[#7b1c35]'
-                  : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-[#8a6470] hover:text-primary-container'
               }`}
             >
               Sample Daily Schedule
@@ -476,7 +476,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
             {activeTab === 'overview' && (
               <div className="space-y-8 animate-fadeIn">
                 <div>
-                  <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-3">
+                  <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container mb-3">
                     {selectedProgramme.tagline}
                   </h3>
                   <p className="text-[#8a6470] text-base leading-relaxed max-w-4xl">
@@ -485,14 +485,14 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 </div>
 
                 <div>
-                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#7b1c35] mb-4 uppercase tracking-wider">
+                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-primary mb-4 uppercase tracking-wider">
                     Programme Highlights
                   </h4>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {selectedProgramme.highlights.map((h, i) => (
-                      <div key={i} className="flex items-start gap-3 bg-[#f9eef1] p-4 rounded-xl border border-[#f0d8df]">
+                      <div key={i} className="flex items-start gap-3 bg-primary-fixed p-4 rounded-xl border border-primary-fixed">
                         <Check className="w-4 h-4 text-[#e8a92a] shrink-0 mt-0.5" />
-                        <p className="text-[#5a1226] text-sm font-semibold">{h}</p>
+                        <p className="text-primary-container text-sm font-semibold">{h}</p>
                       </div>
                     ))}
                   </div>
@@ -502,16 +502,16 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
             {activeTab === 'keyAreas' && (
               <div className="animate-fadeIn">
-                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-6">
+                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container mb-6">
                   Key Activity & Learning Areas ({selectedProgramme.level})
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-6">
                   {selectedProgramme.keyAreas.map((ka, i) => (
-                    <div key={i} className="bg-[#fdfaf6] border border-[#f0d8df] p-6 rounded-2xl hover:border-[#7b1c35] transition-colors">
-                      <div className="w-12 h-12 rounded-2xl bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center mb-3">
+                    <div key={i} className="bg-[#fdfaf6] border border-primary-fixed p-6 rounded-2xl hover:border-primary transition-colors">
+                      <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center mb-3">
                         <ka.icon className="w-6 h-6" />
                       </div>
-                      <h4 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-base text-[#5a1226] mb-2">
+                      <h4 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-base text-primary-container mb-2">
                         {ka.title}
                       </h4>
                       <p className="text-[#8a6470] text-sm leading-relaxed">{ka.desc}</p>
@@ -523,7 +523,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
             {activeTab === 'competencies' && (
               <div className="animate-fadeIn">
-                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-4">
+                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container mb-4">
                   Target CBC Competencies & Outcomes
                 </h3>
                 <p className="text-[#8a6470] text-sm mb-6">
@@ -531,11 +531,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4">
                   {selectedProgramme.competencies.map((comp, i) => (
-                    <div key={i} className="flex items-center gap-4 bg-white border border-[#f0d8df] p-4 rounded-xl shadow-sm">
-                      <div className="w-8 h-8 rounded-full bg-[#7b1c35] text-[#f5c84a] flex items-center justify-center font-bold text-sm shrink-0">
+                    <div key={i} className="flex items-center gap-4 bg-white border border-primary-fixed p-4 rounded-xl shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-primary text-[#f5c84a] flex items-center justify-center font-bold text-sm shrink-0">
                         0{i + 1}
                       </div>
-                      <p className="text-[#5a1226] font-semibold text-sm">{comp}</p>
+                      <p className="text-primary-container font-semibold text-sm">{comp}</p>
                     </div>
                   ))}
                 </div>
@@ -546,23 +546,23 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               <div className="animate-fadeIn">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226]">
+                    <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-primary-container">
                       A Day in {selectedProgramme.level}
                     </h3>
                     <p className="text-[#8a6470] text-sm">Balanced blend of academics, creative play, nutrition, and character building.</p>
                   </div>
-                  <span className="text-xs font-bold text-[#7b1c35] bg-[#f9eef1] px-3 py-1.5 rounded-full border border-[#f0d8df]">
+                  <span className="text-xs font-bold text-primary bg-primary-fixed px-3 py-1.5 rounded-full border border-primary-fixed">
                     Mon – Fri Schedule
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   {selectedProgramme.dailySchedule.map((item, i) => (
-                    <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#fdfaf6] border border-[#f0d8df] p-4 rounded-xl gap-2 hover:bg-[#f9eef1] transition-colors">
-                      <span className="text-xs font-bold text-[#7b1c35] bg-white border border-[#f0d8df] px-3 py-1 rounded-md shrink-0 w-max">
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#fdfaf6] border border-primary-fixed p-4 rounded-xl gap-2 hover:bg-primary-fixed transition-colors">
+                      <span className="text-xs font-bold text-primary bg-white border border-primary-fixed px-3 py-1 rounded-md shrink-0 w-max">
                         ⏰ {item.time}
                       </span>
-                      <span className="text-sm font-bold text-[#5a1226] sm:text-right">{item.activity}</span>
+                      <span className="text-sm font-bold text-primary-container sm:text-right">{item.activity}</span>
                     </div>
                   ))}
                 </div>
@@ -572,11 +572,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
         </div>
       </section>
 
-      <section className="py-20 bg-[#f9eef1]">
+      <section className="py-20 bg-primary-fixed">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Holistic Growth</p>
-            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight mb-4">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Holistic Growth</p>
+            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-primary-container leading-tight mb-4">
               Co-Curricular Clubs & Activities
             </h2>
             <p className="text-[#8a6470] text-base leading-relaxed">
@@ -591,8 +591,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 onClick={() => setSelectedClubCategory(cat)}
                 className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   selectedClubCategory === cat
-                    ? 'bg-[#7b1c35] text-white shadow'
-                    : 'bg-white text-[#5a1226] hover:bg-[#f0d8df] border border-[#f0d8df]'
+                    ? 'bg-primary text-white shadow'
+                    : 'bg-white text-primary-container hover:bg-primary-fixed border border-primary-fixed'
                 }`}
               >
                 {cat}
@@ -604,15 +604,15 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
             {filteredClubs.map((club) => (
               <div
                 key={club.name}
-                className="bg-white border border-[#f0d8df] hover:border-[#7b1c35] p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all group duration-300"
+                className="bg-white border border-primary-fixed hover:border-primary p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all group duration-300"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
+                <div className="w-14 h-14 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
                   <club.icon className="w-7 h-7" />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#e8a92a] bg-[#fdfaf6] px-2.5 py-1 rounded-full border border-[#f0d8df] mb-3 inline-block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#e8a92a] bg-[#fdfaf6] px-2.5 py-1 rounded-full border border-primary-fixed mb-3 inline-block">
                   {club.category}
                 </span>
-                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-2">
+                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-primary-container mb-2">
                   {club.name}
                 </h3>
                 <p className="text-[#8a6470] text-sm leading-relaxed">{club.desc}</p>
@@ -622,11 +622,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
         </div>
       </section>
 
-      <section className="py-20 bg-white border-y border-[#f0d8df]">
+      <section className="py-20 bg-white border-y border-primary-fixed">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="rounded-3xl overflow-hidden border border-[#f0d8df] shadow-xl aspect-4/3 relative">
+          <div className="rounded-3xl overflow-hidden border border-primary-fixed shadow-xl aspect-4/3 relative">
             <img src={whatsappImg} alt="Pupils learning together" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#5a1226]/80 via-transparent to-transparent flex items-end p-8">
+            <div className="absolute inset-0 bg-gradient-to-t from-primary-container/80 via-transparent to-transparent flex items-end p-8">
               <div>
                 <p className="text-[#f5c84a] text-xs font-bold uppercase tracking-widest mb-1">Practical & Inclusive</p>
                 <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white text-2xl font-bold">
@@ -637,17 +637,17 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
           </div>
 
           <div>
-            <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Our Pedagogical Approach</p>
-            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#5a1226] leading-tight mb-6">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Our Pedagogical Approach</p>
+            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-primary-container leading-tight mb-6">
               How CBC Assessment Works at Grace Seeds
             </h2>
             <div className="space-y-6">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-[#7b1c35] text-white flex items-center justify-center font-bold text-lg shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
                   <FolderArchive className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
+                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-primary-container mb-1">
                     Learner Portfolio Assessment
                   </h4>
                   <p className="text-[#8a6470] text-sm leading-relaxed">
@@ -657,11 +657,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               </div>
 
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-[#e8a92a] text-[#5a1226] flex items-center justify-center font-bold text-lg shrink-0">
-                  <HeartHandshake className="w-5 h-5 text-[#5a1226]" />
+                <div className="w-10 h-10 rounded-2xl bg-[#e8a92a] text-primary-container flex items-center justify-center font-bold text-lg shrink-0">
+                  <HeartHandshake className="w-5 h-5 text-primary-container" />
                 </div>
                 <div>
-                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
+                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-primary-container mb-1">
                     Values & Behavioral Growth
                   </h4>
                   <p className="text-[#8a6470] text-sm leading-relaxed">
@@ -671,11 +671,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               </div>
 
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-[#5a1226] text-[#f5c84a] flex items-center justify-center font-bold text-lg shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-primary-container text-[#f5c84a] flex items-center justify-center font-bold text-lg shrink-0">
                   <MessageSquare className="w-5 h-5 text-[#f5c84a]" />
                 </div>
                 <div>
-                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
+                  <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-primary-container mb-1">
                     Continuous Parent Consultations
                   </h4>
                   <p className="text-[#8a6470] text-sm leading-relaxed">
@@ -691,8 +691,8 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
       <section className="py-20 bg-[#fdfaf6]">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Got Questions?</p>
-            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#5a1226]">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Got Questions?</p>
+            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-primary-container">
               Frequently Asked Questions
             </h2>
           </div>
@@ -703,21 +703,21 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               return (
                 <div
                   key={i}
-                  className="bg-white border border-[#f0d8df] rounded-2xl overflow-hidden transition-all shadow-sm"
+                  className="bg-white border border-primary-fixed rounded-2xl overflow-hidden transition-all shadow-sm"
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? null : i)}
-                    className="w-full text-left p-6 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#f9eef1]/50 transition-colors"
+                    className="w-full text-left p-6 flex justify-between items-center gap-4 cursor-pointer hover:bg-primary-fixed/50 transition-colors"
                   >
-                    <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-lg text-[#5a1226]">
+                    <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-lg text-primary-container">
                       {faq.q}
                     </span>
-                    <span className={`w-8 h-8 rounded-full bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center font-bold text-lg shrink-0 transition-transform ${isOpen ? 'rotate-180 bg-[#7b1c35] text-white' : ''}`}>
+                    <span className={`w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-lg shrink-0 transition-transform ${isOpen ? 'rotate-180 bg-primary text-white' : ''}`}>
                       ↓
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-6 pb-6 text-[#8a6470] text-sm leading-relaxed border-t border-[#f0d8df] pt-4 animate-fadeIn">
+                    <div className="px-6 pb-6 text-[#8a6470] text-sm leading-relaxed border-t border-primary-fixed pt-4 animate-fadeIn">
                       {faq.a}
                     </div>
                   )}
@@ -728,14 +728,14 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
         </div>
       </section>
 
-      <section id="programme-enquiry" className="py-20 bg-[#5a1226] text-white relative">
+      <section id="programme-enquiry" className="py-20 bg-primary-container text-white relative">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-white text-[#1f0a10] rounded-3xl p-8 lg:p-12 shadow-2xl border border-white/20">
             <div className="text-center max-w-xl mx-auto mb-8">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#7b1c35] bg-[#f9eef1] px-3 py-1 rounded-full border border-[#f0d8df] mb-3 inline-block">
+              <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary-fixed px-3 py-1 rounded-full border border-primary-fixed mb-3 inline-block">
                 Admissions Desk
               </span>
-              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-[#5a1226] mb-3">
+              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-primary-container mb-3">
                 Enquire about a Programme
               </h2>
               <p className="text-[#8a6470] text-sm">
@@ -755,7 +755,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
               <form onSubmit={handleEnquirySubmit} className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">
                       Parent / Guardian Name *
                     </label>
                     <input
@@ -764,11 +764,11 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                       placeholder="e.g. Mary Wanjiku"
                       value={enquiryForm.parentName}
                       onChange={e => setEnquiryForm({ ...enquiryForm, parentName: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">
                       Phone Number *
                     </label>
                     <input
@@ -777,14 +777,14 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                       placeholder="e.g. 0712 345 678"
                       value={enquiryForm.phone}
                       onChange={e => setEnquiryForm({ ...enquiryForm, phone: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">
                       Child's Name
                     </label>
                     <input
@@ -792,17 +792,17 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                       placeholder="e.g. David Kiprop"
                       value={enquiryForm.childName}
                       onChange={e => setEnquiryForm({ ...enquiryForm, childName: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">
                       Programme of Interest *
                     </label>
                     <select
                       value={enquiryForm.programmeId}
                       onChange={e => setEnquiryForm({ ...enquiryForm, programmeId: e.target.value })}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                     >
                       {PROGRAMMES_DATA.map(p => (
                         <option key={p.id} value={p.id}>{p.level} ({p.age})</option>
@@ -812,7 +812,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-primary-container mb-1 uppercase tracking-wider">
                     Questions / Special Requirements
                   </label>
                   <textarea
@@ -820,13 +820,13 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                     placeholder="Tell us any questions you have or preferred start term..."
                     value={enquiryForm.message}
                     onChange={e => setEnquiryForm({ ...enquiryForm, message: e.target.value })}
-                    className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm text-[#1f0a10] focus:outline-none focus:border-primary"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold py-4 rounded-xl shadow-lg transition-colors text-sm cursor-pointer"
+                  className="w-full bg-primary hover:bg-primary-container text-white font-bold py-4 rounded-xl shadow-lg transition-colors text-sm cursor-pointer"
                 >
                   Submit Programme Enquiry →
                 </button>

@@ -86,7 +86,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 no-print">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0 no-print">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">receipt_long</span>
@@ -139,7 +139,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                     type="button"
                     disabled={resendingChannel !== null}
                     onClick={() => handleResend('whatsapp')}
-                    className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[14px]">
                       {resendingChannel === 'whatsapp' ? 'sync' : 'chat'}
@@ -150,7 +150,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                     type="button"
                     disabled={resendingChannel !== null}
                     onClick={() => handleResend('email')}
-                    className="flex-1 py-1.5 px-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-1.5 px-2 bg-primary hover:bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[14px]">
                       {resendingChannel === 'email' ? 'sync' : 'mail'}
@@ -170,7 +170,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
               <div id="smartshule-receipt-print" className="p-4 sm:p-5 space-y-3.5 bg-surface-container-low rounded-xl border border-outline-variant/30 text-xs">
                 {/* School Header */}
                 <div className="text-center pb-3 border-b border-surface-container">
-                  <div className="text-base font-bold text-[#7a1228] uppercase tracking-wide">
+                  <div className="text-base font-bold text-primary uppercase tracking-wide">
                     {receipt.schoolName || 'Grace Seeds School'}
                   </div>
                   <div className="text-[10px] text-outline mt-0.5">
@@ -185,7 +185,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                 <div className="space-y-2 font-body">
                   <div className="flex justify-between items-center pb-1.5 border-b border-outline-variant/20">
                     <span className="text-on-surface-variant font-semibold">Receipt Number:</span>
-                    <span className="font-data-mono font-bold text-[#7a1228] text-sm">
+                    <span className="font-data-mono font-bold text-primary text-sm">
                       {receipt.receiptNumber || 'REC-OFFICIAL'}
                     </span>
                   </div>
@@ -271,7 +271,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsReversalModalOpen(true)}
-                    className="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2.5 px-3 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">rotate_left</span>
                     <span>Request Reversal</span>
@@ -280,7 +280,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => triggerReceiptPrint()}
-                  className="flex-1 py-2.5 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#600e1f] text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-container text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
                   <span>Print Receipt {printerStatus.hasReceiptPrinter && '(Thermal POS)'}</span>

@@ -1259,6 +1259,7 @@ export class AcademicUseCases {
       streams: Array<{ id: string; name: string }>;
       wholeClass?: boolean;
       subjectsByStream?: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>>;
+      classTeacherByStream?: Record<string, boolean>;
     }>;
     authorizedSubjectsByClass: Record<string, Array<{
       id: string;
@@ -1352,6 +1353,7 @@ export class AcademicUseCases {
       const streams = await this.academicRepository.findStreamsByClass(cls.id);
       const allowedStreams = [];
       const subjectsByStream: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>> = {};
+      const classTeacherByStream: Record<string,boolean> = {};
       const subjects = new Map<string, {id:string; code:string; name:string; gradeLevel?:string}>();
       for (const stream of [undefined,...streams]) {
         if (!canTeach(stream?.id)) continue;
@@ -1366,9 +1368,10 @@ export class AcademicUseCases {
           }
         }
         subjectsByStream[stream?.id || ''] = areas;
+        classTeacherByStream[stream?.id || ''] = assigned.classes.some(a=>matchesTeachingCohort(a,cls.id,stream?.id));
       }
       if (!wholeClass && !allowedStreams.length) continue;
-      assignedClasses.push({id:cls.id,name:cls.name,gradeLevel:cls.gradeLevel,streams:allowedStreams,wholeClass,subjectsByStream});
+      assignedClasses.push({id:cls.id,name:cls.name,gradeLevel:cls.gradeLevel,streams:allowedStreams,wholeClass,subjectsByStream,classTeacherByStream});
       authorizedSubjectsByClass[cls.id]=[...subjects.values()];
     }
     return {

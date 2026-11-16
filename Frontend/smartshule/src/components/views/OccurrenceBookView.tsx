@@ -351,14 +351,14 @@ export const OccurrenceBookView: React.FC = () => {
         );
       case 'MEDICAL_ILLNESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">medical_services</span>
             Medical / Illness
           </span>
         );
       case 'PROPERTY_DAMAGE_LOSS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">construction</span>
             Property / Damage
           </span>
@@ -372,7 +372,7 @@ export const OccurrenceBookView: React.FC = () => {
         );
       case 'ACADEMIC_CLASSROOM':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">school</span>
             Academic / Classroom
           </span>
@@ -399,14 +399,14 @@ export const OccurrenceBookView: React.FC = () => {
     switch (st) {
       case 'OPEN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">pending</span>
             Open
           </span>
         );
       case 'INVESTIGATING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">search</span>
             Investigating
           </span>
@@ -563,21 +563,21 @@ export const OccurrenceBookView: React.FC = () => {
         </div>
 
         <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+          <div className="p-3 bg-primary-fixed text-primary rounded-lg">
             <span className="material-symbols-outlined text-xl">pending_actions</span>
           </div>
           <div>
-            <div className="text-xl font-bold text-blue-600">{stats.open}</div>
+            <div className="text-xl font-bold text-primary">{stats.open}</div>
             <div className="text-xs text-on-surface-variant font-medium">Open / Pending</div>
           </div>
         </div>
 
         <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+          <div className="p-3 bg-primary-fixed text-primary rounded-lg">
             <span className="material-symbols-outlined text-xl">manage_search</span>
           </div>
           <div>
-            <div className="text-xl font-bold text-purple-600">{stats.investigating}</div>
+            <div className="text-xl font-bold text-primary">{stats.investigating}</div>
             <div className="text-xs text-on-surface-variant font-medium">Under Investigation</div>
           </div>
         </div>
@@ -1043,7 +1043,7 @@ export const OccurrenceBookView: React.FC = () => {
                       <select
                         value={form.parentNotificationMethod}
                         onChange={(e) => setForm({ ...form, parentNotificationMethod: e.target.value as any })}
-                        className="w-full px-2.5 py-1.5 border border-outline-variant/30 rounded bg-white text-xs"
+                        className="w-full px-2.5 py-1.5 border border-outline-variant/30 rounded bg-surface text-xs"
                       >
                         <option value="PHONE_CALL">Phone Call</option>
                         <option value="SMS">SMS Notice</option>

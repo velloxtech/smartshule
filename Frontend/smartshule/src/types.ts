@@ -14,7 +14,9 @@ export type TabType =
   | 'report-cards'
   | 'CBC-analytics'
   | 'schemes-lesson-plans'
+  | 'lesson-plans'
   | 'records-of-work'
+  | 'school-calendar-plan'
   | 'timetable'
   | 'attendance-register'
   | 'fee-structure'
@@ -1136,6 +1138,9 @@ export interface DayDefinition {
 
 export interface TimetableSlot {
   id: string;
+  timetableId?: string;
+  classRoomId?: string;
+  streamId?: string;
   dayOfWeek: string;
   periodNumber: number;
   startTime: string;

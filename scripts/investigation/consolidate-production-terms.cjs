@@ -1,0 +1,41 @@
+// Explicitly invoked maintenance tool. No application bootstrap, migrations or seeds.
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),assert=require('assert'),{Client}=require('pg');
+require('dotenv').config({quiet:true});const dir='/tmp/smartshule-term-consolidation-20261116';
+const migration=path.resolve(__dirname,'../../database/migrations/20261116_consolidate_duplicate_2026_terms.sql');
+const sql=fs.readFileSync(migration,'utf8'),sha=s=>crypto.createHash('sha256').update(s).digest('hex'),quote=s=>'"'+s.replace(/"/g,'""')+'"';
+const mode=process.argv[2];if(!['--local-test','--production-apply'].includes(mode))throw Error('Explicit --local-test or --production-apply required');
+const local=mode==='--local-test',url=local?'postgresql://postgres@127.0.0.1:55471/smartshule_term_merge_20261116':process.env.ONLINE_DATABASE_URL;
+const pre=JSON.parse(fs.readFileSync(dir+'/preflight.json'));
+if(!local&&sha(url||'')!==pre.targetFingerprint)throw Error('Production target differs from reviewed target');
+const dump=dir+'/public-before.dump';if(!fs.existsSync(dump)||fs.statSync(dump).size<10000)throw Error('Private backup missing');
+if(!local){const tested=JSON.parse(fs.readFileSync(dir+'/local-test-result.json'));if(!tested.success||tested.migrationSha256!==sha(sql)||tested.backupSha256!==sha(fs.readFileSync(dump)))throw Error('Current migration/backup not locally verified');}
+const c=new Client({connectionString:url,ssl:local?false:{rejectUnauthorized:false},connectionTimeoutMillis:15000,options:'-c statement_timeout=60000 -c application_name=smartshule_term_consolidation'});
+async function tables(){return(await c.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name")).rows.map(r=>r.table_name);}
+async function fingerprints(names,normalized){const cols=(await c.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND column_name IN ('term_id','academic_term_id') AND data_type IN ('text','character varying')")).rows;
+ const parts=names.map(t=>{const termCols=cols.filter(x=>x.table_name===t&&!/backup/i.test(t)&&!['system_logs','deleted_students'].includes(t));
+ const row=normalized&&termCols.length?'to_jsonb(t)||jsonb_build_object('+termCols.map(x=>"'"+x.column_name+"',regexp_replace("+quote(x.column_name)+",'^term-2026-t([123])$','term-2026-\\1')").join(',')+')':'to_jsonb(t)';
+ return `SELECT '${t}' AS table_name,count(*)::int AS rows,md5(coalesce(string_agg(r::text,E'\\n' ORDER BY r::text),'')) AS checksum FROM (SELECT ${row} AS r FROM public.${quote(t)} t ${normalized&&t==='academic_terms'?"WHERE id NOT IN ('term-2026-t1','term-2026-t2','term-2026-t3')":''}) z`;});return(await c.query(parts.join(' UNION ALL '))).rows;}
+async function terms(){return(await c.query('SELECT * FROM public.academic_terms ORDER BY id')).rows;}
+async function begin(names){await c.query('BEGIN');await c.query("SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s'");await c.query("SELECT pg_advisory_xact_lock(hashtext('smartshule:term-consolidation:20261116'))");await c.query('LOCK TABLE '+names.map(t=>'public.'+quote(t)).join(',')+' IN SHARE ROW EXCLUSIVE MODE');}
+async function validate(names,expected){assert.deepStrictEqual(await fingerprints(names,false),expected,'Unexpected row changes or losses');
+ assert.strictEqual((await c.query('SELECT count(*)::int n FROM (SELECT academic_year_id,term_number FROM public.academic_terms GROUP BY 1,2 HAVING count(*)>1) d')).rows[0].n,0);
+ assert.strictEqual((await c.query("SELECT count(*)::int n FROM smartshule_maintenance.term_consolidation_history WHERE removed_id IN ('term-2026-t1','term-2026-t2','term-2026-t3')")).rows[0].n,3);
+ for(const role of ['anon','authenticated']){const r=await c.query("SELECT has_schema_privilege($1,'smartshule_maintenance','USAGE') schema_access,has_table_privilege($1,'smartshule_maintenance.term_consolidation_history','SELECT') table_access",[role]);assert.deepStrictEqual(r.rows[0],{schema_access:false,table_access:false});}
+ await c.query('SAVEPOINT duplicate_test');try{await c.query("INSERT INTO public.academic_terms SELECT 'duplicate-must-fail',academic_year_id,term_number,name,start_date,end_date,is_current,created_at,updated_at FROM public.academic_terms WHERE id='term-2026-1'");throw Error('Duplicate insertion was accepted');}catch(e){if(e.code!=='23505')throw e;}finally{await c.query('ROLLBACK TO SAVEPOINT duplicate_test');await c.query('RELEASE SAVEPOINT duplicate_test');}}
+(async()=>{const out={startedAt:new Date().toISOString(),mode,migrationSha256:sha(sql),backupSha256:sha(fs.readFileSync(dump)),success:false};let tx=false;
+ try{await c.connect();if(local&&((await c.query('SHOW data_directory')).rows[0].data_directory!=='/tmp/smartshule-review-20261116/pgdata'))throw Error('Wrong local cluster');
+ const names=await tables();await begin(names);tx=true;
+ const originalTerms=await terms();const expectedTerms=pre.terms.map(({year_name,school_id,year_current,...t})=>t).sort((a,b)=>a.id.localeCompare(b.id));assert.strictEqual(JSON.stringify(originalTerms),JSON.stringify(expectedTerms),'Term settings changed since preflight; stop and review');
+ out.before=await fingerprints(names,false);const expected=await fingerprints(names,true);
+ const privateRows={at:new Date().toISOString(),terms:originalTerms};for(const t of ['schemes_of_work','student_invoices'])privateRows[t]=(await c.query(`SELECT * FROM public.${quote(t)} WHERE term_id=ANY($1::text[])`,[['term-2026-t1','term-2026-t2','term-2026-t3']])).rows;
+ fs.writeFileSync(dir+'/'+(local?'local':'production')+'-locked-before.json',JSON.stringify(privateRows,null,2),{mode:0o600});out.moved={schemes:privateRows.schemes_of_work.length,invoices:privateRows.student_invoices.length};
+ await c.query(sql);await validate(names,expected);out.after=await fingerprints(names,false);out.remainingTerms=await terms();
+ if(local){await c.query('ROLLBACK');tx=false;assert.deepStrictEqual(await fingerprints(names,false),out.before,'Rollback did not restore original data');out.rollbackVerified=true;
+  await begin(names);tx=true;await c.query(sql);await validate(names,expected);await c.query('COMMIT');tx=false;
+  await begin(names);tx=true;await c.query(sql);await validate(names,expected);await c.query('ROLLBACK');tx=false;out.idempotenceVerified=true;
+  await begin(names);tx=true;await c.query("UPDATE public.schemes_of_work SET planning_state=coalesce(planning_state,'{}'::jsonb)||'{\"unexpectedLegacyTerm\":\"term-2026-t1\"}'::jsonb WHERE id=(SELECT id FROM public.schemes_of_work LIMIT 1)");
+  await c.query('SAVEPOINT unexpected_reference');let caught=false;try{await c.query(sql);}catch(e){if(e.code==='P0001'&&/Unresolved legacy/.test(e.message))caught=true;else throw e;}assert(caught,'Unknown live JSON references should abort');await c.query('ROLLBACK');tx=false;assert.deepStrictEqual(await fingerprints(names,false),expected);out.unknownReferenceAbortVerified=true;
+ }else{await c.query('COMMIT');tx=false;out.committed=true;await c.query('BEGIN READ ONLY');assert.deepStrictEqual(await terms(),out.remainingTerms,'Terms changed after commit');assert.strictEqual((await c.query("SELECT count(*)::int n FROM pg_indexes WHERE schemaname='public' AND indexname='uq_academic_terms_year_number'")).rows[0].n,1);await c.query('ROLLBACK');out.postCommitVerified=true;}
+ out.success=true;out.completedAt=new Date().toISOString();fs.writeFileSync(dir+'/'+(local?'local-test-result':'production-result')+'.json',JSON.stringify(out,null,2),{mode:0o600});console.log(JSON.stringify({success:out.success,committed:out.committed||false,moved:out.moved,remainingTerms:out.remainingTerms.length,tablesVerified:names.length,rollbackVerified:out.rollbackVerified,idempotenceVerified:out.idempotenceVerified,unknownReferenceAbortVerified:out.unknownReferenceAbortVerified}));
+ }catch(e){if(tx)await c.query('ROLLBACK').catch(()=>{});out.error={code:e.code,message:e.message};fs.writeFileSync(dir+'/'+(local?'local':'production')+'-failure.json',JSON.stringify(out,null,2),{mode:0o600});console.error(out.committed?'Consolidation committed but post-commit verification failed:':'Consolidation failed; transaction rolled back where active:',e.code||e.message);process.exitCode=1;}finally{await c.end();}
+})();

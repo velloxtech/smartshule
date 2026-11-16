@@ -337,10 +337,10 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-rose-100 my-auto">
         {/* Institutional Header */}
-        <div className="bg-gradient-to-r from-primary to-[#961a35] text-white p-5 sm:p-6 flex items-center justify-between shrink-0 shadow-md">
+        <div className="bg-gradient-to-r from-primary to-maroon-light text-white p-5 sm:p-6 flex items-center justify-between shrink-0 shadow-md">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center font-bold border border-white/20">
-              <span className="material-symbols-outlined text-[26px] text-amber-300">family_restroom</span>
+              <span className="material-symbols-outlined text-[26px] text-primary-fixed-dim">family_restroom</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -481,7 +481,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                   value={studentSearchQ}
                   onChange={(e) => setStudentSearchQ(e.target.value)}
                   placeholder="Type learner name, admission number, or grade (e.g. Brian, Grade 4)..."
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-white text-on-surface focus:outline-primary"
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-surface text-on-surface focus:outline-primary"
                   autoFocus
                 />
               </div>
@@ -551,7 +551,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                       onChange={(e) => setParentQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearchParents()}
                       placeholder="Enter parent name (e.g. Mary), phone (07XXXXXXXX), or national ID (28475921)..."
-                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-white text-on-surface focus:outline-primary"
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-surface text-on-surface focus:outline-primary"
                     />
                   </div>
                   <button
@@ -730,7 +730,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                         <select
                           value={relationshipType}
                           onChange={(e) => setRelationshipType(e.target.value)}
-                          className="w-full text-xs py-2 px-3 rounded-xl border border-outline-variant/30 bg-white font-bold text-on-surface focus:outline-primary"
+                          className="w-full text-xs py-2 px-3 rounded-xl border border-outline-variant/30 bg-surface font-bold text-on-surface focus:outline-primary"
                         >
                           <option value="MOTHER">Mother</option>
                           <option value="FATHER">Father</option>
@@ -987,7 +987,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                       onChange={(e) => setParentQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearchParents()}
                       placeholder="Search parent by name, phone, or national ID..."
-                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-white text-on-surface focus:outline-primary"
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-outline-variant/30 bg-surface text-on-surface focus:outline-primary"
                     />
                   </div>
                   <button
@@ -1068,7 +1068,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                                     setIsLoading(false);
                                   }
                                 }}
-                                className="px-3 py-1 bg-amber-700 text-white rounded-lg text-xs font-bold hover:bg-amber-800 cursor-pointer"
+                                className="px-3 py-1 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-container cursor-pointer"
                               >
                                 Merge Accounts
                               </button>
@@ -1123,7 +1123,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                                 <select
                                   value={relationshipType}
                                   onChange={(e) => setRelationshipType(e.target.value)}
-                                  className="text-xs py-1 px-2 rounded-lg border border-outline-variant/30 bg-white font-bold"
+                                  className="text-xs py-1 px-2 rounded-lg border border-outline-variant/30 bg-surface font-bold"
                                 >
                                   <option value="MOTHER">Mother</option>
                                   <option value="FATHER">Father</option>
@@ -1138,7 +1138,7 @@ export const ParentLinkingModal: React.FC<ParentLinkingModalProps> = ({
                               value={multiLearnerQuery}
                               onChange={(e) => setMultiLearnerQuery(e.target.value)}
                               placeholder="Filter students by name or admission number..."
-                              className="w-full py-1.5 px-3 text-xs bg-white border border-outline-variant/30 rounded-xl"
+                              className="w-full py-1.5 px-3 text-xs bg-surface border border-outline-variant/30 rounded-xl"
                             />
 
                             <div className="max-h-48 overflow-y-auto space-y-1 bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-2">

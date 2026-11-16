@@ -251,15 +251,15 @@ export const LibraryView: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:border-none print:shadow-none print:p-0">
+      <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:border-none print:shadow-none print:p-0">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#800000]/10 text-[#800000] flex items-center justify-center font-bold flex-shrink-0 shadow-inner">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0 shadow-inner">
             <span className="material-symbols-outlined text-3xl">local_library</span>
           </div>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Library & Textbook System</h1>
-              <span className="bg-[#800000]/10 text-[#800000] text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 CBE Integrated
               </span>
             </div>
@@ -273,7 +273,7 @@ export const LibraryView: React.FC = () => {
         <div className="flex items-center gap-3 w-full md:w-auto print:hidden">
           <button
             onClick={handlePrintCatalog}
-            className="flex-1 md:flex-initial px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+            className="flex-1 md:flex-initial px-4 py-2.5 bg-surface-container-low hover:bg-surface-container text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
           >
             <span className="material-symbols-outlined text-base">print</span>
             Print / Export
@@ -283,7 +283,7 @@ export const LibraryView: React.FC = () => {
               setSelectedBookForIssue(null);
               setIsIssueModalOpen(true);
             }}
-            className="flex-1 md:flex-initial px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-200"
+            className="flex-1 md:flex-initial px-4 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-200"
           >
             <span className="material-symbols-outlined text-base">assignment_return</span>
             Issue Book
@@ -293,7 +293,7 @@ export const LibraryView: React.FC = () => {
               setBookToEdit(null);
               setIsAddBookModalOpen(true);
             }}
-            className="flex-1 md:flex-initial px-5 py-2.5 bg-[#800000] hover:bg-[#660000] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-900/20"
+            className="flex-1 md:flex-initial px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-900/20"
           >
             <span className="material-symbols-outlined text-base">add</span>
             Add Book
@@ -304,7 +304,7 @@ export const LibraryView: React.FC = () => {
       {/* KPI Stats Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
         <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">menu_book</span>
           </div>
           <div>
@@ -314,7 +314,7 @@ export const LibraryView: React.FC = () => {
         </div>
 
         <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">inventory_2</span>
           </div>
           <div>
@@ -324,11 +324,11 @@ export const LibraryView: React.FC = () => {
         </div>
 
         <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">book</span>
           </div>
           <div>
-            <div className="text-2xl font-black text-purple-800">{calculatedStats.issuedCopies}</div>
+            <div className="text-2xl font-black text-on-primary-fixed">{calculatedStats.issuedCopies}</div>
             <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">In Circulation</div>
           </div>
         </div>
@@ -408,7 +408,7 @@ export const LibraryView: React.FC = () => {
               placeholder="Search title, author, ISBN, borrower..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white transition-colors"
+              className="w-full pl-10 pr-4 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface transition-colors"
             />
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
             {searchQuery && (
@@ -427,7 +427,7 @@ export const LibraryView: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-white outline-none focus:border-primary font-medium"
+                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-surface outline-none focus:border-primary font-medium"
               >
                 <option value="ALL">All Categories</option>
                 {availableCategories.map(cat => (
@@ -439,7 +439,7 @@ export const LibraryView: React.FC = () => {
               <select
                 value={gradeFilter}
                 onChange={e => setGradeFilter(e.target.value)}
-                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-white outline-none focus:border-primary font-medium"
+                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-surface outline-none focus:border-primary font-medium"
               >
                 <option value="ALL">All Grades</option>
                 {availableGrades.map(gr => (
@@ -560,7 +560,7 @@ export const LibraryView: React.FC = () => {
                             <td className="py-4 px-4 text-center">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 book.condition === 'NEW'
-                                  ? 'bg-blue-100 text-blue-800'
+                                  ? 'bg-primary-fixed text-on-primary-fixed'
                                   : book.condition === 'GOOD'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : book.condition === 'FAIR'
@@ -580,7 +580,7 @@ export const LibraryView: React.FC = () => {
                                   }}
                                   disabled={!isAvailable}
                                   title={isAvailable ? 'Issue copy to borrower' : 'No copies available'}
-                                  className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-colors"
+                                  className="px-2.5 py-1.5 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-sm">assignment_return</span>
                                   Issue
@@ -690,7 +690,7 @@ export const LibraryView: React.FC = () => {
                                   setLoanToReturn(loan);
                                   setIsReturnModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <span className="material-symbols-outlined text-sm">library_add_check</span>
                                 Return Book

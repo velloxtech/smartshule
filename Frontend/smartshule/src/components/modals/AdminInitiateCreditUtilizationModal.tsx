@@ -179,8 +179,8 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               </div>
             </div>
             <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-outline-variant/30">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800">Available Credit</span>
-              <span className="text-base font-black font-mono text-teal-700">+KES {availCredit.toLocaleString()}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-primary-fixed">Available Credit</span>
+              <span className="text-base font-black font-mono text-primary">+KES {availCredit.toLocaleString()}</span>
             </div>
           </div>
 
@@ -224,7 +224,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
                 value={amountStr}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-3 py-2 bg-white border border-outline-variant/30 rounded-xl text-sm font-mono font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full pl-12 pr-3 py-2 bg-surface border border-outline-variant/30 rounded-xl text-sm font-mono font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
           </div>
@@ -268,7 +268,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               </div>
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-sans">Projected Remaining Available Credit:</span>
-                <span className="text-teal-800 font-bold">
+                <span className="text-on-primary-fixed font-bold">
                   +KES {(preview?.projectedRemainingCredit ?? 0).toLocaleString()}
                 </span>
               </div>
@@ -289,7 +289,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Authorized utilization of Term 1 fee overpayment towards outstanding Term 2 balance as requested by guardian."
-              className="w-full p-2.5 bg-white border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full p-2.5 bg-surface border border-outline-variant/30 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
 
@@ -316,7 +316,7 @@ export const AdminInitiateCreditUtilizationModal: React.FC<AdminInitiateCreditUt
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2.5 bg-surface-container hover:bg-slate-300 text-on-surface font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="px-4 py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>

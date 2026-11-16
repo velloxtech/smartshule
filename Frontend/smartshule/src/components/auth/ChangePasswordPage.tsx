@@ -138,9 +138,9 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
 
       {/* Main Form Centerpiece */}
       <main className="w-full max-w-lg mx-auto px-4 py-8">
-        <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-3xl shadow-2xl border border-rose-100 overflow-hidden">
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-[#7a1228] to-[#961a35] text-white p-6 sm:p-7 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-primary to-maroon-light text-white p-6 sm:p-7 relative overflow-hidden">
             <div className="absolute right-[-20px] top-[-20px] w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20">
@@ -161,7 +161,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
           </div>
 
           {/* User Identity Chip */}
-          <div className="px-6 sm:px-7 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs text-slate-700">
+          <div className="px-6 sm:px-7 py-3 bg-surface border-b border-slate-100 flex items-center justify-between text-xs text-slate-700">
             <div className="flex items-center gap-2 min-w-0">
               <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">account_circle</span>
               <div className="truncate">
@@ -169,7 +169,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
                 <span className="text-[10px] text-slate-500 truncate block">{user.email || user.phone}</span>
               </div>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#7a1228]/10 text-[#7a1228] border border-[#7a1228]/20 shrink-0 uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 shrink-0 uppercase tracking-wider">
               {user.role}
             </span>
           </div>
@@ -199,7 +199,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
                 <button
                   type="button"
                   onClick={generateRandomPassword}
-                  className="text-[11px] text-[#7a1228] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[14px]">casino</span>
                   <span>Generate Strong</span>
@@ -215,7 +215,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters..."
-                  className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  className="w-full pl-10 pr-11 py-2.5 bg-surface border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface"
                 />
                 <button
                   type="button"
@@ -272,11 +272,11 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-type new password..."
-                  className={`w-full pl-10 pr-11 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white ${
+                  className={`w-full pl-10 pr-11 py-2.5 bg-surface border rounded-xl text-sm text-slate-900 focus:outline-primary focus:bg-surface ${
                     passwordsMismatch
                       ? 'border-rose-400 focus:border-rose-500'
                       : passwordsMatch
-                      ? 'border-emerald-500 focus:border-emerald-500'
+                      ? 'border-primary focus:border-primary'
                       : 'border-slate-200'
                   }`}
                 />
@@ -311,7 +311,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
               <button
                 type="submit"
                 disabled={loading || Boolean(passwordsMismatch) || !newPassword}
-                className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-primary hover:bg-primary-container disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -330,7 +330,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
                 type="button"
                 onClick={onLogout}
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-surface transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">logout</span>
                 <span>Cancel & Sign Out</span>
@@ -339,7 +339,7 @@ export const ChangePasswordPage: React.FC<ChangePasswordPageProps> = ({
           </form>
 
           {/* Security Notice Footer */}
-          <div className="px-6 sm:px-7 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="px-6 sm:px-7 py-3 bg-surface border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <div className="flex items-center gap-1.5 text-emerald-700">
               <span className="material-symbols-outlined text-[14px]">verified_user</span>
               <span>256-Bit SSL Encrypted</span>

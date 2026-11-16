@@ -907,7 +907,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-primary to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-rose-200 uppercase tracking-wider mb-1">
             <span className="material-symbols-outlined text-sm">school</span>
@@ -945,7 +945,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
           <button
             onClick={onOpenUploadMarks}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-rose-50 text-[#7a1228] text-xs font-black rounded-xl shadow-lg transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-rose-50 text-primary text-xs font-black rounded-xl shadow-lg transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add_box</span>
             <span>Record Exam Marks</span>
@@ -966,7 +966,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               {summaryStats.evalCount} evaluated with marks
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-primary-fixed text-primary border border-primary flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-xl">groups</span>
           </div>
         </div>
@@ -976,12 +976,12 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
               Class Mean Score
             </span>
-            <div className="text-2xl font-black text-[#7a1228] font-data-mono mt-1">
+            <div className="text-2xl font-black text-primary font-data-mono mt-1">
               {summaryStats.meanScore}%
             </div>
             <span className="text-[10px] text-gray-400">Mean composite score</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#7a1228] border border-rose-200 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-primary border border-rose-200 flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-xl">trending_up</span>
           </div>
         </div>
@@ -1006,12 +1006,12 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
               Subjects Tracked
             </span>
-            <div className="text-2xl font-black text-[#7a1228] font-data-mono mt-1">
+            <div className="text-2xl font-black text-primary font-data-mono mt-1">
               {effectiveSubjects.length}
             </div>
             <span className="text-[10px] text-gray-400">CBE Learning Areas</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#7a1228] border border-rose-200 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-primary border border-rose-200 flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-xl">menu_book</span>
           </div>
         </div>
@@ -1107,7 +1107,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           <div className="flex items-center gap-3">
             <button
               onClick={fetchSummatives}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
               title="Manually refresh marksheet"
             >
               <span className="material-symbols-outlined text-[16px]">sync</span>
@@ -1141,7 +1141,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           </div>
         ) : matrixRows.length === 0 ? (
           <div className="py-16 text-center p-6">
-            <div className="w-14 h-14 rounded-full bg-rose-50 text-[#7a1228] flex items-center justify-center mx-auto mb-3">
+            <div className="w-14 h-14 rounded-full bg-rose-50 text-primary flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-3xl">grid_on</span>
             </div>
             <h3 className="text-base font-bold text-gray-900 mb-1">
@@ -1155,8 +1155,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-gray-800 border-collapse">
               <thead>
-                <tr className="bg-gray-100 text-gray-700 font-bold border-b-2 border-gray-300">
-                  <th className="py-3 px-2 border text-center w-12 bg-gray-200/80">Pos</th>
+                <tr className="bg-surface-container-low text-gray-700 font-bold border-b-2 border-gray-300">
+                  <th className="py-3 px-2 border text-center w-12 bg-surface-container/80">Pos</th>
                   <th className="py-3 px-2 border w-24">Adm No</th>
                   <th className="py-3 px-3 border min-w-[140px]">Learner Full Name</th>
                   <th className="py-3 px-2 border text-center w-16">Stream</th>
@@ -1170,7 +1170,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                         className="py-2.5 px-2 border text-center min-w-[70px] bg-rose-50/40 hover:bg-rose-100/40 transition-colors"
                         title={sub.name}
                       >
-                        <div className="font-black text-xs text-[#7a1228] font-mono tracking-wider">
+                        <div className="font-black text-xs text-primary font-mono tracking-wider">
                           {initial}
                         </div>
                         <div className="text-[9px] text-gray-500 font-medium truncate max-w-[65px] mx-auto">
@@ -1180,10 +1180,10 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                     );
                   })}
 
-                  <th className="py-3 px-2 border text-center w-16 bg-gray-200/60">Total</th>
-                  <th className="py-3 px-2 border text-center w-16 bg-gray-200/60">Mean %</th>
-                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-[#7a1228] font-black">GPA</th>
-                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-[#7a1228] font-black">Level</th>
+                  <th className="py-3 px-2 border text-center w-16 bg-surface-container/60">Total</th>
+                  <th className="py-3 px-2 border text-center w-16 bg-surface-container/60">Mean %</th>
+                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-primary font-black">GPA</th>
+                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-primary font-black">Level</th>
                   <th className="py-3 px-3 border min-w-[170px]">Progress Remarks</th>
                   <th className="py-3 px-2 border text-right w-16 print:hidden">Actions</th>
                 </tr>
@@ -1192,7 +1192,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               <tbody className="divide-y divide-gray-200 font-medium">
                 {matrixRows.map((row, idx) => (
                   <tr key={row.studentId} className="hover:bg-amber-50/30 transition-colors">
-                    <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-gray-50/50">
+                    <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-surface/50">
                       {idx === 0 ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `#${idx + 1}`}
                     </td>
 
@@ -1206,7 +1206,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                     </td>
 
                     <td className="py-2 px-2 border text-center">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container-low text-gray-700 border border-gray-200">
                         {row.stream}
                       </span>
                     </td>
@@ -1233,11 +1233,11 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                       );
                     })}
 
-                    <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-gray-50/40">
+                    <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-surface/40">
                       {row.totalMarks}
                     </td>
 
-                    <td className="py-2 px-2 border text-center font-black font-mono text-sm bg-gray-50/40">
+                    <td className="py-2 px-2 border text-center font-black font-mono text-sm bg-surface/40">
                       <span className={getScoreColor(row.meanScore)}>
                         {row.meanScore}%
                       </span>
@@ -1261,7 +1261,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                           <button
                             onClick={() => onNavigateTab('report-cards')}
                             title="View Student Report Card"
-                            className="p-1 rounded text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                            className="p-1 rounded text-gray-400 hover:text-primary hover:bg-surface-container-low transition-colors"
                           >
                             <span className="material-symbols-outlined text-[16px]">article</span>
                           </button>
@@ -1269,7 +1269,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                         <button
                           onClick={onOpenUploadMarks}
                           title="Record / Update Marks"
-                          className="p-1 rounded text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 transition-colors"
+                          className="p-1 rounded text-gray-400 hover:text-primary hover:bg-rose-50 transition-colors"
                         >
                           <span className="material-symbols-outlined text-[16px]">edit</span>
                         </button>
@@ -1280,7 +1280,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               </tbody>
 
               <tfoot>
-                <tr className="bg-gray-100 font-bold border-t-2 border-gray-300 text-gray-800 text-[11px]">
+                <tr className="bg-surface-container-low font-bold border-t-2 border-gray-300 text-gray-800 text-[11px]">
                   <td colSpan={5} className="py-2.5 px-3 border text-right uppercase tracking-wider text-gray-600">
                     Subject Class Averages:
                   </td>
@@ -1300,7 +1300,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                   })}
 
                   <td colSpan={6} className="py-2.5 px-3 border text-gray-600 text-xs">
-                    Overall Cohort Mean: <strong className="text-[#7a1228] font-mono text-sm">{summaryStats.meanScore}%</strong>
+                    Overall Cohort Mean: <strong className="text-primary font-mono text-sm">{summaryStats.meanScore}%</strong>
                   </td>
                 </tr>
               </tfoot>

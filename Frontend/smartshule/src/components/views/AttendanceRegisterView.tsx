@@ -620,7 +620,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
               <span>/</span>
               <span>Parent Portal</span>
               <span>/</span>
-              <span className="text-[#800000] font-semibold">Learner Attendance</span>
+              <span className="text-primary font-semibold">Learner Attendance</span>
             </div>
             <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
               My Child's Attendance & Punctuality
@@ -649,7 +649,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             )}
             <button
               onClick={downloadParentAttendancePDF}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 text-xs font-bold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 border border-rose-200 text-primary rounded-xl hover:bg-rose-100 text-xs font-bold shadow-xs transition-all cursor-pointer"
               title="Download official learner attendance certificate as PDF"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
@@ -661,7 +661,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         {activeChild && (
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#800000] text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base shadow-sm">
                 {activeChild.firstName?.[0]}{activeChild.lastName?.[0]}
               </div>
               <div>
@@ -696,7 +696,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 
           <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
             <div className="text-xs font-bold text-on-surface-variant uppercase">Days Present</div>
-            <div className="text-2xl font-black text-[#800000] mt-1">{stats.present}</div>
+            <div className="text-2xl font-black text-primary mt-1">{stats.present}</div>
             <div className="text-[11px] text-on-surface-variant mt-0.5">Out of {stats.totalSessions} sessions</div>
           </div>
 
@@ -716,10 +716,10 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-surface-container pb-3">
             <div>
-              <h3 className="font-bold text-base text-[#800000]">Term Roll-Call Check-in History</h3>
+              <h3 className="font-bold text-base text-primary">Term Roll-Call Check-in History</h3>
               <p className="text-xs text-on-surface-variant">Daily morning roll-call logs recorded by class educator</p>
             </div>
-            <span className="px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
+            <span className="px-2.5 py-1 rounded bg-success-container text-on-success-container text-xs font-bold">
               {history.length} Entries Recorded
             </span>
           </div>
@@ -801,7 +801,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           <button
             onClick={downloadTeacherRegisterPDF}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-50 border border-rose-200 text-primary rounded-xl hover:bg-rose-100 text-sm font-semibold shadow-xs transition-all cursor-pointer"
             title="Download Daily Attendance Register as PDF"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
@@ -809,7 +809,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           </button>
           <button
             onClick={() => onOpenSmsModal('absentee')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] text-sm font-semibold shadow-md transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-container text-sm font-semibold shadow-md transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">sms</span>
             <span>Trigger Absentee SMS Alerts</span>
@@ -826,7 +826,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             </span>
             {isTeacher ? (
               <span className="px-3 py-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg text-xs font-bold text-primary flex items-center gap-1.5 shadow-xs">
-                <span className="material-symbols-outlined text-[15px] text-secondary">verified_user</span>
+                <span className="material-symbols-outlined text-[15px] text-success">verified_user</span>
                 {getAssignedDisplayName()} (Assigned Cohort)
               </span>
             ) : (
@@ -884,7 +884,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           <button
             onClick={handleSaveRegister}
             disabled={isSaving || students.length === 0}
-            className="px-4 py-2 bg-secondary text-white font-bold rounded-lg hover:bg-secondary-container text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span>{isSaving ? 'Saving...' : 'Save Register'}</span>
@@ -893,7 +893,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
       </div>
 
       {saveMessage && (
-        <div className="p-3 rounded-xl bg-secondary/15 border border-secondary/30 text-secondary text-xs font-bold flex items-center gap-2 animate-in fade-in">
+        <div className="p-3 rounded-xl bg-success/15 border border-success/30 text-success text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
           <span>{saveMessage}</span>
         </div>
@@ -906,14 +906,14 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             <span className="text-[11px] font-bold text-on-surface-variant uppercase">Enrolled</span>
             <div className="text-xl font-bold font-data-mono text-on-surface">{students.length}</div>
           </div>
-          <span className="material-symbols-outlined text-[#7a1228] text-[24px]">groups</span>
+          <span className="material-symbols-outlined text-primary text-[24px]">groups</span>
         </div>
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
           <div>
-            <span className="text-[11px] font-bold text-secondary uppercase">Present</span>
-            <div className="text-xl font-bold font-data-mono text-secondary">{presentCount}</div>
+            <span className="text-[11px] font-bold text-success uppercase">Present</span>
+            <div className="text-xl font-bold font-data-mono text-success">{presentCount}</div>
           </div>
-          <span className="material-symbols-outlined text-secondary text-[24px]">how_to_reg</span>
+          <span className="material-symbols-outlined text-primary text-[24px]">how_to_reg</span>
         </div>
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
           <div>
@@ -927,7 +927,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             <span className="text-[11px] font-bold text-amber-700 uppercase">Late Arrivals</span>
             <div className="text-xl font-bold font-data-mono text-amber-700">{lateCount}</div>
           </div>
-          <span className="material-symbols-outlined text-amber-700 text-[24px]">schedule</span>
+          <span className="material-symbols-outlined text-primary text-[24px]">schedule</span>
         </div>
       </div>
 
@@ -935,10 +935,10 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-surface-container pb-3">
           <div>
-            <h3 className="font-bold text-base text-[#7a1228]">Daily Morning Roll-Call Register</h3>
+            <h3 className="font-bold text-base text-primary">Daily Morning Roll-Call Register</h3>
             <p className="text-xs text-on-surface-variant">{teacherDisplayName} · {getAssignedDisplayName()}</p>
           </div>
-          <span className="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
+          <span className="px-3 py-1 rounded bg-success-container text-on-success-container text-xs font-bold">
             Live Register Active
           </span>
         </div>
@@ -954,7 +954,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-surface-container-low text-xs gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#7a1228] text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
                       {displayName.split(' ').map((n: string) => n[0]).join('')}
                     </div>
                     <div>
@@ -984,12 +984,12 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                               isSelected
                                 ? status === 'PRESENT'
-                                  ? 'bg-secondary text-white shadow-xs'
+                                  ? 'bg-primary text-white shadow-xs'
                                   : status === 'ABSENT'
                                   ? 'bg-error text-white shadow-xs'
                                   : status === 'LATE'
-                                  ? 'bg-amber-600 text-white shadow-xs'
-                                  : 'bg-[#7a1228] text-white shadow-xs'
+                                  ? 'bg-primary text-white shadow-xs'
+                                  : 'bg-primary text-white shadow-xs'
                                 : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
                             }`}
                           >

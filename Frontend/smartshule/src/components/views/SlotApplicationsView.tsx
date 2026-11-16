@@ -382,7 +382,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
       {/* Top Banner Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-[#103b2b] to-[#5a1226] p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-primary-container p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -408,7 +408,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                 onClick={() => setViewMode('cards')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'cards'
-                    ? 'bg-white text-emerald-950 shadow-xs'
+                    ? 'bg-white text-on-primary-fixed shadow-xs'
                     : 'text-white/80 hover:text-white'
                 }`}
               >
@@ -419,7 +419,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                 onClick={() => setViewMode('agenda')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'agenda'
-                    ? 'bg-white text-emerald-950 shadow-xs'
+                    ? 'bg-white text-on-primary-fixed shadow-xs'
                     : 'text-white/80 hover:text-white'
                 }`}
               >
@@ -439,7 +439,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
             {onNavigateTab && (
               <button
                 onClick={() => onNavigateTab('onboard-queue')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-[#5a1226] hover:bg-amber-50 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-primary-container hover:bg-primary-fixed rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
                 <span>Onboard Queue</span>
@@ -451,7 +451,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
 
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-amber-200 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-amber-200 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">New Slot Requests</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-amber-950">{pendingCount}</span>
@@ -459,15 +459,15 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-blue-200 shadow-xs flex flex-col justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">Tours & Interactions</span>
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-primary shadow-xs flex flex-col justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-on-primary-fixed">Tours & Interactions</span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-data-mono text-blue-950">{scheduledCount}</span>
-            <span className="text-[11px] text-blue-700 font-medium">Scheduled Step 02</span>
+            <span className="text-2xl font-bold font-data-mono text-on-primary-fixed">{scheduledCount}</span>
+            <span className="text-[11px] text-primary font-medium">Scheduled Step 02</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-emerald-200 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">Offers Ratified</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-emerald-950">{approvedCount}</span>
@@ -475,7 +475,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Total Submissions</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-on-surface">{totalCount}</span>
@@ -509,7 +509,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
       )}
 
       {/* Filters & Search Toolbar */}
-      <div className="bg-white rounded-2xl border border-outline-variant/30 p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
           {[
@@ -526,7 +526,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                 onClick={() => setFilterStatus(status.id)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-[#103b2b] text-white shadow-xs'
+                    ? 'bg-primary text-white shadow-xs'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
@@ -587,11 +587,11 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
 
       {/* VIEW MODE 1: Agenda / Visits Calendar */}
       {viewMode === 'agenda' ? (
-        <div className="bg-white rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-4">
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
             <div>
               <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-800 text-[22px]">calendar_month</span>
+                <span className="material-symbols-outlined text-on-primary-fixed text-[22px]">calendar_month</span>
                 <span>Scheduled School Visits & Child Readiness Interactions</span>
               </h3>
               <p className="text-xs text-on-surface-variant mt-0.5">
@@ -658,7 +658,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                   <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
                     <button
                       onClick={() => openScheduleModal(app)}
-                      className="px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100 text-amber-950 text-xs font-semibold cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-white border border-primary hover:bg-primary-fixed text-on-primary-fixed text-xs font-semibold cursor-pointer flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">edit_calendar</span>
                       <span>Reschedule</span>
@@ -668,7 +668,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                         setSelectedApp(app);
                         setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                       }}
-                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1"
+                      className="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">verified</span>
                       <span>Review & Ratify</span>
@@ -682,7 +682,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
       ) : (
         /* VIEW MODE 2: Applications Cards Grid */
         filteredApps.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-outline-variant/30">
+          <div className="text-center py-20 bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
             <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-3 text-on-surface-variant">
               <span className="material-symbols-outlined text-[32px]">inbox</span>
             </div>
@@ -698,7 +698,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
             {filteredApps.map((app) => (
               <div
                 key={app.id}
-                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between bg-white shadow-xs hover:shadow-md ${
+                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between bg-surface-container-lowest shadow-xs hover:shadow-md ${
                   app.status === 'PENDING'
                     ? 'border-amber-300 hover:border-amber-500'
                     : app.status === 'APPROVED'
@@ -727,7 +727,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                   <h4 className="font-bold text-base text-on-surface">
                     {app.firstName} {app.middleName ? app.middleName + ' ' : ''}{app.lastName}
                   </h4>
-                  <p className="text-xs font-semibold text-[#103b2b] mt-0.5">
+                  <p className="text-xs font-semibold text-primary mt-0.5">
                     {app.targetGrade} · {app.entryTerm}
                   </p>
 
@@ -758,7 +758,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                       <div className="mt-2.5 p-2 bg-amber-500/10 border border-amber-300 rounded-xl text-xs space-y-1">
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-bold text-amber-950 truncate flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[15px] text-amber-800">event</span>
+                            <span className="material-symbols-outlined text-[15px] text-on-primary-fixed">event</span>
                             <span>{app.scheduledStep.stepTitle}</span>
                           </span>
                           <span className="text-[9px] uppercase font-bold text-amber-900 bg-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
@@ -802,12 +802,12 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                       onClick={() => openScheduleModal(app)}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 border ${
                         app.scheduledStep
-                          ? 'bg-amber-100/80 text-amber-900 border-amber-300 hover:bg-amber-200'
-                          : 'bg-white text-emerald-950 border-emerald-300 hover:bg-emerald-50'
+                          ? 'bg-primary-fixed/80 text-on-primary-fixed border-primary hover:bg-primary-fixed-dim'
+                          : 'bg-white text-on-primary-fixed border-primary hover:bg-primary-fixed'
                       }`}
                       title="Schedule school tour or readiness assessment"
                     >
-                      <span className="material-symbols-outlined text-[15px] text-emerald-800">calendar_month</span>
+                      <span className="material-symbols-outlined text-[15px] text-on-primary-fixed">calendar_month</span>
                       <span>{app.scheduledStep ? 'Reschedule' : 'Schedule Step'}</span>
                     </button>
                   </div>
@@ -830,7 +830,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                           setSelectedApp(app);
                           setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[15px]">check_circle</span>
                         <span>Ratify Offer</span>
@@ -911,9 +911,9 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
               <div className="bg-amber-500/10 border border-amber-300 rounded-2xl p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px] text-amber-800">event_available</span>
+                    <span className="material-symbols-outlined text-[20px] text-on-primary-fixed">event_available</span>
                     <div>
-                      <h5 className="font-bold text-amber-950 text-xs uppercase tracking-wider">
+                      <h5 className="font-bold text-on-primary-fixed text-xs uppercase tracking-wider">
                         Step 02: Learner Interaction & School Tour Scheduling
                       </h5>
                       <p className="text-[11px] text-amber-900/80">
@@ -924,7 +924,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => openScheduleModal(selectedApp)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0 self-start sm:self-auto"
+                    className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0 self-start sm:self-auto"
                   >
                     <span className="material-symbols-outlined text-[15px]">calendar_month</span>
                     <span>{selectedApp.scheduledStep ? 'Reschedule Appointment' : 'Schedule Step 02'}</span>
@@ -1013,7 +1013,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
               {/* Ratification Panel */}
               {selectedApp.status === 'PENDING' ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
-                  <h5 className="font-bold text-emerald-900 text-xs uppercase tracking-wider">
+                  <h5 className="font-bold text-on-primary-fixed text-xs uppercase tracking-wider">
                     Administrative Ratification & Learning Slot Offer
                   </h5>
                   <p className="text-xs text-emerald-950">
@@ -1030,7 +1030,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                         value={customAdmNo}
                         onChange={(e) => setCustomAdmNo(e.target.value)}
                         placeholder="e.g. 01, 02"
-                        className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none"
+                        className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs font-mono font-bold text-on-primary-fixed focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1038,7 +1038,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                       <select
                         value={streamAssignment}
                         onChange={(e) => setStreamAssignment(e.target.value)}
-                        className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                        className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs focus:outline-none"
                       >
                         <option value="East">East</option>
                         <option value="West">West</option>
@@ -1082,7 +1082,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleApproveAndEnrol(selectedApp)}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">verified</span>
                     <span>{isProcessing ? 'Enrolling & Sending Email...' : 'Ratify Offer & Enrol'}</span>
@@ -1100,9 +1100,9 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
           <div className="bg-surface rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-amber-300 overflow-hidden">
             <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between bg-amber-500/10">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[22px] text-amber-800">event_available</span>
+                <span className="material-symbols-outlined text-[22px] text-on-primary-fixed">event_available</span>
                 <div>
-                  <h4 className="font-bold text-sm text-amber-950">
+                  <h4 className="font-bold text-sm text-on-primary-fixed">
                     Schedule Admission Step / Interaction
                   </h4>
                   <p className="text-[11px] text-amber-900/80 font-mono">
@@ -1152,7 +1152,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                       key={item.type}
                       className={`p-3 rounded-xl border flex flex-col justify-between cursor-pointer transition-all ${
                         stepType === item.type
-                          ? 'border-[#103b2b] bg-[#103b2b]/5 text-[#103b2b] font-bold shadow-2xs'
+                          ? 'border-primary bg-primary/5 text-primary font-bold shadow-2xs'
                           : 'border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant'
                       }`}
                     >
@@ -1163,7 +1163,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                           value={item.type}
                           checked={stepType === item.type}
                           onChange={() => handleStepTypeChange(item.type)}
-                          className="mt-0.5 text-[#103b2b] focus:ring-[#103b2b]"
+                          className="mt-0.5 text-primary focus:ring-primary"
                         />
                         <span className="text-xs leading-snug">{item.title}</span>
                       </div>
@@ -1269,7 +1269,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
               </div>
 
               <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
-                <span className="material-symbols-outlined text-[16px] text-amber-800 shrink-0 mt-0.5">mail</span>
+                <span className="material-symbols-outlined text-[16px] text-on-primary-fixed shrink-0 mt-0.5">mail</span>
                 <span>Saving this schedule will record the appointment and immediately dispatch a formal confirmation email with appointment details to parent <strong>{schedulingApp.parentEmail}</strong>.</span>
               </div>
 
@@ -1283,7 +1283,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
                   <span>Confirm Schedule & Dispatch Notice</span>

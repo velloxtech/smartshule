@@ -627,7 +627,7 @@ export class InventoryUseCases {
       dto.invoiceNumber.trim()
     );
     if (existing) {
-      throw new ConflictError(`Supplier invoice "${dto.invoiceNumber}" from supplier "${dto.supplierName}" has already been recorded in SmartShule.`);
+      throw new ConflictError(`Supplier invoice "${dto.invoiceNumber}" from supplier "${dto.supplierName}" has already been recorded in Grace Seeds School.`);
     }
 
     if (dto.purchaseRequestId) {
@@ -723,7 +723,7 @@ export class InventoryUseCases {
       const existingExpenses = await this.feeRepository.findExpenses({ schoolId: invoice.schoolId });
       const dupe = existingExpenses.find(e => e.paymentReference === ref && e.status !== ExpenseStatus.REJECTED);
       if (dupe) {
-        throw new ConflictError(`Payment reference "${ref}" has already been recorded in SmartShule (Expense Voucher: ${dupe.voucherNumber}).`);
+        throw new ConflictError(`Payment reference "${ref}" has already been recorded in Grace Seeds School (Expense Voucher: ${dupe.voucherNumber}).`);
       }
     }
 

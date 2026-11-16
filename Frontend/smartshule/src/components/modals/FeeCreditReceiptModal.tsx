@@ -250,7 +250,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in font-body">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header (Screen only) */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 no-print">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0 no-print">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">verified</span>
@@ -274,7 +274,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
           {isLoading && (
             <div className="py-12 text-center text-on-surface-variant flex flex-col items-center gap-2">
-              <span className="material-symbols-outlined animate-spin text-3xl text-[#7a1228]">progress_activity</span>
+              <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
               <span>Loading credit utilization receipt...</span>
             </div>
           )}
@@ -292,13 +292,13 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
               <div id="smartshule-receipt-print" className="p-5 sm:p-6 space-y-4 bg-white rounded-xl border border-slate-200 text-xs shadow-xs">
                 {/* School Header */}
                 <div className="text-center pb-3 border-b border-slate-200">
-                  <div className="text-lg font-black text-[#7a1228] uppercase tracking-wide">
+                  <div className="text-lg font-black text-primary uppercase tracking-wide">
                     {receipt.schoolName || 'Grace Seeds School'}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
                     {receipt.schoolAddress || 'P.O Box 12-20123'} · Tel: {receipt.schoolPhone || '0745436312'} · Email: {receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}
                   </div>
-                  <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-300 rounded-full text-[11px] font-extrabold text-[#7a1228] uppercase tracking-wider">
+                  <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-low border border-slate-300 rounded-full text-[11px] font-extrabold text-primary uppercase tracking-wider">
                     <span className="material-symbols-outlined text-[14px]">receipt_long</span>
                     <span>Fee Credit Utilization Receipt</span>
                   </div>
@@ -340,7 +340,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Receipt Number:</span>
-                      <strong className="font-mono font-bold text-[#7a1228] text-sm">{receipt.receiptNumber}</strong>
+                      <strong className="font-mono font-bold text-primary text-sm">{receipt.receiptNumber}</strong>
                     </div>
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Date &amp; Time:</span>
@@ -348,7 +348,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                     </div>
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Transaction Mode:</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${receipt.transactionType === 'ADMIN-INITIATED' ? 'bg-blue-100 text-blue-900' : 'bg-purple-100 text-purple-900'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${receipt.transactionType === 'ADMIN-INITIATED' ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-primary-fixed text-on-primary-fixed'}`}>
                         {receipt.transactionMode || (receipt.transactionType === 'ADMIN-INITIATED' ? 'ADMINISTRATOR-INITIATED' : 'AUTOMATIC')}
                       </span>
                     </div>
@@ -399,7 +399,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                   </div>
                   <div className="border border-slate-200 rounded-lg overflow-hidden">
                     <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 font-sans">
+                      <thead className="bg-surface text-slate-700 font-semibold border-b border-slate-200 font-sans">
                         <tr>
                           <th className="p-2">Fee Obligation</th>
                           <th className="p-2 text-right">Before</th>
@@ -436,7 +436,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                             KES {Math.max(0, (Number(receipt.currentTermFeesBefore) || 0) - (Number(receipt.amountAppliedToCurrentFees) || 0)).toLocaleString()}
                           </td>
                         </tr>
-                        <tr className="bg-slate-50/70 font-bold border-t border-slate-200">
+                        <tr className="bg-surface/70 font-bold border-t border-slate-200">
                           <td className="p-2 font-sans text-slate-900">Total Outstanding Balance</td>
                           <td className="p-2 text-right text-slate-700">
                             KES {((Number(receipt.previousTermArrearsBefore) || 0) + (Number(receipt.currentTermFeesBefore) || 0)).toLocaleString()}
@@ -444,19 +444,19 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                           <td className="p-2 text-right text-emerald-800 text-sm">
                             -KES {(Number(receipt.totalCreditUtilized) || 0).toLocaleString()}
                           </td>
-                          <td className="p-2 text-right text-[#7a1228] text-sm">
+                          <td className="p-2 text-right text-primary text-sm">
                             KES {(Number(receipt.remainingOutstanding) || 0).toLocaleString()}
                           </td>
                         </tr>
-                        <tr className="bg-teal-50/60 font-bold text-teal-950">
+                        <tr className="bg-primary-fixed/60 font-bold text-on-primary-fixed">
                           <td className="p-2 font-sans">Available Fee Credit Balance</td>
                           <td className="p-2 text-right">
                             +KES {(Number(receipt.availableCreditBefore) || 0).toLocaleString()}
                           </td>
-                          <td className="p-2 text-right text-teal-800">
+                          <td className="p-2 text-right text-on-primary-fixed">
                             -KES {(Number(receipt.totalCreditUtilized) || 0).toLocaleString()}
                           </td>
-                          <td className="p-2 text-right text-teal-900 text-sm">
+                          <td className="p-2 text-right text-on-primary-fixed text-sm">
                             +KES {(Number(receipt.remainingCredit) || 0).toLocaleString()}
                           </td>
                         </tr>
@@ -473,7 +473,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                     </div>
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
                       <table className="w-full text-left text-xs font-mono">
-                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 font-sans text-[11px]">
+                        <thead className="bg-surface text-slate-600 font-semibold border-b border-slate-200 font-sans text-[11px]">
                           <tr>
                             <th className="p-2">Invoice #</th>
                             <th className="p-2 font-sans">Category</th>
@@ -483,8 +483,8 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {receipt.invoiceAllocations.map((inv, idx) => (
-                            <tr key={inv.invoiceId || idx} className="hover:bg-slate-50">
-                              <td className="p-2 font-bold text-[#7a1228]">{inv.invoiceNumber}</td>
+                            <tr key={inv.invoiceId || idx} className="hover:bg-surface">
+                              <td className="p-2 font-bold text-primary">{inv.invoiceNumber}</td>
                               <td className="p-2 font-sans text-slate-600 text-[11px]">{inv.category || 'Tuition / Fees'}</td>
                               <td className="p-2 text-right font-bold text-emerald-800">+KES {(Number(inv.amountApplied) || 0).toLocaleString()}</td>
                               <td className="p-2 text-right text-slate-700">KES {(Number(inv.remainingBalance) || 0).toLocaleString()}</td>
@@ -497,7 +497,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                 )}
 
                 {/* Audit & Authorization Verification Box */}
-                <div className="pt-2 border-t border-slate-200 space-y-1 bg-slate-50/80 p-3 rounded-lg border border-slate-200/60 font-sans text-[11px]">
+                <div className="pt-2 border-t border-slate-200 space-y-1 bg-surface/80 p-3 rounded-lg border border-slate-200/60 font-sans text-[11px]">
                   <div className="font-bold text-slate-800 uppercase tracking-wider text-[10px] flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs text-slate-600">verified_user</span>
                     <span>Audit &amp; Authorization Details</span>
@@ -518,7 +518,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                   ) : (
                     <div className="space-y-0.5 text-slate-600">
                       <p>
-                        Authorization: <span className="font-semibold text-purple-900">System Automatic Utilization</span>
+                        Authorization: <span className="font-semibold text-on-primary-fixed">System Automatic Utilization</span>
                       </p>
                       <p>
                         Trigger Workflow: <span className="font-mono text-slate-800 font-medium">{receipt.triggerSource || 'Auto-reconciliation upon overpayment receipt'}</span>
@@ -537,7 +537,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsReversalModalOpen(true)}
-                    className="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2.5 px-3 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">rotate_left</span>
                     <span>Request Reversal</span>
@@ -546,7 +546,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                 <button
                   type="button"
                   onClick={() => triggerReceiptPrint()}
-                  className="flex-1 py-2.5 bg-[#7a1228] text-white font-bold rounded-xl hover:bg-[#600e1f] text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary-container text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
                   <span>Print Receipt</span>
@@ -554,7 +554,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                 <button
                   type="button"
                   onClick={handleDownloadPdf}
-                  className="flex-1 py-2.5 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary-container text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">download</span>
                   <span>Download PDF Document</span>
@@ -562,7 +562,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 rounded-xl text-xs font-bold text-slate-800 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-bold text-slate-800 transition-colors cursor-pointer"
                 >
                   Close
                 </button>

@@ -47,7 +47,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
   return (
     <div className="space-y-6 pb-12">
       {/* Top Academic Leadership Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary-container to-[#450a15] p-6 sm:p-8 text-white shadow-xl border border-primary-container">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary-container to-primary-container p-6 sm:p-8 text-white shadow-xl border border-primary-container">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 mb-2.5">
@@ -132,7 +132,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
         <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-on-surface">Teaching Faculty</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">badge</span>
             </div>
           </div>
@@ -146,7 +146,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
         <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-on-surface">Schemes of Work</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">menu_book</span>
             </div>
           </div>
@@ -160,7 +160,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
         <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-on-surface">Lesson Plans in Workflow</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">pending_actions</span>
             </div>
           </div>

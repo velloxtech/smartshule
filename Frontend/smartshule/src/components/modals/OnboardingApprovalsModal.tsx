@@ -588,7 +588,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                             setSelectedApp(app);
                             setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                           }}
-                          className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[16px]">check_circle</span>
                           <span>Review & Ratify</span>
@@ -599,10 +599,10 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                         type="button"
                         disabled={isProcessing}
                         onClick={() => handleSyncToDatabase(app)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed border border-primary text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                         title="Ensure this approved learner is properly registered in PostgreSQL database and active student directory"
                       >
-                        <span className="material-symbols-outlined text-[15px] text-blue-700">sync</span>
+                        <span className="material-symbols-outlined text-[15px] text-primary">sync</span>
                         <span>Sync to DB</span>
                       </button>
                     ) : null}
@@ -717,7 +717,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
 
                 {selectedApp.status === 'PENDING' ? (
                   <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
-                    <h5 className="font-bold text-emerald-900 text-xs uppercase tracking-wider">
+                    <h5 className="font-bold text-on-primary-fixed text-xs uppercase tracking-wider">
                       Administrative Ratification & Database Enrolment
                     </h5>
                     <p className="text-xs text-emerald-950">
@@ -733,7 +733,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                           value={customAdmNo}
                           onChange={(e) => setCustomAdmNo(e.target.value)}
                           placeholder="e.g. 01, 02"
-                          className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none"
+                          className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs font-mono font-bold text-on-primary-fixed focus:outline-none"
                         />
                       </div>
                       <div>
@@ -741,7 +741,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                         <select
                           value={streamAssignment}
                           onChange={(e) => setStreamAssignment(e.target.value)}
-                          className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                          className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs focus:outline-none"
                         >
                           <option value="East">East</option>
                           <option value="West">West</option>
@@ -752,12 +752,12 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                     </div>
                   </div>
                 ) : selectedApp.status === 'APPROVED' ? (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-3">
+                  <div className="p-4 bg-primary-fixed border border-primary rounded-2xl flex items-center justify-between gap-3">
                     <div>
                       <h5 className="font-bold text-blue-900 text-xs uppercase tracking-wider">
                         Approved Learner Status
                       </h5>
-                      <p className="text-xs text-blue-950 mt-0.5">
+                      <p className="text-xs text-on-primary-fixed mt-0.5">
                         Assigned Admission Number: <strong>{selectedApp.assignedAdmNo || 'Pending'}</strong>.
                         Reviewed by {selectedApp.reviewedBy} ({selectedApp.reviewerRole}).
                       </p>
@@ -766,7 +766,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                       type="button"
                       disabled={isProcessing}
                       onClick={() => handleSyncToDatabase(selectedApp)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-[16px]">sync</span>
                       <span>Sync to DB</span>
@@ -797,7 +797,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                       type="button"
                       disabled={isProcessing}
                       onClick={() => handleApprove(selectedApp)}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">verified</span>
                       <span>{isProcessing ? 'Enrolling & Sending Email...' : 'Approve, Enrol & Send Email'}</span>

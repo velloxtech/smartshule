@@ -89,7 +89,7 @@ describe('Phase 3 & 4: Controlled Curriculum Progression & Coverage Gating', () 
     trackerId = tracker.id;
   });
 
-  test('1. Teacher cannot submit Week 2 before Week 1 is approved (Sequential Gate)', async () => {
+  test('1. Teacher may report Week 2 while Week 1 awaits review', async () => {
     await expect(
       container.curriculumTrackerUseCases.submitWeekForApproval(
         trackerId,
@@ -104,7 +104,7 @@ describe('Phase 3 & 4: Controlled Curriculum Progression & Coverage Gating', () 
           fullName: 'Daniel Kiprono'
         }
       )
-    ).rejects.toThrow('Week 2 is locked');
+    ).resolves.toEqual(expect.objectContaining({items:expect.arrayContaining([expect.objectContaining({weekNumber:2,status:'SUBMITTED',isCovered:false})])}));
   });
 
   test('2. Teacher submits Week 1 -> Pending approval -> Supervisor approves -> Week 2 unlocks', async () => {
@@ -126,24 +126,8 @@ describe('Phase 3 & 4: Controlled Curriculum Progression & Coverage Gating', () 
     expect(week1AfterSubmit?.status).toBe('SUBMITTED');
     expect(week1AfterSubmit?.isCovered).toBe(false);
 
-    const approved = await container.curriculumTrackerUseCases.approveWeekCoverage(
-      trackerId,
-      1,
-      {
-        remarks: 'Excellent practical demonstrations and learner engagement observed.'
-      },
-      {
-        userId: supervisorUser.id,
-        role: UserRole.HEAD_TEACHER,
-        fullName: 'Sarah Wanjiku'
-      }
-    );
-
-    const week1AfterApprove = approved.items.find((i: any) => i.weekNumber === 1);
-    expect(week1AfterApprove?.status).toBe('APPROVED');
-    expect(week1AfterApprove?.isCovered).toBe(true);
-
-    expect(approved.stats.completionPercentage).toBe(33);
+    await expect(container.curriculumTrackerUseCases.approveWeekCoverage(trackerId,1,{remarks:'Manual week approval is no longer confirmation'},{userId:supervisorUser.id,role:UserRole.HEAD_TEACHER})).rejects.toThrow('approved records of work');
+    expect((await container.curriculumTrackerRepository.findById(trackerId))!.toJSON().items.find((i:any)=>i.weekNumber===1)?.isCovered).toBe(false);
 
     const week2Submit = await container.curriculumTrackerUseCases.submitWeekForApproval(
       trackerId,

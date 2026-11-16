@@ -48,7 +48,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenPreferences })
         
         {/* Left Information */}
         <div className="flex items-start gap-3.5 flex-1">
-          <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white flex items-center justify-center shrink-0 shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-md">
             <span className="material-symbols-outlined text-[22px]">cookie</span>
           </div>
           <div>
@@ -82,7 +82,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenPreferences })
 
           <button
             onClick={handleAcceptAll}
-            className="px-4 py-2 bg-[#7a1228] hover:bg-[#961732] text-white font-semibold rounded-xl text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
+            className="px-4 py-2 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
           >
             Accept All
           </button>

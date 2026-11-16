@@ -1874,7 +1874,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md border-b border-[#5e0d1e]">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md border-b border-primary-container">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center font-bold shrink-0 shadow-inner border border-white/30">
               <span className="material-symbols-outlined text-[24px]">grade</span>
@@ -1894,7 +1894,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         </div>
 
         {/* Mode Switcher */}
-        <div className="p-2 sm:p-3 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto">
+        <div className="p-2 sm:p-3 bg-surface-container-low border-b border-slate-200 flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto">
           <button
             type="button"
             onClick={() => {
@@ -1903,8 +1903,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             }}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               entryMode === 'ROSTER_GRID'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white text-slate-800 hover:bg-surface-container border border-slate-300'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">table_chart</span>
@@ -1918,8 +1918,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             }}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               entryMode === 'MANUAL_FORM'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white text-slate-800 hover:bg-surface-container border border-slate-300'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">person_edit</span>
@@ -1933,8 +1933,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             }}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               entryMode === 'BULK_CSV'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white text-slate-800 hover:bg-surface-container border border-slate-300'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">file_upload</span>
@@ -1966,7 +1966,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
             {/* Empty state: No assigned classes for this teacher */}
             {!isSchoolAdmin && authorizedClasses.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <div className="p-8 text-center bg-surface border border-slate-200 rounded-2xl space-y-3">
                 <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[30px]">lock_person</span>
                 </div>
@@ -1979,13 +1979,13 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             ) : (
               <>
                 {/* 1. Clear Selection Sequence Workflow */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3 shadow-xs">
+                <div className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px] text-[#7a1228]">filter_alt</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">filter_alt</span>
                       <span>Target Class, Subject &amp; Assessment Sequence</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-[#7a1228] border border-[#7a1228]/30">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-primary border border-primary/30">
                       Model: {isSchoolAdmin ? 'Administrator / Full School Grading Oversight' : (teacherAuthContext?.teachingModel?.replace(/_/g, ' ') || 'Class Teacher')}
                     </span>
                   </div>
@@ -1999,7 +1999,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       <select
                         value={filterClassId}
                         onChange={(e) => setFilterClassId(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer focus:outline-primary"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer focus:outline-primary"
                       >
                         <option value="">-- Choose Assigned Class --</option>
                         {(authorizedClasses.length > 0 ? authorizedClasses : classes).map((c) => (
@@ -2019,7 +2019,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                         value={filterStreamId}
                         onChange={(e) => setFilterStreamId(e.target.value)}
                         disabled={!filterClassId}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
                       >
                         <option value="" disabled={!isSchoolAdmin&&!teacherAuthContext?.assignedClasses.find(cls=>cls.id===filterClassId)?.wholeClass}>All Streams / Whole Grade</option>
                         {streams.map((s) => (
@@ -2042,7 +2042,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           setBulkSubjectId(e.target.value);
                         }}
                         disabled={!filterClassId}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
                       >
                         <option value="">-- Select Subject ({effectiveSubjects.length} Available) --</option>
                         {effectiveSubjects.map((la: any) => (
@@ -2064,7 +2064,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                         max="1000"
                         value={bulkMaxScore}
                         onChange={(e) => setBulkMaxScore(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold font-data-mono text-slate-900 focus:outline-primary"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-bold font-data-mono text-slate-900 focus:outline-primary"
                       />
                     </div>
                   </div>
@@ -2078,7 +2078,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       <select
                         value={academicYearId}
                         onChange={(e) => setAcademicYearId(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                       >
                         {academicYears.map((yr) => (
                           <option key={yr.id} value={yr.id}>
@@ -2093,7 +2093,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       <select
                         value={termId}
                         onChange={(e) => setTermId(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                        className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                       >
                         {terms.map((t) => (
                           <option key={t.id} value={t.id}>
@@ -2114,7 +2114,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           {classes.find(c => c.id === filterClassId)?.name || 'Class'}{filterStreamId ? ` (${streams.find(s => s.id === filterStreamId)?.name || 'Stream'})` : ''}
                         </span>
                         <span className="text-slate-400">·</span>
-                        <span className="font-bold text-[#7a1228] text-xs">
+                        <span className="font-bold text-primary text-xs">
                           {effectiveSubjects.find(s => s.id === selectedLearningAreaId)?.name || 'Subject'}
                         </span>
                       </div>
@@ -2133,7 +2133,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           </span>
                         )}
                         {!hasUnsavedChanges && rosterMetrics.entered > 0 && rosterMetrics.missing > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary flex items-center gap-1">
                             <span className="material-symbols-outlined text-[13px]">save</span>
                             <span>Saved Draft ({rosterMetrics.entered}/{rosterMetrics.total})</span>
                           </span>
@@ -2143,26 +2143,26 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
                     {/* Progress metrics */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="p-2 rounded-lg bg-surface-container-lowest border border-slate-200">
                         <span className="text-[10px] font-bold uppercase text-slate-500 block">Enrolled Learners</span>
                         <span className="font-black text-sm text-slate-900 font-data-mono">{rosterMetrics.total}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="p-2 rounded-lg bg-surface-container-lowest border border-slate-200">
                         <span className="text-[10px] font-bold uppercase text-slate-500 block">Marks Entered</span>
                         <span className="font-black text-sm text-emerald-700 font-data-mono">{rosterMetrics.entered}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="p-2 rounded-lg bg-surface-container-lowest border border-slate-200">
                         <span className="text-[10px] font-bold uppercase text-slate-500 block">Missing Marks</span>
                         <span className="font-black text-sm text-amber-700 font-data-mono">{rosterMetrics.missing}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="p-2 rounded-lg bg-surface-container-lowest border border-slate-200">
                         <span className="text-[10px] font-bold uppercase text-slate-500 block">Completion %</span>
-                        <span className="font-black text-sm text-[#7a1228] font-data-mono">{rosterMetrics.pct}%</span>
+                        <span className="font-black text-sm text-primary font-data-mono">{rosterMetrics.pct}%</span>
                       </div>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
                       <div
                         className="bg-[#7a1228] h-full transition-all duration-300 rounded-full"
                         style={{ width: `${rosterMetrics.pct}%` }}
@@ -2173,7 +2173,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
                 {/* 3. Class Roster Spreadsheet Grid */}
                 {!filterClassId || !selectedLearningAreaId ? (
-                  <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl space-y-2">
+                  <div className="p-8 text-center bg-surface border border-dashed border-slate-300 rounded-xl space-y-2">
                     <span className="material-symbols-outlined text-[32px] text-slate-400">touch_app</span>
                     <h5 className="font-bold text-slate-700 text-xs">Please Select a Class and Subject Above</h5>
                     <p className="text-[11px] text-slate-500">
@@ -2181,7 +2181,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     </p>
                   </div>
                 ) : rosterRows.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <div className="p-8 text-center bg-surface border border-slate-200 rounded-xl space-y-2">
                     <span className="material-symbols-outlined text-[32px] text-slate-400">group_off</span>
                     <h5 className="font-bold text-slate-700 text-xs">No Active Learners Found in this Cohort</h5>
                     <p className="text-[11px] text-slate-500">
@@ -2199,19 +2199,19 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           value={rosterSearch}
                           onChange={(e) => setRosterSearch(e.target.value)}
                           placeholder="Search learner in roster by name or admission..."
-                          className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-primary"
+                          className="w-full pl-8 pr-3 py-1.5 bg-surface border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-primary"
                         />
                       </div>
                       <div className="text-[11px] text-slate-500 flex items-center gap-1.5 self-center sm:self-auto">
                         <span className="material-symbols-outlined text-[15px] text-slate-400">keyboard</span>
-                        <span>Use <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">↓</kbd> to jump to next score</span>
+                        <span>Use <kbd className="px-1 py-0.5 bg-surface-container-low border border-slate-300 rounded text-[10px] font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 bg-surface-container-low border border-slate-300 rounded text-[10px] font-mono">↓</kbd> to jump to next score</span>
                       </div>
                     </div>
 
                     {/* Table */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs max-h-[48vh] overflow-y-auto">
+                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-surface-container-lowest shadow-xs max-h-[48vh] overflow-y-auto">
                       <table className="w-full text-left border-collapse text-xs">
-                        <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-xs">
+                        <thead className="bg-surface-container-low border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-xs">
                           <tr>
                             <th className="p-2.5 w-10 text-center">#</th>
                             <th className="p-2.5 w-24">Adm No</th>
@@ -2228,7 +2228,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                             const actualIdx = originalIdx !== -1 ? originalIdx : idx;
                             const isInvalid = row.status === 'INVALID';
                             return (
-                              <tr key={row.studentId} className={`hover:bg-slate-50/80 transition-colors ${isInvalid ? 'bg-rose-50/50' : ''}`}>
+                              <tr key={row.studentId} className={`hover:bg-surface/80 transition-colors ${isInvalid ? 'bg-rose-50/50' : ''}`}>
                                 <td className="p-2.5 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
                                 <td className="p-2.5 font-bold font-data-mono text-slate-700">{row.admissionNumber}</td>
                                 <td className="p-2.5 font-semibold text-slate-900">{row.learnerName}</td>
@@ -2257,8 +2257,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                                         isInvalid
                                           ? 'border-2 border-rose-500 bg-rose-50 text-rose-900 focus:ring-2 focus:ring-rose-400'
                                           : row.status === 'SAVED'
-                                          ? 'border-emerald-300 bg-emerald-50/40 text-emerald-950 focus:border-primary'
-                                          : 'border-slate-300 bg-white text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary'
+                                          ? 'border-primary bg-primary-fixed/40 text-on-primary-fixed focus:border-primary'
+                                          : 'border-slate-300 bg-surface text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary'
                                       }`}
                                     />
                                     {row.errorMessage && (
@@ -2293,7 +2293,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                                     value={row.remarks}
                                     onChange={(e) => handleRosterRemarksChange(actualIdx, e.target.value)}
                                     placeholder="Remarks auto-generate or enter custom..."
-                                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-primary"
+                                    className="w-full px-2 py-1 bg-surface border border-slate-200 rounded text-xs text-slate-800 focus:outline-primary"
                                   />
                                 </td>
                                 <td className="p-2 text-center">
@@ -2329,7 +2329,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+                    className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-surface transition-colors cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
@@ -2339,7 +2339,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       type="button"
                       disabled={isSavingRoster || rosterRows.length === 0}
                       onClick={() => handleSaveRosterMarks(false)}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
                       title="Save current entered marks as draft without overwriting blank records"
                     >
                       <span className="material-symbols-outlined text-[16px]">save</span>
@@ -2350,7 +2350,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       type="button"
                       disabled={isSavingRoster || rosterRows.length === 0 || rosterMetrics.invalid > 0}
                       onClick={() => handleSaveRosterMarks(true)}
-                      className="flex-1 sm:flex-none px-5 py-2 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                      className="flex-1 sm:flex-none px-5 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
                       title="Commit and submit assessment marks"
                     >
                       <span className="material-symbols-outlined text-[16px]">task_alt</span>
@@ -2378,9 +2378,9 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             )}
 
             {/* 1. Selection & Configuration */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            <div className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[#7a1228]">tune</span>
+                <span className="material-symbols-outlined text-[16px] text-primary">tune</span>
                 <span>1. Select Class, Subject & Assessment Session</span>
               </span>
 
@@ -2392,7 +2392,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <select
                     value={filterClassId}
                     onChange={(e) => setFilterClassId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
                     <option value="">-- Choose Class --</option>
                     {classes.map((c) => (
@@ -2410,7 +2410,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <select
                     value={filterStreamId}
                     onChange={(e) => setFilterStreamId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
                     <option value="" disabled={!isSchoolAdmin&&!teacherAuthContext?.assignedClasses.find(cls=>cls.id===filterClassId)?.wholeClass}>All Streams / Whole Grade</option>
                     {streams.map((s) => (
@@ -2431,7 +2431,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       setBulkSubjectId(e.target.value);
                       setSelectedLearningAreaId(e.target.value);
                     }}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
                     <option value="">-- Choose Subject ({effectiveSubjects.length} Available) --</option>
                     {(effectiveSubjects.length > 0 ? effectiveSubjects : learningAreas).map((la: any) => (
@@ -2451,7 +2451,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <select
                     value={academicYearId}
                     onChange={(e) => setAcademicYearId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
                     {academicYears.map((yr) => (
                       <option key={yr.id} value={yr.id}>
@@ -2466,7 +2466,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <select
                     value={termId}
                     onChange={(e) => setTermId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
                     {terms.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -2484,7 +2484,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     max="1000"
                     value={bulkMaxScore}
                     onChange={(e) => setBulkMaxScore(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900"
+                    className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900"
                   />
                 </div>
               </div>
@@ -2506,7 +2506,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   type="button"
                   onClick={handleDownloadTemplate}
                   disabled={isDownloadingTemplate || !filterClassId}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-black transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-black transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">file_download</span>
                   <span>{isDownloadingTemplate ? 'Generating CSV...' : 'Download Pre-filled CSV'}</span>
@@ -2581,7 +2581,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     className={`p-2.5 rounded-lg border ${
                       validationResult.invalidRows > 0
                         ? 'bg-rose-50 border-rose-300'
-                        : 'bg-slate-50 border-slate-200'
+                        : 'bg-surface border-slate-200'
                     }`}
                   >
                     <span
@@ -2603,7 +2603,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                  <div className="p-2.5 rounded-lg bg-surface border border-slate-200">
                     <span className="text-[10px] font-bold text-slate-600 uppercase block">Duplicates</span>
                     <span className="text-base font-bold text-slate-800 font-data-mono">
                       {validationResult.duplicatesCount}
@@ -2677,7 +2677,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                   r.action === 'CREATE'
                                     ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-blue-100 text-blue-800'
+                                    : 'bg-primary-fixed text-on-primary-fixed'
                                 }`}
                               >
                                 {r.action === 'CREATE' ? 'New Record' : 'Will Update'}
@@ -2705,7 +2705,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-surface transition-colors cursor-pointer text-xs"
               >
                 Cancel
               </button>
@@ -2719,7 +2719,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   validationResult.invalidRows > 0 ||
                   validationResult.validRows === 0
                 }
-                className="px-5 py-2.5 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
+                className="px-5 py-2.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-container shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">save</span>
                 <span>
@@ -2751,10 +2751,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           )}
 
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+          <div className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[#7a1228]">calendar_month</span>
+                <span className="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
                 <span>Academic Session & Evaluation Mode</span>
               </span>
             </div>
@@ -2766,7 +2766,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <select
                   value={academicYearId}
                   onChange={(e) => setAcademicYearId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:outline-primary cursor-pointer"
+                  className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:outline-primary cursor-pointer"
                 >
                   {academicYears.map((yr) => (
                     <option key={yr.id} value={yr.id}>
@@ -2783,7 +2783,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <select
                   value={termId}
                   onChange={(e) => setTermId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:outline-primary cursor-pointer"
+                  className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:outline-primary cursor-pointer"
                 >
                   {terms.length === 0 ? (
                     <option value="term-2026-t1">Term 1</option>
@@ -2804,7 +2804,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <select
                   value={assessmentType}
                   onChange={(e) => setAssessmentType(e.target.value as any)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 focus:outline-[#7a1228] cursor-pointer"
+                  className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 focus:outline-primary cursor-pointer"
                 >
                   <option value="SUMMATIVE">Summative (Term Exam)</option>
                   <option value="FORMATIVE">Formative (Continuous Rubric)</option>
@@ -2813,10 +2813,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+          <div className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-secondary">filter_alt</span>
+                <span className="material-symbols-outlined text-[16px] text-primary">filter_alt</span>
                 <span>Filter Learners by Cohort</span>
               </span>
               <span className="text-[10px] text-slate-500 font-medium">
@@ -2831,7 +2831,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <select
                   value={filterClassId}
                   onChange={(e) => setFilterClassId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary cursor-pointer"
+                  className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary cursor-pointer"
                 >
                   <option value="">-- All Classes & Grades --</option>
                   {classes.map((c) => (
@@ -2850,7 +2850,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   value={filterStreamId}
                   onChange={(e) => setFilterStreamId(e.target.value)}
                   disabled={!filterClassId}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary disabled:opacity-50 cursor-pointer"
+                  className="w-full bg-surface border border-slate-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary disabled:opacity-50 cursor-pointer"
                 >
                   <option value="">
                     {!filterClassId
@@ -2879,7 +2879,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   type="button"
                   disabled={!hasPrev}
                   onClick={goToPrevStudent}
-                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-0.5"
+                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-surface transition-colors cursor-pointer flex items-center gap-0.5"
                   title="Previous Learner"
                 >
                   <span className="material-symbols-outlined text-[14px]">arrow_back</span>
@@ -2892,7 +2892,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   type="button"
                   disabled={!hasNext}
                   onClick={goToNextStudent}
-                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-0.5"
+                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-surface transition-colors cursor-pointer flex items-center gap-0.5"
                   title="Next Learner"
                 >
                   <span>Next</span>
@@ -2946,7 +2946,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
             {currentLearner && (
               <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-3 shadow-xs">
-                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-[#7a1228] bg-rose-50 flex items-center justify-center shadow-xs">
+                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary bg-rose-50 flex items-center justify-center shadow-xs">
                   {currentLearner.profilePhotoUrl ? (
                     <img
                       src={currentLearner.profilePhotoUrl}
@@ -2957,7 +2957,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       }}
                     />
                   ) : (
-                    <span className="font-black text-sm text-[#7a1228] tracking-wider">
+                    <span className="font-black text-sm text-primary tracking-wider">
                       {currentLearner.name
                         .split(' ')
                         .filter(Boolean)
@@ -2973,7 +2973,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <h4 className="font-bold text-sm text-gray-900 truncate">
                       {currentLearner.name}
                     </h4>
-                    <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[#7a1228] border border-[#7a1228]/30 font-bold text-[10px]">
+                    <span className="px-2 py-0.5 rounded-full bg-rose-50 text-primary border border-primary/30 font-bold text-[10px]">
                       {currentLearner.grade} {currentLearner.stream ? `· ${currentLearner.stream}` : ''}
                     </span>
                   </div>
@@ -2991,15 +2991,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
           {assessmentType === 'SUMMATIVE' && (
             <div className="space-y-3.5">
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div className="p-3.5 bg-surface border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">Subjects Filled</span>
                     <span className="font-bold text-xs text-slate-800">
-                      <strong className="text-sm font-data-mono text-[#7a1228]">{marksSummary.count}</strong> of {marksSummary.totalSubjects}
+                      <strong className="text-sm font-data-mono text-primary">{marksSummary.count}</strong> of {marksSummary.totalSubjects}
                     </span>
                   </div>
-                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div className="h-7 w-[1px] bg-surface-container hidden sm:block" />
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">Total Marks</span>
                     <span className="font-bold text-xs text-slate-800 font-data-mono">
@@ -3007,21 +3007,21 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       <span className="text-slate-400"> / {marksSummary.totalMax}</span>
                     </span>
                   </div>
-                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div className="h-7 w-[1px] bg-surface-container hidden sm:block" />
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">Mean Score</span>
-                    <span className="font-bold text-sm text-[#7a1228] font-data-mono">
+                    <span className="font-bold text-sm text-primary font-data-mono">
                       {marksSummary.meanPct}%
                     </span>
                   </div>
-                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div className="h-7 w-[1px] bg-surface-container hidden sm:block" />
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">Projected Level</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-bold border ${marksSummary.levelBadgeColor}`}>
                       {marksSummary.overallLevel}
                     </span>
                   </div>
-                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div className="h-7 w-[1px] bg-surface-container hidden sm:block" />
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">GPA Points</span>
                     <span className="font-bold text-xs text-slate-800 font-data-mono">
@@ -3034,7 +3034,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <button
                     type="button"
                     onClick={handleSetAllMaxTo100}
-                    className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] font-bold text-slate-700 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 bg-white hover:bg-surface-container-low border border-slate-200 rounded text-[11px] font-bold text-slate-700 transition-colors cursor-pointer"
                     title="Reset all Max Scores to 100"
                   >
                     Set Max = 100
@@ -3051,21 +3051,21 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               </div>
 
               {existingMarksCount > 0 && (
-                <div className="px-3 py-2 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-center justify-between">
+                <div className="px-3 py-2 rounded-lg bg-primary-fixed border border-primary text-on-primary-fixed text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-teal-700">task_alt</span>
+                    <span className="material-symbols-outlined text-[16px] text-primary">task_alt</span>
                     <span>
                       <strong>{existingMarksCount}</strong> existing subject marks loaded for this term. Any updates will overwrite existing marks.
                     </span>
                   </div>
                   {loadingExistingMarks && (
-                    <span className="text-[10px] text-teal-600 animate-pulse font-medium">Refreshing...</span>
+                    <span className="text-[10px] text-primary animate-pulse font-medium">Refreshing...</span>
                   )}
                 </div>
               )}
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold uppercase text-slate-600 tracking-wider items-center">
+              <div className="border border-slate-200 rounded-xl overflow-hidden bg-surface-container-lowest shadow-xs">
+                <div className="bg-surface-container-low border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold uppercase text-slate-600 tracking-wider items-center">
                   <div className="col-span-5 sm:col-span-4">Learning Area / Subject</div>
                   <div className="col-span-4 sm:col-span-3 text-center">Marks (Score / Out Of)</div>
                   <div className="col-span-3 sm:col-span-2 text-center">CBE Level</div>
@@ -3086,7 +3086,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                         }`}
                       >
                         <div className="col-span-5 sm:col-span-4 flex items-center gap-2.5 min-w-0">
-                          <span className="w-10 h-7 rounded-md bg-[#7a1228] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
+                          <span className="w-10 h-7 rounded-md bg-primary text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
                             {initials}
                           </span>
                           <div className="min-w-0">
@@ -3116,7 +3116,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                             value={mark.rawScore}
                             onChange={(e) => handleSubjectScoreChange(sub.id, e.target.value)}
                             placeholder="0"
-                            className="w-16 sm:w-20 text-center bg-white border border-slate-300 focus:border-[#7a1228] focus:ring-1 focus:ring-[#7a1228] rounded-lg py-1.5 px-1 font-bold font-data-mono text-sm text-slate-900 shadow-xs"
+                            className="w-16 sm:w-20 text-center bg-surface border border-slate-300 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg py-1.5 px-1 font-bold font-data-mono text-sm text-slate-900 shadow-xs"
                           />
                           <span className="text-slate-400 font-bold text-xs">/</span>
                           <input
@@ -3125,7 +3125,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                             max="1000"
                             value={mark.maxScore}
                             onChange={(e) => handleSubjectMaxChange(sub.id, e.target.value)}
-                            className="w-12 text-center bg-slate-100 border border-slate-200 rounded-md py-1 px-1 font-semibold font-data-mono text-xs text-slate-600"
+                            className="w-12 text-center bg-surface-container-low border border-slate-200 rounded-md py-1 px-1 font-semibold font-data-mono text-xs text-slate-600"
                             title="Maximum score"
                           />
                         </div>
@@ -3144,7 +3144,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                             value={mark.remarks}
                             onChange={(e) => handleSubjectRemarksChange(sub.id, e.target.value)}
                             placeholder={rubric.hasMark ? getStandardRemark(rubric.level as any) : 'Auto pedagogical remarks...'}
-                            className="w-full text-[11px] bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 truncate focus:bg-white focus:border-slate-400 focus:outline-none"
+                            className="w-full text-[11px] bg-surface border border-slate-200 rounded-md px-2 py-1 text-slate-700 truncate focus:bg-surface focus:border-slate-400 focus:outline-none"
                             title={mark.remarks || 'Pedagogical teacher remarks'}
                           />
                         </div>
@@ -3206,8 +3206,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
+              <div className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">psychology</span>
                   <span>Formative CBE Competency Evaluation</span>
                 </div>
@@ -3220,7 +3220,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     value={selectedSubStrandId}
                     onChange={(e) => setSelectedSubStrandId(e.target.value)}
                     required
-                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                    className="w-full bg-surface border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
                   >
                     {subStrands.length === 0 ? (
                       <option value="">No sub-strands defined</option>
@@ -3245,7 +3245,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <select
                       value={assessmentMethod}
                       onChange={(e) => setAssessmentMethod(e.target.value)}
-                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                      className="w-full bg-surface border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
                     >
                       {CBC_ASSESSMENT_METHODS.map((m) => (
                         <option key={m.value} value={m.value}>
@@ -3264,7 +3264,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       value={specificOutcomeTested}
                       onChange={(e) => setSpecificOutcomeTested(e.target.value)}
                       placeholder="e.g. Identification and guided problem solving"
-                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
+                      className="w-full bg-surface border border-rose-200 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
                     />
                   </div>
                 </div>
@@ -3277,7 +3277,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <select
                       value={targetedCompetency}
                       onChange={(e) => setTargetedCompetency(e.target.value)}
-                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                      className="w-full bg-surface border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
                     >
                       {CBC_CORE_COMPETENCIES.map((c) => (
                         <option key={c.value} value={c.value}>
@@ -3294,7 +3294,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <select
                       value={observedValue}
                       onChange={(e) => setObservedValue(e.target.value)}
-                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                      className="w-full bg-surface border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
                     >
                       {CBC_CORE_VALUES.map((v) => (
                         <option key={v.value} value={v.value}>
@@ -3471,7 +3471,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+              className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-surface transition-colors cursor-pointer text-xs"
             >
               Cancel
             </button>
@@ -3482,7 +3482,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleSubmit(undefined, true)}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                  className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
                   title="Save marks and advance immediately to next student"
                 >
                   <span className="material-symbols-outlined text-[16px]">fast_forward</span>
@@ -3493,7 +3493,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 sm:flex-none px-5 py-2 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                className="flex-1 sm:flex-none px-5 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">save</span>
                 <span>{isLoading ? 'Saving...' : assessmentType === 'SUMMATIVE' ? 'Save All Subject Marks' : 'Save Formative Evaluation'}</span>

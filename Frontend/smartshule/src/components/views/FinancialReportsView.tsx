@@ -406,7 +406,7 @@ export const FinancialReportsView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-outline-variant/30 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7a1228] text-3xl">analytics</span>
+            <span className="material-symbols-outlined text-primary text-3xl">analytics</span>
             <h1 className="text-2xl font-bold tracking-tight text-on-surface">
               Financial Reports & Accounts Statements
             </h1>
@@ -425,7 +425,7 @@ export const FinancialReportsView: React.FC = () => {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium cursor-pointer focus:outline-[#7a1228]"
+            className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium cursor-pointer focus:outline-primary"
           >
             <option value="CURRENT_PERIOD">Current Active Term</option>
             {academicYears.map((ay) => {
@@ -450,20 +450,20 @@ export const FinancialReportsView: React.FC = () => {
             title="Reload live ledger figures"
             className="p-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-on-surface-variant transition-colors cursor-pointer"
           >
-            <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin text-[#7a1228]' : ''}`}>sync</span>
+            <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin text-primary' : ''}`}>sync</span>
           </button>
 
           <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-xs font-semibold text-on-surface transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-base text-emerald-600">table_view</span>
+            <span className="material-symbols-outlined text-base text-primary">table_view</span>
             Export CSV
           </button>
 
           <button
             onClick={handlePrintReport}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#7a1228] hover:bg-[#630d1f] text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-base">print</span>
             Print Financial Statement
@@ -480,7 +480,7 @@ export const FinancialReportsView: React.FC = () => {
               type="date"
               value={customStartDate}
               onChange={(e) => setCustomStartDate(e.target.value)}
-              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface focus:outline-[#7a1228]"
+              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface focus:outline-primary"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -489,7 +489,7 @@ export const FinancialReportsView: React.FC = () => {
               type="date"
               value={customEndDate}
               onChange={(e) => setCustomEndDate(e.target.value)}
-              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface focus:outline-[#7a1228]"
+              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface focus:outline-primary"
             />
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -497,7 +497,7 @@ export const FinancialReportsView: React.FC = () => {
             <select
               value={customBudgetMultiplier}
               onChange={(e) => setCustomBudgetMultiplier(parseFloat(e.target.value))}
-              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface cursor-pointer focus:outline-[#7a1228]"
+              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface cursor-pointer focus:outline-primary"
             >
               <option value="0.33">1 Term Allocation (1/3 Year)</option>
               <option value="1.0">Full Annual Budget (1.0x)</option>
@@ -515,7 +515,7 @@ export const FinancialReportsView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Total Revenue Inflows
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-lg">trending_up</span>
             </div>
           </div>
@@ -533,12 +533,12 @@ export const FinancialReportsView: React.FC = () => {
         </div>
 
         {/* Operating Expenditures Outflow */}
-        <div className="card p-5 bg-surface border border-[#7a1228]/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
+        <div className="card p-5 bg-surface border border-primary/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#7a1228] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
               Operating Expenditures
             </span>
-            <div className="w-9 h-9 rounded-xl bg-[#fdf2f4] text-[#7a1228] border border-[#fecdd3] flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-[#fdf2f4] text-primary border border-[#fecdd3] flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-lg">trending_down</span>
             </div>
           </div>
@@ -563,7 +563,7 @@ export const FinancialReportsView: React.FC = () => {
               className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold border ${
                 isSurplus
                   ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                  : 'bg-[#fdf2f4] border-[#fecdd3] text-[#7a1228]'
+                  : 'bg-[#fdf2f4] border-[#fecdd3] text-primary'
               }`}
             >
               <span className="material-symbols-outlined text-lg">
@@ -574,7 +574,7 @@ export const FinancialReportsView: React.FC = () => {
           <div className="mt-3">
             <div
               className={`text-2xl font-black tracking-tight font-mono ${
-                isSurplus ? 'text-emerald-800' : 'text-[#7a1228]'
+                isSurplus ? 'text-emerald-800' : 'text-primary'
               }`}
             >
               {isSurplus ? '+' : ''}
@@ -593,7 +593,7 @@ export const FinancialReportsView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Liquid Cash Position
             </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 border border-blue-300 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-lg">savings</span>
             </div>
           </div>
@@ -617,7 +617,7 @@ export const FinancialReportsView: React.FC = () => {
             onClick={() => setActiveReportTab('INCOME_EXPENDITURE')}
             className={`py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'INCOME_EXPENDITURE'
-                ? 'border-[#7a1228] text-[#7a1228]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -629,7 +629,7 @@ export const FinancialReportsView: React.FC = () => {
             onClick={() => setActiveReportTab('COLLECTIONS_ANALYSIS')}
             className={`py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'COLLECTIONS_ANALYSIS'
-                ? 'border-[#7a1228] text-[#7a1228]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -641,7 +641,7 @@ export const FinancialReportsView: React.FC = () => {
             onClick={() => setActiveReportTab('CASH_POSITION')}
             className={`py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'CASH_POSITION'
-                ? 'border-[#7a1228] text-[#7a1228]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -653,7 +653,7 @@ export const FinancialReportsView: React.FC = () => {
             onClick={() => setActiveReportTab('INTERNAL_CONTROLS')}
             className={`py-3 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'INTERNAL_CONTROLS'
-                ? 'border-[#7a1228] text-[#7a1228]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -767,7 +767,7 @@ export const FinancialReportsView: React.FC = () => {
 
             {/* Outflows Section Banner */}
             <div className="mt-8">
-              <div className="flex items-center justify-between bg-[#7a1228] text-white px-4 py-2.5 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between bg-primary text-white px-4 py-2.5 rounded-lg shadow-sm">
                 <span className="text-sm font-black uppercase tracking-wider">
                   B. OPERATING EXPENDITURES BY COST CENTER
                 </span>
@@ -784,7 +784,7 @@ export const FinancialReportsView: React.FC = () => {
                   >
                     <div>
                       <div className="flex items-center gap-2.5">
-                        <span className="font-mono text-xs font-black text-white px-2.5 py-0.5 rounded bg-[#7a1228] shadow-2xs">
+                        <span className="font-mono text-xs font-black text-white px-2.5 py-0.5 rounded bg-primary shadow-2xs">
                           {vh.code}
                         </span>
                         <span className="font-bold text-on-surface">{vh.label}</span>
@@ -810,7 +810,7 @@ export const FinancialReportsView: React.FC = () => {
                 </span>
                 <div
                   className={`text-2xl font-black font-mono mt-0.5 ${
-                    isSurplus ? 'text-emerald-800' : 'text-[#7a1228]'
+                    isSurplus ? 'text-emerald-800' : 'text-primary'
                   }`}
                 >
                   {isSurplus ? '+' : ''}
@@ -854,11 +854,11 @@ export const FinancialReportsView: React.FC = () => {
               </p>
             </div>
 
-            <div className="card p-5 bg-surface border border-[#7a1228]/30 rounded-2xl shadow-sm">
-              <span className="text-xs font-semibold text-[#7a1228] uppercase tracking-wider">
+            <div className="card p-5 bg-surface border border-primary/30 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-primary uppercase tracking-wider">
                 Outstanding Fee Arrears
               </span>
-              <div className="text-2xl font-black text-[#7a1228] font-mono mt-2">
+              <div className="text-2xl font-black text-primary font-mono mt-2">
                 {formatKes(financeSummary?.totalOutstanding ?? defaultersData?.totalOutstandingBalance ?? 0)}
               </div>
               <p className="text-xs font-bold text-[#7a1228] mt-1">
@@ -879,7 +879,7 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-on-surface">Safaricom M-Pesa</span>
-                  <span className="material-symbols-outlined text-emerald-700">smartphone</span>
+                  <span className="material-symbols-outlined text-primary">smartphone</span>
                 </div>
                 <div className="text-lg font-black font-mono text-on-surface">
                   {formatKes(paymentChannelsBreakdown.mpesa)}
@@ -892,7 +892,7 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-on-surface">Bank Transfer / KCB</span>
-                  <span className="material-symbols-outlined text-[#7a1228]">account_balance</span>
+                  <span className="material-symbols-outlined text-primary">account_balance</span>
                 </div>
                 <div className="text-lg font-black font-mono text-on-surface">
                   {formatKes(paymentChannelsBreakdown.bank)}
@@ -905,7 +905,7 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-on-surface">Cash Desk (Cashier)</span>
-                  <span className="material-symbols-outlined text-amber-700">payments</span>
+                  <span className="material-symbols-outlined text-primary">payments</span>
                 </div>
                 <div className="text-lg font-black font-mono text-on-surface">
                   {formatKes(paymentChannelsBreakdown.cash)}
@@ -918,7 +918,7 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-on-surface">Cheques & Drafts</span>
-                  <span className="material-symbols-outlined text-purple-700">receipt</span>
+                  <span className="material-symbols-outlined text-primary">receipt</span>
                 </div>
                 <div className="text-lg font-black font-mono text-on-surface">
                   {formatKes(paymentChannelsBreakdown.cheque)}
@@ -938,7 +938,7 @@ export const FinancialReportsView: React.FC = () => {
                   Recurrent expenditure monitoring across private school operational areas
                 </p>
               </div>
-              <div className="text-xs font-black text-[#7a1228] font-mono">
+              <div className="text-xs font-black text-primary font-mono">
                 Total Outflows: {formatKes(totalActualSpent)}
               </div>
             </div>
@@ -956,7 +956,7 @@ export const FinancialReportsView: React.FC = () => {
                 <tbody className="divide-y divide-outline-variant/20">
                   {costCenterSummaryRows.map((r) => (
                     <tr key={r.code} className="hover:bg-surface-variant/10 transition-colors">
-                      <td className="py-3 px-4 font-mono font-black text-[#7a1228]">{r.code}</td>
+                      <td className="py-3 px-4 font-mono font-black text-primary">{r.code}</td>
                       <td className="py-3 px-4">
                         <div className="font-bold text-on-surface">{r.label}</div>
                         <div className="text-[11px] text-on-surface-variant">{r.description}</div>
@@ -990,7 +990,7 @@ export const FinancialReportsView: React.FC = () => {
                     Reconciled liquid balances available across institutional clearing accounts
                   </p>
                 </div>
-                <div className="w-8 h-8 rounded-lg bg-[#fdf2f4] text-[#7a1228] border border-[#fecdd3] flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-[#fdf2f4] text-primary border border-[#fecdd3] flex items-center justify-center font-bold">
                   <span className="material-symbols-outlined text-lg">account_balance</span>
                 </div>
               </div>
@@ -998,7 +998,7 @@ export const FinancialReportsView: React.FC = () => {
               <div className="space-y-4 mt-6">
                 <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#fdf2f4] text-[#7a1228] border border-[#fecdd3] flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-[#fdf2f4] text-primary border border-[#fecdd3] flex items-center justify-center font-bold">
                       <span className="material-symbols-outlined">account_balance</span>
                     </div>
                     <div>
@@ -1014,7 +1014,7 @@ export const FinancialReportsView: React.FC = () => {
 
                 <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary flex items-center justify-center font-bold">
                       <span className="material-symbols-outlined">smartphone</span>
                     </div>
                     <div>
@@ -1030,7 +1030,7 @@ export const FinancialReportsView: React.FC = () => {
 
                 <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary flex items-center justify-center font-bold">
                       <span className="material-symbols-outlined">payments</span>
                     </div>
                     <div>
@@ -1046,7 +1046,7 @@ export const FinancialReportsView: React.FC = () => {
 
                 <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between">
                   <span className="text-sm font-bold text-on-surface">Total Liquid Funds Available</span>
-                  <span className="text-lg font-black text-[#7a1228] font-mono">{formatKes(totalLiquid)}</span>
+                  <span className="text-lg font-black text-primary font-mono">{formatKes(totalLiquid)}</span>
                 </div>
               </div>
             </div>
@@ -1057,16 +1057,16 @@ export const FinancialReportsView: React.FC = () => {
                   <h3 className="text-base font-bold text-on-surface">Fee Receivables & Liquidity Ratios</h3>
                   <p className="text-xs text-on-surface-variant">Short-term assets and learner account balances</p>
                 </div>
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-primary-fixed text-on-primary-fixed border border-primary flex items-center justify-center font-bold">
                   <span className="material-symbols-outlined text-lg">assessment</span>
                 </div>
               </div>
 
               <div className="space-y-4 mt-6">
-                <div className="p-4 rounded-xl border border-[#7a1228]/30 bg-surface-variant/10">
+                <div className="p-4 rounded-xl border border-primary/30 bg-surface-variant/10">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-on-surface uppercase">Uncollected Fee Arrears</span>
-                    <span className="text-base font-black text-[#7a1228] font-mono">
+                    <span className="text-base font-black text-primary font-mono">
                       {formatKes(financeSummary?.totalOutstanding ?? defaultersData?.totalOutstandingBalance ?? 0)}
                     </span>
                   </div>
@@ -1169,13 +1169,13 @@ export const FinancialReportsView: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 p-4 rounded-xl bg-[#fdf2f4] border border-[#fecdd3] text-xs text-[#7a1228]">
+            <div className="mt-6 p-4 rounded-xl bg-[#fdf2f4] border border-[#fecdd3] text-xs text-primary">
               <div className="font-bold flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">info</span>
                 Directorate Governance & System Audit Log
               </div>
               <p className="mt-1 font-medium">
-                All financial actions in SmartShule generate an immutable audit trail recording user identifiers, IP addresses, transaction timestamps, receipt numbers, and fee structure modifications to ensure full institutional accountability.
+                All financial actions in Grace Seeds School generate an immutable audit trail recording user identifiers, IP addresses, transaction timestamps, receipt numbers, and fee structure modifications to ensure full institutional accountability.
               </p>
             </div>
           </div>

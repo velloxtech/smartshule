@@ -23,22 +23,22 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
       case 'EXCELLENT':
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">Excellent (Over 80%)</span>;
       case 'GOOD':
-        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800">Good (65% - 79%)</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-primary-fixed text-on-primary-fixed">Good (65% - 79%)</span>;
       case 'AVERAGE':
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">Average (50% - 64%)</span>;
       case 'NEEDS_REMEDIATION':
         return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">Needs Remediation (&lt; 50%)</span>;
       default:
-        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700">Satisfactory</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-surface-container-low text-slate-700">Satisfactory</span>;
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         
         {/* Modal Header */}
-        <div className="bg-[#7a1228] text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-2xl text-rose-100">visibility</span>
             <div>
@@ -68,7 +68,7 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs text-slate-700">
           
           {/* Timeline & Teacher Metadata Banner */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-surface border border-slate-200 rounded-xl text-center">
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-black block">Date</span>
               <strong className="text-slate-800 text-xs">{log.date}</strong>
@@ -94,7 +94,7 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
           {/* Curriculum Coverage Focus */}
           <div className="space-y-2 p-3.5 bg-rose-50/40 border border-rose-100 rounded-xl">
             <div className="flex items-center justify-between">
-              <span className="font-black text-[#7a1228] uppercase text-[11px] tracking-wider">
+              <span className="font-black text-primary uppercase text-[11px] tracking-wider">
                 {log.strand} &mdash; {log.subStrand}
               </span>
             </div>
@@ -120,7 +120,7 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
             <div className="space-y-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl">
               <div className="flex items-center justify-between border-b border-amber-200 pb-2">
                 <div className="flex items-center gap-1.5 font-black text-amber-950 text-xs uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-amber-700 text-base">psychology</span>
+                  <span className="material-symbols-outlined text-primary text-base">psychology</span>
                   Teacher Self-Reflection Dossier
                 </div>
                 {getComprehensionBadge(reflection.comprehensionLevel)}
@@ -175,14 +175,14 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-400 text-xs italic">
+            <div className="p-3 bg-surface border border-slate-200 rounded-xl text-center text-slate-400 text-xs italic">
               Awaiting supervisor / Head Teacher leadership endorsement.
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <div className="px-6 py-3.5 bg-surface border-t border-slate-200 flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -197,7 +197,7 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
                 onClose();
                 onEdit(log);
               }}
-              className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#901530] transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <span className="material-symbols-outlined text-[16px]">edit</span>
               <span>Edit Log</span>

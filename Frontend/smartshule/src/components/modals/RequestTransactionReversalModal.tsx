@@ -211,7 +211,7 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
                 <button
                   type="button"
                   onClick={loadPosition}
-                  className="px-2 py-0.5 rounded bg-surface-container hover:bg-slate-300 text-on-surface-variant font-bold cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold cursor-pointer"
                 >
                   Retry
                 </button>
@@ -226,9 +226,9 @@ export const RequestTransactionReversalModal: React.FC<RequestTransactionReversa
                     KES {Number(accountPosition.financialPosition.outstandingBalance || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="p-2.5 bg-teal-50/70 rounded-lg border border-teal-200">
-                  <span className="block text-[10px] font-sans uppercase font-bold text-teal-900">Available Credit</span>
-                  <span className="text-sm font-black text-teal-800">
+                <div className="p-2.5 bg-primary-fixed/70 rounded-lg border border-primary">
+                  <span className="block text-[10px] font-sans uppercase font-bold text-on-primary-fixed">Available Credit</span>
+                  <span className="text-sm font-black text-on-primary-fixed">
                     KES {Number(accountPosition.financialPosition.overpaymentCredit || 0).toLocaleString()}
                   </span>
                 </div>

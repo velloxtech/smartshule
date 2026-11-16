@@ -114,7 +114,7 @@ export class SystemLogController {
       });
 
       const today = new Date().toISOString().split('T')[0];
-      const filename = `smartshule_system_logs_${today}.csv`;
+      const filename = `Grace_Seeds_School_system_logs_${today}.csv`;
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

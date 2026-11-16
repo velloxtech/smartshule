@@ -69,10 +69,10 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden border border-slate-200">
         
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-5 sm:p-6 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-5 sm:p-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center font-bold text-white shadow-inner">
               <span className="material-symbols-outlined text-[28px]">gavel</span>
@@ -99,12 +99,12 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-4 sm:px-6 overflow-x-auto gap-2 shrink-0 text-xs font-semibold">
+        <div className="flex items-center border-b border-slate-200 bg-surface px-4 sm:px-6 overflow-x-auto gap-2 shrink-0 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('terms')}
             className={`py-3.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'terms'
-                ? 'border-[#7a1228] text-[#7a1228] font-bold'
+                ? 'border-primary text-primary font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -116,7 +116,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             onClick={() => setActiveTab('privacy')}
             className={`py-3.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'privacy'
-                ? 'border-[#7a1228] text-[#7a1228] font-bold'
+                ? 'border-primary text-primary font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -128,7 +128,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             onClick={() => setActiveTab('cookies')}
             className={`py-3.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'cookies'
-                ? 'border-[#7a1228] text-[#7a1228] font-bold'
+                ? 'border-primary text-primary font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -140,7 +140,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             onClick={() => setActiveTab('child_protection')}
             className={`py-3.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'child_protection'
-                ? 'border-[#7a1228] text-[#7a1228] font-bold'
+                ? 'border-primary text-primary font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -155,7 +155,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           {/* TAB 1: TERMS & CONDITIONS */}
           {activeTab === 'terms' && (
             <div className="space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+              <div className="bg-surface border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Document Reference</span>
                   <div className="font-bold text-slate-900">Grace Seeds School Educational Portal Terms of Service</div>
@@ -168,7 +168,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">1.</span> Acceptance of Terms & Educational Scope
+                  <span className="text-primary">1.</span> Acceptance of Terms & Educational Scope
                 </h3>
                 <p>
                   By accessing or utilizing the Grace Seeds School platform, you agree to be bound by these Terms and Conditions. Grace Seeds School is a Competency-Based Education (CBE) management and institutional administration platform serving schools, educators, learners, and parents across the Republic of Kenya.
@@ -180,7 +180,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">2.</span> Account Responsibilities & Credential Security
+                  <span className="text-primary">2.</span> Account Responsibilities & Credential Security
                 </h3>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li>Users are strictly responsible for maintaining the confidentiality of their login credentials (email, mobile phone number, and password).</li>
@@ -192,7 +192,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">3.</span> School Fees, Invoicing & Electronic Payments
+                  <span className="text-primary">3.</span> School Fees, Invoicing & Electronic Payments
                 </h3>
                 <p>
                   All financial transactions conducted via Lipa na M-Pesa Paybill, bank deposits, parent-forwarded payment verification, or direct cash office receipts are processed in Kenyan Shillings (KES).
@@ -206,7 +206,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">4.</span> Intellectual Property & Curriculum Materials
+                  <span className="text-primary">4.</span> Intellectual Property & Curriculum Materials
                 </h3>
                 <p>
                   All lesson plans, schemes of work, records of work covered, report cards, and customized CBE rubrics created on the platform remain the intellectual property of the respective teachers and the school, safeguarded under the <em>Copyright Act (Cap 130, Laws of Kenya)</em>. The Grace Seeds School software architecture, design, and algorithms are proprietary to Vellox Tech.
@@ -215,7 +215,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">5.</span> Governing Law & Dispute Resolution
+                  <span className="text-primary">5.</span> Governing Law & Dispute Resolution
                 </h3>
                 <p>
                   These terms are governed by and construed in accordance with the laws of the Republic of Kenya. Any disputes arising in connection with the platform shall be settled amicably through institutional consultation, or referred to mediation before competent courts in Kenya.
@@ -227,12 +227,12 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           {/* TAB 2: PRIVACY POLICY (KDPA 2019) */}
           {activeTab === 'privacy' && (
             <div className="space-y-4">
-              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-center justify-between">
+              <div className="bg-primary-fixed border border-primary rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Statutory Framework</span>
-                  <div className="font-bold text-indigo-950">Kenya Data Protection Act, 2019 (Act No. 24 of 2019)</div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Statutory Framework</span>
+                  <div className="font-bold text-on-primary-fixed">Kenya Data Protection Act, 2019 (Act No. 24 of 2019)</div>
                 </div>
-                <div className="text-right text-[11px] text-indigo-700">
+                <div className="text-right text-[11px] text-primary">
                   <div>ODPC Registered Controller</div>
                   <div>Article 31 of Constitution of Kenya</div>
                 </div>
@@ -240,7 +240,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">1.</span> Data Controller & Data Processor Identification
+                  <span className="text-primary">1.</span> Data Controller & Data Processor Identification
                 </h3>
                 <p>
                   <strong>Data Controller:</strong> The respective school institution (e.g., Grace Seeds School) responsible for collecting pupil, guardian, and staff information.
@@ -252,7 +252,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">2.</span> Lawful Bases for Data Processing
+                  <span className="text-primary">2.</span> Lawful Bases for Data Processing
                 </h3>
                 <p>In adherence to Section 30 of the Kenya Data Protection Act, we process personal data under:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
@@ -264,23 +264,23 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">3.</span> Data Subject Rights (Section 26, KDPA 2019)
+                  <span className="text-primary">3.</span> Data Subject Rights (Section 26, KDPA 2019)
                 </h3>
                 <p>Every student, parent, guardian, and educator possesses statutory rights under Kenyan law:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="bg-surface p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-900 text-xs">Right to Access</div>
                     <div className="text-[11px] text-slate-600 mt-0.5">Inspect personal information, attendance registers, and marks retained in the portal.</div>
                   </div>
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="bg-surface p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-900 text-xs">Right to Rectification</div>
                     <div className="text-[11px] text-slate-600 mt-0.5">Request prompt correction of inaccurate or outdated biodata or assessment records.</div>
                   </div>
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="bg-surface p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-900 text-xs">Right to Erasure & Archival</div>
                     <div className="text-[11px] text-slate-600 mt-0.5">Request soft deletion or de-identification of records following graduation, subject to statutory retention.</div>
                   </div>
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="bg-surface p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-900 text-xs">Right to Object & Restrict</div>
                     <div className="text-[11px] text-slate-600 mt-0.5">Object to unauthorized processing or unessential marketing notifications at any time.</div>
                   </div>
@@ -289,7 +289,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">4.</span> Data Security & Encryption Standards
+                  <span className="text-primary">4.</span> Data Security & Encryption Standards
                 </h3>
                 <p>
                   All data in transit is encrypted using 256-bit TLS/SSL protocols. Data at rest is isolated by school domain, protected by role-based access control (RBAC), and continuously tracked through tamper-evident audit trails.
@@ -298,7 +298,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">5.</span> Regulatory Contacts & ODPC
+                  <span className="text-primary">5.</span> Regulatory Contacts & ODPC
                 </h3>
                 <p>
                   For privacy queries or to lodge a statutory data subject request, contact the School Data Protection Desk at <span className="font-semibold text-slate-900">schoolgraceseeds@gmail.com</span> or the <strong>Office of the Data Protection Commissioner (ODPC) Kenya</strong> (Britam Tower, Upper Hill, Nairobi; Email: <span className="font-semibold text-slate-900">complaints@odpc.go.ke</span>).
@@ -322,14 +322,14 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               </div>
 
               <p>
-                Grace Seeds School utilizes cookies and modern browser storage technologies (such as <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-xs">localStorage</code>) to deliver high-performance, secure school management operations. We <strong>do not</strong> use third-party advertising cookies or sell user telemetry.
+                Grace Seeds School utilizes cookies and modern browser storage technologies (such as <code className="bg-surface-container-low px-1 py-0.5 rounded text-slate-800 font-mono text-xs">localStorage</code>) to deliver high-performance, secure school management operations. We <strong>do not</strong> use third-party advertising cookies or sell user telemetry.
               </p>
 
               {/* Cookie Categories Interactive Configuration */}
               <div className="space-y-3">
                 
                 {/* Category 1: Strictly Necessary */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-start justify-between gap-4">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-surface flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 text-sm">Strictly Necessary Cookies</span>
@@ -341,7 +341,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                       Required for basic platform security, maintaining active authenticated sessions (JWT tokens), verifying CSRF tokens, and authenticating user role permissions. Cannot be deactivated.
                     </p>
                     <div className="text-[11px] text-slate-500 font-mono mt-1.5">
-                      Examples: <code className="bg-slate-200/60 px-1 py-0.5 rounded">authToken</code>, <code className="bg-slate-200/60 px-1 py-0.5 rounded">sessionId</code>
+                      Examples: <code className="bg-surface-container/60 px-1 py-0.5 rounded">authToken</code>, <code className="bg-surface-container/60 px-1 py-0.5 rounded">sessionId</code>
                     </div>
                   </div>
                   <div className="pt-1">
@@ -349,17 +349,17 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                       type="checkbox"
                       checked={true}
                       disabled
-                      className="w-5 h-5 rounded text-[#7a1228] opacity-60 cursor-not-allowed"
+                      className="w-5 h-5 rounded text-primary opacity-60 cursor-not-allowed"
                     />
                   </div>
                 </div>
 
                 {/* Category 2: Functional & Preferences */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-start justify-between gap-4 hover:border-slate-300 transition-colors">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-surface-container-lowest flex items-start justify-between gap-4 hover:border-slate-300 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 text-sm">Functional & Preference Cookies</span>
-                      <span className="text-[10px] bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-surface-container-low text-slate-700 font-medium px-2 py-0.5 rounded-full">
                         Optional
                       </span>
                     </div>
@@ -367,7 +367,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                       Remembers your personal workspace settings, including current academic term filters, sidebar collapse state, and table pagination sizes for optimal user experience.
                     </p>
                     <div className="text-[11px] text-slate-500 font-mono mt-1.5">
-                      Examples: <code className="bg-slate-100 px-1 py-0.5 rounded">selectedTermId</code>, <code className="bg-slate-100 px-1 py-0.5 rounded">sidebarCollapsed</code>
+                      Examples: <code className="bg-surface-container-low px-1 py-0.5 rounded">selectedTermId</code>, <code className="bg-surface-container-low px-1 py-0.5 rounded">sidebarCollapsed</code>
                     </div>
                   </div>
                   <div className="pt-1">
@@ -375,17 +375,17 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                       type="checkbox"
                       checked={prefFunctional}
                       onChange={(e) => setPrefFunctional(e.target.checked)}
-                      className="w-5 h-5 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer"
+                      className="w-5 h-5 rounded text-primary focus:ring-primary cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* Category 3: Performance & Diagnostics */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-start justify-between gap-4 hover:border-slate-300 transition-colors">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-surface-container-lowest flex items-start justify-between gap-4 hover:border-slate-300 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 text-sm">Performance & Diagnostics Telemetry</span>
-                      <span className="text-[10px] bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-surface-container-low text-slate-700 font-medium px-2 py-0.5 rounded-full">
                         Optional
                       </span>
                     </div>
@@ -398,7 +398,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                       type="checkbox"
                       checked={prefPerformance}
                       onChange={(e) => setPrefPerformance(e.target.checked)}
-                      className="w-5 h-5 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer"
+                      className="w-5 h-5 rounded text-primary focus:ring-primary cursor-pointer"
                     />
                   </div>
                 </div>
@@ -410,13 +410,13 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleAcceptAll}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-surface-container-low hover:bg-surface-container text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                   >
                     Accept All
                   </button>
                   <button
                     onClick={handleEssentialOnly}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-surface-container-low hover:bg-surface-container text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                   >
                     Essential Only
                   </button>
@@ -431,7 +431,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   )}
                   <button
                     onClick={handleSaveCookiePreferences}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">save</span>
                     <span>Save Cookie Preferences</span>
@@ -457,7 +457,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">1.</span> Mandatory Parental/Guardian Statutory Consent
+                  <span className="text-primary">1.</span> Mandatory Parental/Guardian Statutory Consent
                 </h3>
                 <p>
                   In compliance with Section 33 of the <em>Data Protection Act (2019)</em>, a data controller shall not process personal data relating to a child unless consent is given by the child’s parent or legal guardian.
@@ -475,7 +475,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">2.</span> Prohibition on Commercialization & Profiling
+                  <span className="text-primary">2.</span> Prohibition on Commercialization & Profiling
                 </h3>
                 <p>
                   Grace Seeds School firmly adheres to statutory prohibitions: <strong>Learner data is never monetized, sold, rented, or shared with commercial advertising networks</strong>. Learner assessment analytics are used solely for educational advancement, competency evaluation, and statutory reporting to the Ministry of Education.
@@ -484,7 +484,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">3.</span> Parent Access & Record Rectification
+                  <span className="text-primary">3.</span> Parent Access & Record Rectification
                 </h3>
                 <p>
                   Parents and verified legal guardians hold the statutory right to view, inspect, and request corrections to their child’s records at any time through the Parent Portal or by contacting the school administration directly.
@@ -493,7 +493,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <section className="space-y-2">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-[#7a1228]">4.</span> Graduation & Record Archival Policies
+                  <span className="text-primary">4.</span> Graduation & Record Archival Policies
                 </h3>
                 <p>
                   Following learner graduation, transfer, or completion of junior secondary schooling, learner records are placed into an encrypted, read-only institutional archive in accordance with the <em>Public Archives and Documentation Service Act (Cap 19)</em> and Ministry of Education record-keeping guidelines.
@@ -505,14 +505,14 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+        <div className="p-4 bg-surface border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
             <span>Grace Seeds School · Vellox Tech Regulatory Compliance Standard</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+            className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-slate-800 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
           >
             Close
           </button>

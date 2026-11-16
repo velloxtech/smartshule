@@ -13,6 +13,15 @@ import { CBCAssessmentController } from '../../src/infrastructure/http/controlle
 import { Timetable } from '../../src/core/domain/timetable/Timetable';
 import { CalendarPlanningController } from '../../src/infrastructure/http/controllers/CalendarPlanningController';
 
+async function publishProposal(container: AppContainer, areaId: string, result: any, schoolId: string): Promise<any> {
+ if(!result.proposalId)return result;
+ const actor={userId:'curriculum-reviewer',role:UserRole.ADMIN,schoolId};
+ const queue=await container.curriculumProposals.list(actor,areaId);
+ const reviewed=await container.curriculumProposals.review(actor,areaId,result.proposalId,queue.revision,true,'Validated curriculum for the assigned learning area');
+ const p=reviewed.proposals.find((p:any)=>p.id===result.proposalId);
+ return {...result,id:p.publishedId};
+}
+
 describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipeline', () => {
   let container: AppContainer;
   const schoolId = 'school-001';
@@ -606,23 +615,26 @@ describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipe
           else controller.createStrand(request, response, reject);
         }).catch(reject);
       });
-      const result = await save();
+      let result = await save();
       expect(result.success).toBe(true);
       expect(result.data.learningAreaId).toBe('la-math');
       expect(result.data.gradeLevel).toBe(CBCGradeLevel.GRADE_7);
       expect(result.data.title).toBe('Algebra');
       expect(result.data.id).not.toBe(foreign.id);
       expect((await save()).data.id).toBe(result.data.id);
+      result.data=await publishProposal(container,'la-math',result.data,schoolId);
       expect(await container.CBCUseCases.getStrandsByLearningArea('la-math', CBCGradeLevel.GRADE_7)).toHaveLength(1);
       expect(await container.CBCUseCases.getStrandsByLearningArea('la-math', CBCGradeLevel.GRADE_4)).toHaveLength(0);
       const planningScope = { schoolId, academicYearId, termId, classRoomId: 'class-g7', learningAreaId: 'la-math' };
       const initialCatalogue = await container.termAllocations.catalogue(request.user, planningScope);
       expect(initialCatalogue.map(s => s.id)).toEqual([result.data.id]);
       expect(initialCatalogue[0].subStrands).toEqual([]);
-      const sub = await container.CBCUseCases.createSubStrand({ strandId: result.data.id, code: 'MAT-01.1', title: 'Expressions', specificLearningOutcomes: ['Form algebraic expressions'] }, request.user);
+      let sub = await container.CBCUseCases.createSubStrand({ strandId: result.data.id, code: 'MAT-01.1', title: 'Expressions', specificLearningOutcomes: ['Form algebraic expressions'] }, request.user);
+      sub=await publishProposal(container,'la-math',sub,schoolId);
       const refreshedCatalogue = await container.termAllocations.catalogue(request.user, planningScope);
       expect(refreshedCatalogue[0].subStrands).toEqual([expect.objectContaining({ id: sub.id, title: 'Expressions', specificLearningOutcomes: ['Form algebraic expressions'] })]);
-      await container.CBCUseCases.updateSubStrand(sub.id, { title: 'Algebraic expressions' }, request.user);
+      const edit=await container.CBCUseCases.updateSubStrand(sub.id, { title: 'Algebraic expressions' }, request.user);
+      await publishProposal(container,'la-math',edit,schoolId);
       expect((await container.termAllocations.catalogue(request.user, planningScope))[0].subStrands[0].title).toBe('Algebraic expressions');
       const foreignSub = await container.CBCUseCases.createSubStrand({ strandId: foreign.id, code: 'MAT-01.1', title: 'Foreign topic', specificLearningOutcomes: ['Other subject outcome'] });
       const remove = (id: string) => new Promise<any>((resolve, reject) => {
@@ -635,8 +647,8 @@ describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipe
         }).catch(reject);
       });
       await expect(remove(foreignSub.id)).rejects.toThrow(ForbiddenError);
-      expect((await remove(sub.id)).success).toBe(true);
-      expect(await container.CBCAssessmentRepository.findSubStrandById(sub.id)).toBeNull();
+      await expect(remove(sub.id)).rejects.toThrow(ForbiddenError);
+      expect(await container.CBCAssessmentRepository.findSubStrandById(sub.id)).not.toBeNull();
       expect(await container.CBCAssessmentRepository.findSubStrandById(foreignSub.id)).not.toBeNull();
     });
 
@@ -646,8 +658,10 @@ describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipe
       await container.academicUseCases.assignSubjectTeacher({ schoolId, academicYearId, classRoomId: 'class-g7', learningAreaId: 'la-math', teacherId: 'teacher-3', role: 'SUBJECT_TEACHER', effectiveFrom: '2026-01-05' });
       const english = await container.CBCUseCases.createStrand({ learningAreaId: 'la-eng', gradeLevel: CBCGradeLevel.GRADE_7, code: 'ENG1', title: 'Reading' });
       const englishSub = await container.CBCUseCases.createSubStrand({ strandId: english.id, code: 'ENG1.1', title: 'Fluency', specificLearningOutcomes: ['Read clearly'] });
-      const math = await container.CBCUseCases.createStrand({ learningAreaId: 'la-math', gradeLevel: CBCGradeLevel.GRADE_7, code: 'M1', title: 'Numbers' }, actor);
-      const sub = await container.CBCUseCases.createSubStrand({ strandId: math.id, code: 'M1.1', title: 'Fractions', specificLearningOutcomes: ['Compare fractions'] }, actor);
+      const mathProposal = await container.CBCUseCases.createStrand({ learningAreaId: 'la-math', gradeLevel: CBCGradeLevel.GRADE_7, code: 'M1', title: 'Numbers' }, actor);
+      const math=await publishProposal(container,'la-math',mathProposal,schoolId);
+      const subProposal = await container.CBCUseCases.createSubStrand({ strandId: math.id, code: 'M1.1', title: 'Fractions', specificLearningOutcomes: ['Compare fractions'] }, actor);
+      const sub=await publishProposal(container,'la-math',subProposal,schoolId);
       const access = new TeacherAssignmentAccess(container.academicRepository, container.teacherRepository);
       expect(await access.can(actor, { academicYearId, termId, classRoomId: 'class-g7', streamId: 'stream-g7-a', learningAreaId: 'la-eng' })).toBe(true);
       expect(await container.CBCUseCases.getStrandsByLearningArea('la-eng')).toHaveLength(1);
@@ -672,8 +686,8 @@ describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipe
       for (const attempt of attempts) await expect(attempt()).rejects.toThrow(ForbiddenError);
       await container.CBCUseCases.updateStrand(math.id, { title: 'Number concepts' }, actor);
       await container.CBCUseCases.updateSubStrand(sub.id, { title: 'Comparing fractions' }, actor);
-      await container.CBCUseCases.deleteSubStrand(sub.id, actor);
-      await container.CBCUseCases.deleteStrand(math.id, actor);
+      await expect(container.CBCUseCases.deleteSubStrand(sub.id, actor)).rejects.toThrow(ForbiddenError);
+      await expect(container.CBCUseCases.deleteStrand(math.id, actor)).rejects.toThrow(ForbiddenError);
       expect((await container.CBCUseCases.getStrandsByLearningArea('la-eng'))[0].title).toBe('Reading');
       expect((await container.CBCUseCases.getSubStrandsByStrand(english.id))[0].title).toBe('Fluency');
     });

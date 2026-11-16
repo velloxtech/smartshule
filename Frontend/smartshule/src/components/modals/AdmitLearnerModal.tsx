@@ -523,7 +523,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   }}
                   className={`text-left p-1.5 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-white/20 text-white border-b-2 border-amber-300'
+                      ? 'bg-white/20 text-white border-b-2 border-primary'
                       : isCompleted
                       ? 'text-rose-100 hover:bg-white/10'
                       : 'text-rose-200/60'
@@ -567,7 +567,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in">
               <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
                   badge
                 </span>
                 <div>
@@ -618,7 +618,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={admissionNumber}
                     onChange={(e) => setAdmissionNumber(e.target.value)}
                     placeholder="e.g. 0001"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Auto-generated 4-digit number (e.g. 0001, digits only)</span>
                 </div>
@@ -631,7 +631,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={nemisUpi}
                     onChange={(e) => setNemisUpi(e.target.value)}
                     placeholder="e.g. NEMIS-K9281A (leave blank if pending)"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Ministry of Education UPI (not auto-generated)</span>
                 </div>
@@ -648,7 +648,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="e.g. Kiprono"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -660,7 +660,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={middleName}
                     onChange={(e) => setMiddleName(e.target.value)}
                     placeholder="e.g. David"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -673,7 +673,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="e.g. Omondi"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
               </div>
@@ -686,7 +686,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   >
                     <option value="MALE">Boy (Male)</option>
                     <option value="FEMALE">Girl (Female)</option>
@@ -701,7 +701,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     required
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
               </div>
@@ -718,7 +718,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   value={birthCertNo}
                   onChange={(e) => setBirthCertNo(e.target.value)}
                   placeholder="e.g. 10482932 or leave blank if pending"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
                 <span className="text-[10px] text-on-surface-variant">Ministry of Civil Registration entry number (optional if pending document)</span>
               </div>
@@ -736,7 +736,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <select
                       value={selectedCounty}
                       onChange={(e) => setSelectedCounty(e.target.value)}
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     >
                       {KENYAN_COUNTIES.map((c) => (
                         <option key={c.code} value={c.name}>
@@ -752,7 +752,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <select
                       value={selectedSubCounty}
                       onChange={(e) => setSelectedSubCounty(e.target.value)}
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     >
                       {countyObj.subCounties.map((sc) => (
                         <option key={sc} value={sc}>
@@ -770,7 +770,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in">
               <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[20px] text-emerald-700 shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
                   accessible_forward
                 </span>
                 <div>
@@ -787,7 +787,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <select
                     value={selectedClassId}
                     onChange={(e) => setSelectedClassId(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   >
                     {classes.length === 0 ? (
                       <option value="">No classes configured</option>
@@ -810,7 +810,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <select
                     value={streamId}
                     onChange={(e) => setStreamId(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   >
                     <option value="">-- No Stream (Single Class) --</option>
                     {streams.map((s) => (
@@ -826,7 +826,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-on-surface space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-amber-700 text-lg">receipt_long</span>
+                    <span className="material-symbols-outlined text-primary text-lg">receipt_long</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
                       Class Term Fee Schedule — {matchedFeeStructure?.title || `${currentClass?.name || gradeLevel.replace('_', ' ')} Fee Structure`}
                     </span>
@@ -887,7 +887,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 {/* Dedicated Admission Fee Guarantee (One-Time) */}
                 <div className="p-3 bg-white/95 rounded-xl border border-emerald-200 flex items-center justify-between shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+                    <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0 border border-primary">
                       <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                     </div>
                     <div>
@@ -934,7 +934,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     </label>
                   ) : (
                     <div className="flex items-start gap-2.5 text-xs text-on-surface-variant">
-                      <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">lock</span>
+                      <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">lock</span>
                       <div>
                         <span className="font-bold text-on-surface block">Billing Authorization Deferred</span>
                         <span className="text-[11px] text-on-surface-variant leading-relaxed block mt-0.5">
@@ -998,7 +998,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={sneNotes}
                     onChange={(e) => setSneNotes(e.target.value)}
                     placeholder="Specify learning accommodations: e.g. Front-row seating, extra 15 mins for CBA formative tasks, Braille notes..."
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
               )}
@@ -1014,7 +1014,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={medicalConditions}
                     onChange={(e) => setMedicalConditions(e.target.value)}
                     placeholder="e.g. Asthma, peanut allergy, none"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -1026,7 +1026,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={emergencyClinic}
                     onChange={(e) => setEmergencyClinic(e.target.value)}
                     placeholder="e.g. Gertrude's Children's Hospital"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
               </div>
@@ -1036,8 +1036,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           {/* ================= STEP 3: GUARDIAN BIODATA & SAFEGUARDING ================= */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl text-xs text-sky-900 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[20px] text-sky-700 shrink-0 mt-0.5">
+              <div className="p-3 bg-primary-fixed/80 border border-primary rounded-xl text-xs text-on-primary-fixed flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
                   family_restroom
                 </span>
                 <div>
@@ -1057,7 +1057,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianName}
                     onChange={(e) => setGuardianName(e.target.value)}
                     placeholder="e.g. Mary Wambui Kariuki"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   />
                 </div>
                 <div>
@@ -1067,7 +1067,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <select
                     value={guardianRelationship}
                     onChange={(e) => setGuardianRelationship(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                   >
                     <option value="MOTHER">Mother</option>
                     <option value="FATHER">Father</option>
@@ -1090,7 +1090,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianNationalId}
                     onChange={(e) => setGuardianNationalId(e.target.value)}
                     placeholder="e.g. 28941029"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-on-surface-variant">Kenyan National Identity Card number</span>
                 </div>
@@ -1104,7 +1104,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     value={guardianPhone}
                     onChange={(e) => setGuardianPhone(e.target.value)}
                     placeholder="+2547XXXXXXXX"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white font-mono"
+                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                   />
                   <span className="text-[10px] text-emerald-700 font-medium">For instant fee receipts, morning alerts & portal login (username & default password)</span>
                 </div>
@@ -1119,7 +1119,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   value={guardianEmail}
                   onChange={(e) => setGuardianEmail(e.target.value)}
                   placeholder="e.g. parent.guardian@gmail.com (Optional)"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
 
@@ -1139,7 +1139,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       value={alternateContactName}
                       onChange={(e) => setAlternateContactName(e.target.value)}
                       placeholder="e.g. Uncle John Kariuki"
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     />
                   </div>
                   <div>
@@ -1151,7 +1151,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       value={alternateContactPhone}
                       onChange={(e) => setAlternateContactPhone(e.target.value)}
                       placeholder="+2547XXXXXXXX"
-                      className="w-full bg-white border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary font-mono"
+                      className="w-full bg-surface border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-primary font-mono"
                     />
                   </div>
                 </div>
@@ -1267,7 +1267,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </div>
                 <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl">
                   <div className="font-bold text-on-surface flex items-center gap-1.5 mb-1">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">shield</span>
+                    <span className="material-symbols-outlined text-[16px] text-primary">shield</span>
                     <span>Article 53(2) Best Interests Standard</span>
                   </div>
                   <p className="text-on-surface-variant">
@@ -1368,7 +1368,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-5 py-2.5 bg-primary hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
+                className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
               >
                 <span>Continue</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -1377,7 +1377,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
+                className="px-6 py-2.5 bg-primary hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
               >
                 <span className={`material-symbols-outlined text-[18px] ${isSubmitting ? 'animate-spin' : ''}`}>
                   {isSubmitting ? 'sync' : 'how_to_reg'}
@@ -1406,7 +1406,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               <h1 className="font-headline-lg text-headline-lg text-on-surface">
                 Admit New CBC Learner
               </h1>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">verified</span>
                 <span>Article 53 & Basic Education Act</span>
               </span>

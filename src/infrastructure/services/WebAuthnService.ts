@@ -18,7 +18,7 @@ export interface WebAuthnConfig {
 }
 
 export class WebAuthnService {
-  private readonly defaultRpName = 'SmartShule';
+  private readonly defaultRpName = 'Grace Seeds School';
   private readonly defaultRpId = 'localhost';
   private readonly defaultOrigin = 'http://localhost:5173';
 

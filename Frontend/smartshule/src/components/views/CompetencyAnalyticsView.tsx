@@ -88,11 +88,11 @@ export const CompetencyAnalyticsView: React.FC = () => {
             <div className="p-5 rounded-xl bg-surface-container-lowest border border-outline-variant/30">
               <span className="text-xs text-on-surface-variant uppercase font-semibold">Overall Mastery Rate</span>
               <div className="text-3xl font-bold text-primary font-data-mono mt-1">{masteryRate}%</div>
-              <span className="text-xs text-secondary font-semibold mt-1 block">EE + ME (Above KICD Target)</span>
+              <span className="text-xs text-success font-semibold mt-1 block">EE + ME (Above KICD Target)</span>
             </div>
             <div className="p-5 rounded-xl bg-surface-container-lowest border border-outline-variant/30">
               <span className="text-xs text-on-surface-variant uppercase font-semibold">Exceeding Expectations</span>
-              <div className="text-3xl font-bold text-secondary font-data-mono mt-1">{eePct}%</div>
+              <div className="text-3xl font-bold text-success font-data-mono mt-1">{eePct}%</div>
               <span className="text-xs text-on-surface-variant mt-1 block">{ee} Formative Outcomes</span>
             </div>
             <div className="p-5 rounded-xl bg-surface-container-lowest border border-outline-variant/30">
@@ -115,7 +115,7 @@ export const CompetencyAnalyticsView: React.FC = () => {
                 <p className="text-xs text-on-surface-variant">Live breakdown of EE, ME, AE, and BE rubric scores</p>
               </div>
               <div className="flex items-center gap-3 text-xs font-semibold">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-secondary"></span> EE</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-success"></span> EE</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-primary"></span> ME</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-700"></span> AE</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-error"></span> BE</span>
@@ -134,7 +134,7 @@ export const CompetencyAnalyticsView: React.FC = () => {
                   <div key={s.name} className="space-y-1">
                     <div className="flex justify-between text-xs font-medium">
                       <span className="text-on-surface font-semibold">{s.name}</span>
-                      <span className="text-secondary font-bold font-data-mono">
+                      <span className="text-success font-bold font-data-mono">
                         {s.total > 0 ? (
                           <>
                             {s.ee + s.me}% Proficient (EE {s.ee}% · ME {s.me}%)
@@ -147,7 +147,7 @@ export const CompetencyAnalyticsView: React.FC = () => {
                     <div className="w-full h-3 rounded-full bg-surface-container-high overflow-hidden flex">
                       {s.total > 0 ? (
                         <>
-                          <div style={{ width: `${s.ee}%` }} className="bg-secondary h-full" title={`EE: ${s.ee}%`}></div>
+                          <div style={{ width: `${s.ee}%` }} className="bg-success h-full" title={`EE: ${s.ee}%`}></div>
                           <div style={{ width: `${s.me}%` }} className="bg-primary h-full" title={`ME: ${s.me}%`}></div>
                           <div style={{ width: `${s.ae}%` }} className="bg-amber-700 h-full" title={`AE: ${s.ae}%`}></div>
                           <div style={{ width: `${s.be}%` }} className="bg-error h-full" title={`BE: ${s.be}%`}></div>

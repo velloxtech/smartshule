@@ -55,12 +55,12 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isReturned ? 'bg-rose-100 text-[#7a1228]' : 'bg-blue-50 text-blue-700'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isReturned ? 'bg-rose-100 text-primary' : 'bg-primary-fixed text-primary'}`}>
               <span className="material-symbols-outlined">{isReturned ? 'assignment_return' : 'edit_document'}</span>
             </div>
             <div>
@@ -74,7 +74,7 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -114,17 +114,17 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
             <div>
               <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Term</label>
               <input required type="text" name="term" value={formData.term || ''} onChange={handleChange} 
-                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white" />
+                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-surface" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Week No.</label>
               <input required type="number" name="week" min="1" value={formData.week} onChange={handleChange} 
-                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white font-bold" />
+                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-surface font-bold" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Day</label>
               <select name="day" value={formData.day} onChange={handleChange} 
-                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white">
+                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-surface">
                 <option value="Mon">Monday</option>
                 <option value="Tue">Tuesday</option>
                 <option value="Wed">Wednesday</option>
@@ -135,38 +135,38 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
             <div>
               <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Period</label>
               <input type="text" name="period" value={formData.period || ''} onChange={handleChange} 
-                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white" />
+                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-surface" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Subject & Grade</label>
             <input required type="text" name="subjectAndGrade" value={formData.subjectAndGrade} onChange={handleChange} 
-              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-white" />
+              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-surface" />
           </div>
 
           <div>
             <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Strand & Work Covered *</label>
             <textarea required name="strandAndWorkCovered" rows={2} value={formData.strandAndWorkCovered} onChange={handleChange} 
-              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-white resize-none" />
+              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-surface resize-none" />
           </div>
 
           <div>
             <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Reference & Resources</label>
             <input required type="text" name="reference" value={formData.reference} onChange={handleChange} 
-              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-white" />
+              className="block w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl bg-surface" />
           </div>
 
           <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold uppercase text-amber-900 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-amber-600 text-[18px]">psychology</span>
+                <span className="material-symbols-outlined text-primary text-[18px]">psychology</span>
                 Lesson Outcome & Reflection
               </label>
               <select
                 value={formData.reflectionData?.comprehensionLevel || 'GOOD'}
                 onChange={(e) => handleReflectionChange('comprehensionLevel', e.target.value as LearnerComprehension)}
-                className="px-2.5 py-1 text-xs border border-amber-300 rounded-lg bg-white font-semibold text-amber-900"
+                className="px-2.5 py-1 text-xs border border-primary rounded-lg bg-surface font-semibold text-on-primary-fixed"
               >
                 <option value="EXCELLENT">Excellent (90%+ Mastery)</option>
                 <option value="GOOD">Good (75-89% Mastery)</option>
@@ -181,7 +181,7 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
               placeholder="Self-evaluate lesson success and remedial actions taken..."
               value={formData.reflection || ''}
               onChange={handleChange}
-              className="block w-full px-3 py-2 text-xs bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 resize-none"
+              className="block w-full px-3 py-2 text-xs bg-surface border border-primary/80 rounded-xl focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </div>
 
@@ -193,12 +193,12 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-gray-100 bg-surface/70 flex items-center justify-between">
           <button 
             type="button" 
             onClick={onClose} 
             disabled={submitting}
-            className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+            className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-surface transition-colors shadow-sm cursor-pointer"
           >
             Cancel
           </button>
@@ -208,7 +208,7 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
               type="button"
               disabled={submitting}
               onClick={() => handleSave('DRAFT')}
-              className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-surface transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">draft</span>
               Save Draft
@@ -218,7 +218,7 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
               type="button"
               disabled={submitting}
               onClick={() => handleSave('SUBMITTED')}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-[#7a1228] rounded-xl hover:bg-[#901530] transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">send</span>
               {submitting ? 'Submitting...' : isReturned ? 'Resubmit for Review' : 'Submit for Review'}

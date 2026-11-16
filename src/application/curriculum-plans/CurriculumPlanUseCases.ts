@@ -251,6 +251,7 @@ export class CurriculumPlanUseCases {
       const scheduled=await this.planning.slots(actor,scope);
       const slot=scheduled.slots.find(s=>s.id===entry.slotId);
       if(dto.strand.trim()!==entry.strandTitle.trim()||dto.subStrand.trim()!==entry.subStrandTitle.trim())throw new ValidationError('Lesson strand and sub-strand must match the schemed slot.');
+      if(dto.specificLearningOutcomes.some(outcome=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Use outcomes from the approved scheme lesson. Submit curriculum changes through the scheme review process.');
       if(entry.archivedAt)throw new ValidationError('This scheme entry is archived. Select an eligible slot.');
       if(!slot || slot.date!==dto.lessonDate || (dto.lessonTime && dto.lessonTime!==`${slot.startTime}-${slot.endTime}`))throw new ValidationError('This scheme slot is cancelled or the lesson date/time does not match.');
       dto={...dto,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
@@ -302,7 +303,7 @@ export class CurriculumPlanUseCases {
     const lessonPlan = await this.lessonPlanRepository.findById(lessonPlanId);
     if (!lessonPlan) throw new NotFoundError('Lesson Plan', lessonPlanId);
     await this.authorize(await this.planScope(lessonPlan),actor);
-    if (!['APPROVED','RECORDED'].includes(lessonPlan.status)) throw new ValidationError('After-class reflection is available after the lesson plan is approved.');
+    // Lesson preparation and reflection need no separate administrative approval.
 
     lessonPlan.setReflection(reflection);
     await this.lessonPlanRepository.update(lessonPlan);

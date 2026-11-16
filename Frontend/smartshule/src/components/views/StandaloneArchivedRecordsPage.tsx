@@ -306,7 +306,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <button
             type="button"
             onClick={onBackToPortal}
-            className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-[#600000] transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container transition-colors cursor-pointer"
           >
             Return to School Portal
           </button>
@@ -318,7 +318,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
   return (
     <div className="min-h-screen bg-surface flex flex-col font-sans text-on-surface antialiased selection:bg-rose-900 selection:text-white">
       {/* Top Standalone Header Bar */}
-      <header className="sticky top-0 z-40 bg-primary text-white shadow-md border-b border-[#600000] print:hidden">
+      <header className="sticky top-0 z-40 bg-primary text-white shadow-md border-b border-primary-container print:hidden">
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
           {/* Left Brand & Navigation Back */}
           <div className="flex items-center gap-4">
@@ -336,7 +336,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0 shadow-xs">
-                <span className="material-symbols-outlined text-[24px] text-amber-300">inventory_2</span>
+                <span className="material-symbols-outlined text-[24px] text-primary-fixed-dim">inventory_2</span>
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
@@ -381,7 +381,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
               onClick={handleExportJSON}
               disabled={loading || archivedRecords.length === 0}
               title="Export complete archive snapshot as JSON file"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
               <span className="hidden sm:inline">Export JSON</span>
@@ -494,7 +494,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
             <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Parent Accounts</span>
-              <span className="material-symbols-outlined text-[20px] text-indigo-700">family_restroom</span>
+              <span className="material-symbols-outlined text-[20px] text-primary">family_restroom</span>
             </div>
             <div className="text-2xl font-black text-on-surface">{totalArchivedParents}</div>
             <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Logins & credentials</span>
@@ -503,7 +503,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
             <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Cleared Fee Debt</span>
-              <span className="material-symbols-outlined text-[20px] text-emerald-700">money_off</span>
+              <span className="material-symbols-outlined text-[20px] text-primary">money_off</span>
             </div>
             <div className="text-2xl font-black text-emerald-800 font-mono">
               KES {totalClearedDebt.toLocaleString()}
@@ -514,7 +514,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs">
             <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">Preserved Invoices</span>
-              <span className="material-symbols-outlined text-[20px] text-amber-700">receipt_long</span>
+              <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
             </div>
             <div className="text-2xl font-black text-on-surface">{totalPreservedInvoices}</div>
             <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Historical billing data</span>
@@ -523,7 +523,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-2xs col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between text-on-surface-variant mb-2">
               <span className="text-xs font-bold uppercase tracking-wider">CBC Marks Preserved</span>
-              <span className="material-symbols-outlined text-[20px] text-sky-700">grade</span>
+              <span className="material-symbols-outlined text-[20px] text-primary">grade</span>
             </div>
             <div className="text-2xl font-black text-on-surface">{totalAssessmentsPreserved}</div>
             <span className="text-[11px] text-on-surface-variant font-medium mt-1 block">Formative & summative</span>
@@ -687,7 +687,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                               <div
                                 className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                                   isParent
-                                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                    ? 'bg-primary-fixed text-primary border border-primary'
                                     : 'bg-rose-50 text-rose-800 border border-rose-200'
                                 }`}
                               >
@@ -701,7 +701,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 </span>
                                 <span
                                   className={`inline-block text-[10px] font-bold px-2 py-0.2 rounded-full uppercase tracking-wider mt-0.5 ${
-                                    isParent ? 'bg-indigo-50 text-indigo-700' : 'bg-rose-50 text-rose-800'
+                                    isParent ? 'bg-primary-fixed text-primary' : 'bg-rose-50 text-rose-800'
                                   }`}
                                 >
                                   {isParent ? 'Guardian Account' : 'Learner Account'}
@@ -776,7 +776,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 onClick={() => handleRestore(acc.record)}
                                 disabled={restoringId === acc.record.id}
                                 title="Restore student & linked parent accounts to active system"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                               >
                                 <span className="material-symbols-outlined text-[15px]">settings_backup_restore</span>
                                 <span>Restore</span>
@@ -909,7 +909,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                                 onClick={() => handleRestore(rec)}
                                 disabled={restoringId === rec.id}
                                 title="Restore student"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                               >
                                 <span className="material-symbols-outlined text-[15px]">settings_backup_restore</span>
                                 <span>Restore</span>
@@ -1027,11 +1027,11 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
                         <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Formative</span>
-                        <span className="text-base font-black text-sky-700">{formatives.length}</span>
+                        <span className="text-base font-black text-primary">{formatives.length}</span>
                       </div>
                       <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
                         <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Summative</span>
-                        <span className="text-base font-black text-indigo-700">{summatives.length}</span>
+                        <span className="text-base font-black text-primary">{summatives.length}</span>
                       </div>
                       <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30">
                         <span className="text-[10px] text-on-surface-variant block uppercase font-bold">Reports</span>
@@ -1051,7 +1051,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                       <button
                         type="button"
                         onClick={() => handleRestore(rec)}
-                        className="text-emerald-700 hover:underline font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                        className="text-primary hover:underline font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[14px]">restore</span>
                         <span>Restore File</span>
@@ -1143,7 +1143,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       </main>
 
       {/* Standalone Footer */}
-      <footer className="mt-auto py-5 bg-primary border-t border-[#600000] text-white text-xs print:hidden shadow-lg">
+      <footer className="mt-auto py-5 bg-primary border-t border-primary-container text-white text-xs print:hidden shadow-lg">
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1249,9 +1249,9 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
               {/* 12-Domain Completeness Report Card if generated */}
               {completenessData && (
-                <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-3">
+                <div className="p-4 rounded-xl bg-primary-fixed border border-primary space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-indigo-950 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                    <h4 className="font-bold text-on-primary-fixed uppercase text-[11px] tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px] text-indigo-700">verified</span>
                       <span>12-Domain Archive Completeness: {completenessData.completenessScore}%</span>
                     </h4>
@@ -1265,7 +1265,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {completenessData.domainChecks?.map((dc: any, idx: number) => (
-                      <div key={idx} className="p-2 rounded-lg bg-white/80 border border-indigo-100 flex items-center justify-between">
+                      <div key={idx} className="p-2 rounded-lg bg-white/80 border border-primary flex items-center justify-between">
                         <span className="text-[11px] font-semibold text-on-surface truncate mr-1">{dc.domain}</span>
                         <span className={`material-symbols-outlined text-[15px] ${dc.captured ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {dc.captured ? 'check_circle' : 'remove_circle_outline'}
@@ -1279,25 +1279,25 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
               {/* Linked Guardians */}
               <div className="space-y-3">
                 <h4 className="font-bold text-on-surface uppercase text-[11px] tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-indigo-700">family_restroom</span>
+                  <span className="material-symbols-outlined text-[16px] text-primary">family_restroom</span>
                   <span>Associated Parent & Guardian Logins</span>
                 </h4>
                 {selectedRecord.linkedData?.guardians?.length ? (
                   <div className="space-y-2">
                     {selectedRecord.linkedData.guardians.map((g, idx) => (
-                      <div key={idx} className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start justify-between">
+                      <div key={idx} className="p-3 bg-primary-fixed/50 rounded-xl border border-primary flex items-start justify-between">
                         <div>
-                          <span className="font-bold text-indigo-900 block text-sm">
+                          <span className="font-bold text-on-primary-fixed block text-sm">
                             {g.parentUser?.fullName || `${g.parentUser?.firstName || ''} ${g.parentUser?.lastName || ''}`.trim() || 'Parent'}
                           </span>
-                          <span className="text-[11px] text-indigo-700 block">
+                          <span className="text-[11px] text-primary block">
                             {g.relationship || 'Guardian'} · {g.parentUser?.email || g.emergencyContact || 'No contact'}
                           </span>
-                          <span className="text-[10px] font-mono text-indigo-600 block mt-0.5">
+                          <span className="text-[10px] font-mono text-primary block mt-0.5">
                             Status: {g.willArchiveParentAccount ? 'Archived (Exclusive account)' : 'Unlinked (Has other children)'}
                           </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed text-[10px] font-bold">
                           {g.parentUser?.role || 'PARENT'}
                         </span>
                       </div>
@@ -1310,8 +1310,8 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
 
               {/* Cleared Pending Work */}
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
-                <h4 className="font-bold text-emerald-900 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-700">task_alt</span>
+                <h4 className="font-bold text-on-primary-fixed uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">task_alt</span>
                   <span>Pending Obligations Cleared During Archival</span>
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-emerald-900">
@@ -1359,7 +1359,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 <button
                   type="button"
                   onClick={() => setSelectedRecord(null)}
-                  className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-slate-300 text-on-surface text-xs font-bold transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold transition-all cursor-pointer"
                 >
                   Close
                 </button>
@@ -1393,7 +1393,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                 type="button"
                 onClick={() => handleRestore(selectedRecord)}
                 disabled={restoringId === selectedRecord.id}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[17px]">settings_backup_restore</span>
                 <span>Restore Student & Parents</span>

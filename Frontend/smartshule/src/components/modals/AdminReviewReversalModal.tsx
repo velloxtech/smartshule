@@ -116,7 +116,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-white/10 rounded-lg">
-              <ShieldCheck className="w-6 h-6 text-emerald-400" />
+              <ShieldCheck className="w-6 h-6 text-primary" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -201,8 +201,8 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
           <div className="border border-indigo-100 bg-indigo-50/40 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
-                <h4 className="font-bold text-sm text-indigo-950">Financial Impact Preview</h4>
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h4 className="font-bold text-sm text-on-primary-fixed">Financial Impact Preview</h4>
               </div>
               {hasBlocking && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">
@@ -213,11 +213,11 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
             </div>
 
             {loadingPreview ? (
-              <p className="text-xs text-indigo-700 italic">Calculating authoritative financial impact...</p>
+              <p className="text-xs text-primary italic">Calculating authoritative financial impact...</p>
             ) : preview ? (
               <div className="space-y-3 text-sm">
                 {/* Balance Comparison Grid */}
-                <div className="grid grid-cols-2 gap-2 bg-surface-container-lowest p-3 rounded-lg border border-indigo-100 text-xs">
+                <div className="grid grid-cols-2 gap-2 bg-surface-container-lowest p-3 rounded-lg border border-primary text-xs">
                   <div>
                     <span className="text-on-surface-variant block font-medium">Current Outstanding Balance:</span>
                     <span className="font-bold text-on-surface text-sm">
@@ -226,7 +226,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   </div>
                   <div>
                     <span className="text-on-surface-variant block font-medium">Projected Post-Reversal:</span>
-                    <span className="font-bold text-indigo-700 text-sm">
+                    <span className="font-bold text-primary text-sm">
                       KES {preview.projectedOutstandingBalance.toLocaleString()}
                     </span>
                   </div>
@@ -238,7 +238,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   </div>
                   <div>
                     <span className="text-on-surface-variant block font-medium">Projected Available Credit:</span>
-                    <span className="font-bold text-indigo-700 text-sm">
+                    <span className="font-bold text-primary text-sm">
                       KES {preview.projectedCreditBalance.toLocaleString()}
                     </span>
                   </div>
@@ -247,7 +247,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                 {/* Dependent Transactions */}
                 {preview.dependentTransactions && preview.dependentTransactions.length > 0 && (
                   <div>
-                    <span className="text-xs font-bold text-indigo-900 block mb-1">
+                    <span className="text-xs font-bold text-on-primary-fixed block mb-1">
                       Linked & Dependent Transactions:
                     </span>
                     <div className="space-y-1.5">
@@ -278,7 +278,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
 
                 {/* Summary */}
                 {preview.impactSummary && (
-                  <p className="text-xs text-indigo-900 bg-indigo-100/60 p-2 rounded">
+                  <p className="text-xs text-on-primary-fixed bg-primary-fixed/60 p-2 rounded">
                     <strong>Summary:</strong> {preview.impactSummary}
                   </p>
                 )}
@@ -301,7 +301,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                 type="button"
                 disabled={hasBlocking}
                 onClick={() => setActiveAction('APPROVE')}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50 shadow-md"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-primary hover:bg-primary-container text-white font-bold transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50 shadow-md"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Approve & Execute Reversal</span>
@@ -312,7 +312,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
           {/* Confirmation Form: APPROVE */}
           {activeAction === 'APPROVE' && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
-              <h5 className="font-bold text-emerald-900 text-sm flex items-center space-x-1.5">
+              <h5 className="font-bold text-on-primary-fixed text-sm flex items-center space-x-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>Confirm Reversal Approval & Execution</span>
               </h5>
@@ -328,7 +328,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   placeholder="e.g. Approved following bank clearance verification"
                   value={approvalComment}
                   onChange={(e) => setApprovalComment(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-2">
@@ -344,7 +344,7 @@ export const AdminReviewReversalModal: React.FC<AdminReviewReversalModalProps> =
                   type="button"
                   onClick={handleApprove}
                   disabled={isProcessing}
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow disabled:opacity-50"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-container rounded-lg shadow disabled:opacity-50"
                 >
                   {isProcessing ? 'Executing...' : 'Confirm & Execute Reversal'}
                 </button>

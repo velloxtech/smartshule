@@ -232,7 +232,7 @@ export const ArchivedStudentsModal: React.FC<ArchivedStudentsModalProps> = ({
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                       {/* Learner Info */}
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#7a1228]/10 text-[#7a1228] font-bold flex items-center justify-center text-sm shrink-0 border border-[#7a1228]/20">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm shrink-0 border border-primary/20">
                           {record.firstName?.[0] || 'L'}
                           {record.lastName?.[0] || ''}
                         </div>
@@ -284,7 +284,7 @@ export const ArchivedStudentsModal: React.FC<ArchivedStudentsModalProps> = ({
                           onClick={() => handleRestore(record)}
                           disabled={restoringId === record.id}
                           title="Restore this learner and their profile back to active student roster"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
                         >
                           <span className={`material-symbols-outlined text-[16px] ${restoringId === record.id ? 'animate-spin' : ''}`}>
                             {restoringId === record.id ? 'sync' : 'restore'}
@@ -461,7 +461,7 @@ export const ArchivedStudentsModal: React.FC<ArchivedStudentsModalProps> = ({
                                           Parent Account Cleared from Active Directory
                                         </span>
                                       ) : (
-                                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary-fixed text-on-primary-fixed border border-primary">
                                           Retained (Other Active Children)
                                         </span>
                                       )}

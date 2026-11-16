@@ -565,7 +565,7 @@ export const InventoryManagementView: React.FC = () => {
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Stock Valuation</span>
-            <span className="material-symbols-outlined text-amber-600 text-lg">monetization_on</span>
+            <span className="material-symbols-outlined text-primary text-lg">monetization_on</span>
           </div>
           <p className="text-xl font-bold text-on-surface mt-2">
             KES {stats.totalValuation.toLocaleString()}
@@ -585,18 +585,18 @@ export const InventoryManagementView: React.FC = () => {
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Pending Approvals</span>
-            <span className="material-symbols-outlined text-blue-600 text-lg">pending_actions</span>
+            <span className="material-symbols-outlined text-primary text-lg">pending_actions</span>
           </div>
-          <p className="text-xl font-bold text-blue-600 mt-2">{stats.pendingPRCount}</p>
+          <p className="text-xl font-bold text-primary mt-2">{stats.pendingPRCount}</p>
           <p className="text-xs text-on-surface-variant mt-1">Requires admin review</p>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Accounts Payable</span>
-            <span className="material-symbols-outlined text-purple-600 text-lg">receipt_long</span>
+            <span className="material-symbols-outlined text-primary text-lg">receipt_long</span>
           </div>
-          <p className="text-xl font-bold text-purple-600 mt-2">
+          <p className="text-xl font-bold text-primary mt-2">
             KES {stats.totalAccountsPayable.toLocaleString()}
           </p>
           <p className="text-xs text-on-surface-variant mt-1">{stats.unpaidInvoicesCount} unpaid invoices</p>
@@ -605,7 +605,7 @@ export const InventoryManagementView: React.FC = () => {
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Fixed Assets</span>
-            <span className="material-symbols-outlined text-emerald-600 text-lg">domain</span>
+            <span className="material-symbols-outlined text-primary text-lg">domain</span>
           </div>
           <p className="text-xl font-bold text-emerald-600 mt-2">
             KES {stats.totalAssetsValuation.toLocaleString()}
@@ -706,7 +706,7 @@ export const InventoryManagementView: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="border border-outline-variant/30 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="border border-outline-variant/30 rounded-xl px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
                 <option value="ALL">All Categories</option>
                 <option value="STATIONERY">Stationery</option>
@@ -930,7 +930,7 @@ export const InventoryManagementView: React.FC = () => {
                                   setSelectedPR(pr);
                                   setIsApprovePRModalOpen(true);
                                 }}
-                                className="text-xs bg-emerald-600 text-white hover:bg-emerald-700 font-semibold px-2.5 py-1 rounded-lg"
+                                className="text-xs bg-primary text-white hover:bg-primary-container font-semibold px-2.5 py-1 rounded-lg"
                               >
                                 Review & Approve
                               </button>
@@ -1148,7 +1148,7 @@ export const InventoryManagementView: React.FC = () => {
                               });
                               setIsPayInvoiceModalOpen(true);
                             }}
-                            className="text-xs bg-emerald-600 text-white hover:bg-emerald-700 font-semibold px-2.5 py-1 rounded-lg"
+                            className="text-xs bg-primary text-white hover:bg-primary-container font-semibold px-2.5 py-1 rounded-lg"
                           >
                             Disburse Payment
                           </button>
@@ -1193,7 +1193,7 @@ export const InventoryManagementView: React.FC = () => {
                   setIssueForm({ ...issueForm, itemId: items[0]?.id || '' });
                   setIsIssueStockModalOpen(true);
                 }}
-                className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="bg-primary hover:bg-primary-container text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span className="material-symbols-outlined text-base">output</span>
                 Requisition Issue
@@ -1234,7 +1234,7 @@ export const InventoryManagementView: React.FC = () => {
                             m.movementType === 'GOODS_RECEIVED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : m.movementType === 'STOCK_ISSUE'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-primary-fixed text-on-primary-fixed'
                               : m.movementType === 'STOCK_ADJUSTMENT'
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-rose-100 text-rose-800'
@@ -1319,7 +1319,7 @@ export const InventoryManagementView: React.FC = () => {
                             asset.condition === 'EXCELLENT'
                               ? 'bg-emerald-100 text-emerald-800'
                               : asset.condition === 'GOOD'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-primary-fixed text-on-primary-fixed'
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
@@ -1369,7 +1369,7 @@ export const InventoryManagementView: React.FC = () => {
                   <select
                     value={itemForm.category}
                     onChange={(e) => setItemForm({ ...itemForm, category: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="STATIONERY">Stationery</option>
                     <option value="TEXTBOOKS">Textbooks</option>
@@ -1484,7 +1484,7 @@ export const InventoryManagementView: React.FC = () => {
                       supplierName: sel?.supplier || prForm.supplierName
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -1647,7 +1647,7 @@ export const InventoryManagementView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                    className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                   >
                     Confirm Approval
                   </button>
@@ -1733,7 +1733,7 @@ export const InventoryManagementView: React.FC = () => {
                       quantityAccepted: pr ? pr.outstandingQuantity : grnForm.quantityAccepted
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Select Approved Order --</option>
                   {purchaseRequests
@@ -1780,7 +1780,7 @@ export const InventoryManagementView: React.FC = () => {
                         quantityRejected: Math.max(0, grnForm.quantityDelivered - acc)
                       });
                     }}
-                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-emerald-700"
+                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-primary"
                   />
                 </div>
                 <div>
@@ -1914,7 +1914,7 @@ export const InventoryManagementView: React.FC = () => {
                       supplierName: pr?.supplierName || invoiceForm.supplierName
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- No Direct Link / Independent Invoice --</option>
                   {purchaseRequests.map((p) => (
@@ -2033,7 +2033,7 @@ export const InventoryManagementView: React.FC = () => {
                     required
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-emerald-700"
+                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-primary"
                   />
                 </div>
                 <div>
@@ -2041,7 +2041,7 @@ export const InventoryManagementView: React.FC = () => {
                   <select
                     value={paymentForm.fundingAccount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, fundingAccount: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="BANK">School Bank Account</option>
                     <option value="MPESA">School M-Pesa Paybill / Till</option>
@@ -2057,7 +2057,7 @@ export const InventoryManagementView: React.FC = () => {
                   <select
                     value={paymentForm.paymentMethod}
                     onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="BANK">Bank Transfer / EFT</option>
                     <option value="MPESA">M-Pesa B2B / Till</option>
@@ -2092,7 +2092,7 @@ export const InventoryManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Process Payment & Post Voucher
                 </button>
@@ -2169,7 +2169,7 @@ export const InventoryManagementView: React.FC = () => {
                   required
                   value={issueForm.itemId}
                   onChange={(e) => setIssueForm({ ...issueForm, itemId: e.target.value })}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2227,7 +2227,7 @@ export const InventoryManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-black text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Confirm Stock Issue
                 </button>
@@ -2263,7 +2263,7 @@ export const InventoryManagementView: React.FC = () => {
                       newQuantity: sel ? sel.quantityInStock : adjustForm.newQuantity
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2308,7 +2308,7 @@ export const InventoryManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Update Stock Balance
                 </button>
@@ -2337,7 +2337,7 @@ export const InventoryManagementView: React.FC = () => {
                   required
                   value={disposeForm.itemId}
                   onChange={(e) => setDisposeForm({ ...disposeForm, itemId: e.target.value })}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2448,7 +2448,7 @@ export const InventoryManagementView: React.FC = () => {
                   <select
                     value={assetForm.category}
                     onChange={(e) => setAssetForm({ ...assetForm, category: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="FURNITURE_DESKS">Furniture & Desks</option>
                     <option value="COMPUTERS_IT">Computers & IT</option>
@@ -2500,7 +2500,7 @@ export const InventoryManagementView: React.FC = () => {
                   <select
                     value={assetForm.condition}
                     onChange={(e) => setAssetForm({ ...assetForm, condition: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="EXCELLENT">Excellent</option>
                     <option value="GOOD">Good</option>

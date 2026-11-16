@@ -27,7 +27,7 @@ export function SchemeOfWorkDocument({scheme, school, schoolName, className, are
       </header>
       <table className="w-full table-fixed border-collapse text-left text-sm leading-snug">
         <colgroup>{[4,4,10,10,18,12,16,10,10,6].map((width,i)=><col key={i} style={{width:`${width}%`}}/>)}</colgroup>
-        <thead><tr>{schemeDocumentHead.map(label=><th key={label} scope="col" className="border border-black bg-[#7a1228] p-2 align-top font-bold text-white">{label}</th>)}</tr></thead>
+        <thead><tr>{schemeDocumentHead.map(label=><th key={label} scope="col" className="border border-black bg-primary p-2 align-top font-bold text-white">{label}</th>)}</tr></thead>
         <tbody>{rows.map((row,i)=><tr key={scheme.entries.filter(e=>!e.archivedAt)[i].id}>{row.map((value,j)=><td key={j} className={`whitespace-pre-wrap break-words border border-black p-2 align-top ${j===2||j===3?'font-bold':''}`}>{value}</td>)}</tr>)}</tbody>
       </table>
       {!rows.length&&<p className="border border-t-0 border-black p-8 text-center">No teaching sessions have been saved in this scheme yet. Use Edit scheme to prepare the sub-strand lessons.</p>}

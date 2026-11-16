@@ -4,6 +4,9 @@ export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'
 export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
 
 export interface RecordOfWorkReflection {
+  teachingStatus?: 'COMPLETED'|'PARTIAL'|'POSTPONED'|'CANCELLED';
+  outcomesCovered?: string[];
+  remainingWork?: string;
   comprehensionLevel?: LearnerComprehension;
   whatWentWell?: string;
   challengesFaced?: string;
@@ -12,7 +15,7 @@ export interface RecordOfWorkReflection {
 }
 
 export interface RecordOfWorkProps {
-  planningLink?: { lessonPlanId:string; schemeId:string; schemeEntryId:string; slotId:string };
+  planningLink?: { lessonPlanId?:string; schemeId:string; schemeEntryId:string; slotId:string };
 
   schoolId?: string;
   teacherId: string;

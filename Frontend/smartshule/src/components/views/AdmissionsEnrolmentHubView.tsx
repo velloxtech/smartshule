@@ -336,7 +336,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
   return (
     <div className="space-y-6 pb-12">
       {/* Admissions Module Banner & Interactive Workflow Stepper */}
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-primary to-[#550000] p-6 text-white shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-r from-primary via-primary to-primary-container p-6 text-white shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
@@ -396,7 +396,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   <span>{step.label}</span>
                   {typeof step.count === 'number' && step.count > 0 && (
                     <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-primary text-white' : 'bg-emerald-400 text-emerald-950'
+                      isActive ? 'bg-primary text-white' : 'bg-primary text-on-primary-fixed'
                     }`}>
                       {step.count}
                     </span>
@@ -668,7 +668,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               <button
                 type="submit"
                 disabled={isSubmittingNewApp}
-                className="px-6 py-2.5 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                className="px-6 py-2.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">save</span>
                 <span>{isSubmittingNewApp ? 'Submitting...' : 'Register Applicant Dossier'}</span>
@@ -771,7 +771,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                             setDecisionApp(app);
                             setDecisionAction('APPROVED');
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed font-bold text-[11px] cursor-pointer"
                         >
                           Decide
                         </button>
@@ -797,13 +797,13 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
           </div>
 
           {assessingApp && (
-            <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-4">
+            <div className="p-4 rounded-xl bg-primary-fixed/70 border border-primary space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-indigo-950">
+                  <h3 className="text-sm font-bold text-on-primary-fixed">
                     Evaluating Applicant: {assessingApp.firstName} {assessingApp.lastName} ({assessingApp.targetGrade})
                   </h3>
-                  <p className="text-xs text-indigo-800">Tracking Code: {assessingApp.trackingCode}</p>
+                  <p className="text-xs text-on-primary-fixed">Tracking Code: {assessingApp.trackingCode}</p>
                 </div>
                 <button onClick={() => setAssessingApp(null)} className="text-xs font-bold text-primary hover:underline">
                   Close Form
@@ -812,11 +812,11 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-indigo-900 mb-1">CBE Readiness Rating</label>
+                  <label className="block text-xs font-bold text-on-primary-fixed mb-1">CBE Readiness Rating</label>
                   <select
                     value={assessmentScore}
                     onChange={(e) => setAssessmentScore(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs bg-white border border-primary rounded-xl outline-none"
+                    className="w-full px-3 py-2 text-xs bg-surface border border-primary rounded-xl outline-none"
                   >
                     <option value="EXCEEDS">Exceeding Expectations (EE) - Highly Prepared</option>
                     <option value="MEETS">Meeting Expectations (ME) - Ready for Cohort</option>
@@ -826,12 +826,12 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-indigo-900 mb-1">Evaluator Notes & Observations</label>
+                  <label className="block text-xs font-bold text-on-primary-fixed mb-1">Evaluator Notes & Observations</label>
                   <input
                     type="text"
                     value={assessmentComments}
                     onChange={(e) => setAssessmentComments(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-white border border-primary rounded-xl outline-none"
+                    className="w-full px-3 py-2 text-xs bg-surface border border-primary rounded-xl outline-none"
                   />
                 </div>
               </div>
@@ -922,7 +922,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                     type="button"
                     onClick={() => setDecisionAction('APPROVED')}
                     className={`flex-1 py-2 text-xs font-bold rounded-xl border cursor-pointer ${
-                      decisionAction === 'APPROVED' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-on-surface-variant border-outline-variant/30'
+                      decisionAction === 'APPROVED' ? 'bg-primary text-white border-primary' : 'bg-white text-on-surface-variant border-outline-variant/30'
                     }`}
                   >
                     Approve (Offer Admission)
@@ -961,7 +961,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                 <button
                   type="button"
                   onClick={handleRecordDecision}
-                  className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#600000] cursor-pointer"
+                  className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-xl shadow-xs hover:bg-primary-container cursor-pointer"
                 >
                   Confirm Decision
                 </button>
@@ -1005,7 +1005,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                           setDecisionApp(app);
                           setDecisionAction('APPROVED');
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed font-bold text-[11px] cursor-pointer"
                       >
                         Approve
                       </button>
@@ -1059,7 +1059,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   </span>
                   <button
                     onClick={() => setPreviewOfferApp(app)}
-                    className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold hover:bg-[#600000] cursor-pointer flex items-center gap-1"
+                    className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[14px]">visibility</span>
                     <span>Preview Letter</span>
@@ -1086,7 +1086,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
             <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-4 max-w-lg mx-auto">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Final Registration</span>
-                <h3 className="text-base font-bold text-emerald-950">
+                <h3 className="text-base font-bold text-on-primary-fixed">
                   Enrolling: {enrollingApp.firstName} {enrollingApp.lastName}
                 </h3>
                 <p className="text-xs text-emerald-800">Target Cohort: {enrollingApp.targetGrade} · Parent: {enrollingApp.parentName}</p>
@@ -1101,7 +1101,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                     value={assignedAdmNo}
                     onChange={(e) => setAssignedAdmNo(e.target.value)}
                     placeholder="e.g. 0013"
-                    className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl font-mono font-bold outline-none"
+                    className="w-full px-3 py-2 text-xs bg-surface border border-primary rounded-xl font-mono font-bold outline-none"
                   />
                   <span className="text-[10px] text-emerald-700">Auto-suggested pure integer sequence</span>
                 </div>
@@ -1111,7 +1111,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   <select
                     value={assignedStream}
                     onChange={(e) => setAssignedStream(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl outline-none"
+                    className="w-full px-3 py-2 text-xs bg-surface border border-primary rounded-xl outline-none"
                   >
                     <option value="East">East</option>
                     <option value="West">West</option>
@@ -1134,7 +1134,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                   type="button"
                   disabled={isEnrolling}
                   onClick={handleConfirmEnrolment}
-                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
                   <span>{isEnrolling ? 'Registering...' : 'Matriculate & Create Learner Record'}</span>
@@ -1188,7 +1188,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
                         ) : (
                           <button
                             onClick={() => handleCompleteEnrolment(app)}
-                            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer flex items-center gap-1 ml-auto"
+                            className="px-3 py-1 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-[11px] cursor-pointer flex items-center gap-1 ml-auto"
                           >
                             <span className="material-symbols-outlined text-[14px]">badge</span>
                             <span>Complete Enrolment</span>
@@ -1231,14 +1231,14 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               <div className="text-2xl font-black text-emerald-950 mt-1">{approvedApplications.length}</div>
               <span className="text-[11px] text-emerald-700">Qualified for enrolment</span>
             </div>
-            <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200">
-              <span className="text-xs font-bold text-indigo-800 uppercase">Conversion Rate</span>
-              <div className="text-2xl font-black text-indigo-950 mt-1">
+            <div className="p-4 rounded-xl bg-primary-fixed border border-primary">
+              <span className="text-xs font-bold text-on-primary-fixed uppercase">Conversion Rate</span>
+              <div className="text-2xl font-black text-on-primary-fixed mt-1">
                 {allApplications.length > 0
                   ? `${Math.round((approvedApplications.length / allApplications.length) * 100)}%`
                   : '100%'}
               </div>
-              <span className="text-[11px] text-indigo-700">Application to offer conversion</span>
+              <span className="text-[11px] text-primary">Application to offer conversion</span>
             </div>
           </div>
         </div>
@@ -1274,7 +1274,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </p>
               <button
                 onClick={() => setIsStationeryModalOpen(true)}
-                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-[#600000] cursor-pointer"
+                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container cursor-pointer"
               >
                 View & Edit 2027 Requirements List
               </button>
@@ -1358,7 +1358,7 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
               </button>
               <button
                 onClick={() => setPreviewOfferApp(null)}
-                className="px-4 py-2 bg-primary hover:bg-[#600000] text-white text-xs font-bold rounded-xl cursor-pointer"
+                className="px-4 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl cursor-pointer"
               >
                 Close
               </button>

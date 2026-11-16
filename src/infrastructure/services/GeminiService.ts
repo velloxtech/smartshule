@@ -239,8 +239,8 @@ MANDATORY RULES:
         `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
         `*CBC Competency Evaluation:*\n` +
         `• Overall Performance: *${CBCSummary?.averagePerformance || 'Recorded in portal'}*\n` +
-        `• Teacher Remarks: _"${CBCSummary?.teacherRemarks || 'Continuous assessment progress recorded in SmartShule.'}"_\n\n` +
-        `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
+        `• Teacher Remarks: _"${CBCSummary?.teacherRemarks || 'Continuous assessment progress recorded in Grace Seeds School.'}"_\n\n` +
+        `You can review complete strand-by-strand CBC assessments via the Grace Seeds School parent portal.\n\n` +
         `Warm regards,\n` +
         `*${schoolName} Academic Directorate*\n` +
         contactLine

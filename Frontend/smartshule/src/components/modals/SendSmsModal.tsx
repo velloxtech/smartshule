@@ -76,7 +76,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-[#653400] flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">sms</span>
@@ -96,7 +96,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
 
         {status === 'sending' ? (
           <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 p-6 overflow-y-auto flex-1">
-            <div className="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center text-secondary animate-spin">
+            <div className="w-14 h-14 rounded-full bg-success-container flex items-center justify-center text-success animate-spin">
               <span className="material-symbols-outlined text-[32px]">sync</span>
             </div>
             <div className="text-sm font-bold text-on-surface">Broadcasting {recipientCount} SMS Messages...</div>
@@ -104,7 +104,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
           </div>
         ) : status === 'sent' ? (
           <div className="py-10 flex flex-col items-center justify-center text-center space-y-2 p-6 overflow-y-auto flex-1">
-            <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-white">
+            <div className="w-14 h-14 rounded-full bg-success flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[28px]">done_all</span>
             </div>
             <div className="text-base font-bold text-on-surface">SMS Broadcast Completed!</div>

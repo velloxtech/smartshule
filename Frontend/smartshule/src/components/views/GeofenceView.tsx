@@ -192,7 +192,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
   return (
     <div className="space-y-6 pb-12">
       {/* Standalone Page Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] p-6 sm:p-8 text-white shadow-md">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#500b1b] via-primary to-[#991b36] p-6 sm:p-8 text-white shadow-md">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -200,7 +200,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 <span className="material-symbols-outlined text-[14px]">share_location</span>
                 Compound Perimeter
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-500/20 text-teal-200 border border-teal-400/30 flex items-center gap-1.5">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-on-primary border border-primary/30 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
                 {isEnabled ? 'Strict Geofence Active' : 'Geofence Standby'}
               </span>
@@ -235,7 +235,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 loadClockInRecords();
               }}
               disabled={loading || loadingRecords}
-              className="px-4 py-2.5 rounded-xl bg-white text-[#7a1228] hover:bg-rose-50 font-bold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70"
+              className="px-4 py-2.5 rounded-xl bg-white text-primary hover:bg-rose-50 font-bold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-70"
             >
               <span
                 className={`material-symbols-outlined text-[18px] ${
@@ -253,7 +253,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
       {/* Role Permission Banner */}
       {!canEditCoordinates ? (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
-          <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 mt-0.5">
+          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">
             lock
           </span>
           <div>
@@ -266,15 +266,15 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
           </div>
         </div>
       ) : (
-        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 flex items-start gap-3">
-          <span className="material-symbols-outlined text-teal-700 text-2xl shrink-0 mt-0.5">
+        <div className="p-4 rounded-xl bg-primary-fixed border border-primary text-on-primary-fixed flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">
             verified_user
           </span>
           <div>
             <h4 className="font-bold text-sm">
               Director & Super Admin Coordinate Management Active
             </h4>
-            <p className="text-xs mt-0.5 leading-relaxed text-teal-800">
+            <p className="text-xs mt-0.5 leading-relaxed text-on-primary-fixed">
               You are authorized to configure the physical GPS perimeter of the school compound.
               Teachers outside the {radiusMeters}m radius boundary will be strictly blocked from
               clocking in.
@@ -286,7 +286,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
       {/* Top 4 KPI Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: School Coordinates */}
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               School Center GPS
@@ -306,17 +306,17 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
         </div>
 
         {/* Metric 2: Compound Radius */}
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Perimeter Boundary
             </span>
-            <span className="material-symbols-outlined text-teal-700 text-[22px]">
+            <span className="material-symbols-outlined text-primary text-[22px]">
               radar
             </span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold font-data-mono text-teal-800 block">
+            <span className="text-2xl font-bold font-data-mono text-on-primary-fixed block">
               {radiusMeters} meters
             </span>
             <span className="text-[11px] text-on-surface-variant mt-1 block">
@@ -326,7 +326,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
         </div>
 
         {/* Metric 3: Enforcement State */}
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Boundary Enforcement
@@ -338,7 +338,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
           <div className="mt-2">
             <span
               className={`text-lg font-bold block ${
-                isEnabled ? 'text-teal-700' : 'text-gray-500'
+                isEnabled ? 'text-primary' : 'text-gray-500'
               }`}
             >
               {isEnabled ? 'Strictly Enforced' : 'Unrestricted'}
@@ -350,17 +350,17 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
         </div>
 
         {/* Metric 4: Clocked In Today */}
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Faculty Clocked In Today
             </span>
-            <span className="material-symbols-outlined text-purple-700 text-[22px]">
+            <span className="material-symbols-outlined text-primary text-[22px]">
               how_to_reg
             </span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold font-data-mono text-purple-900 block">
+            <span className="text-2xl font-bold font-data-mono text-on-primary-fixed block">
               {clockedInCount}
             </span>
             <span className="text-[11px] text-on-surface-variant mt-1 block">
@@ -398,7 +398,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
       {/* Main Coordinate Setting Form & Visualizer Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Coordinates Form (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl p-6 shadow-xs border border-outline-variant/30 space-y-5">
+        <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-outline-variant/30 space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-surface-container">
             <div>
               <h3 className="font-bold text-base text-on-surface">
@@ -429,8 +429,8 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
           </div>
 
           {successMsg && (
-            <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-xs flex items-center gap-2">
-              <span className="material-symbols-outlined text-teal-700 text-[18px]">
+            <div className="p-3 bg-primary-fixed border border-primary rounded-xl text-on-primary-fixed text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">
                 check_circle
               </span>
               <span>{successMsg}</span>
@@ -465,7 +465,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                     value={latitude}
                     onChange={(e) => setLatitude(e.target.value)}
                     placeholder="e.g. -0.061234"
-                    className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-white border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-gray-100 disabled:text-gray-500"
+                    className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container-low disabled:text-gray-500"
                   />
                 </div>
                 <span className="text-[10px] text-on-surface-variant mt-1 block">
@@ -489,7 +489,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                     value={longitude}
                     onChange={(e) => setLongitude(e.target.value)}
                     placeholder="e.g. 34.721234"
-                    className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-white border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-gray-100 disabled:text-gray-500"
+                    className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container-low disabled:text-gray-500"
                   />
                 </div>
                 <span className="text-[10px] text-on-surface-variant mt-1 block">
@@ -514,8 +514,8 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                     onClick={() => setRadiusMeters(preset)}
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-60 ${
                       radiusMeters === preset
-                        ? 'bg-[#7a1228] text-white shadow-2xs'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        ? 'bg-primary text-white shadow-2xs'
+                        : 'bg-surface-container-low hover:bg-surface-container text-gray-800'
                     }`}
                   >
                     {preset}m
@@ -552,12 +552,12 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Grace Seeds School, Kisian, Kisumu"
-                className="w-full px-3 py-2 text-xs bg-white border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-gray-100 disabled:text-gray-500"
+                className="w-full px-3 py-2 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container-low disabled:text-gray-500"
               />
             </div>
 
             {/* Enforcement Toggle Switch */}
-            <div className="pt-2 flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="pt-2 flex items-center justify-between p-3 rounded-xl bg-surface border border-gray-200">
               <div>
                 <span className="font-bold text-xs text-on-surface block">
                   Enforce Geofence on Teacher Clock-In
@@ -575,7 +575,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                   onChange={(e) => setIsEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1228]"></div>
+                <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -585,7 +585,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 <button
                   type="submit"
                   disabled={saving || loading}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#7a1228] hover:bg-[#5e0d1e] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60"
                 >
                   <span className="material-symbols-outlined text-[18px]">
                     {saving ? 'sync' : 'save'}
@@ -598,7 +598,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
         </div>
 
         {/* Right Column: Visualizer & Radar Card (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl p-6 shadow-xs border border-outline-variant/30 flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-outline-variant/30 flex flex-col justify-between space-y-6">
           <div>
             <h3 className="font-bold text-base text-on-surface pb-3 border-b border-surface-container">
               Perimeter Radar Visualizer
@@ -608,20 +608,20 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
             <div className="mt-6 flex flex-col items-center justify-center">
               <div className="relative w-52 h-52 rounded-full border-2 border-dashed border-[#7a1228]/40 bg-[#7a1228]/5 flex items-center justify-center">
                 {/* Secondary inner ring */}
-                <div className="w-36 h-36 rounded-full border border-teal-500/30 bg-teal-500/5 flex items-center justify-center">
+                <div className="w-36 h-36 rounded-full border border-primary/30 bg-primary/5 flex items-center justify-center">
                   {/* Center pin */}
-                  <div className="w-12 h-12 rounded-full bg-[#7a1228] text-white flex items-center justify-center shadow-md animate-pulse">
+                  <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-md animate-pulse">
                     <span className="material-symbols-outlined text-[24px]">school</span>
                   </div>
                 </div>
 
                 {/* Boundary tag */}
-                <span className="absolute -top-3 px-2 py-0.5 rounded-full bg-white border border-[#7a1228] text-[#7a1228] text-[10px] font-bold shadow-2xs">
+                <span className="absolute -top-3 px-2 py-0.5 rounded-full bg-white border border-primary text-primary text-[10px] font-bold shadow-2xs">
                   Boundary: {radiusMeters}m
                 </span>
 
                 {/* Verified tag */}
-                <span className="absolute -bottom-3 px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold shadow-2xs">
+                <span className="absolute -bottom-3 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold shadow-2xs">
                   {isEnabled ? 'Enforcement Active' : 'Geofence Standby'}
                 </span>
               </div>
@@ -633,7 +633,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                   {parseFloat(longitude || '0').toFixed(5)}
                 </p>
                 {detectedAccuracy != null && (
-                  <p className="text-[10px] text-teal-700 font-semibold">
+                  <p className="text-[10px] text-primary font-semibold">
                     Acquired via Device GPS (±{detectedAccuracy}m accuracy)
                   </p>
                 )}
@@ -658,7 +658,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
 
           {/* Quick Metrics */}
           <div className="pt-4 border-t border-surface-container grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3 rounded-xl bg-surface border border-gray-200">
               <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">
                 Total Clocked In Today
               </span>
@@ -666,11 +666,11 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 {clockedInCount}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
+            <div className="p-3 rounded-xl bg-surface border border-gray-200">
               <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">
                 Compound Compliance
               </span>
-              <span className="text-xl font-bold font-data-mono text-teal-700 mt-1 block">
+              <span className="text-xl font-bold font-data-mono text-primary mt-1 block">
                 100%
               </span>
             </div>

@@ -177,7 +177,7 @@ export class FinancialApprovalUseCases {
     // 4. Dispatch code directly to approver (never log code or expose in response)
     const actionDesc = dto.actionType.replace(/_/g, ' ').toLowerCase();
     if (channel === 'SMS') {
-      const smsMessage = `SmartShule: Approval code for ${actionDesc} on ${dto.targetRecordType} #${dto.targetRecordId} requested by ${requestingUser.name || requestingUser.userId} is ${rawCode}. Valid for 5 mins. Do not share.`;
+      const smsMessage = `Grace Seeds School: Approval code for ${actionDesc} on ${dto.targetRecordType} #${dto.targetRecordId} requested by ${requestingUser.name || requestingUser.userId} is ${rawCode}. Valid for 5 mins. Do not share.`;
       try {
         await this.notificationService.sendSms(destination, smsMessage);
       } catch (err: any) {

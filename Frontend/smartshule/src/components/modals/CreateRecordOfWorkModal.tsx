@@ -293,7 +293,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-surface p-4 rounded-xl border border-outline-variant/30">
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Term</label>
-              <select name="term" value={formData.term} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-white">
+              <select name="term" value={formData.term} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface">
                 <option value="Term 1">Term 1</option>
                 <option value="Term 2">Term 2</option>
                 <option value="Term 3">Term 3</option>
@@ -301,11 +301,11 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
             </div>
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Week No. *</label>
-              <input required type="number" name="week" min="1" max="15" value={formData.week} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-white font-bold" />
+              <input required type="number" name="week" min="1" max="15" value={formData.week} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface font-bold" />
             </div>
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Day *</label>
-              <select name="day" value={formData.day} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-white cursor-pointer">
+              <select name="day" value={formData.day} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface cursor-pointer">
                 <option value="Mon">Monday</option>
                 <option value="Tue">Tuesday</option>
                 <option value="Wed">Wednesday</option>
@@ -315,11 +315,11 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
             </div>
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Lesson Date *</label>
-              <input type="date" name="lessonDate" value={formData.lessonDate} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-white" />
+              <input type="date" name="lessonDate" value={formData.lessonDate} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface" />
             </div>
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Period</label>
-              <input type="text" name="period" value={formData.period} onChange={handleChange} placeholder="e.g. 1" className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-white" />
+              <input type="text" name="period" value={formData.period} onChange={handleChange} placeholder="e.g. 1" className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface" />
             </div>
           </div>
 
@@ -496,7 +496,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
           <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-sm font-bold text-amber-900 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-amber-600 text-[19px]">psychology</span>
+                <span className="material-symbols-outlined text-primary text-[19px]">psychology</span>
                 Lesson Outcome & Reflection
               </label>
               <div className="flex items-center gap-2">
@@ -505,7 +505,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   name="comprehensionLevel"
                   value={formData.comprehensionLevel}
                   onChange={handleChange}
-                  className="px-2.5 py-1 text-xs border border-amber-300 rounded-lg bg-white font-semibold text-amber-900"
+                  className="px-2.5 py-1 text-xs border border-primary rounded-lg bg-surface font-semibold text-on-primary-fixed"
                 >
                   <option value="EXCELLENT">Excellent (90%+ Mastery)</option>
                   <option value="GOOD">Good (75-89% Mastery)</option>
@@ -525,7 +525,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   placeholder="Most learners grasped the concept quickly during the activity..."
                   value={formData.whatWentWell}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 text-xs bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 resize-none"
+                  className="w-full px-3 py-2 text-xs bg-surface border border-primary/80 rounded-xl focus:ring-2 focus:ring-primary/20 resize-none"
                 />
               </div>
               <div>
@@ -536,7 +536,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   placeholder="3 learners struggled with calculation; scheduled remedial session..."
                   value={formData.remedialPlan}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 text-xs bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 resize-none"
+                  className="w-full px-3 py-2 text-xs bg-surface border border-primary/80 rounded-xl focus:ring-2 focus:ring-primary/20 resize-none"
                 />
               </div>
             </div>
@@ -581,7 +581,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
               type="button"
               disabled={submitting}
               onClick={() => handleSave('SUBMITTED')}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-[#901530] transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">send</span>
               {submitting ? 'Submitting...' : 'Submit for Review'}

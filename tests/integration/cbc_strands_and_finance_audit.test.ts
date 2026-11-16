@@ -93,7 +93,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('1. Successfully creates a new CBC Strand under a learning area and grade', async () => {
       const res = await request(app)
         .post('/api/v1/CBC/strands')
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           learningAreaId: testLearningAreaId,
           gradeLevel: 'GRADE_7',
@@ -113,7 +113,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('2. Repeated strand creation returns the existing record without creating duplicates', async () => {
       const dupRes = await request(app)
         .post('/api/v1/CBC/strands')
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           learningAreaId: testLearningAreaId,
           gradeLevel: 'GRADE_7',
@@ -132,7 +132,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('3. Updates existing strand details via PUT /api/v1/CBC/strands/:id', async () => {
       const updateRes = await request(app)
         .put(`/api/v1/CBC/strands/${createdStrandId}`)
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           title: 'Advanced Algebraic Expressions & Linear Equations',
           description: 'Updated comprehensive description for Grade 7 learners.'
@@ -147,7 +147,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('4. Retrieves strands scoped strictly by learning area and gradeLevel filter', async () => {
       const res = await request(app)
         .get(`/api/v1/CBC/strands/by-learning-area/${testLearningAreaId}?gradeLevel=GRADE_7`)
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -160,7 +160,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('5. Successfully creates a Sub-strand with specific learning outcomes', async () => {
       const res = await request(app)
         .post('/api/v1/CBC/sub-strands')
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           strandId: createdStrandId,
           code: 'SUB-TEST-1.1',
@@ -183,7 +183,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('6. Repeated sub-strand creation returns the existing record without creating duplicates', async () => {
       const dupRes = await request(app)
         .post('/api/v1/CBC/sub-strands')
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           strandId: createdStrandId,
           code: 'SUB-TEST-1.1',
@@ -201,7 +201,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('7. Updates sub-strand details and learning outcomes via PUT /api/v1/CBC/sub-strands/:id', async () => {
       const updateRes = await request(app)
         .put(`/api/v1/CBC/sub-strands/${createdSubStrandId}`)
-        .set('Authorization', `Bearer ${teacherToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           title: 'Binomial Expansion & Factorization Techniques',
           specificLearningOutcomes: [
@@ -219,7 +219,7 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
     it('8. Retrieves sub-strands by strand and verifies outcomes integrity', async () => {
       const res = await request(app)
         .get(`/api/v1/CBC/sub-strands/by-strand/${createdStrandId}`)
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -240,13 +240,13 @@ describe('CBC Strands Pipeline & Finance Hardcoded Values Audit', () => {
       // Verify strand is gone
       const checkStrand = await request(app)
         .get(`/api/v1/CBC/strands/by-learning-area/${testLearningAreaId}?gradeLevel=GRADE_7`)
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set('Authorization', `Bearer ${adminToken}`);
       expect(checkStrand.body.data.some((s: any) => s.id === createdStrandId)).toBe(false);
 
       // Verify sub-strand is gone
       const checkSub = await request(app)
         .get(`/api/v1/CBC/sub-strands/by-strand/${createdStrandId}`)
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set('Authorization', `Bearer ${adminToken}`);
       expect(checkSub.body.data.length).toBe(0);
     });
   });

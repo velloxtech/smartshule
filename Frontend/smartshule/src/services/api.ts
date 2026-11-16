@@ -412,6 +412,7 @@ export interface MarksCommitResult {
 }
 
 export interface TeacherAuthorizedClass {
+  classTeacherByStream?: Record<string,boolean>;
   wholeClass?: boolean;
   subjectsByStream?: Record<string, TeacherAuthorizedSubject[]>;
   id: string;
@@ -1810,16 +1811,21 @@ const coreApiService = {
     });
   },
 
-  getStreamTimetable: async (streamId?: string, termId?: string, classRoomId?: string): Promise<ApiResponse<TimetableData>> => {
+  getMyTimetableAccess: async (academicYearId:string,termId:string):Promise<ApiResponse<any>> => {
+    return apiFetch(`/timetables/access-options?${new URLSearchParams({academicYearId,termId})}`);
+  },
+
+  getStreamTimetable: async (streamId?: string, termId?: string, classRoomId?: string,academicYearId?:string): Promise<ApiResponse<TimetableData>> => {
     const params = new URLSearchParams();
     if (streamId) params.append('streamId', streamId);
     if (termId) params.append('termId', termId);
     if (classRoomId) params.append('classRoomId', classRoomId);
+    if (academicYearId) params.append('academicYearId',academicYearId);
     return apiFetch<ApiResponse<TimetableData>>(`/timetables/stream?${params.toString()}`);
   },
 
-  getTeacherTimetable: async (teacherId: string, termId: string): Promise<ApiResponse<any[]>> => {
-    return apiFetch<ApiResponse<any[]>>(`/timetables/teacher?teacherId=${teacherId}&termId=${termId}`);
+  getTeacherTimetable: async (teacherId: string, termId: string,academicYearId?:string): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>(`/timetables/teacher?teacherId=${teacherId}&termId=${termId}${academicYearId?'&academicYearId='+encodeURIComponent(academicYearId):''}`);
   },
 
   saveTimetableGrid: async (data: {
@@ -3029,7 +3035,7 @@ const coreApiService = {
     const link = document.createElement('a');
     link.href = downloadUrl;
     const today = new Date().toISOString().split('T')[0];
-    link.download = `smartshule_system_logs_${today}.csv`;
+    link.download = `Grace_Seeds_School_system_logs_${today}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

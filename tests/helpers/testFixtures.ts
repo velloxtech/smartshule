@@ -940,7 +940,8 @@ export async function fixtureLessonPlanPayload(container: AppContainer) {
   }
 
   const plan = (await container.lessonPlanRepository.findById('lesson-plan-current'))!.toJSON();
-  return { ...plan, teacherId: 'usr-teacher-01', academicYearId: 'year-2026', termId: 'term-2026-3' };
+  const source=(await container.schemeOfWorkRepository.findAll()).flatMap(s=>s.entries).find(e=>e.id===plan.schemeOfWorkEntryId);
+  return { ...plan, specificLearningOutcomes:source?.specificLearningOutcomes||plan.specificLearningOutcomes, teacherId: 'usr-teacher-01', academicYearId: 'year-2026', termId: 'term-2026-3' };
 }
 
 export async function fixtureRecordPayload(container: AppContainer) {

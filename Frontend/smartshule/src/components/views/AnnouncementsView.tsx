@@ -931,7 +931,7 @@ export const AnnouncementsView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 rounded-2xl text-white shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-300 text-3xl">campaign</span>
+            <span className="material-symbols-outlined text-primary-fixed-dim text-3xl">campaign</span>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notice Board & Circulars</h1>
           </div>
           <p className="text-rose-100/90 text-sm max-w-2xl">
@@ -961,13 +961,13 @@ export const AnnouncementsView: React.FC = () => {
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white border border-rose-400/30 rounded-xl text-sm font-semibold transition shadow-md cursor-pointer"
                 title="Broadcast School Reopening Notice & Directives to Parents"
               >
-                <span className="material-symbols-outlined text-base text-amber-300">campaign</span>
+                <span className="material-symbols-outlined text-base text-primary-fixed-dim">campaign</span>
                 <span>📢 Reopening Notice</span>
               </button>
 
               <button
                 onClick={openCreateModal}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-on-surface rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-container text-on-surface rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
                 title="Create a new official notice"
               >
                 <span className="material-symbols-outlined text-base">add</span>
@@ -991,7 +991,7 @@ export const AnnouncementsView: React.FC = () => {
       {/* 2. Key Notice Board Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">article</span>
           </div>
           <div>
@@ -1011,12 +1011,12 @@ export const AnnouncementsView: React.FC = () => {
         </div>
 
         <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">push_pin</span>
           </div>
           <div>
             <p className="text-xs text-on-surface-variant font-medium">Pinned Notices</p>
-            <h3 className="text-xl font-bold text-amber-600">{stats.pinnedCount}</h3>
+            <h3 className="text-xl font-bold text-primary">{stats.pinnedCount}</h3>
           </div>
         </div>
 
@@ -1030,7 +1030,7 @@ export const AnnouncementsView: React.FC = () => {
             <p className="text-xs text-on-surface-variant font-medium">
               {isParentOrStudent ? 'My Acknowledged' : 'Parent Notices'}
             </p>
-            <h3 className="text-xl font-bold text-emerald-600">
+            <h3 className="text-xl font-bold text-primary">
               {isParentOrStudent ? stats.userAckCount : stats.parentNotices}
             </h3>
           </div>
@@ -1039,7 +1039,7 @@ export const AnnouncementsView: React.FC = () => {
 
       {/* 3. Urgent / Pinned Spotlight Alert Banner */}
       {pinnedOrUrgent.length > 0 && (
-        <div className="bg-gradient-to-r from-red-50 via-amber-50 to-orange-50 border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
+        <div className="bg-gradient-to-r from-red-50 via-primary-fixed to-primary-fixed border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2 text-red-800 font-semibold text-sm">
             <span className="material-symbols-outlined text-red-600">notifications_active</span>
             <span>HIGH PRIORITY / PINNED NOTICES ({pinnedOrUrgent.length})</span>
@@ -1073,7 +1073,7 @@ export const AnnouncementsView: React.FC = () => {
                     <span className="material-symbols-outlined text-xs">person</span>
                     {item.authorName}
                   </span>
-                  <span className="text-indigo-600 font-medium hover:underline flex items-center gap-0.5">
+                  <span className="text-primary font-medium hover:underline flex items-center gap-0.5">
                     Read Directive
                     <span className="material-symbols-outlined text-xs">arrow_forward</span>
                   </span>
@@ -1097,7 +1097,7 @@ export const AnnouncementsView: React.FC = () => {
               placeholder="Search circular title, content, or author..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition"
             />
             {searchQuery && (
               <button
@@ -1176,7 +1176,7 @@ export const AnnouncementsView: React.FC = () => {
       {/* 5. Announcements List / Grid */}
       {loading ? (
         <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
-          <span className="material-symbols-outlined text-4xl animate-spin text-indigo-600">
+          <span className="material-symbols-outlined text-4xl animate-spin text-primary">
             progress_activity
           </span>
           <p className="mt-2 text-sm font-medium">Loading school notice board...</p>
@@ -1222,7 +1222,7 @@ export const AnnouncementsView: React.FC = () => {
                     item.category === 'FEES'
                       ? 'bg-emerald-500'
                       : item.category === 'ACADEMIC'
-                      ? 'bg-indigo-500'
+                      ? 'bg-primary'
                       : item.category === 'EMERGENCY'
                       ? 'bg-red-500'
                       : item.category === 'EVENT'
@@ -1258,7 +1258,7 @@ export const AnnouncementsView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       {item.isPinned && (
                         <span
-                          className="material-symbols-outlined text-amber-500 text-lg"
+                          className="material-symbols-outlined text-primary text-lg"
                           title="Pinned Notice"
                         >
                           push_pin
@@ -1270,7 +1270,7 @@ export const AnnouncementsView: React.FC = () => {
                           onClick={(e) => handleTogglePin(item.id, e)}
                           className={`p-1 rounded-md transition ${
                             item.isPinned
-                              ? 'text-amber-600 hover:bg-amber-50'
+                              ? 'text-primary hover:bg-primary-fixed'
                               : 'text-slate-400 hover:bg-surface-container-low hover:text-on-surface-variant'
                           }`}
                           title={item.isPinned ? 'Unpin Notice' : 'Pin to Top'}
@@ -1282,7 +1282,7 @@ export const AnnouncementsView: React.FC = () => {
                   </div>
 
                   {/* Title & Ref */}
-                  <h3 className="font-bold text-on-surface text-base leading-snug line-clamp-2 group-hover:text-indigo-600 transition">
+                  <h3 className="font-bold text-on-surface text-base leading-snug line-clamp-2 group-hover:text-primary transition">
                     {item.title}
                   </h3>
 
@@ -1311,7 +1311,7 @@ export const AnnouncementsView: React.FC = () => {
                   {(item.sendSmsBroadcast || item.sendWhatsAppBroadcast) && (
                     <div className="flex items-center gap-2 mt-3 text-[11px] text-on-surface-variant">
                       {item.sendSmsBroadcast && (
-                        <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2 py-0.5 rounded border border-sky-100">
+                        <span className="inline-flex items-center gap-1 bg-primary-fixed text-primary px-2 py-0.5 rounded border border-primary">
                           <span className="material-symbols-outlined text-xs">sms</span>
                           SMS Sent
                         </span>
@@ -1341,7 +1341,7 @@ export const AnnouncementsView: React.FC = () => {
                         disabled={!!isAcknowledged}
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition ${
                           isAcknowledged
-                            ? 'bg-emerald-100 text-emerald-800 cursor-default'
+                            ? 'bg-primary-fixed text-on-primary-fixed cursor-default'
                             : 'bg-primary-fixed text-primary hover:bg-primary-fixed'
                         }`}
                         title={isAcknowledged ? 'You have read and acknowledged this notice' : 'Acknowledge notice receipt'}
@@ -1548,7 +1548,7 @@ export const AnnouncementsView: React.FC = () => {
                 </div>
 
                 {/* Stamp Seal Graphic */}
-                <div className="w-28 h-28 rounded-full border-2 border-indigo-700 border-dashed p-1 flex flex-col items-center justify-center text-center text-indigo-800 rotate-[-8deg] bg-indigo-50/40 select-none shadow-xs">
+                <div className="w-28 h-28 rounded-full border-2 border-primary border-dashed p-1 flex flex-col items-center justify-center text-center text-on-primary-fixed rotate-[-8deg] bg-primary-fixed/40 select-none shadow-xs">
                   <span className="text-[9px] font-bold uppercase tracking-tighter">
                     GRACE SEEDS SCHOOL
                   </span>
@@ -1581,7 +1581,7 @@ export const AnnouncementsView: React.FC = () => {
                       user?.id &&
                       selectedForMemo.acknowledgements &&
                       selectedForMemo.acknowledgements.includes(user.id)
-                        ? 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-primary-fixed text-on-primary-fixed'
                         : 'bg-primary hover:bg-primary-container text-white shadow-sm'
                     }`}
                   >
@@ -1616,7 +1616,7 @@ export const AnnouncementsView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setSelectedForMemo(null)}
-                  className="px-4 py-2 bg-surface-container hover:bg-slate-300 text-on-surface text-xs font-semibold rounded-xl transition"
+                  className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold rounded-xl transition"
                 >
                   Close
                 </button>
@@ -1634,7 +1634,7 @@ export const AnnouncementsView: React.FC = () => {
           <div className="bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden my-8">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-400">post_add</span>
+                <span className="material-symbols-outlined text-primary">post_add</span>
                 <h3 className="font-semibold text-base">
                   {editingAnnouncement ? 'Edit Circular Notice' : 'Post New Notice or Circular'}
                 </h3>
@@ -1688,7 +1688,7 @@ export const AnnouncementsView: React.FC = () => {
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="e.g. 2026 Term 3 Opening Guidelines & Reporting Dates"
-                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                 />
               </div>
 
@@ -1699,7 +1699,7 @@ export const AnnouncementsView: React.FC = () => {
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as AnnouncementCategory)}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="GENERAL">General Notice</option>
                     <option value="ACADEMIC">Academic & CBC</option>
@@ -1717,7 +1717,7 @@ export const AnnouncementsView: React.FC = () => {
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as AnnouncementPriority)}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="NORMAL">Normal Priority</option>
                     <option value="HIGH">High Priority</option>
@@ -1734,7 +1734,7 @@ export const AnnouncementsView: React.FC = () => {
                   <select
                     value={formAudience}
                     onChange={(e) => setFormAudience(e.target.value as AnnouncementAudience)}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="ALL">All School Community</option>
                     <option value="PARENTS">Parents & Guardians</option>
@@ -1750,7 +1750,7 @@ export const AnnouncementsView: React.FC = () => {
                     <select
                       value={formGradeLevel}
                       onChange={(e) => setFormGradeLevel(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                     >
                       {GRADE_LEVEL_OPTIONS.map((g) => (
                         <option key={g.value} value={g.value}>
@@ -1769,7 +1769,7 @@ export const AnnouncementsView: React.FC = () => {
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as 'PUBLISHED' | 'DRAFT')}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="PUBLISHED">PUBLISHED (Live)</option>
                     <option value="DRAFT">DRAFT (Admin Only)</option>
@@ -1783,7 +1783,7 @@ export const AnnouncementsView: React.FC = () => {
                     required
                     value={formPublishDate}
                     onChange={(e) => setFormPublishDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
 
@@ -1793,7 +1793,7 @@ export const AnnouncementsView: React.FC = () => {
                     type="date"
                     value={formExpiryDate}
                     onChange={(e) => setFormExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
               </div>
@@ -1809,7 +1809,7 @@ export const AnnouncementsView: React.FC = () => {
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
                   placeholder="Enter the official text of the circular notice..."
-                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none font-sans leading-relaxed"
+                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none font-sans leading-relaxed"
                 />
               </div>
 
@@ -1820,7 +1820,7 @@ export const AnnouncementsView: React.FC = () => {
                     type="checkbox"
                     checked={formIsPinned}
                     onChange={(e) => setFormIsPinned(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
                   <span className="text-xs text-on-surface-variant font-medium">
                     Pin this notice to top of the school notice board
@@ -1832,7 +1832,7 @@ export const AnnouncementsView: React.FC = () => {
                     type="checkbox"
                     checked={formSendSms}
                     onChange={(e) => setFormSendSms(e.target.checked)}
-                    className="rounded text-sky-600 focus:ring-sky-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
                   <span className="text-xs text-on-surface-variant font-medium">
                     Send Instant SMS Alert to Parent Contacts
@@ -1844,7 +1844,7 @@ export const AnnouncementsView: React.FC = () => {
                     type="checkbox"
                     checked={formSendWhatsApp}
                     onChange={(e) => setFormSendWhatsApp(e.target.checked)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
                   <span className="text-xs text-on-surface-variant font-medium">
                     Broadcast to School WhatsApp Community Channel
@@ -1864,7 +1864,7 @@ export const AnnouncementsView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-on-surface bg-amber-500 hover:bg-amber-400 rounded-xl transition shadow-md disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-on-surface bg-primary hover:bg-primary-container rounded-xl transition shadow-md disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>

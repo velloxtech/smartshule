@@ -351,7 +351,7 @@ export const MyDigitalSignatureView: React.FC = () => {
                 Signature Vault Status
               </span>
               {isConfigured ? (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary-fixed text-on-primary-fixed flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Active &amp; Secured
                 </span>
               ) : (
@@ -372,17 +372,17 @@ export const MyDigitalSignatureView: React.FC = () => {
         </div>
 
         {/* Security Rule Notice */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl p-5 border border-blue-100 shadow-sm flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-primary-fixed to-primary-fixed/50 rounded-2xl p-5 border border-primary shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider mb-2">
-              <Info className="w-4 h-4 text-blue-700" />
+            <div className="flex items-center gap-2 text-on-primary-fixed font-bold text-xs uppercase tracking-wider mb-2">
+              <Info className="w-4 h-4 text-primary" />
               Dual-Control Security Rule
             </div>
-            <p className="text-xs text-blue-950 leading-relaxed mt-1">
+            <p className="text-xs text-on-primary-fixed leading-relaxed mt-1">
               Saving your signature does <strong>not</strong> sign any document automatically. Every document signature requires explicit 6-digit email challenge authorization.
             </p>
           </div>
-          <div className="text-[10px] text-blue-700 font-semibold mt-3">
+          <div className="text-[10px] text-primary font-semibold mt-3">
             SHA-256 Document Content Hashing · 5-Min OTP Window
           </div>
         </div>
@@ -487,7 +487,7 @@ export const MyDigitalSignatureView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setPenColor('#1e3a8a')}
-                  className={`w-6 h-6 rounded-full bg-blue-900 border-2 transition-transform ${
+                  className={`w-6 h-6 rounded-full bg-primary-container border-2 transition-transform ${
                     penColor === '#1e3a8a' ? 'scale-110 border-primary shadow-sm' : 'border-transparent'
                   }`}
                   title="Institutional Navy"
@@ -503,7 +503,7 @@ export const MyDigitalSignatureView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setPenColor('#1d4ed8')}
-                  className={`w-6 h-6 rounded-full bg-blue-700 border-2 transition-transform ${
+                  className={`w-6 h-6 rounded-full bg-primary border-2 transition-transform ${
                     penColor === '#1d4ed8' ? 'scale-110 border-primary shadow-sm' : 'border-transparent'
                   }`}
                   title="Royal Blue"
@@ -519,7 +519,7 @@ export const MyDigitalSignatureView: React.FC = () => {
                   step="0.5"
                   value={penWidth}
                   onChange={(e) => setPenWidth(parseFloat(e.target.value))}
-                  className="w-24 accent-blue-700 cursor-pointer"
+                  className="w-24 accent-primary cursor-pointer"
                 />
               </div>
 
@@ -609,7 +609,7 @@ export const MyDigitalSignatureView: React.FC = () => {
         {/* TAB 3: UPLOAD IMAGE */}
         {activeTab === 'UPLOAD' && (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-outline-variant/30 hover:border-blue-600 rounded-xl p-8 text-center bg-surface hover:bg-blue-50/20 transition-all cursor-pointer relative">
+            <div className="border-2 border-dashed border-outline-variant/30 hover:border-primary rounded-xl p-8 text-center bg-surface hover:bg-primary-fixed/20 transition-all cursor-pointer relative">
               <input
                 type="file"
                 accept="image/png, image/jpeg, image/webp, image/svg+xml"
@@ -655,7 +655,7 @@ export const MyDigitalSignatureView: React.FC = () => {
               <strong className="text-on-surface block font-bold mb-0.5">
                 Explicit Electronic Signature Consent &amp; Authorization
               </strong>
-              I explicitly authorize Grace Seeds School to securely store this digital signature in my SmartShule profile. I understand that creating or updating this signature does not automatically sign any document, and that placing this signature on any official school document will strictly require a single-use 6-digit email authorization challenge verified through my registered account email.
+              I explicitly authorize Grace Seeds School to securely store this digital signature in my Grace Seeds School profile. I understand that creating or updating this signature does not automatically sign any document, and that placing this signature on any official school document will strictly require a single-use 6-digit email authorization challenge verified through my registered account email.
             </div>
           </label>
         </div>

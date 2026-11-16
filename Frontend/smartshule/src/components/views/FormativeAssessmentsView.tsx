@@ -140,8 +140,8 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
   if (isParent && checkingClearance) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-[#800000] font-body">Verifying fee clearance status with Grace Seeds School...</p>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-primary font-body">Verifying fee clearance status with Grace Seeds School...</p>
       </div>
     );
   }
@@ -161,7 +161,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
           </div>
 
           <div>
-            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-primary text-white uppercase tracking-wider">
               Fee Clearance Required
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-on-surface mt-2.5">
@@ -183,7 +183,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             </div>
             <div className="flex justify-between text-xs font-bold pt-2 border-t border-amber-200">
               <span className="text-amber-950">Outstanding Balance:</span>
-              <span className="font-data-mono text-base text-[#7a1228] font-black">
+              <span className="font-data-mono text-base text-primary font-black">
                 KES {feeBalance.toLocaleString()}
               </span>
             </div>
@@ -194,7 +194,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">chat</span>
               <span>Request Clearance from Head Teacher</span>
@@ -204,7 +204,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">support_agent</span>
               <span>Request Clearance from Director</span>
@@ -248,7 +248,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
               onClick={() => onNavigateTab('summative-assessments')}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
             >
-              <span className="material-symbols-outlined text-[18px] text-[#7a1228]">military_tech</span>
+              <span className="material-symbols-outlined text-[18px] text-primary">military_tech</span>
               <span>Go to Summative Exams</span>
             </button>
           )}
@@ -256,7 +256,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
           {!isParent && (
             <button
               onClick={onOpenNewAssessment}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7a1228] hover:bg-[#5f0d1e] text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
               <span>Record Formative Rubric (CAT)</span>
@@ -286,8 +286,8 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             <span className="text-[11px] text-on-surface-variant uppercase font-bold tracking-wider">
               Meeting (ME)
             </span>
-            <div className="text-2xl font-black text-blue-700 font-data-mono mt-1">
-              {meCount} <span className="text-xs font-semibold text-blue-600">({mePct})</span>
+            <div className="text-2xl font-black text-primary font-data-mono mt-1">
+              {meCount} <span className="text-xs font-semibold text-primary">({mePct})</span>
             </div>
           </div>
           <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center font-black text-sm">
@@ -394,7 +394,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
                   <span className="font-data-mono text-xs text-outline font-medium">
                     (Adm #{item.admNo} · {item.grade})
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-xs font-bold text-[#7a1228] border border-outline-variant/30">
+                  <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-xs font-bold text-primary border border-outline-variant/30">
                     {item.learningArea}
                   </span>
                 </div>
@@ -412,12 +412,12 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
                 {/* Targeted Competency & Values Pills */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {item.targetedCompetencies && item.targetedCompetencies.length > 0 && (
-                    <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-md font-semibold">
+                    <span className="text-[10px] bg-primary-fixed text-primary border border-primary px-2 py-0.5 rounded-md font-semibold">
                       Competency: {item.targetedCompetencies.join(', ').replace(/_/g, ' ')}
                     </span>
                   )}
                   {item.valuesObserved && item.valuesObserved.length > 0 && (
-                    <span className="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-md font-semibold">
+                    <span className="text-[10px] bg-primary-fixed text-primary border border-primary px-2 py-0.5 rounded-md font-semibold">
                       Values: {item.valuesObserved.join(', ').replace(/_/g, ' ')}
                     </span>
                   )}
@@ -467,7 +467,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             {!isParent && (
               <button
                 onClick={onOpenNewAssessment}
-                className="px-4 py-2 bg-[#7a1228] text-white rounded-lg text-xs font-bold hover:bg-[#5f0d1e] inline-flex items-center gap-2 cursor-pointer shadow-sm"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-container inline-flex items-center gap-2 cursor-pointer shadow-sm"
               >
                 <span className="material-symbols-outlined text-base">add</span>
                 <span>Record First Formative Rubric</span>

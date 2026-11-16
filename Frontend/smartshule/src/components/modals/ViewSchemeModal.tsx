@@ -85,9 +85,9 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         {/* Top Header */}
-        <div className="bg-[#7a1228] text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-2xl">calendar_month</span>
             <div>
@@ -121,7 +121,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
         </div>
 
         {/* Metadata & Controls Bar */}
-        <div className="bg-slate-50 border-b border-slate-200 p-4 shrink-0 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between text-xs">
+        <div className="bg-surface border-b border-slate-200 p-4 shrink-0 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between text-xs">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-700">
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Academic Term</span>
@@ -146,7 +146,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
             <select
               value={selectedWeekFilter}
               onChange={(e) => setSelectedWeekFilter(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 font-medium focus:ring-2 focus:ring-[#7a1228] outline-none"
+              className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-surface text-slate-700 font-medium focus:ring-2 focus:ring-primary outline-none"
             >
               <option value="ALL">All Weeks ({uniqueWeeks.length})</option>
               {uniqueWeeks.map((w) => (
@@ -164,7 +164,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                 placeholder="Search strand or outcome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-[#7a1228] outline-none w-48"
+                className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-surface focus:ring-2 focus:ring-primary outline-none w-48"
               />
             </div>
           </div>
@@ -200,7 +200,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-100/90 text-slate-700 font-black border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                    <tr className="bg-surface-container-low/90 text-slate-700 font-black border-b border-slate-200 text-[11px] uppercase tracking-wider">
                       <th className="py-3 px-3 w-16 text-center">Wk/Les</th>
                       <th className="py-3 px-3 w-48">Strand & Sub-Strand</th>
                       <th className="py-3 px-4 min-w-[220px]">Specific Learning Outcomes</th>
@@ -214,10 +214,10 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800">
                     {filteredEntries.map((e, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors align-top">
+                      <tr key={idx} className="hover:bg-surface/80 transition-colors align-top">
                         {/* Week / Lesson */}
-                        <td className="py-3 px-3 text-center font-mono font-black text-slate-900 bg-slate-50/50">
-                          <div className="text-xs text-[#7a1228]">W{e.weekNumber}</div>
+                        <td className="py-3 px-3 text-center font-mono font-black text-slate-900 bg-surface/50">
+                          <div className="text-xs text-primary">W{e.weekNumber}</div>
                           <div className="text-[10px] text-slate-500 font-normal">L{e.lessonNumber}</div>
                         </td>
 
@@ -265,7 +265,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
 
                         {/* Assessment Methods */}
                         <td className="py-3 px-3">
-                          <span className="inline-block bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                          <span className="inline-block bg-primary-fixed text-on-primary-fixed border border-primary px-2 py-0.5 rounded text-[10px] font-bold">
                             {e.assessmentMethods?.join(', ') || 'Not recorded'}
                           </span>
                         </td>
@@ -280,7 +280,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setFocusedEntry(e)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-rose-50 transition-colors cursor-pointer"
                             title="View single lesson entry details"
                           >
                             <span className="material-symbols-outlined text-[17px]">visibility</span>
@@ -296,7 +296,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
         </div>
 
         {/* Modal Bottom Actions Footer */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="bg-surface border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-500">
             Scheme of Work · {context?.school?.name || 'School'}
           </div>
@@ -307,7 +307,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
               <button
                 type="button"
                 onClick={() => onDownloadPDF(scheme)}
-                className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#5e0d1e] shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">download</span>
                 <span>Download Official PDF</span>
@@ -321,7 +321,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                   onSubmitForReview(scheme.id);
                   onClose();
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">send</span>
                 <span>Submit for Review</span>
@@ -333,7 +333,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
             <button
               type="button"
               onClick={close}
-              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-100 transition-all cursor-pointer"
+              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-surface-container-low transition-all cursor-pointer"
             >
               Close
             </button>
@@ -343,8 +343,8 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
         {/* Focused Single Scheme Entry Modal */}
         {focusedEntry && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
-              <div className="bg-[#7a1228] text-white px-5 py-4 flex items-center justify-between">
+            <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+              <div className="bg-primary text-white px-5 py-4 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase bg-white/20 px-2 py-0.5 rounded">
                     Week {focusedEntry.weekNumber} · Lesson {focusedEntry.lessonNumber}
@@ -374,7 +374,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                 {focusedEntry.keyInquiryQuestions && focusedEntry.keyInquiryQuestions.length > 0 && (
                   <div>
                     <span className="font-black text-slate-900 uppercase text-[11px] block mb-1">Key Inquiry Questions:</span>
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl italic space-y-1">
+                    <div className="p-3 bg-surface border border-slate-200 rounded-xl italic space-y-1">
                       {focusedEntry.keyInquiryQuestions.map((q, idx) => (
                         <div key={idx}>• {q}</div>
                       ))}
@@ -384,7 +384,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
 
                 <div>
                   <span className="font-black text-slate-900 uppercase text-[11px] block mb-1">Learning Experiences & Activities:</span>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="p-3 bg-surface border border-slate-200 rounded-xl">
                     {focusedEntry.learningExperiences && focusedEntry.learningExperiences.length > 0 ? (
                       <ul className="list-disc list-inside space-y-1">
                         {focusedEntry.learningExperiences.map((act, idx) => (
@@ -398,11 +398,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="p-3 bg-surface border border-slate-200 rounded-xl">
                     <span className="font-black text-slate-900 uppercase text-[10px] block mb-0.5">Resources:</span>
                     <p className="text-[11px] text-slate-600">{focusedEntry.learningResources?.join(', ') || 'Not recorded'}</p>
                   </div>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="p-3 bg-surface border border-slate-200 rounded-xl">
                     <span className="font-black text-slate-900 uppercase text-[10px] block mb-0.5">Assessment:</span>
                     <p className="text-[11px] text-slate-600">{focusedEntry.assessmentMethods?.join(', ') || 'Not recorded'}</p>
                   </div>
@@ -416,11 +416,11 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
                 )}
               </div>
 
-              <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 text-right">
+              <div className="px-5 py-3 bg-surface border-t border-slate-200 text-right">
                 <button
                   type="button"
                   onClick={() => setFocusedEntry(null)}
-                  className="px-4 py-1.5 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#5e0d1e] cursor-pointer"
+                  className="px-4 py-1.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container cursor-pointer"
                 >
                   Done
                 </button>

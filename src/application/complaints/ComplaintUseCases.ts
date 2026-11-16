@@ -351,7 +351,7 @@ export class ComplaintUseCases {
 
     // Asynchronously notify school office/administration
     if (this.notificationService) {
-      const notifyMessage = `SmartShule: New Concern #${referenceNumber} (${category}) logged for student ${studentName || 'Learner'}. Priority: ${priority}.`;
+      const notifyMessage = `Grace Seeds School: New Concern #${referenceNumber} (${category}) logged for student ${studentName || 'Learner'}. Priority: ${priority}.`;
       this.notificationService
         .sendGeneralNotification?.({
           schoolId,
@@ -504,7 +504,7 @@ export class ComplaintUseCases {
       this.notificationService
         .sendSms?.(
           complaint.complainantPhone,
-          `SmartShule: Your concern #${complaint.referenceNumber} has been acknowledged by ${userName} and is now being attended to.`
+          `Grace Seeds School: Your concern #${complaint.referenceNumber} has been acknowledged by ${userName} and is now being attended to.`
         )
         .catch(() => {});
     }
@@ -667,7 +667,7 @@ export class ComplaintUseCases {
         this.notificationService
           .sendSms?.(
             complaint.complainantPhone,
-            `SmartShule: New update regarding concern #${complaint.referenceNumber}: "${messageData.message.slice(0, 80)}..."`
+            `Grace Seeds School: New update regarding concern #${complaint.referenceNumber}: "${messageData.message.slice(0, 80)}..."`
           )
           .catch(() => {});
       }
@@ -718,7 +718,7 @@ export class ComplaintUseCases {
       this.notificationService
         .sendSms?.(
           complaint.complainantPhone,
-          `SmartShule: Your concern #${complaint.referenceNumber} has been resolved. Action taken: ${actionTaken}. Please verify in your Parent Portal.`
+          `Grace Seeds School: Your concern #${complaint.referenceNumber} has been resolved. Action taken: ${actionTaken}. Please verify in your Parent Portal.`
         )
         .catch(() => {});
     }

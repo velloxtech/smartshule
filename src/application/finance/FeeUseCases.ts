@@ -3111,7 +3111,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
             if (u && u.phone) {
               await this.notificationService.sendSms(
                 u.phone,
-                `SmartShule KCB Buni: Received KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber} (Ref: ${transactionCode}). Balance: KES ${invoice.balance}.`
+                `Grace Seeds School KCB Buni: Received KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber} (Ref: ${transactionCode}). Balance: KES ${invoice.balance}.`
               );
             }
           }
@@ -7843,7 +7843,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         if (u && u.phone) {
           await this.notificationService.sendSms(
             u.phone,
-            `SmartShule: Payment of KES ${amount.toLocaleString()} (Ref: ${ref}) for ${student.fullName} has been forwarded to the school accounts office. Your ledger will update once verified.`
+            `Grace Seeds School: Payment of KES ${amount.toLocaleString()} (Ref: ${ref}) for ${student.fullName} has been forwarded to the school accounts office. Your ledger will update once verified.`
           );
         }
       }

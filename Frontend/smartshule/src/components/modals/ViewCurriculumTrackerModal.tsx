@@ -37,9 +37,9 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         {/* Top Header */}
-        <div className="bg-[#7a1228] text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-2xl">fact_check</span>
             <div>
@@ -65,7 +65,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
         </div>
 
         {/* Progress & Metadata Header */}
-        <div className="bg-slate-50 border-b border-slate-200 p-4 shrink-0 space-y-3">
+        <div className="bg-surface border-b border-slate-200 p-4 shrink-0 space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Educator</span>
@@ -89,11 +89,11 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
           <div>
             <div className="flex justify-between items-center text-[11px] font-bold mb-1">
               <span className="text-slate-600">Overall Term Curriculum Coverage:</span>
-              <span className="text-[#7a1228] font-black">{completionPct}% Completed</span>
+              <span className="text-primary font-black">{completionPct}% Completed</span>
             </div>
-            <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div className="w-full bg-surface-container rounded-full h-2.5 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#7a1228] to-emerald-600 h-2.5 rounded-full transition-all duration-500"
+                className="bg-primary h-2.5 rounded-full transition-all duration-500 motion-reduce:transition-none"
                 style={{ width: `${Math.min(100, Math.max(0, completionPct))}%` }}
               />
             </div>
@@ -101,13 +101,13 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
         </div>
 
         {/* Tab Switcher & Filters */}
-        <div className="px-6 py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 bg-white">
+        <div className="px-6 py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 bg-surface-container-lowest">
           <div className="flex gap-4 font-bold">
             <button
               onClick={() => setActiveTab('weeks')}
               className={`py-2 border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
                 activeTab === 'weeks'
-                  ? 'border-[#7a1228] text-[#7a1228]'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -118,7 +118,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
               onClick={() => setActiveTab('dailyLogs')}
               className={`py-2 border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
                 activeTab === 'dailyLogs'
-                  ? 'border-[#7a1228] text-[#7a1228]'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -133,7 +133,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
               <select
                 value={weekFilter}
                 onChange={(e) => setWeekFilter(e.target.value as any)}
-                className="px-2.5 py-1 border border-slate-200 rounded-lg text-xs bg-white text-slate-700 outline-none"
+                className="px-2.5 py-1 border border-slate-200 rounded-lg text-xs bg-surface text-slate-700 outline-none"
               >
                 <option value="ALL">All Weeks</option>
                 <option value="COVERED">Covered Only</option>
@@ -155,7 +155,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
                 <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-black border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                      <tr className="bg-surface-container-low text-slate-700 font-black border-b border-slate-200 text-[11px] uppercase tracking-wider">
                         <th className="py-2.5 px-3 w-16 text-center">Week</th>
                         <th className="py-2.5 px-3 w-48">Strand & Sub-Strand</th>
                         <th className="py-2.5 px-4 min-w-[200px]">Planned Outcomes</th>
@@ -169,8 +169,8 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
                       {filteredWeeks.map((w) => {
                         const isWeekCovered = w.isCovered || w.status === 'COVERED';
                         return (
-                          <tr key={w.id || w.weekNumber} className="hover:bg-slate-50/80 transition-colors align-top">
-                            <td className="py-3 px-3 text-center font-black font-mono text-[#7a1228] bg-slate-50/50">
+                          <tr key={w.id || w.weekNumber} className="hover:bg-surface/80 transition-colors align-top">
+                            <td className="py-3 px-3 text-center font-black font-mono text-primary bg-surface/50">
                               W{w.weekNumber}
                             </td>
                             <td className="py-3 px-3">
@@ -224,7 +224,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
                               <button
                                 type="button"
                                 onClick={() => setSelectedWeekDetail(w)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-rose-50 transition-colors cursor-pointer"
                                 title="View Week Progression Details"
                               >
                                 <span className="material-symbols-outlined text-[17px]">visibility</span>
@@ -250,20 +250,20 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
               ) : (
                 <div className="space-y-2">
                   {tracker.dailyLogs.map((log) => (
-                    <div key={log.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div key={log.id} className="p-3.5 bg-surface border border-slate-200 rounded-xl space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setSelectedDailyLogDetail(log)}
-                            className="p-1 rounded-lg text-slate-500 hover:text-[#7a1228] hover:bg-white transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-slate-500 hover:text-primary hover:bg-white transition-colors cursor-pointer"
                             title="View Daily Lesson Log & Reflection Details"
                           >
                             <span className="material-symbols-outlined text-[17px]">visibility</span>
                           </button>
                           <span className="font-black text-slate-900">{log.date} ({log.dayOfWeek || 'Lesson'})</span>
                           {log.lessonPeriod && (
-                            <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-bold bg-surface-container text-slate-700 px-2 py-0.5 rounded">
                               {log.lessonPeriod}
                             </span>
                           )}
@@ -284,7 +284,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
                       </div>
 
                       {log.reflection?.whatWentWell && (
-                        <div className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                        <div className="text-[11px] text-slate-700 bg-surface-container-lowest p-2 rounded border border-slate-200">
                           <span className="font-bold text-slate-800">Reflection: </span>
                           <span>{log.reflection.whatWentWell}</span>
                         </div>
@@ -298,7 +298,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="bg-surface border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-500">
             KICD CBC Syllabus Coverage Plan Dossier · Grace Seeds School
           </div>
@@ -308,7 +308,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
               <button
                 type="button"
                 onClick={() => onDownloadPDF(tracker)}
-                className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#5e0d1e] shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">download</span>
                 <span>Download Tracker PDF</span>
@@ -318,7 +318,7 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-100 transition-all cursor-pointer"
+              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-surface-container-low transition-all cursor-pointer"
             >
               Close
             </button>

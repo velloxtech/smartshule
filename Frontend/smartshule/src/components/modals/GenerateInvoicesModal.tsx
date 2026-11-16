@@ -255,10 +255,10 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold">
-              <span className="material-symbols-outlined text-[24px] text-amber-300">receipt_long</span>
+              <span className="material-symbols-outlined text-[24px] text-primary-fixed-dim">receipt_long</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Automated Bulk Fee Invoicing</h3>
@@ -275,7 +275,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 setError(null);
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                activeTab === 'CREATE' ? 'bg-white text-[#7a1228]' : 'text-rose-100 hover:bg-white/10'
+                activeTab === 'CREATE' ? 'bg-white text-primary' : 'text-rose-100 hover:bg-white/10'
               }`}
             >
               Generate
@@ -287,7 +287,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 setError(null);
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                activeTab === 'HISTORY' ? 'bg-white text-[#7a1228]' : 'text-rose-100 hover:bg-white/10'
+                activeTab === 'HISTORY' ? 'bg-white text-primary' : 'text-rose-100 hover:bg-white/10'
               }`}
             >
               Batch History
@@ -448,9 +448,9 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 const currentPupil = allStudentsList.find(s => s.id === selectedStudentId);
                 if (!currentPupil) return null;
                 return (
-                  <div className="p-3 bg-white rounded-xl border border-[#7a1228]/20 flex items-center justify-between gap-3 shadow-xs">
+                  <div className="p-3 bg-surface-container-lowest rounded-xl border border-primary/20 flex items-center justify-between gap-3 shadow-xs">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-[#7a1228]/10 text-[#7a1228] font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
                         {currentPupil.name.charAt(0)}
                       </div>
                       <div>
@@ -499,7 +499,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewLoading || isExecuting}
-                  className="px-5 py-2 bg-[#7a1228] text-white text-xs font-bold rounded-lg hover:bg-[#600e1f] transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
+                  className="px-5 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
                 >
                   {isPreviewLoading ? (
                     <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
@@ -528,13 +528,13 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">Already Invoiced (Skip)</span>
                     <strong className="text-lg font-bold text-amber-700 font-data-mono">{previewData.summary.alreadyInvoicedCount}</strong>
                   </div>
-                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-300">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 block">100% Scholarship</span>
-                    <strong className="text-lg font-bold text-blue-700 font-data-mono">{previewData.summary.exemptSponsoredCount}</strong>
+                  <div className="p-3 rounded-xl bg-primary-fixed border border-primary">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-on-primary-fixed block">100% Scholarship</span>
+                    <strong className="text-lg font-bold text-primary font-data-mono">{previewData.summary.exemptSponsoredCount}</strong>
                   </div>
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-300">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">Estimated Billing</span>
-                    <strong className="text-base font-bold text-[#7a1228] font-data-mono">
+                    <strong className="text-base font-bold text-primary font-data-mono">
                       KES {previewData.summary.totalEstimatedBilling.toLocaleString()}
                     </strong>
                   </div>
@@ -548,21 +548,21 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setCandidateFilter('ALL')}
-                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'ALL' ? 'bg-[#7a1228] text-white' : 'text-on-surface-variant'}`}
+                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'ALL' ? 'bg-primary text-white' : 'text-on-surface-variant'}`}
                       >
                         All ({previewData.candidates.length})
                       </button>
                       <button
                         type="button"
                         onClick={() => setCandidateFilter('READY')}
-                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'READY' ? 'bg-emerald-700 text-white' : 'text-on-surface-variant'}`}
+                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'READY' ? 'bg-primary text-white' : 'text-on-surface-variant'}`}
                       >
                         Ready ({previewData.summary.readyCount})
                       </button>
                       <button
                         type="button"
                         onClick={() => setCandidateFilter('SKIPPED')}
-                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'SKIPPED' ? 'bg-amber-700 text-white' : 'text-on-surface-variant'}`}
+                        className={`px-2.5 py-0.5 rounded cursor-pointer ${candidateFilter === 'SKIPPED' ? 'bg-primary text-white' : 'text-on-surface-variant'}`}
                       >
                         Skipped ({previewData.summary.alreadyInvoicedCount + previewData.summary.exemptSponsoredCount + previewData.summary.missingStructureCount})
                       </button>
@@ -573,7 +573,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                     type="button"
                     onClick={handleExecuteBulk}
                     disabled={isExecuting || previewData.summary.readyCount === 0}
-                    className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    className="px-5 py-2.5 bg-primary hover:bg-primary-container disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                   >
                     {isExecuting ? (
                       <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
@@ -613,7 +613,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                           <td className="p-2.5 text-right font-data-mono text-amber-700">
                             {c.carriedForwardBalance > 0 ? `+KES ${c.carriedForwardBalance.toLocaleString()}` : '—'}
                           </td>
-                          <td className="p-2.5 text-right font-data-mono font-bold text-[#7a1228]">
+                          <td className="p-2.5 text-right font-data-mono font-bold text-primary">
                             KES {c.totalPayable.toLocaleString()}
                           </td>
                           <td className="p-2.5 text-center">
@@ -628,7 +628,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                               </span>
                             )}
                             {c.status === 'EXEMPT_SPONSORED' && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">
                                 100% Scholarship
                               </span>
                             )}
@@ -648,7 +648,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 {executionResult && (
                   <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 space-y-2 animate-fade-in">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-emerald-700 text-[20px]">task_alt</span>
+                      <span className="material-symbols-outlined text-primary text-[20px]">task_alt</span>
                       <strong className="text-sm font-bold text-emerald-900">
                         Bulk Invoicing Batch Completed Successfully!
                       </strong>
@@ -721,7 +721,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                       </div>
                       <div>
                         <span className="text-[10px] text-on-surface-variant uppercase block">Total Amount Billed</span>
-                        <strong className="font-data-mono text-[#7a1228] font-bold">KES {batch.totalAmountBilled?.toLocaleString()}</strong>
+                        <strong className="font-data-mono text-primary font-bold">KES {batch.totalAmountBilled?.toLocaleString()}</strong>
                       </div>
                     </div>
                   </div>
@@ -734,7 +734,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
         {/* Footer */}
         <div className="p-4 bg-surface-container border-t border-outline-variant/30 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
-            <span className="material-symbols-outlined text-[16px] text-emerald-700">shield</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">shield</span>
             <span>Duplicate protection active: re-running billing never duplicates existing invoices.</span>
           </div>
           <button

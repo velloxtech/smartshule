@@ -138,6 +138,7 @@ export interface GenerateReportCardDTO {
 }
 
 export class CBCAssessmentUseCases {
+  public proposeChange?: (actor: any,kind:'STRAND'|'SUBSTRAND',payload:any,targetId?:string)=>Promise<any>;
   private broadsheetUseCases?: BroadsheetUseCases;
 
   constructor(
@@ -204,6 +205,7 @@ export class CBCAssessmentUseCases {
       return dup.toJSON();
     }
 
+    if(actor?.role==='TEACHER'){if(!this.proposeChange)throw new ValidationError('Curriculum proposal review is not configured.');return this.proposeChange(actor,'STRAND',dto);}
     const strand = Strand.create(dto, IdGenerator.generate());
     await this.CBCRepository.saveStrand(strand);
     return strand.toJSON();
@@ -228,6 +230,7 @@ export class CBCAssessmentUseCases {
       throw new ConflictError(`Another strand with code '${dto.code || strand.code}' or title '${dto.title || strand.title}' already exists for this learning area and grade.`);
     }
 
+    if(actor?.role==='TEACHER'){if(!this.proposeChange)throw new ValidationError('Curriculum proposal review is not configured.');return this.proposeChange(actor,'STRAND',{...strand.toJSON(),...dto},id);}
     strand.updateDetails(dto);
     await this.CBCRepository.saveStrand(strand);
     return strand.toJSON();
@@ -252,6 +255,7 @@ export class CBCAssessmentUseCases {
       return dup.toJSON();
     }
 
+    if(actor?.role==='TEACHER'){if(!this.proposeChange)throw new ValidationError('Curriculum proposal review is not configured.');return this.proposeChange(actor,'SUBSTRAND',dto);}
     const subStrand = SubStrand.create(dto, IdGenerator.generate());
     await this.CBCRepository.saveSubStrand(subStrand);
     return subStrand.toJSON();
@@ -275,6 +279,7 @@ export class CBCAssessmentUseCases {
       throw new ConflictError(`Another sub-strand with code '${dto.code || subStrand.code}' or title '${dto.title || subStrand.title}' already exists under this strand.`);
     }
 
+    if(actor?.role==='TEACHER'){if(!this.proposeChange)throw new ValidationError('Curriculum proposal review is not configured.');return this.proposeChange(actor,'SUBSTRAND',{...subStrand.toJSON(),...dto},id);}
     subStrand.updateDetails(dto);
     await this.CBCRepository.saveSubStrand(subStrand);
     return subStrand.toJSON();
@@ -1789,6 +1794,7 @@ export class CBCAssessmentUseCases {
 
   public async deleteStrand(id: string, actor?: UserContext): Promise<void> {
     await this.assertSubStrandEditor(id, actor);
+    if(actor?.role==='TEACHER')throw new ForbiddenError('Only leadership can remove published curriculum. Request a reviewed change instead.');
     await this.CBCRepository.deleteStrand(id);
   }
 
@@ -1796,6 +1802,7 @@ export class CBCAssessmentUseCases {
     const subStrand = await this.CBCRepository.findSubStrandById(id);
     if (!subStrand) throw new NotFoundError('SubStrand', id);
     await this.assertSubStrandEditor(subStrand.strandId, actor);
+    if(actor?.role==='TEACHER')throw new ForbiddenError('Only leadership can remove published curriculum. Request a reviewed change instead.');
     await this.CBCRepository.deleteSubStrand(id);
   }
 

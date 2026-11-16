@@ -1,0 +1,442 @@
+{
+  "startedAt": "2026-11-16T06:12:35.221Z",
+  "migration": "database/migrations/20261116_add_missing_payroll_complaint_and_reversal_schema.sql",
+  "migrationSha256": "eff726cc1bd071fb354adde91dcca617fd7507f9b80f1fef670a0c8452f9bc84",
+  "sourcePreflightAt": "2026-11-16T06:10:01.343Z",
+  "committed": true,
+  "checks": {
+    "before": {
+      "payroll_records": {
+        "rows": 9,
+        "original_values_digest": "31182f7bdd35e8be75c9ace0dce52a96"
+      },
+      "complaints": {
+        "rows": 0,
+        "original_values_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    "after": {
+      "payroll_records": {
+        "rows": 9,
+        "original_values_digest": "31182f7bdd35e8be75c9ace0dce52a96"
+      },
+      "complaints": {
+        "rows": 0,
+        "original_values_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    "columnsAdded": [
+      {
+        "table": "complaints",
+        "column": "reference_number",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "parent_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "student_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "student_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "admission_number",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "grade_level",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "assigned_to_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "assigned_to_role",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "assigned_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "assigned_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "assigned_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "reassignment_reason",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "acknowledged_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "acknowledged_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "acknowledged_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_to_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_to_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_to_role",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "escalated_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "escalation_reason",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "action_taken",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "resolution_details",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "resolved_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "closed_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "closed_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "closed_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "closure_notes",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "reopened_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "reopened_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "complaints",
+        "column": "reopened_by_name",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "reopening_reason",
+        "type": "text"
+      },
+      {
+        "table": "complaints",
+        "column": "acknowledgement_deadline",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "resolution_deadline",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "complaints",
+        "column": "messages",
+        "type": "jsonb"
+      },
+      {
+        "table": "complaints",
+        "column": "audit_trail",
+        "type": "jsonb"
+      },
+      {
+        "table": "complaints",
+        "column": "attachments",
+        "type": "jsonb"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledged_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledged_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledgement_statement",
+        "type": "text"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledgement_method",
+        "type": "character varying"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledgement_signature",
+        "type": "text"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledgement_ip",
+        "type": "character varying"
+      },
+      {
+        "table": "payroll_records",
+        "column": "acknowledgement_status",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "school_id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "request_reference",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "transaction_type",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "transaction_id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "transaction_reference",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "original_receipt_number",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "student_id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "student_name",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "admission_number",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "original_amount",
+        "type": "numeric"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "requested_reversal_amount",
+        "type": "numeric"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "transaction_date",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reason",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "explanation",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "supporting_attachment_url",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "status",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "requested_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "requested_by_name",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "requested_by_role",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "requested_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reviewed_by_user_id",
+        "type": "character varying"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reviewed_by_name",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reviewed_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "approval_comment",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "rejection_reason",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reversal_receipt_number",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "reversal_receipt_payload",
+        "type": "jsonb"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "financial_impact_preview",
+        "type": "jsonb"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "error_message",
+        "type": "text"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "audit_trail",
+        "type": "jsonb"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "created_at",
+        "type": "timestamp with time zone"
+      },
+      {
+        "table": "transaction_reversal_requests",
+        "column": "updated_at",
+        "type": "timestamp with time zone"
+      }
+    ],
+    "tableDelta": [
+      "transaction_reversal_requests"
+    ],
+    "browserRoles": [
+      {
+        "rolname": "anon",
+        "table_access": false,
+        "column_access": false
+      },
+      {
+        "rolname": "authenticated",
+        "table_access": false,
+        "column_access": false
+      }
+    ],
+    "reversal": {
+      "relrowsecurity": true,
+      "rows": 0,
+      "backend_access": true
+    }
+  },
+  "completedAt": "2026-11-16T06:12:41.480Z"
+}

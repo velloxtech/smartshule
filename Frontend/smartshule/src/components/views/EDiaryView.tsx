@@ -486,7 +486,7 @@ export const EDiaryView: React.FC = () => {
                 {/* Entry Date & Header */}
                 <div className="p-4 bg-surface-container-low border-b border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-9 h-9 rounded-xl ${isDraft ? 'bg-amber-100 text-amber-800' : 'bg-primary/10 text-primary'} flex items-center justify-center font-bold`}>
+                    <div className={`w-9 h-9 rounded-xl ${isDraft ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-primary/10 text-primary'} flex items-center justify-center font-bold`}>
                       <span className="material-symbols-outlined text-lg">{isDraft ? 'draft' : 'event_available'}</span>
                     </div>
                     <div>
@@ -543,7 +543,7 @@ export const EDiaryView: React.FC = () => {
                       isTeacher && (
                         <button
                           onClick={() => handleOpenCreateModal(entry)}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-all cursor-pointer shadow-xs"
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-container transition-all cursor-pointer shadow-xs"
                         >
                           <span className="material-symbols-outlined text-[14px]">edit</span>
                           <span>Edit & Publish</span>
@@ -557,7 +557,7 @@ export const EDiaryView: React.FC = () => {
                     ) : isGuardian ? (
                       <button
                         onClick={() => setAcknowledgingEntryId(entry.id)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[15px]">draw</span>
                         <span>Sign & Acknowledge Entry</span>
@@ -634,7 +634,7 @@ export const EDiaryView: React.FC = () => {
                     {entry.tomorrowRequirements && entry.tomorrowRequirements.length > 0 ? (
                       <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/60 space-y-2">
                         <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs uppercase tracking-wider">
-                          <span className="material-symbols-outlined text-[16px] text-amber-700">backpack</span>
+                          <span className="material-symbols-outlined text-[16px] text-primary">backpack</span>
                           <span>What to Bring Tomorrow</span>
                         </div>
                         <ul className="space-y-1 text-xs text-amber-950 font-medium">
@@ -665,7 +665,7 @@ export const EDiaryView: React.FC = () => {
                   {/* Guardian Feedback Note if Signed */}
                   {myAck && (myAck.parentNote || (myAck as any).note) && (
                     <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-xs flex items-start gap-2">
-                      <span className="material-symbols-outlined text-sm text-emerald-700 mt-0.5">rate_review</span>
+                      <span className="material-symbols-outlined text-sm text-primary mt-0.5">rate_review</span>
                       <div>
                         <span className="font-bold text-emerald-950">Parent Note ({myAck.guardianName}): </span>
                         <span className="text-emerald-900 italic">"{myAck.parentNote || (myAck as any).note}"</span>
@@ -728,7 +728,7 @@ export const EDiaryView: React.FC = () => {
                 type="button"
                 disabled={isSubmittingAck}
                 onClick={() => handleAcknowledge(acknowledgingEntryId)}
-                className="flex-1 py-2.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-sm">check_circle</span>
                 <span>{isSubmittingAck ? 'Signing...' : 'Sign & Submit'}</span>
@@ -915,7 +915,7 @@ export const EDiaryView: React.FC = () => {
                     setEntryStatus('DRAFT');
                     handleCreateEntry(e, 'DRAFT');
                   }}
-                  className="flex-1 py-2.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold hover:bg-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-primary-fixed text-on-primary-fixed border border-primary rounded-xl text-xs font-bold hover:bg-primary-fixed-dim transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-sm">save</span>
                   <span>Save Draft</span>

@@ -101,7 +101,7 @@ export class BiometricService {
       if (err.name === 'SecurityError') {
         return {
           success: false,
-          error: 'Biometric authentication requires a secure connection. Open SmartShule on http://localhost:5173 during local development.'
+          error: 'Biometric authentication requires a secure connection. Open Grace Seeds School on http://localhost:5173 during local development.'
         };
       }
       return {
@@ -162,7 +162,7 @@ export class BiometricService {
       if (err.name === 'SecurityError') {
         return {
           success: false,
-          error: 'Biometric authentication requires a secure connection. Open SmartShule on http://localhost:5173 during local development.'
+          error: 'Biometric authentication requires a secure connection. Open Grace Seeds School on http://localhost:5173 during local development.'
         };
       }
       return {

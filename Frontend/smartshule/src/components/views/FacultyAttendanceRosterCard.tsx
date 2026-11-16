@@ -182,10 +182,10 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
         {/* Action Controls & Live Status */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Live Indicator */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-300 text-teal-900 text-xs font-bold">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-fixed border border-primary text-on-primary-fixed text-xs font-bold">
             <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
             <span>Live Sync Active</span>
-            <span className="text-teal-700 font-mono text-[10px]">
+            <span className="text-primary font-mono text-[10px]">
               ({lastRefreshedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
             </span>
           </div>
@@ -234,7 +234,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             <button
               type="button"
               onClick={() => onNavigateTab('geofencing')}
-              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">open_in_new</span>
               <span>Geofencing Page</span>
@@ -260,16 +260,16 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
         </div>
 
         {/* Clocked In */}
-        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-semibold text-teal-800">
+        <div className="p-4 rounded-xl bg-primary-fixed border border-primary flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs font-semibold text-on-primary-fixed">
             <span>Clocked In (Present)</span>
-            <span className="material-symbols-outlined text-[18px] text-teal-600">login</span>
+            <span className="material-symbols-outlined text-[18px] text-primary">login</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold font-data-mono text-teal-900 block">
+            <span className="text-2xl font-bold font-data-mono text-on-primary-fixed block">
               {summary.clockedIn}
             </span>
-            <span className="text-[11px] text-teal-700 font-semibold mt-0.5 block">
+            <span className="text-[11px] text-primary font-semibold mt-0.5 block">
               Inside compound
             </span>
           </div>
@@ -293,7 +293,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs font-semibold text-amber-800">
             <span>Pending Arrival</span>
-            <span className="material-symbols-outlined text-[18px] text-amber-600">schedule</span>
+            <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
           </div>
           <div className="mt-2">
             <span className="text-2xl font-bold font-data-mono text-amber-900 block">
@@ -329,7 +329,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               statusFilter === 'ALL'
-                ? 'bg-slate-900 text-white shadow-2xs font-bold'
+                ? 'bg-primary text-white shadow-2xs font-bold'
                 : 'bg-surface-container-low hover:bg-surface-container text-on-surface font-semibold'
             }`}
           >
@@ -341,8 +341,8 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setStatusFilter('CLOCKED_IN')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               statusFilter === 'CLOCKED_IN'
-                ? 'bg-teal-700 text-white shadow-2xs'
-                : 'bg-teal-50 hover:bg-teal-100 text-teal-800'
+                ? 'bg-primary text-white shadow-2xs'
+                : 'bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed'
             }`}
           >
             Clocked In ({summary.clockedIn})
@@ -353,7 +353,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setStatusFilter('CLOCKED_OUT')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               statusFilter === 'CLOCKED_OUT'
-                ? 'bg-slate-700 text-white shadow-2xs'
+                ? 'bg-primary text-white shadow-2xs'
                 : 'bg-surface-container-low hover:bg-surface-container text-on-surface'
             }`}
           >
@@ -365,8 +365,8 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setStatusFilter('NOT_CLOCKED_IN')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               statusFilter === 'NOT_CLOCKED_IN'
-                ? 'bg-amber-600 text-white shadow-2xs'
-                : 'bg-amber-50 hover:bg-amber-100 text-amber-800'
+                ? 'bg-primary text-white shadow-2xs'
+                : 'bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed'
             }`}
           >
             Pending ({summary.notClockedIn})
@@ -378,7 +378,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer flex items-center gap-1 ${
               autoRefreshEnabled
-                ? 'bg-teal-50 border-teal-300 text-teal-800'
+                ? 'bg-primary-fixed border-primary text-on-primary-fixed'
                 : 'bg-surface border-outline-variant/30 text-on-surface-variant'
             }`}
             title="Toggle automatic 25-second roster polling"
@@ -396,7 +396,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
       {/* Roster Table / Card Grid */}
       {loading ? (
         <div className="py-16 text-center text-on-surface-variant flex flex-col items-center gap-2">
-          <span className="material-symbols-outlined text-4xl text-indigo-700 animate-spin">
+          <span className="material-symbols-outlined text-4xl text-primary animate-spin">
             sync
           </span>
           <p className="text-xs font-bold text-on-surface">Loading faculty attendance roster...</p>
@@ -442,7 +442,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                       <div className="flex items-center gap-2.5">
                         {/* Avatar Beacon */}
                         <div className="relative shrink-0">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-900 font-black text-xs flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-xl bg-primary-fixed text-on-primary-fixed font-black text-xs flex items-center justify-center">
                             {teacher.name
                               .split(' ')
                               .map((n) => n[0])
@@ -491,7 +491,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                     {/* Status Badge */}
                     <td className="py-3 px-3">
                       {isClockedIn && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">
                           <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
                           <span>Clocked In</span>
                         </span>
@@ -513,7 +513,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                     {/* Clock In Time */}
                     <td className="py-3 px-3 font-data-mono font-semibold text-on-surface">
                       {teacher.clockInTime ? (
-                        <span className="text-teal-900">{teacher.clockInTime}</span>
+                        <span className="text-on-primary-fixed">{teacher.clockInTime}</span>
                       ) : (
                         <span className="text-gray-400 font-normal">--:--</span>
                       )}
@@ -527,7 +527,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                     {/* Distance to Center */}
                     <td className="py-3 px-3">
                       {teacher.distanceMeters != null ? (
-                        <span className="font-data-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 inline-flex items-center gap-1">
+                        <span className="font-data-mono font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded border border-primary inline-flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px]">location_on</span>
                           <span>{teacher.distanceMeters}m from center</span>
                         </span>
@@ -551,7 +551,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                     {/* Compliance */}
                     <td className="py-3 px-3">
                       {isClockedIn || isClockedOut ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-on-primary-fixed">
                           <span className="material-symbols-outlined text-[15px] text-teal-700">
                             verified
                           </span>
@@ -559,7 +559,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                         </span>
                       ) : (
                         <span className="text-amber-700 text-[11px] font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[15px] text-amber-600">
+                          <span className="material-symbols-outlined text-[15px] text-primary">
                             hourglass_empty
                           </span>
                           <span>Expected on Site</span>
@@ -584,7 +584,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                             href={`sms:${teacher.phoneNumber}?body=Hello ${encodeURIComponent(
                               teacher.name
                             )}, this is a friendly reminder to please clock in at the school compound.`}
-                            className="p-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 transition-colors"
+                            className="p-1 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed transition-colors"
                             title={`Send reminder SMS to ${teacher.name}`}
                           >
                             <span className="material-symbols-outlined text-[15px]">sms</span>

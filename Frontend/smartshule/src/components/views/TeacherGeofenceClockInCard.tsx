@@ -198,7 +198,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
         <div className="flex items-center gap-3">
           <div
             className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-sm ${
-              isInsideCompound ? 'bg-teal-700' : 'bg-rose-700'
+              isInsideCompound ? 'bg-primary' : 'bg-rose-700'
             }`}
           >
             <span className="material-symbols-outlined text-2xl">
@@ -210,7 +210,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
               <h2 className="text-base font-bold text-on-surface">
                 School Compound Geofence Clock-In
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-200">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-fixed text-on-primary-fixed border border-primary">
                 TSC Art. 237 Biometric
               </span>
             </div>
@@ -246,7 +246,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
           locating
             ? 'bg-amber-50/70 border-amber-200 text-amber-900'
             : isInsideCompound
-            ? 'bg-teal-50/80 border-teal-300 text-teal-950'
+            ? 'bg-primary-fixed/80 border-primary text-on-primary-fixed'
             : 'bg-rose-50/90 border-rose-300 text-rose-950'
         }`}
       >
@@ -270,7 +270,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
               </span>
               {isInsideCompound && !locating && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
                 </span>
               )}
@@ -288,7 +288,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                     isInsideCompound
-                      ? 'bg-teal-700 text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-rose-700 text-white'
                   }`}
                 >
@@ -327,7 +327,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
                   <span
                     className={`px-2 py-1 rounded font-bold inline-flex items-center gap-1 ${
                       isInsideCompound
-                        ? 'bg-teal-200 text-teal-900'
+                        ? 'bg-primary-fixed-dim text-on-primary-fixed'
                         : 'bg-rose-200 text-rose-900'
                     }`}
                   >
@@ -347,8 +347,8 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
                 disabled={submitting || locating || !isInsideCompound}
                 className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed ${
                   isInsideCompound && !submitting
-                    ? 'bg-teal-700 hover:bg-teal-800 text-white hover:shadow-md'
-                    : 'bg-gray-300 text-gray-500 opacity-80'
+                    ? 'bg-primary hover:bg-primary-container text-white hover:shadow-md'
+                    : 'bg-surface-container-high text-gray-500 opacity-80'
                 }`}
                 title={
                   !isInsideCompound
@@ -397,8 +397,8 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
       )}
 
       {actionSuccess && (
-        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-xs flex items-center gap-2">
-          <span className="material-symbols-outlined text-teal-600 text-[18px]">check_circle</span>
+        <div className="p-3 bg-primary-fixed border border-primary rounded-xl text-on-primary-fixed text-xs flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
           <span>{actionSuccess}</span>
         </div>
       )}
@@ -442,7 +442,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
           <div>
             <div className="flex items-center justify-between text-xs text-on-surface-variant font-semibold">
               <span>Clock-In Timestamp</span>
-              <span className="material-symbols-outlined text-[18px] text-teal-700">schedule</span>
+              <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
             </div>
             <div className="mt-2 text-lg font-bold font-data-mono text-on-surface">
               {clockInRecord?.clockInTime || '--:--'}

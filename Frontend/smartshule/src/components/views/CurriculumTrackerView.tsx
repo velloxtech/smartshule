@@ -121,9 +121,10 @@ const SAMPLE_CBC_TEMPLATES: Record<string, Partial<CurriculumTrackerWeekItem>[]>
 
 interface CurriculumTrackerViewProps {
   onNavigateTab?: (tab: string) => void;
+  showSuiteSwitcher?: boolean;
 }
 
-export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ onNavigateTab }) => {
+export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ onNavigateTab, showSuiteSwitcher = true }) => {
   const { user } = useAuth();
   const isSchoolAdmin = Boolean(
     user?.role && [
@@ -686,22 +687,18 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Curriculum Planning & Coverage Suite Switcher */}
-      <CurriculumSuiteSwitcher
+      {showSuiteSwitcher && <CurriculumSuiteSwitcher
         activeTab="curriculum-tracker"
         onSelectTab={(tab) => {
           if (tab === 'curriculum-tracker') return;
           if (onNavigateTab) {
-            if (tab === 'records-of-work') {
-              onNavigateTab('records-of-work');
-            } else {
-              onNavigateTab('schemes-lesson-plans');
-            }
+            onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
           }
         }}
         counts={{
           curriculumTrackers: trackers.length,
         }}
-      />
+      />}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
@@ -718,7 +715,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
           {selectedTracker && (
             <button
               onClick={() => setViewingTrackerDossier(true)}
-              className="px-3.5 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              className="px-3.5 py-2 bg-primary text-white rounded-xl hover:bg-primary-container font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               title="Open full interactive on-screen tracker dossier"
             >
               <span className="material-symbols-outlined text-[18px]">visibility</span>
@@ -741,7 +738,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
           <select
             value={selectedTracker?.id || ''}
             onChange={(e) => setSelectedTracker(trackers.find((t) => t.id === e.target.value) || null)}
-            className="w-full sm:w-80 px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 bg-white font-semibold text-on-surface"
+            className="w-full sm:w-80 px-3 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 bg-surface font-semibold text-on-surface"
           >
             {trackers.map((t) => (
               <option key={t.id} value={t.id}>
@@ -852,7 +849,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                             Locked
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 inline-flex items-center gap-1">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-primary-fixed text-primary inline-flex items-center gap-1">
                             <span className="material-symbols-outlined text-[14px]">play_circle</span>
                             Ready
                           </span>
@@ -881,7 +878,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                               </button>
                               {week.status === 'SUBMITTED' && isSchoolAdmin && (
                                 <>
-                                  <button onClick={() => handleApproveWeek(week.weekNumber)} title="Approve Coverage & Unlock Next Week" className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                                  <button onClick={() => handleApproveWeek(week.weekNumber)} title="Approve Coverage & Unlock Next Week" className="p-1.5 text-primary hover:bg-primary-fixed rounded-lg cursor-pointer">
                                     <span className="material-symbols-outlined text-[18px]">verified</span>
                                   </button>
                                   <button onClick={() => { setReturnModalWeek(week); setReturnReason(''); }} title="Return for Correction" className="p-1.5 text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer">
@@ -890,7 +887,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                                 </>
                               )}
                               {!week.isCovered && week.status !== 'APPROVED' && week.status !== 'SUBMITTED' && (
-                                <button onClick={() => { setSubmitModalWeek(week); setSubmitLessons(week.plannedLessons || 5); setSubmitComment(''); }} title="Submit for Approval" className="px-2 py-1 bg-secondary text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer hover:bg-secondary-container">
+                                <button onClick={() => { setSubmitModalWeek(week); setSubmitLessons(week.plannedLessons || 5); setSubmitComment(''); }} title="Submit for Approval" className="px-2 py-1 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer hover:bg-primary-container">
                                   <span className="material-symbols-outlined text-[15px]">send</span>
                                   <span>Submit</span>
                                 </button>
@@ -978,7 +975,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                       <span className="material-symbols-outlined text-[18px]">visibility</span>
                     </button>
                     {!log.endorsement && (
-                      <button onClick={() => handleOpenEndorseModal(log.trackerId, log)} className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer">Endorse</button>
+                      <button onClick={() => handleOpenEndorseModal(log.trackerId, log)} className="px-3 py-1 bg-primary text-white rounded-lg text-xs font-semibold cursor-pointer">Endorse</button>
                     )}
                   </div>
                 </div>
@@ -1107,7 +1104,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {endorseModalLog && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="px-6 py-4 bg-gradient-to-r from-gray-900 via-emerald-950 to-gray-900 text-white flex justify-between">
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-900 via-primary to-gray-900 text-white flex justify-between">
               <h3 className="font-bold text-sm">Supervisory Endorsement</h3>
               <button onClick={() => setEndorseModalLog(null)} className="cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
@@ -1115,7 +1112,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
               <textarea rows={3} required placeholder="Endorsement remarks..." value={endorsementRemark} onChange={(e) => setEndorsementRemark(e.target.value)} className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl" />
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setEndorseModalLog(null)} className="px-4 py-2 text-xs border rounded-xl">Cancel</button>
-                <button type="submit" disabled={savingEndorsement} className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl">Sign Endorsement</button>
+                <button type="submit" disabled={savingEndorsement} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">Sign Endorsement</button>
               </div>
             </form>
           </div>
@@ -1126,7 +1123,7 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
       {submitModalWeek && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="px-6 py-4 bg-secondary text-white flex justify-between">
+            <div className="px-6 py-4 bg-success text-white flex justify-between">
               <div>
                 <h3 className="font-bold text-sm">Submit Week {submitModalWeek.weekNumber} Coverage</h3>
                 <p className="text-xs text-white/80">{selectedTracker?.subjectName} &mdash; {selectedTracker?.className}</p>
@@ -1158,14 +1155,14 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
                   className="w-full px-3 py-2 border border-outline-variant/30 rounded-xl"
                 />
               </div>
-              <div className="p-3 bg-blue-50 rounded-xl text-blue-900 border border-blue-200">
+              <div className="p-3 bg-primary-fixed rounded-xl text-on-primary-fixed border border-primary">
                 <strong>Sequential Workflow:</strong> Submitting sends this unit to the Head Teacher/Deputy for formal review. Upon approval, Week {submitModalWeek.weekNumber + 1} unlocks.
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setSubmitModalWeek(null)} className="px-4 py-2 text-xs border rounded-xl">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmittingWeek} className="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-xl">
+                <button type="submit" disabled={isSubmittingWeek} className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl">
                   {isSubmittingWeek ? 'Submitting...' : 'Submit for Review'}
                 </button>
               </div>

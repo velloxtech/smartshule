@@ -1517,8 +1517,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   if (isParent && checkingClearance) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-[#800000] font-body">Verifying fee clearance status with Grace Seeds School...</p>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-primary font-body">Verifying fee clearance status with Grace Seeds School...</p>
       </div>
     );
   }
@@ -1527,8 +1527,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     if (loadingStudents) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-          <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-semibold text-[#800000] font-body">Loading learner dossiers from Grace Seeds School registry...</p>
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-semibold text-primary font-body">Loading learner dossiers from Grace Seeds School registry...</p>
         </div>
       );
     }
@@ -1540,14 +1540,14 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <span>/</span>
             <span>Academics &amp; CBC</span>
             <span>/</span>
-            <span className="text-[#800000] font-semibold">Report Cards</span>
+            <span className="text-primary font-semibold">Report Cards</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Official CBC Learner Summative Performance Dossier
           </h1>
         </div>
         <div className="bg-surface-container-lowest rounded-2xl p-12 text-center border border-dashed border-outline-variant max-w-2xl mx-auto my-12">
-          <div className="w-16 h-16 rounded-full bg-[#800000]/10 text-[#800000] flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-outlined text-3xl">assignment</span>
           </div>
           <h3 className="text-lg font-bold text-on-surface mb-2">No Learners Available</h3>
@@ -1576,7 +1576,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           <div>
-            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-primary text-white uppercase tracking-wider">
               Fee Clearance Required
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-on-surface mt-2.5">
@@ -1597,8 +1597,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                     onClick={() => setSelectedId(c.id)}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       (student?.id === c.id)
-                        ? 'bg-[#7a1228] text-white shadow-xs'
-                        : 'bg-white text-amber-950 hover:bg-amber-200/50'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'bg-white text-on-primary-fixed hover:bg-primary-fixed-dim/50'
                     }`}
                   >
                     {c.name}
@@ -1619,7 +1619,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </div>
             <div className="flex justify-between text-xs font-bold pt-2 border-t border-amber-200">
               <span className="text-amber-950">Outstanding Balance:</span>
-              <span className="font-data-mono text-base text-[#7a1228] font-black">
+              <span className="font-data-mono text-base text-primary font-black">
                 KES {balance.toLocaleString()}
               </span>
             </div>
@@ -1630,7 +1630,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">chat</span>
               <span>Request Clearance from Head Teacher</span>
@@ -1640,7 +1640,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">support_agent</span>
               <span>Request Clearance from Director</span>
@@ -1723,7 +1723,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <span>/</span>
               <span>Academics &amp; Assessment</span>
               <span>/</span>
-              <span className="text-[#800000] font-semibold">Report Cards</span>
+              <span className="text-primary font-semibold">Report Cards</span>
             </div>
             <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
               Summative Assessment Report
@@ -1736,7 +1736,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-lg bg-[#800000] text-white text-xs font-bold hover:bg-[#600000] transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Download or print report card with centered school logo"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
@@ -1755,7 +1755,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             {canUserSign && (
               <button
                 onClick={() => setIsSigningModalOpen(true)}
-                className="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
                 title="Electronically sign this report card using your verified digital signature"
               >
                 <span className="material-symbols-outlined text-[16px]">draw</span>
@@ -1776,7 +1776,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search learner by name or admission number (e.g. 0355)..."
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg pl-9 pr-8 py-2 text-xs font-medium text-on-surface placeholder:text-gray-400 focus:outline-[#800000] focus:border-[#800000] transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg pl-9 pr-8 py-2 text-xs font-medium text-on-surface placeholder:text-gray-400 focus:outline-primary focus:border-primary transition-all"
             />
             {searchTerm && (
               <button
@@ -1841,7 +1841,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               onClick={() => setEvaluationPeriod('END_OF_TERM')}
               className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 isEndTerm
-                  ? 'bg-[#800000] text-white shadow-2xs'
+                  ? 'bg-primary text-white shadow-2xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -1852,7 +1852,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               onClick={() => setEvaluationPeriod('MID_TERM')}
               className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 !isEndTerm
-                  ? 'bg-[#800000] text-white shadow-2xs'
+                  ? 'bg-primary text-white shadow-2xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -1875,7 +1875,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       </div>
 
       {/* Official Report Card Printable Document */}
-      <div className="printable-report-card bg-white text-gray-900 rounded-2xl shadow-xl border border-outline-variant/30 p-6 sm:p-8 print:p-0 max-w-5xl mx-auto flex flex-col justify-between print:max-w-none print:w-full print:m-0 print:border-none print:shadow-none print:rounded-none min-h-[920px] print:min-h-0 print:h-[284mm]">
+      <div className="printable-report-card bg-surface-container-lowest text-gray-900 rounded-2xl shadow-xl border border-outline-variant/30 p-6 sm:p-8 print:p-0 max-w-5xl mx-auto flex flex-col justify-between print:max-w-none print:w-full print:m-0 print:border-none print:shadow-none print:rounded-none min-h-[920px] print:min-h-0 print:h-[284mm]">
         <div>
           {/* Header */}
           <div className="flex items-center gap-4 pb-2.5 border-b border-gray-300">
@@ -1903,7 +1903,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <div className="text-xs print:text-[8pt] text-gray-600 mt-0.5">
                 Tel: <strong>{schoolPhone}</strong> | Email: <strong>{schoolEmail}</strong> | Web: www.graceseedsschool.sc.ke
               </div>
-              <div className="text-xs print:text-[8pt] italic text-[#800000] font-semibold mt-0.5">
+              <div className="text-xs print:text-[8pt] italic text-primary font-semibold mt-0.5">
                 &quot;{schoolMotto}&quot;
               </div>
             </div>
@@ -1916,7 +1916,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
           {/* Student Bio & Summary Box */}
           <div className="border border-gray-400 rounded-sm mb-3 text-xs print:text-[8pt] divide-y divide-gray-300">
-            <div className={`grid grid-cols-2 ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 px-3 py-1.5 bg-gray-50/60 print:bg-transparent`}>
+            <div className={`grid grid-cols-2 ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 px-3 py-1.5 bg-surface/60 print:bg-transparent`}>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Student Name:</span>
                 <span className="font-bold text-gray-900">{student?.name || ''}</span>
@@ -1938,21 +1938,21 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </div>
 
             {/* Row 2: Real student position and total stream candidates */}
-            <div className="grid grid-cols-2 gap-2 px-3 py-1.5 border-t border-dashed border-gray-400 bg-white">
+            <div className="grid grid-cols-2 gap-2 px-3 py-1.5 border-t border-dashed border-gray-400 bg-surface-container-lowest">
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Class Position:</span>
                 <span className="font-bold text-gray-900">{classPositionText}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt]">MEAN GRADE:</span>
-                <span className="px-2 py-0.5 rounded font-black text-[#800000] text-sm print:text-[10pt] bg-rose-50 border border-rose-200">
+                <span className="px-2 py-0.5 rounded font-black text-primary text-sm print:text-[10pt] bg-rose-50 border border-rose-200">
                   {meanGrade}
                 </span>
               </div>
             </div>
 
             {/* Row 3: Total Marks, Mean Mark, Total Points, Mean Points */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-1.5 bg-gray-50/60 print:bg-transparent">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-1.5 bg-surface/60 print:bg-transparent">
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Total Marks:</span>
                 <span className="font-mono font-bold text-gray-900">{totalSubjectMarks}</span>
@@ -1975,7 +1975,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           {/* Subjects Table */}
           <div className="border border-gray-400 rounded-sm overflow-x-auto print:overflow-visible min-w-0 max-w-full mb-3">
             <table className="subjects-table-el w-full text-left text-xs print:text-[7.5pt] border-collapse">
-              <thead className="bg-slate-100 border-b border-gray-400 text-gray-800 uppercase text-[11px] print:text-[7pt] font-black">
+              <thead className="bg-surface-container-low border-b border-gray-400 text-gray-800 uppercase text-[11px] print:text-[7pt] font-black">
                 <tr>
                   <th className="py-1.5 px-2 text-center w-8 border border-gray-300">Code</th>
                   <th className="py-1.5 px-2.5 border border-gray-300">SUBJECT</th>
@@ -1991,8 +1991,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {evaluatedSubjectsList.map((s, idx) => (
-                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                    <td className="py-1 px-1 text-center font-bold text-indigo-900 border border-gray-300 font-mono text-[10px] print:text-[7pt]">
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface/50'}>
+                    <td className="py-1 px-1 text-center font-bold text-on-primary-fixed border border-gray-300 font-mono text-[10px] print:text-[7pt]">
                       {s.code}
                     </td>
                     <td className="py-1 px-2.5 font-bold text-gray-900 border border-gray-300">
@@ -2005,7 +2005,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                     <td className="py-1 px-1 text-center font-mono text-gray-700 border border-gray-300">
                       {s.avg}
                     </td>
-                    <td className="py-1 px-1 text-center font-bold text-[#800000] border border-gray-300">
+                    <td className="py-1 px-1 text-center font-bold text-primary border border-gray-300">
                       {s.grade}
                     </td>
                     <td className="py-1 px-1 text-center font-mono font-bold text-gray-800 border border-gray-300">
@@ -2023,19 +2023,19 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-100 font-bold border-t-2 border-gray-400 text-gray-900 text-xs print:text-[7.5pt]">
+              <tfoot className="bg-surface-container-low font-bold border-t-2 border-gray-400 text-gray-900 text-xs print:text-[7.5pt]">
                 <tr>
                   <td colSpan={2} className="py-1.5 px-2.5 uppercase font-black border border-gray-300">
                     TOTAL
                   </td>
-                  <td className="py-1.5 px-1 text-center font-mono font-black text-[#800000] border border-gray-300">
+                  <td className="py-1.5 px-1 text-center font-mono font-black text-primary border border-gray-300">
                     {totalSubjectMarks}
                   </td>
                   <td className="border border-gray-300"></td>
                   <td className="py-1.5 px-1 text-center font-mono font-bold border border-gray-300">
                     {meanSubjectMark}%
                   </td>
-                  <td className="py-1.5 px-1 text-center font-black text-[#800000] border border-gray-300">
+                  <td className="py-1.5 px-1 text-center font-black text-primary border border-gray-300">
                     {meanGrade}
                   </td>
                   <td className="py-1.5 px-1 text-center font-mono font-bold border border-gray-300">
@@ -2116,7 +2116,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           <div className="flex justify-between items-center pt-1 text-[11px] print:text-[7pt]">
-            <div className="font-black text-[#800000] tracking-wider">
+            <div className="font-black text-primary tracking-wider">
               {schoolMotto.toUpperCase()}
             </div>
             <div className="italic text-gray-500">

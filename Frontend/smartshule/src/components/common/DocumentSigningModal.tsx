@@ -181,11 +181,11 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-600/30 text-blue-400">
+            <div className="p-1.5 rounded-lg bg-primary/30 text-primary">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -195,7 +195,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-primary-container transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -215,7 +215,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
           {step === 'INIT' && (
             <div className="space-y-4">
               {/* Document Metadata Card */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-xs">
+              <div className="bg-surface border border-slate-200 rounded-xl p-4 space-y-2 text-xs">
                 <div className="flex justify-between items-start">
                   <span className="text-slate-500 font-semibold">Document:</span>
                   <span className="font-bold text-slate-900 text-right max-w-[240px] truncate">
@@ -228,7 +228,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 font-semibold">Version:</span>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 font-bold">
+                  <span className="px-2 py-0.5 rounded-md bg-surface-container text-slate-800 font-bold">
                     {documentVersion}
                   </span>
                 </div>
@@ -237,14 +237,14 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
               {/* Signature Profile Check */}
               {loadingVault ? (
                 <div className="p-6 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary" />
                   Verifying signature profile in vault...
                 </div>
               ) : hasSignature ? (
-                <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4">
+                <div className="bg-primary-fixed/50 border border-primary rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <FileSignature className="w-4 h-4 text-blue-700" />
+                    <span className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider flex items-center gap-1.5">
+                      <FileSignature className="w-4 h-4 text-primary" />
                       Signer Signature Ready
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
@@ -253,7 +253,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                   </div>
 
                   {signatureData && (
-                    <div className="bg-white rounded-lg p-2 border border-blue-100 flex items-center justify-center h-20 shadow-inner">
+                    <div className="bg-white rounded-lg p-2 border border-primary flex items-center justify-center h-20 shadow-inner">
                       <img
                         src={signatureData}
                         alt="Signature preview"
@@ -262,7 +262,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                     </div>
                   )}
 
-                  <p className="text-[11px] text-blue-900/80 mt-2">
+                  <p className="text-[11px] text-on-primary-fixed/80 mt-2">
                     Registered email: <strong>{userEmail || 'Configured'}</strong>
                   </p>
                 </div>
@@ -270,7 +270,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center space-y-3">
                   <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto" />
                   <div>
-                    <h4 className="text-sm font-bold text-amber-900">No Signature Configured</h4>
+                    <h4 className="text-sm font-bold text-on-primary-fixed">No Signature Configured</h4>
                     <p className="text-xs text-amber-800 mt-1">
                       You must configure your digital signature in your vault before you can sign documents.
                     </p>
@@ -281,7 +281,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                         onClose();
                         onNavigateToVault();
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold transition-colors"
                     >
                       Go to My Digital Signature
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -291,7 +291,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
               )}
 
               {/* Informational Notice */}
-              <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-start gap-2">
+              <div className="text-[11px] text-slate-500 leading-relaxed bg-surface p-3 rounded-lg border border-slate-200 flex items-start gap-2">
                 <Lock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div>
                   Clicking below will dispatch a single-use 6-digit authorization code to your verified email address. The code is valid for 5 minutes.
@@ -304,7 +304,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                   type="button"
                   onClick={handleRequestOtp}
                   disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99] disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-sm shadow-md transition-all active:scale-[0.99] disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -326,13 +326,13 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
           {/* STEP 2: 6-DIGIT OTP ENTRY */}
           {step === 'OTP_CHALLENGE' && (
             <form onSubmit={handleVerifyAndSign} className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center space-y-1">
-                <KeyRound className="w-8 h-8 text-blue-700 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-blue-950">Enter Email Authorization Code</h4>
-                <p className="text-xs text-blue-800">
+              <div className="bg-primary-fixed border border-primary rounded-xl p-4 text-center space-y-1">
+                <KeyRound className="w-8 h-8 text-primary mx-auto mb-2" />
+                <h4 className="text-sm font-bold text-on-primary-fixed">Enter Email Authorization Code</h4>
+                <p className="text-xs text-on-primary-fixed">
                   A 6-digit verification code has been dispatched to:
                 </p>
-                <div className="text-sm font-mono font-bold text-blue-900 bg-white/70 py-1 px-3 rounded-md inline-block mt-1">
+                <div className="text-sm font-mono font-bold text-on-primary-fixed bg-white/70 py-1 px-3 rounded-md inline-block mt-1">
                   {maskedEmail}
                 </div>
               </div>
@@ -349,7 +349,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="------"
                   autoFocus
-                  className="w-48 mx-auto text-center font-mono text-3xl font-black tracking-[10px] py-2.5 px-3 rounded-xl border-2 border-slate-300 focus:border-blue-700 focus:outline-none bg-slate-50 text-slate-900"
+                  className="w-48 mx-auto text-center font-mono text-3xl font-black tracking-[10px] py-2.5 px-3 rounded-xl border-2 border-slate-300 focus:border-primary focus:outline-none bg-surface text-slate-900"
                 />
               </div>
 
@@ -369,7 +369,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                     type="button"
                     onClick={handleRequestOtp}
                     disabled={submitting}
-                    className="text-blue-700 font-bold hover:underline inline-flex items-center gap-1"
+                    className="text-primary font-bold hover:underline inline-flex items-center gap-1"
                   >
                     <RefreshCw className="w-3 h-3" />
                     Resend Code
@@ -387,7 +387,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || otpCode.length !== 6 || expiryCountdown <= 0}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-sm shadow-md transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? (
                   <>
@@ -419,7 +419,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
               </div>
 
               {/* Signature Snapshot Preview */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2 text-xs">
+              <div className="bg-surface border border-slate-200 rounded-xl p-4 text-left space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Signer:</span>
                   <span className="font-bold text-slate-800">{completedRecord.signerName} ({completedRecord.signerRole})</span>
@@ -439,7 +439,7 @@ export const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all"
+                className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-sm transition-all"
               >
                 Done
               </button>

@@ -27,6 +27,14 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
     description: string;
   }> = [
     {
+      id: 'curriculum-tracker',
+      label: 'Syllabus Coverage Plan',
+      shortLabel: 'Coverage Plan',
+      icon: 'fact_check',
+      count: counts?.curriculumTrackers,
+      description: 'Curriculum allocation & coverage progress',
+    },
+    {
       id: 'schemes',
       label: 'Schemes of Work',
       shortLabel: 'Schemes',
@@ -49,14 +57,6 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
       icon: 'auto_stories',
       count: counts?.recordsOfWork,
       description: 'Documented work covered & reflections',
-    },
-    {
-      id: 'curriculum-tracker',
-      label: 'Syllabus Coverage Plan',
-      shortLabel: 'Tracker',
-      icon: 'fact_check',
-      count: counts?.curriculumTrackers,
-      description: 'Weekly syllabus progression & audit',
     },
   ];
 
@@ -81,6 +81,7 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
             <button
               key={tab.id}
               type="button"
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onSelectTab(tab.id)}
               className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 isActive

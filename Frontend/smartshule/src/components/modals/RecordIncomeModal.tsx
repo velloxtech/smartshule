@@ -102,7 +102,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[94vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-emerald-700 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold shrink-0 shadow-inner">
               <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
@@ -119,7 +119,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1.5 rounded-lg text-on-primary hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             title="Close modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -128,7 +128,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
 
         {/* Regulatory Banner */}
         <div className="bg-emerald-50 dark:bg-emerald-950/30 px-5 py-2.5 border-b border-emerald-200/50 dark:border-emerald-900/40 flex items-center gap-2 text-xs text-emerald-900 dark:text-emerald-200">
-          <span className="material-symbols-outlined text-[18px] text-emerald-600 shrink-0">receipt</span>
+          <span className="material-symbols-outlined text-[18px] text-primary shrink-0">receipt</span>
           <span>Issues an official School Miscellaneous General Receipt (OR) in the financial ledger.</span>
         </div>
 
@@ -151,7 +151,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. MoE Junior Secondary Capitation Grant Term 1 2026"
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
               required
             />
           </div>
@@ -165,7 +165,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value as IncomeSourceType)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
               >
                 {SOURCE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -190,7 +190,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                   placeholder="240,000"
                   min="1"
                   step="0.01"
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl pl-12 pr-3.5 py-2.5 text-sm font-semibold text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl pl-12 pr-3.5 py-2.5 text-sm font-semibold text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
                   required
                 />
               </div>
@@ -208,7 +208,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                 value={receivedFrom}
                 onChange={(e) => setReceivedFrom(e.target.value)}
                 placeholder="e.g. Ministry of Education, St. Teresa Church"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
                 required
               />
             </div>
@@ -221,7 +221,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                 type="date"
                 value={incomeDate}
                 onChange={(e) => setIncomeDate(e.target.value)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
                 required
               />
             </div>
@@ -236,7 +236,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as any)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
               >
                 <option value="BANK_TRANSFER">Bank Account (EFT / Wire)</option>
                 <option value="BANK_DEPOSIT">Bank Direct Deposit Slip</option>
@@ -257,7 +257,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
                 placeholder="e.g. EFT-MOE-TR1, QHN77889DD, SLIP-449"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm font-mono text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm font-mono text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
                 required
               />
             </div>
@@ -273,7 +273,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Capitation allocation for 120 Grade 7 learners verified via NEMIS UPI registers."
               rows={2}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-primary focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
 
@@ -289,7 +289,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-700 hover:bg-emerald-800 text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-primary hover:bg-primary-container text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isLoading ? (
                 <>
