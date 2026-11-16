@@ -2376,7 +2376,15 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return AcademicTerm.create({ academicYearId: r.academic_year_id, termNumber: r.term_number, name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current }, r.id, r.created_at, r.updated_at);
   }
   public async findCurrentTerm(yearId?: string): Promise<AcademicTerm | null> {
-    const res = await this.pool.query('SELECT * FROM academic_terms WHERE is_current = true LIMIT 1');
+    // Never let another year's current term hide this year's saved teaching duties.
+    // During a transition an explicitly current year can have no flagged term yet.
+    // Read-only fallback: use its latest started term, without changing stored flags.
+    const res = yearId
+      ? await this.pool.query(`SELECT * FROM academic_terms
+          WHERE academic_year_id = $1 AND (is_current = true OR start_date::text <= $2)
+          ORDER BY is_current DESC, start_date DESC, updated_at DESC NULLS LAST, id ASC LIMIT 1`,
+        [yearId, new Date().toISOString().slice(0, 10)])
+      : await this.pool.query('SELECT * FROM academic_terms WHERE is_current = true ORDER BY updated_at DESC NULLS LAST, id ASC LIMIT 1');
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return AcademicTerm.create({ academicYearId: r.academic_year_id, termNumber: r.term_number, name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current }, r.id, r.created_at, r.updated_at);

@@ -1,4 +1,4 @@
-import { TeacherAssignmentAccess } from '../shared/TeacherAssignmentAccess';
+import { TeacherAssignmentAccess, matchesTeachingCohort } from '../shared/TeacherAssignmentAccess';
 import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -1338,24 +1338,31 @@ export class AcademicUseCases {
     const access = new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository);
     const scope = { academicYearId, termId };
     const assigned = await access.assignments(requestingUser, scope);
-    const period = {academicYearId: assigned.year.id, termId: assigned.term.id};
     const assignedClasses = [];
+    const editableLearningAreaIds = new Set<string>();
     const authorizedSubjectsByClass: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>> = {};
+    // Use one request-local assignment snapshot. Re-reading period/profile/duties for
+    // every subject both slows login and risks contradictory results during reassignment.
+    // Classes/areas below are already school-scoped; streams are loaded by their class.
     for (const cls of allClasses) {
-      const base = {...period, classRoomId:cls.id};
-      const wholeClass = await access.can(requestingUser, base);
+      const canTeach = (streamId?: string, learningAreaId?: string) =>
+        assigned.classes.some(a => matchesTeachingCohort(a, cls.id, streamId)) ||
+        assigned.subjects.some(a => matchesTeachingCohort(a, cls.id, streamId) && (!learningAreaId || a.learningAreaId === learningAreaId));
+      const wholeClass = canTeach();
       const streams = await this.academicRepository.findStreamsByClass(cls.id);
       const allowedStreams = [];
       const subjectsByStream: Record<string, Array<{id:string; code:string; name:string; gradeLevel?:string}>> = {};
       const subjects = new Map<string, {id:string; code:string; name:string; gradeLevel?:string}>();
       for (const stream of [undefined,...streams]) {
-        if (!await access.can(requestingUser, {...base,streamId:stream?.id})) continue;
+        if (!canTeach(stream?.id)) continue;
         if (stream) allowedStreams.push({id:stream.id,name:stream.name});
         const areas = [];
         for (const area of allLearningAreas.filter(a=>a.gradeLevel===cls.gradeLevel)) {
-          if (await access.can(requestingUser,{...base,streamId:stream?.id,learningAreaId:area.id})) {
+          if (canTeach(stream?.id, area.id)) {
             const item={id:area.id,code:area.code,name:area.name,gradeLevel:area.gradeLevel};
             areas.push(item); subjects.set(area.id,item);
+            if (assigned.subjects.some(a => ['SUBJECT_TEACHER', 'SUBJECT_LEAD'].includes(a.role)
+              && a.learningAreaId === area.id && matchesTeachingCohort(a, cls.id, stream?.id))) editableLearningAreaIds.add(area.id);
           }
         }
         subjectsByStream[stream?.id || ''] = areas;
@@ -1368,7 +1375,7 @@ export class AcademicUseCases {
       isGlobalAdmin:false, teacherId:teacher.id,
       teachingModel: assigned.classes.length ? (assigned.subjects.length ? 'HYBRID' : 'CLASS_TEACHER') : 'SUBJECT_TEACHER',
       assignedClasses, authorizedSubjectsByClass,
-      editableLearningAreaIds: await access.editableLearningAreaIds(requestingUser)
+      editableLearningAreaIds: [...editableLearningAreaIds]
     };
   }
 }

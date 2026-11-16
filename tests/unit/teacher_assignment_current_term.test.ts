@@ -21,8 +21,8 @@ describe('Current-term assignment effective dates', () => {
     expect(current.subjects).toEqual([assignment]);
 
     // A historical term still evaluates assignments within its own bounds.
-    term.isCurrent = false;
-    const historical = await access.assignments(actor);
+    academic.findTermById = async () => ({ ...term, id: 'historical', isCurrent: false });
+    const historical = await access.assignments(actor, { termId: 'historical' });
     expect(historical.classes).toEqual([]);
     expect(historical.subjects).toEqual([]);
   });

@@ -316,6 +316,9 @@ export class TeacherUseCases {
             if (!classRoom || classRoom.schoolId !== targetSchoolId) {
               throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
             }
+            if (!await this.academicRepository.findCurrentYear(targetSchoolId)) {
+              throw new ValidationError('Set the current academic year before assigning a teacher.');
+            }
           }
           singleAssignedStream = [streamId];
         }
@@ -347,6 +350,9 @@ export class TeacherUseCases {
       );
 
       await this.teacherRepository.save(teacher);
+      if (singleAssignedStream.length) {
+        await this.assignStream({ teacherId: teacher.id, streamId: singleAssignedStream[0] });
+      }
 
       if (this.systemLogRepository) {
         const actionName = targetRole === UserRole.HEAD_TEACHER ? 'HEAD_TEACHER_REGISTERED_FROM_PARENT' : 'TEACHER_REGISTERED_FROM_PARENT';
@@ -457,6 +463,9 @@ export class TeacherUseCases {
           if (!classRoom || classRoom.schoolId !== targetSchoolId) {
             throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
           }
+          if (!await this.academicRepository.findCurrentYear(targetSchoolId)) {
+            throw new ValidationError('Set the current academic year before assigning a teacher.');
+          }
         }
         singleAssignedStream = [streamId];
       }
@@ -520,6 +529,12 @@ export class TeacherUseCases {
         }
         throw err;
       }
+    }
+
+    // Persist the canonical duty on the server; a client-side follow-up request
+    // may fail or never run, and profile arrays alone do not authorize a teacher.
+    if (singleAssignedStream.length) {
+      await this.assignStream({ teacherId: teacher.id, streamId: singleAssignedStream[0] });
     }
 
     if (this.systemLogRepository) {
@@ -1576,6 +1591,10 @@ export class TeacherUseCases {
         IdGenerator.generate()
       );
       await this.teacherRepository.save(teacher);
+    }
+
+    if (teacher && dto.assignedClassStreamIds?.length) {
+      await this.assignStream({ teacherId: teacher.id, streamId: dto.assignedClassStreamIds[0] });
     }
 
     if (this.systemLogRepository) {

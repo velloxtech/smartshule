@@ -181,6 +181,15 @@ describe('Staff and Teacher Onboarding & Editing Pipeline (Generic & Resilient)'
       // Verify stream is linked properly
       const teacher = await container.teacherRepository.findById(res.body.data.id);
       expect(teacher?.assignedClassStreamIds).toContain('stream-g7-east');
+      const duties = await container.academicRepository.findClassTeacherAssignments({ teacherId: res.body.data.id, isActive: true });
+      expect(duties.map(d => d.streamId)).toEqual(['stream-g7-east']);
+      // No browser follow-up assignment request: the first login must already work.
+      const login = await request(app).post('/api/v1/auth/login').send({ email: payload.email, password: payload.phone });
+      expect(login.status).toBe(200);
+      const portal = await request(app).get('/api/v1/academics/teacher/authorized-context')
+        .set('Authorization', `Bearer ${login.body.data.accessToken}`);
+      expect(portal.status).toBe(200);
+      expect(portal.body.data.assignedClasses.some((c: any) => c.streams.some((stream: any) => stream.id === 'stream-g7-east'))).toBe(true);
     });
   });
 
@@ -426,6 +435,8 @@ describe('Staff and Teacher Onboarding & Editing Pipeline (Generic & Resilient)'
       expect(updateRes.body.data.employeeNumber).toBe('EMP-EDIT-001-REV');
       expect(updateRes.body.data.qualification).toBe('B.Ed (Hons) Education');
       expect(updateRes.body.data.assignedClassStreamIds).toEqual(['stream-g7-east']);
+      const updatedDuties = await container.academicRepository.findClassTeacherAssignments({ teacherId, isActive: true });
+      expect(updatedDuties.map(d => d.streamId)).toEqual(['stream-g7-east']);
 
       // 3. Confirm original IDs were preserved (no accidental recreation or orphaned replacement)
       expect(updateRes.body.data.id).toBe(teacherId);
