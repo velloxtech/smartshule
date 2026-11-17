@@ -1,4 +1,4 @@
-import { TeacherAssignmentAccess, matchesTeachingCohort } from '../shared/TeacherAssignmentAccess';
+import { TeacherAssignmentAccess, matchesTeachingCohort, teachesAllLowerPrimaryAreas } from '../shared/TeacherAssignmentAccess';
 import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -1363,7 +1363,7 @@ export class AcademicUseCases {
           if (canTeach(stream?.id, area.id)) {
             const item={id:area.id,code:area.code,name:area.name,gradeLevel:area.gradeLevel};
             areas.push(item); subjects.set(area.id,item);
-            if (assigned.subjects.some(a => ['SUBJECT_TEACHER', 'SUBJECT_LEAD'].includes(a.role)
+            if (teachesAllLowerPrimaryAreas(cls.gradeLevel, assigned.classes, cls.id, stream?.id) || assigned.subjects.some(a => ['SUBJECT_TEACHER', 'SUBJECT_LEAD'].includes(a.role)
               && a.learningAreaId === area.id && matchesTeachingCohort(a, cls.id, stream?.id))) editableLearningAreaIds.add(area.id);
           }
         }

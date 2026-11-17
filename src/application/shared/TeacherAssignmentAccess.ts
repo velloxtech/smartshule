@@ -8,6 +8,9 @@ export const sameTerm = (a: string, b: string) => a.replace(/-t([1-3])$/, '-$1')
 export const matchesTeachingCohort = (a: {classRoomId?: string; streamId?: string}, classId: string, streamId?: string) =>
   (a.classRoomId === classId || (!a.classRoomId && Boolean(a.streamId) && a.streamId === streamId))
   && (!a.streamId || Boolean(streamId && a.streamId === streamId));
+/** Grades 1–3 class teachers teach every learning area in their own assigned cohort. */
+export const teachesAllLowerPrimaryAreas = (gradeLevel: string, duties: {classRoomId?: string; streamId?: string}[], classId: string, streamId?: string) =>
+  ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(gradeLevel) && duties.some(duty => matchesTeachingCohort(duty, classId, streamId));
 const supervisors = ['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'];
 export class TeacherAssignmentAccess {
   constructor(private academic: IAcademicRepository, private teachers: ITeacherRepository) {}
@@ -52,11 +55,21 @@ export class TeacherAssignmentAccess {
       return assigned.classes.some(a=>(a.classRoomId===classId||(!a.classRoomId&&a.streamId===scope.streamId))&&(!a.streamId||a.streamId===scope.streamId));
     }catch(e){if(e instanceof ForbiddenError)return false;throw e;}
   }
-  /** Dictionary editing requires an explicit subject duty, never a class-teacher duty. */
+  /** Subject teachers and lower-primary class teachers may propose dictionary changes. */
   async editableLearningAreaIds(actor: AcademicActor, scope: TeachingScope = {}): Promise<string[]> {
     if (actor.role !== 'TEACHER') return [];
     const assigned = await this.assignments(actor, scope);
     const editable = new Set<string>();
+    for (const duty of assigned.classes) {
+      const stream = duty.streamId ? await this.academic.findStreamById(duty.streamId) : null;
+      if (duty.streamId && (!stream || (duty.classRoomId && stream.classRoomId !== duty.classRoomId))) continue;
+      const classId = duty.classRoomId || stream?.classRoomId;
+      const classroom = classId ? await this.academic.findClassById(classId) : null;
+      if (!classroom || classroom.schoolId !== actor.schoolId || !teachesAllLowerPrimaryAreas(classroom.gradeLevel, [duty], classroom.id, duty.streamId)) continue;
+      for (const area of await this.academic.findAllLearningAreas({schoolId: actor.schoolId, gradeLevel: classroom.gradeLevel})) {
+        if (area.schoolId === actor.schoolId && area.gradeLevel === classroom.gradeLevel) editable.add(area.id);
+      }
+    }
     for (const assignment of assigned.subjects) {
       if (!['SUBJECT_TEACHER', 'SUBJECT_LEAD'].includes(assignment.role)) continue;
       const stream = assignment.streamId ? await this.academic.findStreamById(assignment.streamId) : null;
@@ -74,7 +87,7 @@ export class TeacherAssignmentAccess {
     if (!area || (actor.schoolId && area.schoolId !== actor.schoolId)) throw new ForbiddenError('Learning area access denied.');
     if (supervisors.includes(actor.role)) return;
     if (!actor.schoolId || (gradeLevel && gradeLevel !== area.gradeLevel) || !(await this.editableLearningAreaIds(actor)).includes(learningAreaId)) {
-      throw new ForbiddenError('Only the assigned subject teacher can change this subject’s strands and sub-strands. Class-teacher access is view only.');
+      throw new ForbiddenError('Only an assigned subject teacher or the lower-primary class teacher can propose changes to this subject’s strands and sub-strands.');
     }
   }
   async assertSubjectTeaching(actor: AcademicActor, scope: TeachingScope) {
@@ -82,11 +95,13 @@ export class TeacherAssignmentAccess {
     if (supervisors.includes(actor.role)) return;
     const assigned = await this.assignments(actor, scope);
     const classId = scope.classRoomId || scope.classroomId || (scope.streamId ? (await this.academic.findStreamById(scope.streamId))?.classRoomId : undefined);
+    const classroom = classId ? await this.academic.findClassById(classId) : null;
+    if (classroom && teachesAllLowerPrimaryAreas(classroom.gradeLevel, assigned.classes, classroom.id, scope.streamId)) return;
     const permitted = assigned.subjects.some(a => ['SUBJECT_TEACHER', 'SUBJECT_LEAD'].includes(a.role)
       && a.learningAreaId === scope.learningAreaId
       && (a.classRoomId === classId || (!a.classRoomId && a.streamId === scope.streamId))
       && (!a.streamId || a.streamId === scope.streamId));
-    if (!permitted) throw new ForbiddenError('Only the assigned subject teacher can plan this learning area. Class-teacher coverage access is view only.');
+    if (!permitted) throw new ForbiddenError('Only the assigned subject teacher or the lower-primary class teacher can plan this learning area. Other class-teacher coverage access is view only.');
   }
   async assert(actor: AcademicActor, scope: TeachingScope, privateWork = false) {
     if (!actor?.schoolId || (scope.schoolId && scope.schoolId !== actor.schoolId)) throw new ForbiddenError('School access denied.');

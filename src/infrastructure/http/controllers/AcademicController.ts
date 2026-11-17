@@ -143,7 +143,8 @@ export class AcademicController {
 
   public listYears = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const years = await this.academicUseCases.listAcademicYears(req.query.schoolId as string);
+      const actor = (req as any).user;
+      const years = await this.academicUseCases.listAcademicYears(actor?.role === 'TEACHER' ? actor.schoolId : req.query.schoolId as string);
       return res.status(200).json({ success: true, data: years });
     } catch (err) {
       next(err);
@@ -218,7 +219,8 @@ export class AcademicController {
 
   public listAllTerms = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const terms = await this.academicUseCases.listAllTerms(req.query.schoolId as string);
+      const actor = (req as any).user;
+      const terms = await this.academicUseCases.listAllTerms(actor?.role === 'TEACHER' ? actor.schoolId : req.query.schoolId as string);
       return res.status(200).json({ success: true, data: terms });
     } catch (err) {
       next(err);

@@ -561,6 +561,62 @@ describe('Teacher Assignments, Class Promotion Continuity, and Marks Upload Pipe
   // PART 3: SUBJECT LEADERSHIP ASSIGNMENTS
   // ==========================================
   describe('Part 3: Subject Leadership & Subject Teacher Assignments', () => {
+    async function lowerPrimaryFixture(gradeLevel: CBCGradeLevel) {
+      const cls = ClassRoom.create({name: gradeLevel, gradeLevel, educationLevel: EducationLevel.LOWER_PRIMARY, schoolId}, 'lower-class');
+      await container.academicRepository.saveClass(cls);
+      for (const id of ['lower-a', 'lower-b']) await container.academicRepository.saveStream(Stream.create({classRoomId: cls.id, name: id, capacity: 30}, id));
+      for (const id of ['lower-math', 'lower-eng']) await container.academicRepository.saveLearningArea(LearningArea.create({name:id, code:id, gradeLevel, educationLevel:EducationLevel.LOWER_PRIMARY, isElective:false, schoolId},id));
+      const duty = await container.academicUseCases.assignClassTeacher({schoolId, academicYearId, classRoomId:cls.id, streamId:'lower-a', teacherId:teacher1.id, effectiveFrom:'2026-01-05'});
+      const actor = {userId:teacherUser1.id, email:teacherUser1.email!, role:UserRole.TEACHER, schoolId};
+      const scope = {schoolId, academicYearId, termId, classRoomId:cls.id, streamId:'lower-a', learningAreaId:'lower-math'};
+      return {actor, scope, duty};
+    }
+
+    it.each([CBCGradeLevel.GRADE_1, CBCGradeLevel.GRADE_2, CBCGradeLevel.GRADE_3])('allows %s class teachers to plan every own-cohort area and propose curriculum without separate subject duties', async grade => {
+      const {actor, scope} = await lowerPrimaryFixture(grade);
+      for (const learningAreaId of ['lower-math', 'lower-eng']) {
+        await expect(container.assignmentAccess.assertSubjectTeaching(actor, {...scope, learningAreaId})).resolves.toBeUndefined();
+        await expect(container.assignmentAccess.assertSubjectEditor(actor, learningAreaId, grade)).resolves.toBeUndefined();
+      }
+      const context = await container.academicUseCases.getTeacherAuthorizedContext(actor, academicYearId, termId);
+      expect(context.editableLearningAreaIds).toEqual(expect.arrayContaining(['lower-math','lower-eng']));
+      expect(context.assignedClasses.find(c=>c.id===scope.classRoomId)?.subjectsByStream?.['lower-a']).toHaveLength(2);
+      const proposed = await container.CBCUseCases.createStrand({learningAreaId:'lower-math', gradeLevel:grade, code:'LP-NUM', title:'Numbers'}, actor);
+      expect(proposed.proposalId).toBeTruthy();
+      expect(await container.CBCAssessmentRepository.findStrandsByLearningArea('lower-math', grade)).toHaveLength(0);
+      const strand = await container.CBCUseCases.createStrand({learningAreaId:'lower-math', gradeLevel:grade, code:'PUBLISHED-NUM', title:'Published numbers'});
+      const sub = await container.CBCUseCases.createSubStrand({strandId:strand.id, code:'LP-SUB', title:'Counting', specificLearningOutcomes:['Count objects']});
+      const draft = await container.termAllocations.saveDraft(actor, scope, [{subStrandId:sub.id, lessons:2}], 0);
+      expect(draft.scheme.planningState?.coverageReviewStatus).not.toBe('APPROVED');
+      expect(draft.scheme.planningState?.allocations[0].lessons).toBe(2);
+    });
+
+    it('keeps lower-primary all-subject teaching within the assigned stream and preserves subject-only access elsewhere', async () => {
+      const {actor, scope} = await lowerPrimaryFixture(CBCGradeLevel.GRADE_2);
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, {...scope, streamId:'lower-b'})).rejects.toThrow(ForbiddenError);
+      await container.academicUseCases.assignSubjectTeacher({...scope, streamId:'lower-b', teacherId:teacher1.id, role:'SUBJECT_TEACHER', effectiveFrom:'2026-01-05'});
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, {...scope, streamId:'lower-b'})).resolves.toBeUndefined();
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, {...scope, streamId:'lower-b', learningAreaId:'lower-eng'})).rejects.toThrow(ForbiddenError);
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, {...scope, learningAreaId:'la-math'})).rejects.toThrow(ForbiddenError);
+      await expect(container.assignmentAccess.assertSubjectTeaching({...actor,schoolId:'another-school'}, scope)).rejects.toThrow(ForbiddenError);
+    });
+
+    it('removes implicit lower-primary teaching rights when the class duty is deactivated', async () => {
+      const {actor, scope, duty} = await lowerPrimaryFixture(CBCGradeLevel.GRADE_1);
+      const [savedDuty] = await container.academicRepository.findClassTeacherAssignments({teacherId:teacher1.id,schoolId,academicYearId,isActive:true});
+      expect(savedDuty.id).toBe(duty.id);
+      savedDuty.deactivate();
+      await container.academicRepository.saveClassTeacherAssignment(savedDuty);
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, scope)).rejects.toThrow(ForbiddenError);
+      await expect(container.assignmentAccess.assertSubjectEditor(actor, 'lower-math')).rejects.toThrow(ForbiddenError);
+    });
+
+    it.each([CBCGradeLevel.GRADE_4, CBCGradeLevel.PP1])('does not infer all-subject planning from a class duty in %s', async grade => {
+      const {actor, scope} = await lowerPrimaryFixture(grade);
+      await expect(container.assignmentAccess.assertSubjectTeaching(actor, scope)).rejects.toThrow(ForbiddenError);
+      await expect(container.assignmentAccess.assertSubjectEditor(actor, 'lower-math')).rejects.toThrow(ForbiddenError);
+    });
+
     it('lets subject teachers save drafts before scheduling while class teachers see coverage summaries without editing', async () => {
       const subjectActor = { userId: teacherUser3.id, role: UserRole.TEACHER, schoolId };
       const classActor = { userId: teacherUser1.id, role: UserRole.TEACHER, schoolId };

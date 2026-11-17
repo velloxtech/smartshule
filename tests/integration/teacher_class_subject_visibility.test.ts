@@ -31,6 +31,23 @@ describe('Alpha class teacher and West Science-only teacher',()=>{
    for(const learningAreaId of ['math','science'])await c.CBCAssessmentRepository.saveSummative(SummativeAssessment.create({studentId,learningAreaId,academicYearId:'visibility-year',termId:'visibility-term',teacherId:'another-teacher',gradeLevel:CBCGradeLevel.GRADE_4,assessmentDate:'2026-11-10',assessmentType:'END_TERM',strandScores:[{strandId:'s',strandTitle:'Test',rawScore:learningAreaId==='math'?95:60,maxScore:100,performanceLevel:PerformanceLevel.MEETING_EXPECTATIONS}],overallPerformanceLevel:PerformanceLevel.MEETING_EXPECTATIONS} as any,`${streamId}-${learningAreaId}`));
   }
  });
+ it('loads school period selectors without current flags and retains saved assignments',async()=>{
+  const year=(await c.academicRepository.findYearById('visibility-year'))!;year.setCurrent(false);await c.academicRepository.updateYear(year);
+  const term=(await c.academicRepository.findTermById('visibility-term'))!;term.setCurrent(false);await c.academicRepository.updateTerm(term);
+  await c.academicRepository.saveYear(AcademicYear.create({schoolId:'other-school',name:'2027',startDate:'2027-01-01',endDate:'2027-12-31',isCurrent:true},'other-year'));
+  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:'other-year',name:'Term 1',termNumber:1,startDate:'2027-01-01',endDate:'2027-04-01',isCurrent:true},'other-term'));
+  const years=await request(app).get('/api/v1/academics/years').set('Authorization',auth());
+  expect(years.status).toBe(200);expect(years.body.data.map((r:any)=>r.id)).toEqual(['visibility-year']);
+  for(const path of ['/api/v1/academics/terms','/api/v1/academics/terms/by-year/visibility-year']){
+   const terms=await request(app).get(path).set('Authorization',auth());expect(terms.status).toBe(200);expect(terms.body.data.map((r:any)=>r.id)).toEqual(['visibility-term']);
+  }
+  expect((await request(app).get('/api/v1/academics/terms/by-year/other-year').set('Authorization',auth())).status).toBe(403);
+  expect((await request(app).get('/api/v1/academics/years?schoolId=other-school').set('Authorization',auth())).status).toBe(403);
+  expect((await request(app).get('/api/v1/students').set('Authorization',auth())).status).toBe(403);
+  const options=await request(app).get('/api/v1/curriculum/planning/options?'+query).set('Authorization',auth());
+  expect(options.status).toBe(200);expect(options.body.data.some((r:any)=>r.id==='grade4')).toBe(true);
+  expect((await c.academicRepository.findClassTeacherAssignments({teacherId:'hybrid-profile',schoolId:actor.schoolId,academicYearId:'visibility-year',isActive:true})).map(r=>r.id)).toEqual(['alpha-duty']);
+ });
  it('lists only Alpha in Learners and Guardians and blocks West dossier by direct ID',async()=>{
   const response=await request(app).get('/api/v1/students?'+query).set('Authorization',auth());
   expect(response.status).toBe(200);expect(response.body.data.map((row:any)=>row.id)).toEqual(['alpha-student']);

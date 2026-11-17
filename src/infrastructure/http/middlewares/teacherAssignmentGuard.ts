@@ -11,6 +11,20 @@ export function teacherAssignmentGuard(c:AppContainer){return async(req:Request,
  try{
   if(req.query.schoolId && req.query.schoolId!==actor.schoolId)throw new ForbiddenError('School access denied.');
   const path=req.originalUrl.split('?')[0].replace(/^\/api\/v1/i,'');const segments=path.split('/').filter(Boolean).map(s=>decodeURIComponent(s));segments[0]=segments[0]?.toLowerCase();if(['curriculum','cbc'].includes(segments[0]))segments[1]=segments[1]?.toLowerCase();
+  // Period selectors must be readable before a teaching period has been resolved.
+  // Otherwise a missing current flag prevents the teacher from selecting a valid year.
+  // These exact GET routes expose only school-scoped period metadata, not teaching data.
+  if(req.method==='GET' && segments[0]==='academics' && (
+    (segments.length===2 && ['years','terms'].includes(segments[1])) ||
+    (segments.length===4 && segments[1]==='terms' && segments[2]==='by-year')
+  )) {
+    if(!actor.schoolId)throw new ForbiddenError('A school-scoped account is required.');
+    if(segments.length===4){
+      const requestedYear=await c.academicRepository.findYearById(segments[3]);
+      if(!requestedYear || requestedYear.schoolId!==actor.schoolId)throw new ForbiddenError('Academic year access denied.');
+    }
+    return next();
+  }
   // BroadsheetUseCases calculates subject-limited totals and aggregates per stream.
   // Generic response filtering cannot safely recalculate those derived values.
   if(segments[0]==='broadsheets'&&segments[1]==='stream')return next();

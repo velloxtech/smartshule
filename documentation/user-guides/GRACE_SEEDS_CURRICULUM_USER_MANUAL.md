@@ -50,8 +50,9 @@
 1. Confirm the real operational academic year and term in the academic year and term settings. Check their dates, not only their names.
 2. If preparing a future year, select that year in planning. Do not activate the future year just to prepare its plans.
 3. Check that each teacher’s login is linked to the correct staff profile.
-4. Save class-teacher duties and subject-teacher assignments separately for the correct year, class, stream and learning area. Check effective dates.
-5. Confirm published curriculum, the school’s first-use decision, published calendar and matching timetable as described below.
+4. Save the class-teacher duty for the correct year, class and stream. In Grades 1–3 this also grants teaching and planning access to all learning areas for that cohort; separate subject assignments are unnecessary there.
+5. For other grades, and subjects taught outside the class-teacher cohort, save the required subject assignments. Check effective dates.
+6. Confirm published curriculum, the school’s first-use decision, published calendar and matching timetable as described below.
 
 ### Teacher: check the teaching context
 
@@ -61,7 +62,11 @@
 
 - A class-teacher duty and a subject assignment have different purposes.
 - A teacher may be class teacher for one stream and teach only Science in another.
-- Subject planning and marks access follow the subject assignment; learners and guardians access follows the class-teacher duty.
+- In Grades 1–3, the active class-teacher duty also grants teaching and planning access to every learning area in that assigned class and stream.
+- For other grades, subject planning requires subject assignments. A subject-only assignment in another stream remains limited to that subject.
+- Learners and guardians access follows the class-teacher duty.
+- Lower-primary teachers can propose curriculum entries for all their grade’s learning areas, but leadership must still approve and publish those proposals.
+- Coverage, schemes and records still require approval; lesson plans remain usable immediately.
 - Use your personal timetable for all your own teaching periods.
 - Full class timetables are available for your class-teacher cohorts, not every class where you teach one subject.
 
@@ -333,7 +338,7 @@
 - **No assigned learning area**
   - Action: Leadership checks staff/login linkage, subject assignment, year, class, stream and effective dates; teacher refreshes assignments afterward
 - **Assigned class but no planning subject**
-  - Action: A class-teacher duty alone is insufficient; leadership checks subject-teacher duties
+  - Action: For Grades 1–3, check the active class-teacher duty, year, grade and stream. For other grades, leadership checks subject-teacher duties
 - **Missing curriculum**
   - Action: Check grade/learning-area filters; leadership publishes valid proposals; teacher chooses Refresh strands
 - **Calendar not published / timetable missing**
