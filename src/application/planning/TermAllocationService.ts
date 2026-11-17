@@ -56,8 +56,6 @@ export class TermAllocationService {
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scope);
     const canonical=await this.c.assignmentAccess.context(actor,scope);scope={...scope,academicYearId:canonical.year.id,termId:canonical.term.id};
     await this.c.calendarPlanning.assertUnlocked(actor,scope);
-    const calendar=await this.c.calendarPlanning.calendar(actor,scope);
-    if(calendar?.data.guidedWorkflow){const continuity=await this.c.planningWorkflow.continuity(actor,scope);if(!continuity.canPlan)throw new ConflictError(continuity.message);}
     const scheduled=await this.c.calendarPlanning.draftSchedule(actor,scope);
     await this.checkAllocations(actor,scope,allocations);
     let scheme:SchemeOfWork;

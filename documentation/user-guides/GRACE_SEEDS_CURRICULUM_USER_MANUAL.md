@@ -180,7 +180,7 @@
 
 1. Open Curriculum & Timetable → Syllabus Coverage Plan.
 2. Check your assigned class, stream, learning area, year and term.
-3. Read the roadmap. If an assignment, calendar or timetable is missing, note the named missing item and contact leadership. You may be able to save a draft before scheduling is ready; submission and scheduled work remain subject to the displayed checks.
+3. Read the roadmap. If an assignment, calendar or timetable is missing, note the named missing item and contact leadership. You can save and submit syllabus coverage before the calendar/timetable is ready. Leadership completes setup before dated scheme sessions and teaching records are available. Missing previous-term records are an administrator follow-up, not a coverage-drafting block.
 4. Review any previous approved unfinished work offered for carry-forward. Select the work genuinely needed for this period; this retains the earlier source instead of changing the old scheme.
 5. Open Coverage allocation. Expand a strand, choose the relevant sub-strands and use Add to sequence.
 6. Enter Lessons before next sub-strand as a pacing estimate. Arrange the teaching order with the move controls. Check Coverage outcomes.
@@ -344,7 +344,7 @@
 - **Calendar not published / timetable missing**
   - Action: Administrator or Head Teacher completes the named setup for the matching period
 - **Previous scheme missing**
-  - Action: Leadership checks the named prior period; records genuine first use or resolves missing prior history truthfully
+  - Action: Continue coverage planning from published curriculum. Leadership checks the named prior period and records genuine first use or resolves missing history; do not create placeholder schemes.
 - **Approve button absent or disabled**
   - Action: Confirm reviewer role, selected context and SUBMITTED status; coverage approval must precede scheme approval; own-record approval is restricted
 - **Scheme submit disabled**

@@ -35,14 +35,27 @@ beforeEach(async()=>{
  await c.CBCAssessmentRepository.saveSubStrand(SubStrand.create({strandId:'director-strand',code:'F',title:'Fractions',specificLearningOutcomes:content.specificLearningOutcomes},'director-sub'));
 });
 it('names missing calendar and timetable, and teachers cannot configure the calendar or decide first use',async()=>{
- let r=await request(app).get(url('readiness')).set('Authorization',auth());expect(r.status).toBe(200);expect(r.body.data.nextAction.owner).toBe('Administrator');expect(r.body.data.calendarPublished).toBe(false);
+ let r=await request(app).get(url('readiness')).set('Authorization',auth());expect(r.status).toBe(200);expect(r.body.data.nextAction.label).toBe('Create Coverage Plan');expect(r.body.data.calendarPublished).toBe(false);
  expect((await request(app).post(url('start')).set('Authorization',auth()).send({decision:'FIRST_TERM',reason:'Teacher should not decide this',revision:0})).status).toBe(403);
- await calendar();r=await request(app).get(url('readiness')).set('Authorization',auth());expect(r.body.data.timetableReady).toBe(false);expect(r.body.data.nextAction.label).toMatch(/timetable/);
+ await calendar();r=await request(app).get(url('readiness')).set('Authorization',auth());expect(r.body.data.timetableReady).toBe(false);expect(r.body.data.nextAction.label).toBe('Create Coverage Plan');expect(r.body.data.setupRequired).toMatch(/timetable/);
 });
-it('records explicit first use in Term 3 without creating placeholder schemes and gates guided planning until decided',async()=>{
- await calendar();await timetable();await expect(save()).rejects.toThrow('Start First Term');
+it('records explicit first use in Term 3 without creating placeholder schemes and preserves the first-use decision without fabricating previous schemes',async()=>{
+ await calendar();await timetable();
  const result=await request(app).post(url('start',{academicYearId:scope.academicYearId,termId:scope.termId})).set('Authorization',auth(admin)).send({decision:'FIRST_TERM',reason:'School starts SmartShule in third term',revision:0});expect(result.status).toBe(200);expect(result.body.data.data.decidedBy).toBe(admin.userId);
  expect(await c.schemeOfWorkRepository.findAll()).toHaveLength(0);expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('FIRST_TERM');expect((await save()).scheme.planningState?.allocations).toHaveLength(1);
+});
+it('saves and submits coverage before setup is complete but cannot invent scheduled scheme lessons',async()=>{
+ let p=await save();expect(p.setupRequired).toBeTruthy();expect(p.scheme.entries).toEqual([]);
+ p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);
+ expect(p.scheme.planningState!.coverageReviewStatus).toBe('SUBMITTED');
+ await expect(c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow();
+ await calendar();
+ const state=await c.planningWorkflow.readiness(teacher,scope);
+ expect(state.continuity.status).toBe('NEEDS_FIRST_TERM_DECISION');
+ expect(state.continuity.canPlan).toBe(true);expect(state.continuity.requiresAdminFollowUp).toBe(true);
+ expect(state.nextAction.tab).toBe('curriculum-tracker');
+ expect(state.timetableReady).toBe(false);
+ expect(await c.planningRepository.get(`smartshule-start:${teacher.schoolId}`)).toBeNull();
 });
 it('completes coverage and scheme review, uses an unapproved lesson plan, and records another session while earlier work awaits review',async()=>{
  const weekly=await approvedScheme();const lessons=weekly.weeks.flatMap((w:any)=>w.lessons);const first=lessons[0],second=lessons[1];
@@ -66,12 +79,12 @@ it('carries unfinished work from an approved earlier term into a draft and prese
  await calendar();await timetable();const continuity=await c.planningWorkflow.continuity(teacher,scope);expect(continuity.status).toBe('PRIOR_APPROVED');expect(continuity.unfinishedEntries.map(e=>e.sourceEntryId)).toEqual(['unfinished']);
  const carried=await c.planningWorkflow.carryForward(teacher,scope,['unfinished'],0);expect(carried.scheme.planningState?.allocations[0].carriedFrom).toEqual([{schemeId:'old-scheme',entryId:'unfinished'}]);expect(JSON.stringify((await c.schemeOfWorkRepository.findById(old.id))!.toJSON())).toBe(before);
 });
-it('requires an audited administrator resolution for later missing records instead of fabricating history',async()=>{
+it('allows drafting with missing prior records while retaining administrator resolution and genuine history',async()=>{
  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:scope.academicYearId,name:'Term 2',termNumber:2,startDate:'2026-05-01',endDate:'2026-08-01',isCurrent:false},'director-term2'));
  await c.planningWorkflow.decide(admin,{...scope,termId:'director-term2'},'FIRST_TERM','School began in Term 2',0);await calendar();await timetable();
- expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('MISSING_PRIOR');await expect(save()).rejects.toThrow('No approved previous scheme');
+ expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('MISSING_PRIOR');const draft=await save();expect(draft.scheme.planningState?.coverageReviewStatus).toBe('DRAFT');expect((await c.planningWorkflow.readiness(teacher,scope)).nextAction.label).toBe('Continue Draft');
  await c.planningWorkflow.decide(admin,scope,'MISSING_PRIOR','Prior paper scheme was not captured; academic head reviewed curriculum restart',0);
- expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('RESOLVED');await save();expect((await c.schemeOfWorkRepository.findAll()).every(s=>s.termId===scope.termId)).toBe(true);
+ expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('RESOLVED');expect((await c.schemeOfWorkRepository.findAll()).every(s=>s.termId===scope.termId)).toBe(true);
 });
 it('holds teacher curriculum changes for admin approval and keeps published entries usable until reviewed',async()=>{
  const proposal:any=await c.CBCUseCases.createStrand({learningAreaId:scope.learningAreaId,gradeLevel:CBCGradeLevel.GRADE_4,code:'NEW',title:'Teacher proposed entry'},teacher);
