@@ -1417,6 +1417,14 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS week_number INT;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS lesson_number INT;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS session_title VARCHAR(255);
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS learner_needs TEXT;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS pcis JSONB DEFAULT '[]';
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS safety_requirements TEXT;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS introduction JSONB;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS session_review JSONB;
       ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection TEXT;
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
       ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
@@ -3401,7 +3409,15 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
       submittedAt: r.submitted_at ? new Date(r.submitted_at) : undefined,
       reviewedByUserId: r.reviewed_by_user_id,
       reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
-      reviewRemarks: r.review_remarks
+      reviewRemarks: r.review_remarks,
+      weekNumber: r.week_number,
+      lessonNumber: r.lesson_number,
+      sessionTitle: r.session_title,
+      learnerNeeds: r.learner_needs,
+      pcis: typeof r.pcis === 'string' ? JSON.parse(r.pcis) : (r.pcis || []),
+      safetyRequirements: r.safety_requirements,
+      introduction: typeof r.introduction === 'string' ? JSON.parse(r.introduction) : r.introduction,
+      sessionReview: typeof r.session_review === 'string' ? JSON.parse(r.session_review) : r.session_review
     }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: LessonPlanFilterCriteria): Promise<LessonPlan[]> {
@@ -3459,39 +3475,82 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
       submittedAt: r.submitted_at ? new Date(r.submitted_at) : undefined,
       reviewedByUserId: r.reviewed_by_user_id,
       reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
-      reviewRemarks: r.review_remarks
+      reviewRemarks: r.review_remarks,
+      weekNumber: r.week_number,
+      lessonNumber: r.lesson_number,
+      sessionTitle: r.session_title,
+      learnerNeeds: r.learner_needs,
+      pcis: typeof r.pcis === 'string' ? JSON.parse(r.pcis) : (r.pcis || []),
+      safetyRequirements: r.safety_requirements,
+      introduction: typeof r.introduction === 'string' ? JSON.parse(r.introduction) : r.introduction,
+      sessionReview: typeof r.session_review === 'string' ? JSON.parse(r.session_review) : r.session_review
     }, r.id, r.created_at, r.updated_at));
   }
   public async save(lp: LessonPlan): Promise<void> {
-    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
-               ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, reviewed_by_user_id = EXCLUDED.reviewed_by_user_id, reviewed_at = EXCLUDED.reviewed_at, review_remarks = EXCLUDED.review_remarks, updated_at = NOW()`;
+    const props = (lp as any)._props || {};
+    const q = `INSERT INTO lesson_plans (
+                 id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id,
+                 lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand,
+                 specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed,
+                 learning_resources, steps, extended_activity, teacher_self_reflection, status,
+                 submitted_at, reviewed_by_user_id, reviewed_at, review_remarks,
+                 week_number, lesson_number, session_title, learner_needs, pcis, safety_requirements, introduction, session_review,
+                 created_at, updated_at
+               )
+               VALUES (
+                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+                 $26, $27, $28, $29, $30, $31, $32, $33, $34, $35
+               )
+               ON CONFLICT (id) DO UPDATE SET
+                 teacher_self_reflection = EXCLUDED.teacher_self_reflection,
+                 status = EXCLUDED.status,
+                 submitted_at = EXCLUDED.submitted_at,
+                 reviewed_by_user_id = EXCLUDED.reviewed_by_user_id,
+                 reviewed_at = EXCLUDED.reviewed_at,
+                 review_remarks = EXCLUDED.review_remarks,
+                 week_number = EXCLUDED.week_number,
+                 lesson_number = EXCLUDED.lesson_number,
+                 session_title = EXCLUDED.session_title,
+                 learner_needs = EXCLUDED.learner_needs,
+                 pcis = EXCLUDED.pcis,
+                 safety_requirements = EXCLUDED.safety_requirements,
+                 introduction = EXCLUDED.introduction,
+                 session_review = EXCLUDED.session_review,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       lp.id,
-      ((lp as any)._props.schemeOfWorkEntryId && (lp as any)._props.schemeOfWorkEntryId.trim() !== '') ? (lp as any)._props.schemeOfWorkEntryId : null,
+      (props.schemeOfWorkEntryId && props.schemeOfWorkEntryId.trim() !== '') ? props.schemeOfWorkEntryId : null,
       (lp.teacherId && lp.teacherId.trim() !== '') ? lp.teacherId : null,
       lp.learningAreaId,
       (lp.classRoomId && lp.classRoomId.trim() !== '') ? lp.classRoomId : null,
       (lp.streamId && lp.streamId.trim() !== '') ? lp.streamId : null,
       lp.lessonDate,
       lp.durationMinutes,
-      (lp as any)._props.rollBoys,
-      (lp as any)._props.rollGirls,
+      props.rollBoys,
+      props.rollGirls,
       lp.strand,
       lp.subStrand,
       JSON.stringify(lp.specificLearningOutcomes),
-      JSON.stringify((lp as any)._props.keyInquiryQuestions || []),
-      JSON.stringify((lp as any)._props.coreCompetenciesAddressed || []),
-      JSON.stringify((lp as any)._props.valuesAddressed || []),
-      JSON.stringify((lp as any)._props.learningResources || []),
+      JSON.stringify(props.keyInquiryQuestions || []),
+      JSON.stringify(props.coreCompetenciesAddressed || []),
+      JSON.stringify(props.valuesAddressed || []),
+      JSON.stringify(props.learningResources || []),
       JSON.stringify(lp.steps),
-      (lp as any)._props.extendedActivity || null,
+      props.extendedActivity || null,
       lp.teacherSelfReflection || null,
       lp.status,
       lp.submittedAt || null,
       (lp.reviewedByUserId && lp.reviewedByUserId.trim() !== '') ? lp.reviewedByUserId : null,
       lp.reviewedAt || null,
       lp.reviewRemarks || null,
+      props.weekNumber ?? null,
+      props.lessonNumber ?? null,
+      props.sessionTitle ?? null,
+      props.learnerNeeds ?? null,
+      JSON.stringify(props.pcis || []),
+      props.safetyRequirements ?? null,
+      props.introduction ? JSON.stringify(props.introduction) : null,
+      props.sessionReview ? JSON.stringify(props.sessionReview) : null,
       lp.createdAt,
       lp.updatedAt
     ]);

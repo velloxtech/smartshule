@@ -145,7 +145,7 @@ export const FeeStructureView: React.FC = () => {
         s.title?.toLowerCase().includes(q) ||
         s.gradeLevel?.toLowerCase().includes(q) ||
         s.items?.some((it) => it.name.toLowerCase().includes(q));
-      const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm || (!s.termId && selectedTerm === 'ALL');
+      const matchesTerm = selectedTerm === 'ALL' || !s.termId || s.termId === selectedTerm;
       return matchesSearch && matchesTerm;
     });
   }, [structures, searchQuery, selectedTerm]);

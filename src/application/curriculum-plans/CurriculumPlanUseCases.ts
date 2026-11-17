@@ -41,6 +41,14 @@ export interface CreateLessonPlanDTO {
   steps: LessonDevelopmentStep[];
   extendedActivity?: string;
   teacherSelfReflection?: string;
+  weekNumber?: number;
+  lessonNumber?: number;
+  sessionTitle?: string;
+  learnerNeeds?: string;
+  pcis?: string[];
+  safetyRequirements?: string;
+  introduction?: { durationMinutes?: number; activities?: string } | string;
+  sessionReview?: { durationMinutes?: number; activities?: string } | string;
 }
 
 export class CurriculumPlanUseCases {
@@ -150,7 +158,15 @@ export class CurriculumPlanUseCases {
         learningResources: dto.learningResources,
         steps: dto.steps,
         extendedActivity: dto.extendedActivity,
-        teacherSelfReflection: dto.teacherSelfReflection
+        teacherSelfReflection: dto.teacherSelfReflection,
+        weekNumber: dto.weekNumber,
+        lessonNumber: dto.lessonNumber,
+        sessionTitle: dto.sessionTitle,
+        learnerNeeds: dto.learnerNeeds,
+        pcis: dto.pcis,
+        safetyRequirements: dto.safetyRequirements,
+        introduction: dto.introduction,
+        sessionReview: dto.sessionReview
       },
       IdGenerator.generate()
     );

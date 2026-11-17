@@ -268,6 +268,8 @@ export interface AuthUser {
   guardianId?: string;
 }
 
+export type User = AuthUser;
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -292,6 +294,8 @@ export interface ApiResponse<T = any> {
 }
 
 export interface Student {
+  schoolId?: string;
+  totalBalance?: number;
   id: string;
   admNo: string;
   admissionNumber?: string;
@@ -301,7 +305,7 @@ export interface Student {
   firstName?: string;
   middleName?: string;
   lastName?: string;
-  gender: 'Boy' | 'Girl' | 'MALE' | 'FEMALE';
+  gender: 'Boy' | 'Girl' | 'Male' | 'Female' | 'MALE' | 'FEMALE';
   grade: string;
   stream: string;
   guardianName: string;
@@ -471,6 +475,9 @@ export interface TeacherCorrectionRequest {
 }
 
 export interface TeacherProfileData {
+  classTeacherAssignments?: any[];
+  subjectAssignments?: any[];
+  assignedClassId?: string;
   id: string;
   userId: string;
   tscNumber?: string;
@@ -527,6 +534,8 @@ export interface TeacherProfileData {
 }
 
 export interface Teacher {
+  schoolId?: string;
+  assignedClassStreamIds?: string[];
   id: string;
   userId?: string;
   tscNumber: string;
@@ -730,6 +739,7 @@ export interface FacultyDailyRoster {
 }
 
 export interface AcademicYear {
+  year?: number | string;
   id: string;
   name: string;
   startDate: string;
@@ -991,6 +1001,19 @@ export interface LessonPlan {
   reviewedAt?: string;
   reviewRemarks?: string;
   createdAt?: string;
+  weekNumber?: number;
+  lessonNumber?: number;
+  sessionTitle?: string;
+  learnerNeeds?: string;
+  pcis?: string[];
+  safetyRequirements?: string;
+  introduction?: { durationMinutes?: number; activities?: string } | string;
+  sessionReview?: { durationMinutes?: number; activities?: string } | string;
+  institutionName?: string;
+  gradeLevel?: string;
+  className?: string;
+  learningAreaName?: string;
+  teacherName?: string;
 }
 
 export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
@@ -2723,6 +2746,7 @@ export interface BestClassPerSubjectItem {
 }
 
 export interface BestStudentPerSubjectItem {
+  scope?: string;
   learningAreaId: string;
   learningAreaName: string;
   studentId: string;
@@ -2765,8 +2789,10 @@ export interface BroadsheetResult {
   totalClassStudents?: number;
   genderStats?: GenderStats;
   classRankings?: ClassRankingItem[];
+  schoolClassRankings?: ClassRankingItem[];
   bestClassesPerSubject?: BestClassPerSubjectItem[];
   bestStudentsPerSubject?: BestStudentPerSubjectItem[];
+  schoolBestStudentsPerSubject?: BestStudentPerSubjectItem[];
 }
 
 // ==========================================
@@ -2835,10 +2861,11 @@ export interface OccurrenceDailySummary {
 // CURRICULUM PROGRESS TRACKER TYPES
 // ==========================================
 
-export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED' | 'APPROVED' | 'SUBMITTED' | 'RETURNED' | 'EXEMPTED';
 export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
 
 export interface DailyReflection {
+  challenges?: string;
   comprehensionLevel: LearnerComprehension;
   whatWentWell: string;
   challengesFaced?: string;
@@ -2847,6 +2874,7 @@ export interface DailyReflection {
 }
 
 export interface AdministrativeEndorsement {
+  role?: string;
   endorsedByUserId: string;
   endorsedByName: string;
   endorsedByRole: string;
@@ -3026,6 +3054,8 @@ export interface EndorseDailyLogDTO {
 }
 
 export interface FeeCreditUtilizationReceiptPayload {
+  applicationId?: string;
+  amountUtilized?: number;
   receiptNumber: string;
   receiptTitle?: string;
   transactionReference: string;

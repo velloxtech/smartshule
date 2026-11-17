@@ -33,6 +33,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [learningAreas, setLearningAreas] = useState<any[]>([]);
 
   // Modals
   const [isCreateSchemeOpen, setIsCreateSchemeOpen] = useState(false);
@@ -196,105 +198,444 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const downloadLessonPlanPDF = async (plan: LessonPlan) => {
     const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const schoolName = schoolInfo?.name || 'Grace Seeds School';
-    const motto = schoolInfo?.motto || 'The Future Begins Here';
+    const schoolName = schoolInfo?.name || plan.institutionName || 'Grace Seeds School';
 
-    // Top burgundy bar
+    const teacherName = teacherProfile?.user
+      ? `${teacherProfile.user.firstName} ${teacherProfile.user.lastName}`
+      : (plan.teacherName || user?.fullName || 'Educator');
+
+    const matchedClass = classes.find((c) => c.id === plan.classRoomId);
+    const gradeLevel = plan.gradeLevel || matchedClass?.gradeLevel?.replace(/_/g, ' ') || 'Grade 3';
+    const className = plan.className || matchedClass?.name || 'Primary Class';
+    const matchedSubject = learningAreas.find((la) => la.id === plan.learningAreaId);
+    const learningAreaName = plan.learningAreaName || matchedSubject?.name || 'Learning Area';
+    const sessionTitle = plan.sessionTitle || plan.subStrand || plan.strand;
+    const weekDisplay = plan.weekNumber ? `Week ${plan.weekNumber}` : 'Week ___';
+    const lessonDisplay = plan.lessonNumber ? `Lesson ${plan.lessonNumber}` : 'Lesson ___';
+
+    const formatCompetencyName = (comp: string) => {
+      return comp
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+
+    const formatValueName = (val: string) => {
+      return val
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+
+    // ==========================================
+    // PAGE 1 OF 3: SESSION DETAILS & OUTCOMES
+    // ==========================================
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 210, 5, 'F');
 
-    let curY = 13;
+    let curY = 12;
     if (logoBase64) {
       try {
-        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
       } catch {
         // continue
       }
     }
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setTextColor(122, 18, 40);
-    doc.text(schoolName, 34, curY + 5);
+    doc.text(schoolName, 32, curY + 4);
 
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`"${motto}"`, 34, curY + 10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(31, 41, 55);
+    doc.text('Session Plan Template (Primary CBE)', 32, curY + 9);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Ministry of Education · KICD 40-Minute CBE Lesson Plan Dossier', 34, curY + 15);
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${weekDisplay} · ${lessonDisplay} · [${sessionTitle}]`, 32, curY + 14);
 
-    curY += 21;
+    curY += 19;
     doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.4);
     doc.line(14, curY, 196, curY);
 
-    curY += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(17, 24, 39);
-    doc.text(`40-MINUTE LESSON PLAN: ${plan.strand.toUpperCase()}`, 14, curY);
-
-    curY += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(55, 65, 81);
-    const teacherName = teacherProfile?.user ? `${teacherProfile.user.firstName} ${teacherProfile.user.lastName}` : (user?.fullName || 'Educator');
-    const rollText = `${plan.rollBoys ?? 0} Boys · ${plan.rollGirls ?? 0} Girls (Total: ${(plan.rollBoys ?? 0) + (plan.rollGirls ?? 0)})`;
-    doc.text(`Date: ${plan.lessonDate} · Duration: ${plan.durationMinutes} Mins · Class Roll: ${rollText}`, 14, curY);
-
-    curY += 4.5;
-    doc.text(`Sub-Strand: ${plan.subStrand} · Educator: Tr. ${teacherName} · Status: ${plan.status || 'DRAFT'}`, 14, curY);
-
-    curY += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(122, 18, 40);
-    doc.text('SPECIFIC LEARNING OUTCOMES:', 14, curY);
     curY += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(31, 41, 55);
-    (plan.specificLearningOutcomes || ['Outcome defined']).forEach((o) => {
-      doc.text(`• ${o}`, 18, curY);
-      curY += 4;
-    });
-
-    curY += 1;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
+    doc.setFontSize(9.5);
     doc.setTextColor(122, 18, 40);
-    doc.text('KEY INQUIRY QUESTION(S):', 14, curY);
-    curY += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(31, 41, 55);
-    (plan.keyInquiryQuestions || ['Inquiry question defined']).forEach((q) => {
-      doc.text(`• ${q}`, 18, curY);
-      curY += 4;
-    });
+    doc.text('SESSION DETAILS', 14, curY);
 
     curY += 2;
 
-    // Steps table
-    const stepRows = (plan.steps || []).map((s) => [
-      `Step ${s.stepNumber}`,
-      `${s.durationMinutes} mins`,
-      s.teacherActivities || '--',
-      s.learnerActivities || '--',
-    ]);
+    autoTable(doc, {
+      startY: curY,
+      head: [['Item', 'Details', 'Item', 'Details']],
+      body: [
+        ['Date', plan.lessonDate || '---', 'Time', `${plan.durationMinutes || 40} Minutes`],
+        ['Week', weekDisplay, 'Lesson', lessonDisplay],
+        ['Teacher name', `Tr. ${teacherName}`, 'Grade', gradeLevel],
+        ['Name of institution', schoolName, 'Class', className],
+        ['', '', 'Learning area', learningAreaName],
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 32 },
+        1: { cellWidth: 62 },
+        2: { fontStyle: 'bold', cellWidth: 30 },
+        3: { cellWidth: 58 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const rollBoys = plan.rollBoys ?? 0;
+    const rollGirls = plan.rollGirls ?? 0;
+    const totalRoll = rollBoys + rollGirls;
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 2,
+      head: [['Item', 'Details']],
+      body: [
+        ['Number of learners', `Boys: ${rollBoys}    Girls: ${rollGirls}    (Total: ${totalRoll})`],
+        ['Strand', plan.strand || '---'],
+        ['Sub strand', plan.subStrand || '---'],
+        ['Session title', sessionTitle],
+        ['Learner needs (LLN) or other requirements', plan.learnerNeeds || 'Differentiated instruction: peer-assisted scaffolding for emerging learners; extension challenges for fast learners.'],
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const outcomesList = (plan.specificLearningOutcomes && plan.specificLearningOutcomes.length > 0)
+      ? plan.specificLearningOutcomes
+      : [
+          '1. [Outcome 1: start with an action verb, e.g. identify, calculate, construct]',
+          '2. [Outcome 2: apply concept collaboratively in practical tasks]',
+          '3. [Outcome 3: appreciation or attitude towards the learning area]',
+        ];
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 3,
+      head: [['Learning Outcomes', 'Details']],
+      body: [
+        [
+          'By the end of this session, the learner should be able to:',
+          outcomesList.map((o, idx) => {
+            const clean = o.replace(/^\d+[\.\)]\s*/, '');
+            return `${idx + 1}. ${clean}`;
+          }).join('\n\n')
+        ]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const inquiryList = (plan.keyInquiryQuestions && plan.keyInquiryQuestions.length > 0)
+      ? plan.keyInquiryQuestions
+      : [
+          '[Learning experience or question 1: How does this concept apply in real life?]',
+          '[Learning experience or question 2: What patterns can we observe during our task?]',
+          '[Learning experience or question 3: How can we confirm our findings with peers?]',
+        ];
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 3,
+      head: [['Key Inquiry Questions', 'The learner is guided to:']],
+      body: [
+        [
+          'Inquiry & Experiences',
+          inquiryList.map((q, idx) => {
+            const clean = q.replace(/^\d+[\.\)]\s*/, '');
+            return `${idx + 1}. ${clean}`;
+          }).join('\n\n')
+        ]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`${schoolName} · Session Plan Template (Primary CBE)`, 14, 289);
+    doc.text('Page 1 of 3', 196, 289, { align: 'right' });
+
+    // ==========================================
+    // PAGE 2 OF 3: COMPETENCIES, PCIS & PRESENTATION
+    // ==========================================
+    doc.addPage('a4', 'portrait');
+
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    curY = 12;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(122, 18, 40);
+    doc.text(`${schoolName} · Session Plan Template (Primary CBE)`, 14, curY);
+
+    curY += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${weekDisplay} · ${lessonDisplay} · [${sessionTitle}]`, 14, curY);
+
+    curY += 4;
+
+    const compDisplay = (plan.coreCompetenciesAddressed && plan.coreCompetenciesAddressed.length > 0)
+      ? plan.coreCompetenciesAddressed.map(formatCompetencyName).join(', ')
+      : 'Critical Thinking and Problem Solving, Communication and Collaboration, Digital Literacy';
+
+    const valDisplay = (plan.valuesAddressed && plan.valuesAddressed.length > 0)
+      ? plan.valuesAddressed.map(formatValueName).join(', ')
+      : 'Respect, Responsibility, Integrity, Unity, Love';
+
+    const pcisDisplay = (plan.pcis && plan.pcis.length > 0)
+      ? plan.pcis.join(', ')
+      : 'Financial literacy, Health education, Environmental awareness and conservation';
+
+    const resDisplay = (plan.learningResources && plan.learningResources.length > 0)
+      ? plan.learningResources.join('; ')
+      : 'Approved KICD/Ministry Curriculum Coursebook, charts, realia, digital learning aids';
 
     autoTable(doc, {
       startY: curY,
-      head: [['Lesson Phase', 'Time', 'Teacher Activities (Facilitation)', 'Learner Activities (Experience)']],
-      body: stepRows.length > 0 ? stepRows : [
-        ['Step 1', '5 mins', 'Introduction & context setting', 'Respond to inquiry questions'],
-        ['Step 2', '15 mins', 'Demonstration & concept exploration', 'Observe & collaborate in pairs'],
-        ['Step 3', '15 mins', 'Guided activity & assessment check', 'Complete activity in exercise books'],
-        ['Step 4', '5 mins', 'Conclusion & review summary', 'Self-evaluate & ask questions'],
+      head: [['Item', 'Details']],
+      body: [
+        ['Core Competencies', compDisplay],
+        ['Values', valDisplay],
+        ['PCIs', pcisDisplay],
+        ['Resources (references and learning aids)', resDisplay],
+        ['Safety requirements', plan.safetyRequirements || 'Orderly handling of instructional aids, structured movement, safe spatial distribution.'],
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    curY = (doc as any).lastAutoTable.finalY + 4;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text('SESSION PRESENTATION', 14, curY);
+
+    curY += 2;
+
+    const introText = typeof plan.introduction === 'string'
+      ? plan.introduction
+      : (plan.introduction?.activities || 'Review previous lesson through recall inquiry. Learners share observations and connect prior knowledge to new lesson concepts in small groups.');
+    const introDuration = typeof plan.introduction === 'object' && plan.introduction?.durationMinutes ? plan.introduction.durationMinutes : 5;
+
+    autoTable(doc, {
+      startY: curY,
+      head: [[`1. Introduction (${introDuration} minutes)`, 'Details']],
+      body: [
+        [
+          'Review the previous lesson. Say how learners will begin: read, discuss or recall.',
+          introText
+        ]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const stepRows = (plan.steps || []).map((s) => [
+      `Step ${s.stepNumber} (${s.durationMinutes}m)`,
+      s.teacherActivities || '--',
+      s.learnerActivities || '--',
+      s.assessmentCriterion || 'Observation & verbal check',
+    ]);
+
+    const defaultSteps = [
+      ['Step 1 (10m)', 'Facilitates conceptual exploration and models core concepts.', 'Observe demonstration, ask clarifying questions in pairs.', 'Oral questioning & engagement check'],
+      ['Step 2 (10m)', 'Guides hands-on practical tasks and provides scaffolded hints.', 'Perform guided activity in pairs using learning resources.', 'Formative check of exercise book work'],
+      ['Step 3 (10m)', 'Monitors differentiated group exercises and scaffolds struggling learners.', 'Apply concept collaboratively to solve problem tasks.', 'Peer assessment & peer feedback'],
+      ['Step 4 (5m)', 'Conducts plenary synthesis and checks individual mastery.', 'Demonstrate completed task output and summarize findings.', 'Check individual progress rubric'],
+    ];
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 3,
+      head: [['2. Session Delivery', 'Teacher Activity', 'Learner Activity', 'Learning Check / Assessment']],
+      body: stepRows.length > 0 ? stepRows : defaultSteps,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 26 },
+        1: { cellWidth: 54 },
+        2: { cellWidth: 52 },
+        3: { cellWidth: 50 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const reviewText = typeof plan.sessionReview === 'string'
+      ? plan.sessionReview
+      : (plan.sessionReview?.activities || 'Summarize key points and learning achieved. Conduct a brief interactive Q&A plenary. Provide constructive formative feedback and preview the next session.');
+    const reviewDuration = typeof plan.sessionReview === 'object' && plan.sessionReview?.durationMinutes ? plan.sessionReview.durationMinutes : 5;
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 3,
+      head: [[`3. Session Review (${reviewDuration} minutes)`, 'Details']],
+      body: [
+        [
+          'Summarize key points and learning achieved. Add a brief interactive activity. Preview the next session.',
+          reviewText
+        ]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`${schoolName} · Session Plan Template (Primary CBE)`, 14, 289);
+    doc.text('Page 2 of 3', 196, 289, { align: 'right' });
+
+    // ==========================================
+    // PAGE 3 OF 3: EXTENSION, REFLECTION & SIGNATURE
+    // ==========================================
+    doc.addPage('a4', 'portrait');
+
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    curY = 12;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(122, 18, 40);
+    doc.text(`${schoolName} · Session Plan Template (Primary CBE)`, 14, curY);
+
+    curY += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Review, Extended Activities & Institutional Approval Endorsement', 14, curY);
+
+    curY += 4;
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Item', 'Details']],
+      body: [
+        ['Assignment (extended activities)', plan.extendedActivity || 'Learners complete home practice exercise in their coursebook with guardian guidance.'],
+        ['Total time', `${plan.durationMinutes || 40} Minutes`],
+        ['Session reflection (teacher self-evaluation)', plan.teacherSelfReflection || 'All primary outcomes attained. Majority demonstrated proficient understanding; remedial practice planned for emerging learners.'],
       ],
       theme: 'grid',
       headStyles: {
@@ -304,65 +645,58 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         fontSize: 8,
       },
       bodyStyles: {
-        fontSize: 7.5,
+        fontSize: 8,
         textColor: [31, 41, 55],
-        cellPadding: 2.5,
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
+        cellPadding: 3.5,
       },
       columnStyles: {
-        0: { cellWidth: 26, fontStyle: 'bold' },
-        1: { cellWidth: 18, halign: 'center' },
-        2: { cellWidth: 72 },
-        3: { cellWidth: 66 },
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
       },
       margin: { left: 14, right: 14 },
     });
 
-    const lastTable = (doc as any).lastAutoTable;
-    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 210) + 7;
-    if (finalY + 45 > 280) {
-      doc.addPage('a4', 'portrait');
-      finalY = 18;
-    }
+    curY = (doc as any).lastAutoTable.finalY + 8;
 
-    if (plan.teacherSelfReflection) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(122, 18, 40);
-      doc.text('TEACHER SELF-REFLECTION & REMEDIAL:', 14, finalY);
-      finalY += 4;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7.5);
-      doc.setTextColor(55, 65, 81);
-      doc.text(`"${plan.teacherSelfReflection}"`, 18, finalY);
-      finalY += 6;
-    }
+    autoTable(doc, {
+      startY: curY,
+      head: [['Item', 'Signature & Institutional Verification Details']],
+      body: [
+        [
+          'Signature',
+          `Teacher Name: Tr. ${teacherName}\nTSC / ID No: ${teacherProfile?.tscNumber || '---'}\nTeacher Signature: _____________________________________      Date: ${plan.lessonDate || new Date().toISOString().split('T')[0]}`
+        ],
+        [
+          'Head Teacher / Deputy Signature',
+          `Pedagogical Status: ${plan.status || 'DRAFT'}\nReview Remarks: ${plan.reviewRemarks || (plan.status === 'APPROVED' ? 'Approved for official classroom delivery.' : 'Pending head teacher administrative review.')}\nReviewed By: ${plan.reviewedByUserId ? 'Institutional Leadership' : '_____________________________________'}\nSignature: _____________________________________      Date: ${plan.reviewedAt ? new Date(plan.reviewedAt).toLocaleDateString() : '____________'}\nOfficial School Stamp:\n\n[                                                                                     ]`
+        ]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [31, 41, 55],
+        cellPadding: 4,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 46 },
+        1: { cellWidth: 136 },
+      },
+      margin: { left: 14, right: 14 },
+    });
 
-    if (plan.reviewRemarks) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(16, 185, 129);
-      doc.text('HEAD TEACHER / DEPUTY APPROVAL REMARKS:', 14, finalY);
-      finalY += 4;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7.5);
-      doc.setTextColor(55, 65, 81);
-      doc.text(`"${plan.reviewRemarks}"`, 18, finalY);
-      finalY += 6;
-    }
-
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Teacher: Tr. ${teacherName} _______________________   Date: ${new Date().toLocaleDateString()}`, 14, finalY);
-    doc.text('Head Teacher Approval Stamp: [                               ]', 120, finalY);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`${schoolName} · Generated on ${new Date().toLocaleString()} · Official Academic Record`, 14, 289);
+    doc.text('Page 3 of 3', 196, 289, { align: 'right' });
 
-    doc.setFontSize(7);
-    doc.text(`Grace Seeds School · Generated on ${new Date().toLocaleString()} · Confidential Lesson Dossier`, 105, 290, { align: 'center' });
-
-    doc.save(`Grace_Seeds_School_Lesson_Plan_${plan.strand.replace(/[^a-zA-Z0-9]/g, '_')}_${plan.lessonDate}.pdf`);
+    doc.save(`${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}_Session_Plan_CBE_${(plan.strand || 'Lesson').replace(/[^a-zA-Z0-9]/g, '_')}_${plan.lessonDate}.pdf`);
   };
 
   useEffect(() => {
@@ -400,6 +734,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   };
 
   useEffect(() => {
+    apiService.getClasses().then(r => r?.data && setClasses(r.data)).catch(() => {});
+    apiService.getLearningAreas().then(r => r?.data && setLearningAreas(r.data)).catch(() => {});
     loadCurriculum();
   }, [teacherProfile]);
 
@@ -827,11 +1163,14 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       {/* Lesson Plan Detail Modal */}
       {selectedPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+            {/* Header */}
             <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-semibold text-sm">CBC 40-Minute Lesson Plan</h3>
-                <p className="text-xs text-rose-100">{selectedPlan.strand} · {selectedPlan.subStrand}</p>
+                <h3 className="font-semibold text-sm">Session Plan (Primary CBE)</h3>
+                <p className="text-xs text-rose-100">
+                  {selectedPlan.weekNumber ? `Week ${selectedPlan.weekNumber}` : 'Week ___'} · {selectedPlan.lessonNumber ? `Lesson ${selectedPlan.lessonNumber}` : 'Lesson ___'} · {selectedPlan.sessionTitle || selectedPlan.subStrand || selectedPlan.strand}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedPlan(null)}
@@ -841,7 +1180,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
               </button>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
+            <div className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
               {/* Approval status banner */}
               <div className="p-3 rounded-xl border flex items-center justify-between gap-2 bg-slate-50 border-slate-200">
                 <div className="flex items-center gap-2">
@@ -868,49 +1207,171 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                   )}
                 </div>
                 {selectedPlan.reviewRemarks && (
-                  <span className="text-[10px] text-slate-500 italic truncate max-w-[200px]">
+                  <span className="text-[10px] text-slate-500 italic truncate max-w-[240px]">
                     "{selectedPlan.reviewRemarks}"
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-surface-container-low font-data-mono">
-                <div>Duration: <strong>{selectedPlan.durationMinutes} Minutes</strong></div>
-                <div>Date: <strong>{selectedPlan.lessonDate}</strong></div>
+              {/* 1. Session Details */}
+              <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+                <div className="bg-surface-container-low px-3 py-1.5 font-bold text-primary uppercase text-[11px] border-b border-outline-variant/30">
+                  Session Details
+                </div>
+                <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-on-surface">
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Date:</span>{selectedPlan.lessonDate || '---'}</div>
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Time:</span>{selectedPlan.durationMinutes || 40} Mins</div>
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Week:</span>{selectedPlan.weekNumber ? `Week ${selectedPlan.weekNumber}` : '---'}</div>
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Lesson:</span>{selectedPlan.lessonNumber ? `Lesson ${selectedPlan.lessonNumber}` : '---'}</div>
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Roll:</span>{selectedPlan.rollBoys ?? 0} Boys · {selectedPlan.rollGirls ?? 0} Girls</div>
+                  <div><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Strand:</span>{selectedPlan.strand}</div>
+                  <div className="col-span-2"><span className="text-on-surface-variant block text-[10px] uppercase font-bold">Sub-Strand:</span>{selectedPlan.subStrand}</div>
+                </div>
+                {selectedPlan.learnerNeeds && (
+                  <div className="px-3 pb-3 text-[11px] text-on-surface-variant border-t border-outline-variant/20 pt-2">
+                    <strong className="text-on-surface font-semibold">Learner Needs (LLN):</strong> {selectedPlan.learnerNeeds}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <div className="font-bold text-primary mb-0.5 uppercase">Learning Outcomes:</div>
-                <ul className="list-disc list-inside space-y-1 text-on-surface">
-                  {selectedPlan.specificLearningOutcomes?.map((o, idx) => (
-                    <li key={idx}>{o}</li>
-                  ))}
-                </ul>
+              {/* 2. Learning Outcomes */}
+              <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+                <div className="bg-surface-container-low px-3 py-1.5 font-bold text-primary uppercase text-[11px] border-b border-outline-variant/30">
+                  Learning Outcomes
+                </div>
+                <div className="p-3 space-y-1.5">
+                  <p className="text-[11px] text-on-surface-variant font-medium">By the end of this session, the learner should be able to:</p>
+                  <ul className="list-decimal list-inside space-y-1 text-on-surface pl-1">
+                    {selectedPlan.specificLearningOutcomes?.map((o, idx) => (
+                      <li key={idx} className="leading-snug">{o.replace(/^\d+[\.\)]\s*/, '')}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
 
-              <div>
-                <div className="font-bold text-primary mb-0.5 uppercase">Instructional Steps:</div>
-                <div className="space-y-1.5">
-                  {selectedPlan.steps?.map((step) => (
-                    <div key={step.stepNumber} className="p-2 rounded bg-surface-container-low">
-                      <div className="font-semibold text-secondary">{step.stepTitle}</div>
-                      <div className="text-[11px] text-on-surface-variant mt-0.5">
-                        Teacher: {step.teacherActivities}
-                      </div>
-                      <div className="text-[11px] text-on-surface mt-0.5">
-                        Learner: {step.learnerActivities}
-                      </div>
+              {/* 3. Key Inquiry Questions */}
+              <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+                <div className="bg-surface-container-low px-3 py-1.5 font-bold text-primary uppercase text-[11px] border-b border-outline-variant/30">
+                  Key Inquiry Questions
+                </div>
+                <div className="p-3 space-y-1.5">
+                  <p className="text-[11px] text-on-surface-variant font-medium">The learner is guided to:</p>
+                  <ul className="list-disc list-inside space-y-1 text-on-surface pl-1">
+                    {selectedPlan.keyInquiryQuestions?.map((q, idx) => (
+                      <li key={idx} className="leading-snug">{q.replace(/^\d+[\.\)]\s*/, '')}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* 4. Competencies, Values & Resources */}
+              <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+                <div className="bg-surface-container-low px-3 py-1.5 font-bold text-primary uppercase text-[11px] border-b border-outline-variant/30">
+                  Core Competencies, Values & Resources
+                </div>
+                <div className="p-3 space-y-2 text-on-surface">
+                  {selectedPlan.coreCompetenciesAddressed && selectedPlan.coreCompetenciesAddressed.length > 0 && (
+                    <div>
+                      <span className="font-bold text-primary">Competencies: </span>
+                      <span>{selectedPlan.coreCompetenciesAddressed.map(c => c.replace(/_/g, ' ')).join(', ')}</span>
                     </div>
-                  ))}
+                  )}
+                  {selectedPlan.valuesAddressed && selectedPlan.valuesAddressed.length > 0 && (
+                    <div>
+                      <span className="font-bold text-primary">Values: </span>
+                      <span>{selectedPlan.valuesAddressed.map(v => v.replace(/_/g, ' ')).join(', ')}</span>
+                    </div>
+                  )}
+                  {selectedPlan.pcis && selectedPlan.pcis.length > 0 && (
+                    <div>
+                      <span className="font-bold text-primary">PCIs: </span>
+                      <span>{selectedPlan.pcis.join(', ')}</span>
+                    </div>
+                  )}
+                  {selectedPlan.learningResources && selectedPlan.learningResources.length > 0 && (
+                    <div>
+                      <span className="font-bold text-primary">Resources: </span>
+                      <span>{selectedPlan.learningResources.join('; ')}</span>
+                    </div>
+                  )}
+                  {selectedPlan.safetyRequirements && (
+                    <div>
+                      <span className="font-bold text-primary">Safety Requirements: </span>
+                      <span>{selectedPlan.safetyRequirements}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {selectedPlan.teacherSelfReflection && (
-                <div className="p-2.5 rounded-lg bg-secondary/10 border border-secondary/20">
-                  <div className="font-bold text-secondary text-[11px]">Teacher Self-Reflection:</div>
-                  <div className="text-xs text-on-surface italic mt-0.5">{selectedPlan.teacherSelfReflection}</div>
+              {/* 5. Session Presentation */}
+              <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest">
+                <div className="bg-surface-container-low px-3 py-1.5 font-bold text-primary uppercase text-[11px] border-b border-outline-variant/30">
+                  Session Presentation
                 </div>
-              )}
+                <div className="p-3 space-y-3">
+                  {/* Introduction */}
+                  <div className="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+                    <div className="font-semibold text-secondary">
+                      1. Introduction ({typeof selectedPlan.introduction === 'object' && selectedPlan.introduction?.durationMinutes ? selectedPlan.introduction.durationMinutes : 5} Mins)
+                    </div>
+                    <div className="text-[11px] text-on-surface mt-1">
+                      {typeof selectedPlan.introduction === 'string' ? selectedPlan.introduction : (selectedPlan.introduction?.activities || 'Review previous lesson and introduce session context.')}
+                    </div>
+                  </div>
+
+                  {/* Steps */}
+                  <div>
+                    <div className="font-semibold text-secondary mb-1.5">2. Session Delivery (Steps)</div>
+                    <div className="space-y-2">
+                      {selectedPlan.steps?.map((step) => (
+                        <div key={step.stepNumber} className="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+                          <div className="flex justify-between items-center font-bold text-primary text-[11px]">
+                            <span>{step.stepTitle}</span>
+                            <span className="font-data-mono">{step.durationMinutes} Mins</span>
+                          </div>
+                          <div className="text-[11px] text-on-surface-variant mt-1">
+                            <strong className="text-on-surface">Teacher: </strong>{step.teacherActivities}
+                          </div>
+                          <div className="text-[11px] text-on-surface mt-0.5">
+                            <strong className="text-on-surface">Learner: </strong>{step.learnerActivities}
+                          </div>
+                          {step.assessmentCriterion && (
+                            <div className="text-[11px] text-emerald-800 mt-0.5">
+                              <strong>Assessment Check: </strong>{step.assessmentCriterion}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Review */}
+                  <div className="p-2.5 rounded bg-surface-container-low border border-outline-variant/20">
+                    <div className="font-semibold text-secondary">
+                      3. Session Review ({typeof selectedPlan.sessionReview === 'object' && selectedPlan.sessionReview?.durationMinutes ? selectedPlan.sessionReview.durationMinutes : 5} Mins)
+                    </div>
+                    <div className="text-[11px] text-on-surface mt-1">
+                      {typeof selectedPlan.sessionReview === 'string' ? selectedPlan.sessionReview : (selectedPlan.sessionReview?.activities || 'Summarize key points, interactive plenary check and preview next session.')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 6. Assignment & Reflection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedPlan.extendedActivity && (
+                  <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/20">
+                    <div className="font-bold text-primary text-[11px] uppercase">Assignment (extended activities):</div>
+                    <div className="text-xs text-on-surface mt-0.5">{selectedPlan.extendedActivity}</div>
+                  </div>
+                )}
+                {selectedPlan.teacherSelfReflection && (
+                  <div className="p-2.5 rounded-lg bg-secondary/10 border border-secondary/20">
+                    <div className="font-bold text-secondary text-[11px] uppercase">Session Reflection (teacher self-evaluation):</div>
+                    <div className="text-xs text-on-surface italic mt-0.5">{selectedPlan.teacherSelfReflection}</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Modal Review Actions Footer */}
@@ -925,10 +1386,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                 <button
                   onClick={() => downloadLessonPlanPDF(selectedPlan)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs cursor-pointer"
-                  title="Download 40-Minute Lesson Plan as PDF"
+                  title="Download 3-Page Primary CBE Lesson Plan as PDF"
                 >
                   <span className="material-symbols-outlined text-[14px]">download</span>
-                  <span>Download PDF</span>
+                  <span>Download 3-Page PDF</span>
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -949,15 +1410,15 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[14px]">cancel</span>
-                        <span>Reject</span>
+                        <span>Request Revision</span>
                       </button>
                     )}
                     {selectedPlan.status !== 'APPROVED' && (
                       <button
                         onClick={() => handleReviewLessonPlan(selectedPlan.id, true)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-xs cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span className="material-symbols-outlined text-[14px]">verified</span>
                         <span>Approve Plan</span>
                       </button>
                     )}

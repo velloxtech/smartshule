@@ -42,6 +42,14 @@ export interface LessonPlanProps {
   reviewedByUserId?: string;
   reviewedAt?: Date;
   reviewRemarks?: string;
+  weekNumber?: number;
+  lessonNumber?: number;
+  sessionTitle?: string;
+  learnerNeeds?: string;
+  pcis?: string[];
+  safetyRequirements?: string;
+  introduction?: { durationMinutes?: number; activities?: string } | string;
+  sessionReview?: { durationMinutes?: number; activities?: string } | string;
 }
 
 export class LessonPlan extends Entity<LessonPlanProps> {
@@ -170,6 +178,14 @@ export class LessonPlan extends Entity<LessonPlanProps> {
       reviewedByUserId: this._props.reviewedByUserId,
       reviewedAt: this._props.reviewedAt,
       reviewRemarks: this._props.reviewRemarks,
+      weekNumber: this._props.weekNumber,
+      lessonNumber: this._props.lessonNumber,
+      sessionTitle: this._props.sessionTitle,
+      learnerNeeds: this._props.learnerNeeds,
+      pcis: this._props.pcis,
+      safetyRequirements: this._props.safetyRequirements,
+      introduction: this._props.introduction,
+      sessionReview: this._props.sessionReview,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

@@ -89,7 +89,27 @@ export const CreateLessonPlanSchema = z.object({
     )
     .min(1),
   extendedActivity: z.string().optional(),
-  teacherSelfReflection: z.string().optional()
+  teacherSelfReflection: z.string().optional(),
+  weekNumber: z.number().int().optional(),
+  lessonNumber: z.number().int().optional(),
+  sessionTitle: z.string().optional(),
+  learnerNeeds: z.string().optional(),
+  pcis: z.array(z.string()).optional(),
+  safetyRequirements: z.string().optional(),
+  introduction: z.union([
+    z.string(),
+    z.object({
+      durationMinutes: z.number().int().optional(),
+      activities: z.string().optional()
+    })
+  ]).optional(),
+  sessionReview: z.union([
+    z.string(),
+    z.object({
+      durationMinutes: z.number().int().optional(),
+      activities: z.string().optional()
+    })
+  ]).optional()
 });
 
 export class CurriculumPlanController {
