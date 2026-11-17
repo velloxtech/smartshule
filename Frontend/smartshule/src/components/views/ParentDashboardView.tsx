@@ -5,6 +5,8 @@ import { FeeBannerConfig, EDiaryEntry } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
 import { ReceiptViewModal } from '../modals/ReceiptViewModal';
+import { FeeCreditReceiptModal } from '../modals/FeeCreditReceiptModal';
+import { FeeCreditUtilizationReceiptPayload } from '../../types';
 import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
@@ -30,6 +32,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
   const [clearanceModalTarget, setClearanceModalTarget] = useState<'REPORT_CARD' | 'FORMATIVE'>('REPORT_CARD');
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<any | null>(null);
+  const [selectedCreditReceiptPayload, setSelectedCreditReceiptPayload] = useState<FeeCreditUtilizationReceiptPayload | null>(null);
+  const [selectedCreditReceiptNumber, setSelectedCreditReceiptNumber] = useState<string | null>(null);
+  const [isCreditReceiptModalOpen, setIsCreditReceiptModalOpen] = useState(false);
   const [activeCbcTab, setActiveCbcTab] = useState<'formative' | 'summative'>('formative');
   const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
   const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
@@ -148,7 +153,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const currentChildFee = currentChild?.fee;
   const isSponsored = Boolean(currentChild?.isSponsored || currentChild?.sponsorship || currentChild?.isChargeExempt || (currentChild as any)?.sponsorship);
   const feeBalance = isSponsored ? 0 : (currentChildFee?.balance || (currentChild as any)?.feeBalance || 0);
-  const isFeeCleared = isSponsored || feeBalance <= 0;
+  const hasInvoices = Boolean(
+    (currentChildFee?.invoices && currentChildFee.invoices.length > 0) ||
+    currentChildFee?.hasInvoices
+  );
+  const isUnbilled = !isSponsored && !hasInvoices && feeBalance === 0;
+  const isFeeCleared = isSponsored || isUnbilled || (hasInvoices && feeBalance <= 0);
   const arrearsAmount = isSponsored ? 0 : (currentChildFee?.arrearsAmount || (currentChild as any)?.priorArrears || 0);
   const feeBannerConfig: FeeBannerConfig | null = portalData?.feeBanner || null;
   const rawDueDate = feeBannerConfig?.deadlineDate || currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
@@ -188,7 +198,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const getRatingBadge = (rating: string) => {
     switch (rating) {
       case 'EE':
-        return <span className="px-2.5 py-0.5 rounded-full bg-secondary text-white font-bold text-xs">EE · Exceeding Expectations</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-success text-white font-bold text-xs">EE · Exceeding Expectations</span>;
       case 'ME':
         return <span className="px-2.5 py-0.5 rounded-full bg-primary text-white font-bold text-xs">ME · Meeting Expectations</span>;
       case 'AE':
@@ -196,7 +206,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
       case 'BE':
         return <span className="px-2.5 py-0.5 rounded-full bg-error text-white font-bold text-xs">BE · Below Expectations</span>;
       default:
-        return <span className="px-2.5 py-0.5 rounded-full bg-secondary text-white font-bold text-xs">ME · Meeting Expectations</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-success text-white font-bold text-xs">ME · Meeting Expectations</span>;
     }
   };
 
@@ -253,7 +263,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
       <div className="bg-gradient-to-r from-primary to-[#500b1a] text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-white text-[11px] font-semibold tracking-wider uppercase">
-            <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
             {portalData?.school?.name || user?.schoolName || 'Grace Seeds School'} · Parent Portal
           </div>
           <h1 className="text-xl md:text-2xl font-black tracking-tight">
@@ -300,7 +310,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   <h2 className="text-lg font-bold text-on-surface">
                     {currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`}
                   </h2>
-                  <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
+                  <span className="px-2 py-0.5 rounded bg-success-container text-on-success-container text-xs font-bold">
                     {resolveGradeName(currentChild.gradeLevel)}
                   </span>
                   {(currentChild.streamName || currentChild.streamId) && (
@@ -356,10 +366,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     setClearanceModalTarget('REPORT_CARD');
                     setIsClearanceModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-950 rounded-lg text-xs font-bold border border-amber-600/30 transition-all cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary/15 hover:bg-primary-container/25 text-on-primary-fixed rounded-lg text-xs font-bold border border-primary/30 transition-all cursor-pointer shadow-2xs"
                   title="Report Card Withheld · Outstanding Fee Balance Required"
                 >
-                  <span className="material-symbols-outlined text-[16px] text-amber-800">lock</span>
+                  <span className="material-symbols-outlined text-[16px] text-on-primary-fixed">lock</span>
                   <span>Report Card (Uncleared)</span>
                 </button>
               )}
@@ -367,7 +377,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               {onNavigateTab && (
                 <button
                   onClick={() => onNavigateTab('concerns')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] rounded-lg text-xs font-bold border border-[#7a1228]/20 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold border border-primary/20 transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">rate_review</span>
                   <span>Submit Concern</span>
@@ -376,7 +386,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
               <button
                 onClick={() => setIsForwardPaymentModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
                 <span>Forward Payment Message</span>
@@ -386,9 +396,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
           {/* Official School Reopening Notice Banner for Parents */}
           {reopenAnnouncement && (
-            <div className="bg-gradient-to-r from-[#800000] via-[#660000] to-[#500b1a] text-white rounded-2xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border border-rose-300/30">
+            <div className="bg-gradient-to-r from-primary via-primary-container to-primary-container text-white rounded-2xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border border-rose-300/30">
               <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-bold shrink-0 shadow-xs text-amber-300">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-bold shrink-0 shadow-xs text-primary-fixed-dim">
                   <span className="material-symbols-outlined text-[28px]">campaign</span>
                 </div>
                 <div>
@@ -428,7 +438,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-emerald-950">
+                    <h3 className="text-sm font-extrabold text-on-primary-fixed">
                       Fees Cleared · 100% Institutional Scholarship Scheme
                     </h3>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-700 text-white">
@@ -446,42 +456,42 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               </div>
             </div>
           ) : feeBalance < 0 ? (
-            <div className="bg-teal-500/10 border-2 border-teal-500/40 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+            <div className="bg-primary/10 border-2 border-primary/40 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-teal-500/20 text-teal-900 border border-teal-500/30 flex items-center justify-center font-bold shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0">
                   <span className="material-symbols-outlined text-[26px]">savings</span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-teal-950">
+                    <h3 className="text-sm font-extrabold text-on-primary-fixed">
                       Fee Overpayment / Advance Credit
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-700 text-white font-mono">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary text-white font-mono">
                       Credit Balance: -KES {Math.abs(feeBalance).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-xs text-teal-900/90 mt-0.5">
-                    An advance payment has been recorded for <strong>{currentChild.firstName}</strong>. Your account has an overpayment credit of <strong className="font-mono text-teal-950 font-bold">-KES {Math.abs(feeBalance).toLocaleString()}</strong> which will automatically be credited against subsequent term fees.
+                  <p className="text-xs text-on-primary-fixed/90 mt-0.5">
+                    An advance payment has been recorded for <strong>{currentChild.firstName}</strong>. Your account has an overpayment credit of <strong className="font-mono text-on-primary-fixed font-bold">-KES {Math.abs(feeBalance).toLocaleString()}</strong> which will automatically be credited against subsequent term fees.
                   </p>
                 </div>
               </div>
               <div className="text-right hidden sm:block">
-                <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">Prepaid Credit</span>
-                <span className="text-base font-black font-data-mono text-teal-800">-KES {Math.abs(feeBalance).toLocaleString()}</span>
+                <span className="text-[10px] font-bold text-on-primary-fixed uppercase tracking-wider block">Prepaid Credit</span>
+                <span className="text-base font-black font-data-mono text-on-primary-fixed">-KES {Math.abs(feeBalance).toLocaleString()}</span>
               </div>
             </div>
           ) : feeBalance > 0 && feeBannerConfig?.isEnabled !== false ? (
-            <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+            <div className="bg-gradient-to-r from-primary-container/15 via-rose-500/10 to-maroon-light/15 border-2 border-primary/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
-                  <span className="material-symbols-outlined text-[28px] text-amber-900">calendar_clock</span>
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <span className="material-symbols-outlined text-[28px] text-on-primary-fixed">calendar_clock</span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-extrabold text-amber-950 tracking-tight">
+                    <h3 className="text-sm sm:text-base font-extrabold text-on-primary-fixed tracking-tight">
                       {feeBannerConfig?.bannerTitle || 'School Fee Payment Notice'}
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-primary text-white shadow-2xs">
                       Due: {formattedDueDate}
                     </span>
                     {arrearsAmount > 0 && (
@@ -506,7 +516,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     )}
                   </div>
                   <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
-                    The outstanding school fee balance of <strong className="font-bold text-[#7a1228] font-data-mono">KES {feeBalance.toLocaleString()}</strong>
+                    The outstanding school fee balance of <strong className="font-bold text-primary font-data-mono">KES {feeBalance.toLocaleString()}</strong>
                     {arrearsAmount > 0 ? (
                       <span> (including <strong className="text-rose-950 font-bold">KES {arrearsAmount.toLocaleString()}</strong> in prior fee arrears)</span>
                     ) : ''} for{' '}
@@ -527,22 +537,47 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
                 <button
                   onClick={() => setIsForwardPaymentModalOpen(true)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-primary to-[#500b1a] hover:from-[#600e20] hover:to-[#400914] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="px-4 py-2.5 bg-gradient-to-r from-primary to-primary-container hover:from-primary-container hover:to-[#400914] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
                   <span>Forward Payment Confirmation</span>
                 </button>
               </div>
             </div>
+          ) : isUnbilled ? (
+            <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[26px]">hourglass_top</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-amber-950">
+                      Term Invoice Pending · Not Billed Yet
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-700 text-white">
+                      Status: Unbilled
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-900/80 mt-0.5">
+                    The school finance desk has not yet issued the term fee invoice for <strong>{currentChild.firstName}</strong>. No outstanding balance is due at this time.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Current Ledger Balance</span>
+                <span className="text-base font-black font-data-mono text-amber-800">KES 0 (Unbilled)</span>
+              </div>
+            </div>
           ) : feeBalance <= 0 ? (
             <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-900 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0">
                   <span className="material-symbols-outlined text-[26px]">task_alt</span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-extrabold text-emerald-950">
+                    <h3 className="text-sm font-extrabold text-on-primary-fixed">
                       Fees Cleared · Zero Balance
                     </h3>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-700 text-white">
@@ -572,8 +607,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   <span className="material-symbols-outlined text-xl">edit_note</span>
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-on-surface">Digital eDiary</div>
-                  <div className="text-[11px] text-on-surface-variant">View homework & sign off</div>
+                  <div className="font-bold text-xs text-on-surface">Daily Homefun &amp; Communication Diary (E-Diary)</div>
+                  <div className="text-[11px] text-on-surface-variant">View homefun &amp; sign off</div>
                 </div>
               </div>
 
@@ -581,7 +616,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 onClick={() => onNavigateTab('formative-assessments')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-700/10 text-emerald-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-on-primary-fixed flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
                   <span className="material-symbols-outlined text-xl">fact_check</span>
                 </div>
                 <div>
@@ -594,12 +629,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 onClick={() => onNavigateTab('visual-CBC')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
                   <span className="material-symbols-outlined text-xl">add_a_photo</span>
                 </div>
                 <div>
                   <div className="font-bold text-xs text-on-surface">Ask Teacher with Photo</div>
-                  <div className="text-[11px] text-on-surface-variant">Homework photo Q&A desk</div>
+                  <div className="text-[11px] text-on-surface-variant">Homefun photo Q&amp;A desk</div>
                 </div>
               </div>
 
@@ -607,7 +642,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 onClick={() => onNavigateTab('concerns')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
                   <span className="material-symbols-outlined text-xl">rate_review</span>
                 </div>
                 <div>
@@ -624,11 +659,11 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                 Attendance Rate
               </span>
-              <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
+              <div className="text-2xl font-bold font-data-mono text-success mt-1">
                 {currentChild.attendance?.attendanceRate || 100}%
               </div>
               <span className="text-[11px] text-on-surface-variant mt-1 block">
-                Today: <strong className="text-secondary">{currentChild.attendance?.todayStatus || 'PRESENT'}</strong>
+                Today: <strong className="text-success">{currentChild.attendance?.todayStatus || 'PRESENT'}</strong>
               </span>
             </div>
 
@@ -639,20 +674,22 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="text-2xl font-bold font-data-mono text-primary mt-1">
                 {currentChild.CBC?.formativesCount ?? formativeAssessments.length ?? currentChild.CBC?.assessmentsCount ?? 0}
               </div>
-              <span className="text-[11px] text-secondary font-semibold mt-1 block">
+              <span className="text-[11px] text-success font-semibold mt-1 block">
                 Continuous Classroom Evaluations
               </span>
             </div>
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                {isSponsored ? 'Fee Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
+                {isSponsored ? 'Fee Status' : isUnbilled ? 'Term Billing Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
               </span>
               <div className={`text-2xl font-bold font-data-mono mt-1 ${
-                isSponsored || feeBalance === 0 ? 'text-emerald-700' : feeBalance < 0 ? 'text-teal-700' : 'text-error'
+                isSponsored || (feeBalance === 0 && !isUnbilled) ? 'text-emerald-700' : isUnbilled ? 'text-amber-700' : feeBalance < 0 ? 'text-primary' : 'text-error'
               }`}>
                 {isSponsored
                   ? 'KES 0 (CLEARED)'
+                  : isUnbilled
+                  ? 'KES 0 (UNBILLED)'
                   : feeBalance < 0
                   ? `-KES ${Math.abs(feeBalance).toLocaleString()}`
                   : `KES ${feeBalance.toLocaleString()}`}
@@ -667,8 +704,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
                   100% Institutional Scholarship
                 </span>
+              ) : isUnbilled ? (
+                <span className="text-[11px] text-amber-800 font-medium mt-1 block">
+                  Term invoice pending / not generated yet
+                </span>
               ) : feeBalance < 0 ? (
-                <span className="text-[11px] text-teal-700 font-bold mt-1 block">
+                <span className="text-[11px] text-primary font-bold mt-1 block">
                   Exact Advance Overpayment: -KES {Math.abs(feeBalance).toLocaleString()}
                 </span>
               ) : (
@@ -682,7 +723,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                 Total Fees Cleared
               </span>
-              <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
+              <div className="text-2xl font-bold font-data-mono text-success mt-1">
                 KES {(currentChild.fee?.totalPaid || 0).toLocaleString()}
               </div>
               <span className="text-[11px] text-emerald-700 font-semibold mt-1 block truncate" title={`Official Paybill: 522533 · Acc: 8048859#${currentChild.firstName} ${currentChild.lastName} (${resolveGradeName(currentChild.gradeLevel)})`}>
@@ -691,7 +732,127 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Active Digital eDiary & Homework Board for Selected Learner */}
+          {/* Automatic Fee Credit Utilization & Breakdown for Parents */}
+          {(Number(currentChildFee?.totalCreditApplied) > 0 || Number(currentChildFee?.availableCredit) > 0) && (
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface">
+                    Fee Statement &amp; Automatic Credit Settlement
+                  </h3>
+                </div>
+                {Number(currentChildFee?.totalCreditApplied) > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                    KES {Number(currentChildFee.totalCreditApplied).toLocaleString()} Auto-Credited
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Prior Arrears</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.previousTermArrears) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Current Fees</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.currentTermBilledFees) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Total Invoiced</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.totalBilled) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                  <span className="text-[10px] text-primary font-semibold block uppercase">Credit Auto-Applied</span>
+                  <span className="text-sm font-black font-data-mono text-primary">
+                    -KES {(Number(currentChildFee?.totalCreditApplied) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Available Credit</span>
+                  <span className="text-sm font-bold font-data-mono text-primary">
+                    KES {(Number(currentChildFee?.availableCredit) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Remaining Due</span>
+                  <span className="text-sm font-black font-data-mono text-on-surface">
+                    KES {(Math.max(0, Number(currentChildFee?.balance) || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {Number(currentChildFee?.totalCreditApplied) > 0 && (
+                <p className="text-[11px] text-on-surface-variant bg-surface-container-low/60 p-2.5 rounded-xl border border-outline-variant/15 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">info</span>
+                  <span>
+                    Prior advance overpayment credits were automatically applied towards your child's fee obligations in strict priority order (previous arrears settled before current term fees).
+                  </span>
+                </p>
+              )}
+
+              {/* Official Fee Credit Utilization Receipts for this Child */}
+              {currentChildFee?.creditReceipts && currentChildFee.creditReceipts.length > 0 && (
+                <div className="pt-2 border-t border-outline-variant/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">receipt_long</span>
+                      <span>Fee Credit Utilization Receipts</span>
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant font-medium">
+                      {currentChildFee.creditReceipts.length} Receipt(s) Issued
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {currentChildFee.creditReceipts.map((cr: any, idx: number) => (
+                      <div
+                        key={cr.receiptNumber || idx}
+                        className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between gap-2.5 text-xs font-sans"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-primary text-xs">{cr.receiptNumber}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-primary/10 text-primary">
+                              {cr.transactionType === 'ADMIN-INITIATED' ? 'ADMIN' : 'AUTO'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-on-surface-variant">
+                            {cr.formattedDate || cr.timestamp} · Credit Applied:{' '}
+                            <strong className="text-emerald-700 font-bold font-mono">
+                              KES {(Number(cr.totalCreditUtilized) || 0).toLocaleString()}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCreditReceiptPayload(cr);
+                            setSelectedCreditReceiptNumber(cr.receiptNumber);
+                            setIsCreditReceiptModalOpen(true);
+                          }}
+                          className="px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          title="View & Download Official Receipt"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">visibility</span>
+                          <span>Receipt</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active Daily Homefun & Communication Diary (E-Diary) for Selected Learner */}
           <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
               <div className="flex items-center gap-3">
@@ -701,14 +862,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">
-                      Digital School eDiary &amp; Homework Board
+                      Daily Homefun &amp; Communication Diary (E-Diary)
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
                       {resolveGradeName(currentChild.gradeLevel)}
                     </span>
                   </div>
                   <p className="text-xs text-on-surface-variant">
-                    Daily learning tasks, teacher instructions, and next-day preparations for <strong className="text-on-surface">{currentChild.firstName}</strong>
+                    Daily homefun activities, teacher instructions, and next-day preparations for <strong className="text-on-surface">{currentChild.firstName}</strong>
                   </p>
                 </div>
               </div>
@@ -716,7 +877,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => loadChildEdiary(currentChild.id)}
-                  title="Refresh eDiary feed"
+                  title="Refresh Daily Homefun & Communication Diary feed"
                   className="p-1.5 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">refresh</span>
@@ -726,7 +887,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     onClick={() => onNavigateTab('ediary')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    <span>Full eDiary Portal</span>
+                    <span>Full Diary Portal</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </button>
                 )}
@@ -756,9 +917,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div className="w-10 h-10 rounded-full bg-outline-variant/20 flex items-center justify-center mx-auto text-outline">
                   <span className="material-symbols-outlined text-xl">event_available</span>
                 </div>
-                <h4 className="font-bold text-xs text-on-surface">No eDiary Entries for Today</h4>
+                <h4 className="font-bold text-xs text-on-surface">No Homefun Entries for Today</h4>
                 <p className="text-xs text-on-surface-variant max-w-md mx-auto">
-                  Educators have not yet published daily assignments for {currentChild.firstName}’s class. Check back later or open the Full eDiary Portal.
+                  Educators have not yet published daily homefun activities for {currentChild.firstName}’s class. Check back later or open the Full Diary Portal.
                 </p>
               </div>
             ) : (
@@ -804,20 +965,20 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                           ) : (
                             <button
                               onClick={() => setAcknowledgingEdiaryId(entry.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[14px]">draw</span>
-                              <span>Sign Off Homework</span>
+                              <span>Sign Off Homefun</span>
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Homework Tasks */}
+                      {/* Homefun Activities */}
                       <div>
                         <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] text-primary">assignment</span>
-                          <span>Assigned Tasks</span>
+                          <span>Assigned Homefun Activities &amp; Instructions</span>
                         </div>
                         {entry.homeworkTasks && entry.homeworkTasks.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -839,7 +1000,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                             {entry.homework}
                           </div>
                         ) : (
-                          <p className="text-xs text-on-surface-variant italic">No specific homework tasks assigned for today.</p>
+                          <p className="text-xs text-on-surface-variant italic">No specific homefun activities assigned for today.</p>
                         )}
                       </div>
 
@@ -875,7 +1036,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       {/* Guardian Sign Note if signed */}
                       {myAck && (myAck.parentNote || (myAck as any).note) && (
                         <div className="p-2 rounded-lg bg-emerald-50/60 border border-emerald-200/60 text-xs text-emerald-950 flex items-start gap-1.5">
-                          <span className="material-symbols-outlined text-sm text-emerald-700 mt-0.5">rate_review</span>
+                          <span className="material-symbols-outlined text-sm text-primary mt-0.5">rate_review</span>
                           <div>
                             <span className="font-bold">Parent Note: </span>
                             <span className="italic">"{myAck.parentNote || (myAck as any).note}"</span>
@@ -906,7 +1067,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     <span className="material-symbols-outlined text-[14px]">forward_to_inbox</span>
                     <span>Forward Payment</span>
                   </button>
-                  <span className={`text-xs font-bold font-data-mono ${feeBalance < 0 ? 'text-teal-800' : isSponsored || feeBalance === 0 ? 'text-emerald-700' : 'text-primary'}`}>
+                  <span className={`text-xs font-bold font-data-mono ${feeBalance < 0 ? 'text-on-primary-fixed' : isSponsored || feeBalance === 0 ? 'text-emerald-700' : 'text-primary'}`}>
                     Balance: {isSponsored ? 'KES 0 (CLEARED)' : feeBalance < 0 ? `-KES ${Math.abs(feeBalance).toLocaleString()}` : `KES ${feeBalance.toLocaleString()}`}
                   </span>
                 </div>
@@ -958,7 +1119,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                             className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition-colors ${
                               isPending
                                 ? 'bg-amber-50/70 border-amber-300'
-                                : 'bg-secondary/5 border-secondary/20 hover:bg-secondary/15 hover:border-secondary/40 cursor-pointer'
+                                : 'bg-success/5 border-success/20 hover:bg-success/15 hover:border-success/40 cursor-pointer'
                             }`}
                           >
                             <div>
@@ -979,11 +1140,11 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className={`font-bold font-data-mono ${isPending ? 'text-amber-900' : 'text-secondary'}`}>
+                              <div className={`font-bold font-data-mono ${isPending ? 'text-amber-900' : 'text-success'}`}>
                                 +KES {pay.amount?.toLocaleString()}
                               </div>
                               <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
-                                isPending ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-secondary-container text-on-secondary-container'
+                                isPending ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-success-container text-on-success-container'
                               }`}>
                                 {isPending ? 'Under Review' : pay.status}
                               </span>
@@ -1005,7 +1166,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-container pb-3 gap-2">
                 <div className="flex items-center gap-2">
-                  <span className={`material-symbols-outlined ${isFeeCleared ? 'text-secondary' : 'text-amber-800'} text-[20px]`}>
+                  <span className={`material-symbols-outlined ${isFeeCleared ? 'text-success' : 'text-amber-800'} text-[20px]`}>
                     {isFeeCleared ? 'grading' : 'lock'}
                   </span>
                   <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">CBE Assessment Portfolio</h3>
@@ -1028,15 +1189,15 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               {!isFeeCleared ? (
                 <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 border border-amber-300/80 space-y-3">
                   <div className="flex items-start gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-11 h-11 rounded-2xl bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center shrink-0 shadow-2xs">
                       <span className="material-symbols-outlined text-[24px]">lock_person</span>
                     </div>
                     <div className="space-y-1">
-                      <h4 className="font-bold text-sm text-amber-950">
+                      <h4 className="font-bold text-sm text-on-primary-fixed">
                         Formative Progress &amp; Rubric Records Withheld
                       </h4>
                       <p className="text-xs text-amber-900/90 leading-relaxed">
-                        Continuous classroom observation rubrics, CAT scores, and strand competency evaluations for <strong>{currentChild.firstName} {currentChild.lastName}</strong> are withheld pending fee clearance. The outstanding ledger balance is <strong className="font-data-mono text-[#7a1228] font-bold">KES {feeBalance.toLocaleString()}</strong>.
+                        Continuous classroom observation rubrics, CAT scores, and strand competency evaluations for <strong>{currentChild.firstName} {currentChild.lastName}</strong> are withheld pending fee clearance. The outstanding ledger balance is <strong className="font-data-mono text-primary font-bold">KES {feeBalance.toLocaleString()}</strong>.
                       </p>
                       <p className="text-xs text-amber-900/80">
                         Kindly clear the balance or request clearance details and authorization from the <strong>Head Teacher</strong> or <strong>School Director</strong> below.
@@ -1051,7 +1212,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                         setClearanceModalTarget('FORMATIVE');
                         setIsClearanceModalOpen(true);
                       }}
-                      className="px-3.5 py-2 rounded-lg bg-[#7a1228] hover:bg-[#5a1226] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <span className="material-symbols-outlined text-sm">support_agent</span>
                       <span>Request Clearance / Contact Leadership</span>
@@ -1062,7 +1223,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       onClick={() => setIsForwardPaymentModalOpen(true)}
                       className="px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
-                      <span className="material-symbols-outlined text-sm text-emerald-700">forward_to_inbox</span>
+                      <span className="material-symbols-outlined text-sm text-primary">forward_to_inbox</span>
                       <span>Forward Payment Confirmation</span>
                     </button>
                   </div>
@@ -1117,9 +1278,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                         <span className="text-[10px] font-bold text-emerald-800 uppercase block">EE · Exceeding</span>
                         <span className="text-base font-extrabold text-emerald-900 font-data-mono">{formativesEeCount}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                      <div className="p-2 rounded-lg bg-primary-fixed border border-primary text-center">
                         <span className="text-[10px] font-bold text-blue-800 uppercase block">ME · Meeting</span>
-                        <span className="text-base font-extrabold text-blue-900 font-data-mono">{formativesMeCount}</span>
+                        <span className="text-base font-extrabold text-on-primary-fixed font-data-mono">{formativesMeCount}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-center">
                         <span className="text-[10px] font-bold text-amber-800 uppercase block">AE · Approaching</span>
@@ -1207,7 +1368,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                                 {fa.targetedCompetencies?.map((c: string) => (
                                   <span
                                     key={c}
-                                    className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-semibold"
+                                    className="px-2 py-0.5 rounded-md bg-primary-fixed text-on-primary-fixed border border-primary text-[10px] font-semibold"
                                   >
                                     Competency: {formatEnumLabel(c)}
                                   </span>
@@ -1215,7 +1376,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                                 {fa.valuesObserved?.map((v: string) => (
                                   <span
                                     key={v}
-                                    className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-semibold"
+                                    className="px-2 py-0.5 rounded-md bg-primary-fixed text-on-primary-fixed border border-primary text-[10px] font-semibold"
                                   >
                                     Value: {formatEnumLabel(v)}
                                   </span>
@@ -1235,7 +1396,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                               <span>
                                 Date: <strong>{fa.assessmentDate || 'Term 3 2026'}</strong>
                                 {fa.assessmentMethod && (
-                                  <span> · Method: <strong className="text-secondary">{formatEnumLabel(fa.assessmentMethod)}</strong></span>
+                                  <span> · Method: <strong className="text-success">{formatEnumLabel(fa.assessmentMethod)}</strong></span>
                                 )}
                               </span>
                               <span className="text-on-surface-variant">
@@ -1261,12 +1422,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div className="space-y-3">
                   {summativeEvaluations.length > 0 ? (
                     summativeEvaluations.map((ev: any) => {
-                      const rawScore =
-                        ev.percentageScore ??
-                        ev.overallScore ??
-                        ev.score ??
-                        (ev.strandScores?.[0]?.rawScore !== undefined ? ev.strandScores[0].rawScore : null);
-                      const scoreDisplay = rawScore !== null && rawScore !== undefined ? `${rawScore}%` : 'Competency Assessed';
+                      const scoreDisplay = ev.scoreIssue
+                        ? 'Score requires verification'
+                        : ev.percentageScore !== null && ev.percentageScore !== undefined
+                          ? `${ev.percentageScore}%` : 'Competency Assessed';
                       const areaName = resolveLearningAreaName(ev.learningAreaId, ev.learningAreaName || ev.name);
 
                       return (
@@ -1283,7 +1442,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                           </p>
                           <div className="flex items-center justify-between text-[11px] text-outline pt-1">
                             <span>Evaluated: {ev.evaluationDate || 'Term 3 2026'}</span>
-                            <span className="font-bold text-secondary font-data-mono">
+                            <span className="font-bold text-success font-data-mono">
                               {scoreDisplay}
                             </span>
                           </div>
@@ -1309,7 +1468,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-container pb-3 gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
                     <span className="material-symbols-outlined text-[22px]">lunch_dining</span>
                   </div>
                   <div>
@@ -1351,7 +1510,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                           onOpenMpesaWithStudent(studentObj);
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
                     >
                       <span className="material-symbols-outlined text-[16px]">credit_card</span>
                       <span>Pay Lunch Fee (KES {currentChildLunch.balance.toLocaleString()})</span>
@@ -1474,10 +1633,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-surface-container-lowest w-full max-w-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-5 bg-gradient-to-r from-[#7a1228] to-[#500b1a] text-white flex items-center justify-between">
+            <div className="p-5 bg-gradient-to-r from-primary to-primary-container text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-amber-300">lock_reset</span>
+                  <span className="material-symbols-outlined text-2xl text-primary-fixed-dim">lock_reset</span>
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base leading-tight">
@@ -1519,7 +1678,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
                       Outstanding Fee Balance
                     </span>
-                    <span className="text-lg font-black font-data-mono text-[#7a1228]">
+                    <span className="text-lg font-black font-data-mono text-primary">
                       KES {feeBalance.toLocaleString()}
                     </span>
                   </div>
@@ -1562,7 +1721,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
                     >
                       <span className="material-symbols-outlined text-[16px]">chat</span>
                       <span>WhatsApp</span>
@@ -1586,7 +1745,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 {/* 2. School Director */}
                 <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-900 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-on-primary-fixed flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-xl">admin_panel_settings</span>
                     </div>
                     <div>
@@ -1594,7 +1753,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       <p className="text-[11px] text-on-surface-variant">
                         For fee balance arrangements, bursaries &amp; clearances
                       </p>
-                      <div className="text-[11px] text-[#7a1228] font-bold mt-0.5">
+                      <div className="text-[11px] text-primary font-bold mt-0.5">
                         0745436312 · schoolgraceseeds@gmail.com
                       </div>
                     </div>
@@ -1609,7 +1768,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
                     >
                       <span className="material-symbols-outlined text-[16px]">chat</span>
                       <span>WhatsApp</span>
@@ -1635,7 +1794,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-700">payments</span>
+                    <span className="material-symbols-outlined text-[16px] text-primary">payments</span>
                     <span>Already made a fee payment?</span>
                   </div>
                   <p className="text-[11px] text-emerald-900/80">
@@ -1648,7 +1807,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     setIsClearanceModalOpen(false);
                     setIsForwardPaymentModalOpen(true);
                   }}
-                  className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-xs shrink-0 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center justify-center gap-1 shadow-xs shrink-0 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
                   <span>Forward Payment</span>
@@ -1688,7 +1847,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
 
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              By acknowledging, you confirm you have reviewed <strong>{currentChild?.firstName}</strong>'s homework assignments and organized the items required for tomorrow.
+              By acknowledging, you confirm you have reviewed <strong>{currentChild?.firstName}</strong>'s homefun activities and organized the items required for tomorrow.
             </p>
 
             <div>
@@ -1699,7 +1858,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 rows={3}
                 value={parentEdiaryNote}
                 onChange={(e) => setParentEdiaryNote(e.target.value)}
-                placeholder="e.g. All math exercises completed. Manila paper packed in school bag."
+                placeholder="e.g. All homefun activities completed. Manila paper packed in school bag."
                 className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-primary"
               ></textarea>
             </div>
@@ -1716,7 +1875,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 type="button"
                 disabled={isSubmittingEdiaryAck}
                 onClick={() => handleAcknowledgeEdiary(acknowledgingEdiaryId)}
-                className="flex-1 py-2.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-sm">check_circle</span>
                 <span>{isSubmittingEdiaryAck ? 'Signing...' : 'Sign & Submit'}</span>
@@ -1724,6 +1883,19 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {/* Official Fee Credit Utilization Receipt Modal */}
+      {isCreditReceiptModalOpen && (
+        <FeeCreditReceiptModal
+          isOpen={isCreditReceiptModalOpen}
+          onClose={() => {
+            setIsCreditReceiptModalOpen(false);
+            setSelectedCreditReceiptNumber(null);
+            setSelectedCreditReceiptPayload(null);
+          }}
+          receiptNumber={selectedCreditReceiptNumber || undefined}
+          initialReceipt={selectedCreditReceiptPayload}
+        />
       )}
     </div>
   );

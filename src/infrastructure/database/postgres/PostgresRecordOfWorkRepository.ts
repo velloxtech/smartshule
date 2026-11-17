@@ -11,6 +11,7 @@ import {
 
 function mapRow(r: any): RecordOfWork {
   const extraProps: Partial<RecordOfWorkProps> = {
+    planningLink: r.planning_link || undefined,
     schoolId: r.school_id || 'school-001',
     teacherName: r.teacher_name,
     academicYear: r.academic_year,
@@ -27,7 +28,7 @@ function mapRow(r: any): RecordOfWork {
     subStrand: r.sub_strand,
     weekNumber: r.week_number ? Number(r.week_number) : Number(r.week),
     lessonPeriod: r.lesson_period || r.period,
-    lessonDate: r.lesson_date ? (r.lesson_date instanceof Date ? r.lesson_date.toISOString().split('T')[0] : String(r.lesson_date).split('T')[0]) : undefined,
+    lessonDate: r.lesson_date ? (r.lesson_date instanceof Date ? `${r.lesson_date.getFullYear()}-${String(r.lesson_date.getMonth()+1).padStart(2,'0')}-${String(r.lesson_date.getDate()).padStart(2,'0')}` : String(r.lesson_date).split('T')[0]) : undefined,
     lessonTopic: r.lesson_topic,
     learningObjectives: r.learning_objectives,
     learningActivities: r.learning_activities,
@@ -92,7 +93,7 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
     const day = r.day || 'Mon';
     const period = r.period || r.lessonPeriod || null;
     const lessonPeriod = r.lessonPeriod || r.period || null;
-    const lessonDate = r.lessonDate ? new Date(r.lessonDate) : null;
+    const lessonDate = r.lessonDate || null;
     const subjectAndGrade = r.subjectAndGrade || `${className || 'Class'} ${subjectName || 'Subject'}`;
     const strandAndWorkCovered = r.strandAndWorkCovered || (strand && subStrand ? `${strand} > ${subStrand}` : strand || 'Curriculum delivery');
     const lessonTopic = r.lessonTopic || null;
@@ -123,11 +124,11 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
          learning_activities, resources, reference, status, reflection_data,
          comments, reflection, submitted_at, reviewed_by_user_id, reviewed_by_name,
          reviewed_at, review_remarks, return_reason, tracker_id, is_official_coverage,
-         created_at, updated_at
+         created_at, updated_at, planning_link
        ) VALUES (
          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
          $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-         $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45
+         $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46
        )`,
       [
         id, schoolId, teacherId, teacherName, academicYearId, academicYear,
@@ -138,7 +139,7 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
         learningActivities, resources, reference, status, reflectionData,
         comments, reflection, submittedAt, reviewedByUserId, reviewedByName,
         reviewedAt, reviewRemarks, returnReason, trackerId, isOfficialCoverage,
-        now, now
+        now, now, r.planningLink ? JSON.stringify(r.planningLink) : null
       ]
     );
 
@@ -172,7 +173,7 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
     const day = r.day !== undefined ? r.day : existing.day;
     const period = r.period !== undefined ? r.period : existing.period;
     const lessonPeriod = r.lessonPeriod !== undefined ? r.lessonPeriod : (r.period !== undefined ? r.period : existing.period);
-    const lessonDate = r.lessonDate ? new Date(r.lessonDate) : (existing.lessonDate ? new Date(existing.lessonDate) : null);
+    const lessonDate = r.lessonDate || existing.lessonDate || null;
     const subjectAndGrade = r.subjectAndGrade !== undefined ? r.subjectAndGrade : existing.subjectAndGrade;
     const strandAndWorkCovered = r.strandAndWorkCovered !== undefined ? r.strandAndWorkCovered : existing.strandAndWorkCovered;
     const lessonTopic = r.lessonTopic !== undefined ? r.lessonTopic : existing.lessonTopic;
@@ -354,6 +355,7 @@ export class InMemoryRecordOfWorkRepository implements IRecordOfWorkRepository {
     const r = typeof record.toJSON === 'function' ? record.toJSON() : record;
 
     const extraProps: Partial<RecordOfWorkProps> = {
+      planningLink: r.planningLink,
       schoolId: r.schoolId || 'school-001',
       teacherName: r.teacherName,
       academicYearId: r.academicYearId,

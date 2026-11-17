@@ -351,14 +351,14 @@ export const OccurrenceBookView: React.FC = () => {
         );
       case 'MEDICAL_ILLNESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">medical_services</span>
             Medical / Illness
           </span>
         );
       case 'PROPERTY_DAMAGE_LOSS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">construction</span>
             Property / Damage
           </span>
@@ -372,7 +372,7 @@ export const OccurrenceBookView: React.FC = () => {
         );
       case 'ACADEMIC_CLASSROOM':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">school</span>
             Academic / Classroom
           </span>
@@ -387,7 +387,7 @@ export const OccurrenceBookView: React.FC = () => {
       case 'GENERAL':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-surface-container-low text-on-surface-variant border border-outline-variant/30">
             <span className="material-symbols-outlined text-xs">notes</span>
             General Occurrence
           </span>
@@ -399,14 +399,14 @@ export const OccurrenceBookView: React.FC = () => {
     switch (st) {
       case 'OPEN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">pending</span>
             Open
           </span>
         );
       case 'INVESTIGATING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-fixed text-primary border border-primary">
             <span className="material-symbols-outlined text-xs">search</span>
             Investigating
           </span>
@@ -432,14 +432,14 @@ export const OccurrenceBookView: React.FC = () => {
     <div className="space-y-6">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-5 right-5 z-50 bg-[#7a1228] text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-bounce">
+        <div className="fixed top-5 right-5 z-50 bg-primary text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-bounce">
           <span className="material-symbols-outlined text-lg">check_circle</span>
           <span className="text-sm font-semibold">{notification}</span>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#420914] via-[#7a1228] to-[#9c1834] rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1">
             <span className="material-symbols-outlined text-base">event_note</span>
@@ -479,7 +479,7 @@ export const OccurrenceBookView: React.FC = () => {
               }));
               setIsLogModalOpen(true);
             }}
-            className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-[#7a1228] font-bold text-sm shadow-md hover:shadow-lg flex items-center gap-2 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-primary font-bold text-sm shadow-md hover:shadow-lg flex items-center gap-2 transition-all"
           >
             <span className="material-symbols-outlined text-sm">add_circle</span>
             Record Incident Today
@@ -488,15 +488,15 @@ export const OccurrenceBookView: React.FC = () => {
       </div>
 
       {/* Date Filter Bar & Scope Pills */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Scope:</span>
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mr-1">Scope:</span>
           <button
             onClick={() => handleScopeChange('today')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               dateScope === 'today'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-xs">today</span>
@@ -506,8 +506,8 @@ export const OccurrenceBookView: React.FC = () => {
             onClick={() => handleScopeChange('yesterday')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               dateScope === 'yesterday'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-xs">history</span>
@@ -517,8 +517,8 @@ export const OccurrenceBookView: React.FC = () => {
             onClick={() => handleScopeChange('custom')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               dateScope === 'custom'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-xs">event</span>
@@ -528,8 +528,8 @@ export const OccurrenceBookView: React.FC = () => {
             onClick={() => handleScopeChange('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               dateScope === 'all'
-                ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
             }`}
           >
             <span className="material-symbols-outlined text-xs">view_agenda</span>
@@ -539,12 +539,12 @@ export const OccurrenceBookView: React.FC = () => {
 
         {dateScope === 'custom' && (
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-600">Select Date:</label>
+            <label className="text-xs font-medium text-on-surface-variant">Select Date:</label>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+              className="text-xs px-3 py-1.5 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
         )}
@@ -552,49 +552,49 @@ export const OccurrenceBookView: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-rose-50 text-[#7a1228] rounded-lg">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-rose-50 text-primary rounded-lg">
             <span className="material-symbols-outlined text-xl">assignment</span>
           </div>
           <div>
-            <div className="text-xl font-bold text-gray-900">{stats.total}</div>
-            <div className="text-xs text-gray-500 font-medium">Total Logged</div>
+            <div className="text-xl font-bold text-on-surface">{stats.total}</div>
+            <div className="text-xs text-on-surface-variant font-medium">Total Logged</div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-primary-fixed text-primary rounded-lg">
             <span className="material-symbols-outlined text-xl">pending_actions</span>
           </div>
           <div>
-            <div className="text-xl font-bold text-blue-600">{stats.open}</div>
-            <div className="text-xs text-gray-500 font-medium">Open / Pending</div>
+            <div className="text-xl font-bold text-primary">{stats.open}</div>
+            <div className="text-xs text-on-surface-variant font-medium">Open / Pending</div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-primary-fixed text-primary rounded-lg">
             <span className="material-symbols-outlined text-xl">manage_search</span>
           </div>
           <div>
-            <div className="text-xl font-bold text-purple-600">{stats.investigating}</div>
-            <div className="text-xs text-gray-500 font-medium">Under Investigation</div>
+            <div className="text-xl font-bold text-primary">{stats.investigating}</div>
+            <div className="text-xs text-on-surface-variant font-medium">Under Investigation</div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
             <span className="material-symbols-outlined text-xl">verified</span>
           </div>
           <div>
             <div className="text-xl font-bold text-emerald-600">{stats.resolved}</div>
-            <div className="text-xs text-gray-500 font-medium">Cases Resolved</div>
+            <div className="text-xs text-on-surface-variant font-medium">Cases Resolved</div>
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
           <input
@@ -602,7 +602,7 @@ export const OccurrenceBookView: React.FC = () => {
             placeholder="Search incident title, OB number, learner name, teacher, location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+            className="w-full pl-9 pr-4 py-2 border border-outline-variant/30 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -610,7 +610,7 @@ export const OccurrenceBookView: React.FC = () => {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="text-xs px-3 py-2 border border-gray-200 rounded-lg bg-gray-50/50 text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+            className="text-xs px-3 py-2 border border-outline-variant/30 rounded-lg bg-surface/50 text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Categories</option>
             <option value="DISCIPLINARY">Disciplinary</option>
@@ -626,7 +626,7 @@ export const OccurrenceBookView: React.FC = () => {
           <select
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value)}
-            className="text-xs px-3 py-2 border border-gray-200 rounded-lg bg-gray-50/50 text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+            className="text-xs px-3 py-2 border border-outline-variant/30 rounded-lg bg-surface/50 text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Severities</option>
             <option value="LOW">Low</option>
@@ -638,7 +638,7 @@ export const OccurrenceBookView: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs px-3 py-2 border border-gray-200 rounded-lg bg-gray-50/50 text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+            className="text-xs px-3 py-2 border border-outline-variant/30 rounded-lg bg-surface/50 text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Statuses</option>
             <option value="OPEN">Open</option>
@@ -650,15 +650,15 @@ export const OccurrenceBookView: React.FC = () => {
       </div>
 
       {/* Occurrences List */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-outline-variant/30 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7a1228]">history_edu</span>
-            <h2 className="text-sm font-bold text-gray-800">
+            <span className="material-symbols-outlined text-primary">history_edu</span>
+            <h2 className="text-sm font-bold text-on-surface">
               Occurrence Book Register ({filteredOccurrences.length})
             </h2>
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-on-surface-variant">
             {dateScope === 'today' ? `Incidents for Today (${todayStr})` : `Scope: ${dateScope}`}
           </span>
         </div>
@@ -671,7 +671,7 @@ export const OccurrenceBookView: React.FC = () => {
         ) : filteredOccurrences.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <span className="material-symbols-outlined text-5xl text-gray-300">verified</span>
-            <p className="mt-2 text-sm font-medium text-gray-600">No occurrences logged for this period</p>
+            <p className="mt-2 text-sm font-medium text-on-surface-variant">No occurrences logged for this period</p>
             <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
               If an incident happens today, teachers can record it directly using the "Record Incident Today" button above.
             </p>
@@ -679,15 +679,15 @@ export const OccurrenceBookView: React.FC = () => {
         ) : (
           <div className="divide-y divide-gray-100">
             {filteredOccurrences.map((occ) => (
-              <div key={occ.id} className="p-5 hover:bg-gray-50/70 transition-colors">
+              <div key={occ.id} className="p-5 hover:bg-surface/70 transition-colors">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                   <div className="space-y-1.5 flex-1">
                     {/* Badges row */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-800 border border-gray-200">
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-container-low text-on-surface border border-outline-variant/30">
                         {occ.occurrenceNumber}
                       </span>
-                      <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                      <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1">
                         <span className="material-symbols-outlined text-xs">schedule</span>
                         {occ.date} • {occ.time}
                       </span>
@@ -698,15 +698,15 @@ export const OccurrenceBookView: React.FC = () => {
 
                     {/* Title & Location */}
                     <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
-                      <h3 className="text-sm font-bold text-gray-900">{occ.title}</h3>
-                      <span className="text-xs text-gray-500 flex items-center gap-0.5">
+                      <h3 className="text-sm font-bold text-on-surface">{occ.title}</h3>
+                      <span className="text-xs text-on-surface-variant flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-xs">location_on</span>
                         {occ.location}
                       </span>
                     </div>
 
                     {/* Narrative Description */}
-                    <p className="text-xs text-gray-700 leading-relaxed max-w-3xl">
+                    <p className="text-xs text-on-surface-variant leading-relaxed max-w-3xl">
                       {occ.description}
                     </p>
 
@@ -727,16 +727,16 @@ export const OccurrenceBookView: React.FC = () => {
                     )}
 
                     {/* Metadata Footer */}
-                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 flex-wrap">
+                    <div className="flex items-center gap-4 text-xs text-on-surface-variant pt-2 flex-wrap">
                       <span className="flex items-center gap-1">
                         <span className="material-symbols-outlined text-xs">person</span>
-                        Reported by: <strong className="text-gray-700">{occ.reportedByTeacherName}</strong> ({occ.reportedByRole || 'Teacher'})
+                        Reported by: <strong className="text-on-surface-variant">{occ.reportedByTeacherName}</strong> ({occ.reportedByRole || 'Teacher'})
                       </span>
 
                       {occ.studentNames && occ.studentNames.length > 0 && (
                         <span className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-xs">group</span>
-                          Learners involved: <strong className="text-gray-700">{occ.studentNames.join(', ')}</strong>
+                          Learners involved: <strong className="text-on-surface-variant">{occ.studentNames.join(', ')}</strong>
                         </span>
                       )}
 
@@ -753,7 +753,7 @@ export const OccurrenceBookView: React.FC = () => {
                   <div className="flex items-center gap-1.5 shrink-0 self-start md:self-center">
                     <button
                       onClick={() => setSelectedOccurrenceDetail(occ)}
-                      className="p-1.5 text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                      className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-rose-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
                       title="View Details"
                     >
                       <span className="material-symbols-outlined text-base">visibility</span>
@@ -770,7 +770,7 @@ export const OccurrenceBookView: React.FC = () => {
                         });
                         setIsResolveModalOpen(true);
                       }}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                      className="p-1.5 text-primary hover:bg-primary-fixed rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
                       title="Update Status / Action"
                     >
                       <span className="material-symbols-outlined text-base">edit_note</span>
@@ -795,20 +795,20 @@ export const OccurrenceBookView: React.FC = () => {
       {/* RECORD INCIDENT MODAL */}
       {isLogModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-rose-50 text-[#7a1228] rounded-xl">
+                <div className="p-2 bg-rose-50 text-primary rounded-xl">
                   <span className="material-symbols-outlined">edit_calendar</span>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Record Occurrence Book Incident</h3>
-                  <p className="text-xs text-gray-500">Document an event or incident that happened today</p>
+                  <h3 className="text-base font-bold text-on-surface">Record Occurrence Book Incident</h3>
+                  <p className="text-xs text-on-surface-variant">Document an event or incident that happened today</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsLogModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-gray-400 hover:text-on-surface-variant p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -818,24 +818,24 @@ export const OccurrenceBookView: React.FC = () => {
               {/* Date & Time Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Date of Incident *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Date of Incident *</label>
                   <input
                     type="date"
                     required
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Time of Incident *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Time of Incident *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 10:30 AM"
                     value={form.time}
                     onChange={(e) => setForm({ ...form, time: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -843,29 +843,29 @@ export const OccurrenceBookView: React.FC = () => {
               {/* Category & Severity */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Incident Category *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Incident Category *</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value as OccurrenceCategory })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="DISCIPLINARY">Disciplinary (Fighting, Bullying, Defiance, Absenteeism)</option>
                     <option value="ACCIDENT_INJURY">Accident / Injury (Sports, Playground fall, Cut)</option>
                     <option value="MEDICAL_ILLNESS">Medical / Illness (Sudden illness, Asthma, Fainting)</option>
                     <option value="PROPERTY_DAMAGE_LOSS">Property Damage / Loss (Broken property, Lost item)</option>
                     <option value="SECURITY_SAFETY">Security & Safety (Perimeter, Stranger, Gate issue)</option>
-                    <option value="ACADEMIC_CLASSROOM">Academic / Classroom (Disturbance, Homework dispute)</option>
+                    <option value="ACADEMIC_CLASSROOM">Academic / Classroom (Disturbance, Homefun dispute)</option>
                     <option value="COMMENDATION_GOOD_DEED">Commendation / Good Deed (Honesty, Heroic act)</option>
                     <option value="GENERAL">General Occurrence (Handover note, Routine notice)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Severity Level *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Severity Level *</label>
                   <select
                     value={form.severity}
                     onChange={(e) => setForm({ ...form, severity: e.target.value as OccurrenceSeverity })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="LOW">Low (Minor issue, handled immediately on the spot)</option>
                     <option value="MEDIUM">Medium (Noticeable incident requiring monitoring)</option>
@@ -878,32 +878,32 @@ export const OccurrenceBookView: React.FC = () => {
               {/* Title & Location */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
-                  <label className="block font-semibold text-gray-700 mb-1">Incident Title / Summary *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Incident Title / Summary *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Minor Collision on Lower Football Pitch during Break"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Exact Location *</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Exact Location *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Playground, Science Lab, Hall"
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
 
               {/* Learner Selector */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">
+                <label className="block font-semibold text-on-surface-variant mb-1">
                   Involved Learners (Optional - search and add learners)
                 </label>
                 <div className="relative">
@@ -912,10 +912,10 @@ export const OccurrenceBookView: React.FC = () => {
                     placeholder="Type learner name or admission number to select..."
                     value={studentSearchInput}
                     onChange={(e) => setStudentSearchInput(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   {filteredStudentsForSelect.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto divide-y divide-gray-100">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant/30 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto divide-y divide-gray-100">
                       {filteredStudentsForSelect.map((s: any) => (
                         <button
                           key={s.id}
@@ -923,7 +923,7 @@ export const OccurrenceBookView: React.FC = () => {
                           onClick={() => handleAddStudentToForm(s)}
                           className="w-full text-left px-3 py-2 hover:bg-rose-50 text-xs flex items-center justify-between"
                         >
-                          <span className="font-medium text-gray-800">
+                          <span className="font-medium text-on-surface">
                             {s.name || `${s.firstName || ''} ${s.lastName || ''}`}
                           </span>
                           <span className="text-gray-400 font-mono">Adm: {s.admNo || s.admissionNumber}</span>
@@ -939,7 +939,7 @@ export const OccurrenceBookView: React.FC = () => {
                     {form.studentNames.map((name, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-rose-50 text-[#7a1228] border border-rose-200 font-medium"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-rose-50 text-primary border border-rose-200 font-medium"
                       >
                         {name}
                         <button
@@ -957,37 +957,37 @@ export const OccurrenceBookView: React.FC = () => {
 
               {/* Full Description */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Detailed Description of What Happened *</label>
+                <label className="block font-semibold text-on-surface-variant mb-1">Detailed Description of What Happened *</label>
                 <textarea
                   rows={3}
                   required
                   placeholder="Provide an objective, clear account of what transpired, who was involved, and circumstances..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Immediate Action Taken & Witnesses */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Immediate Action Taken</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Immediate Action Taken</label>
                   <textarea
                     rows={2}
                     placeholder="e.g. Administered first aid, escorted to clinic, separated learners, confiscated item..."
                     value={form.immediateActionTaken}
                     onChange={(e) => setForm({ ...form, immediateActionTaken: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Witnesses (Staff or Students)</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Witnesses (Staff or Students)</label>
                   <textarea
                     rows={2}
                     placeholder="e.g. Tr. Dennis (Duty Teacher), Kevin (Class Prefect)"
                     value={form.witnesses}
                     onChange={(e) => setForm({ ...form, witnesses: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -995,11 +995,11 @@ export const OccurrenceBookView: React.FC = () => {
               {/* Reported By Role */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Reporting Role</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Reporting Role</label>
                   <select
                     value={form.reportedByRole}
                     onChange={(e) => setForm({ ...form, reportedByRole: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="Teacher on Duty">Teacher on Duty (TOD)</option>
                     <option value="Class Teacher">Class Teacher</option>
@@ -1011,27 +1011,27 @@ export const OccurrenceBookView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Reporting Teacher Name</label>
+                  <label className="block font-semibold text-on-surface-variant mb-1">Reporting Teacher Name</label>
                   <input
                     type="text"
                     value={form.reportedByTeacherName}
                     onChange={(e) => setForm({ ...form, reportedByTeacherName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                    className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
 
               {/* Parent Notification Options */}
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+              <div className="p-3 bg-surface rounded-xl border border-outline-variant/30 space-y-2">
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="notifyParentCheck"
                     checked={form.parentNotified}
                     onChange={(e) => setForm({ ...form, parentNotified: e.target.checked })}
-                    className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                    className="rounded text-primary focus:ring-primary"
                   />
-                  <label htmlFor="notifyParentCheck" className="font-semibold text-gray-800">
+                  <label htmlFor="notifyParentCheck" className="font-semibold text-on-surface">
                     Parent / Guardian has been notified (or will be notified)
                   </label>
                 </div>
@@ -1039,11 +1039,11 @@ export const OccurrenceBookView: React.FC = () => {
                 {form.parentNotified && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 pl-6">
                     <div>
-                      <label className="block text-gray-600 mb-0.5">Notification Method</label>
+                      <label className="block text-on-surface-variant mb-0.5">Notification Method</label>
                       <select
                         value={form.parentNotificationMethod}
                         onChange={(e) => setForm({ ...form, parentNotificationMethod: e.target.value as any })}
-                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded bg-white text-xs"
+                        className="w-full px-2.5 py-1.5 border border-outline-variant/30 rounded bg-surface text-xs"
                       >
                         <option value="PHONE_CALL">Phone Call</option>
                         <option value="SMS">SMS Notice</option>
@@ -1057,9 +1057,9 @@ export const OccurrenceBookView: React.FC = () => {
                         id="sendSmsGateway"
                         checked={form.notifyParentViaSms}
                         onChange={(e) => setForm({ ...form, notifyParentViaSms: e.target.checked })}
-                        className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                        className="rounded text-primary focus:ring-primary"
                       />
-                      <label htmlFor="sendSmsGateway" className="text-gray-700">
+                      <label htmlFor="sendSmsGateway" className="text-on-surface-variant">
                         Dispatch SMS via Grace Seeds School Gateway
                       </label>
                     </div>
@@ -1068,17 +1068,17 @@ export const OccurrenceBookView: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => setIsLogModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                  className="px-4 py-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#7a1228] hover:bg-[#600e20] text-white font-bold rounded-lg shadow-sm"
+                  className="px-5 py-2 bg-primary hover:bg-primary-container text-white font-bold rounded-lg shadow-sm"
                 >
                   Save Occurrence Entry
                 </button>
@@ -1091,15 +1091,15 @@ export const OccurrenceBookView: React.FC = () => {
       {/* UPDATE STATUS / RESOLUTION MODAL */}
       {isResolveModalOpen && selectedOccurrenceForResolve && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Update Incident Status & Resolution</h3>
-                <p className="text-xs text-gray-500">{selectedOccurrenceForResolve.occurrenceNumber}</p>
+                <h3 className="text-base font-bold text-on-surface">Update Incident Status & Resolution</h3>
+                <p className="text-xs text-on-surface-variant">{selectedOccurrenceForResolve.occurrenceNumber}</p>
               </div>
               <button
                 onClick={() => setIsResolveModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-gray-400 hover:text-on-surface-variant p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1107,11 +1107,11 @@ export const OccurrenceBookView: React.FC = () => {
 
             <form onSubmit={handleUpdateStatus} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Current Status</label>
+                <label className="block font-semibold text-on-surface-variant mb-1">Current Status</label>
                 <select
                   value={resolveForm.status}
                   onChange={(e) => setResolveForm({ ...resolveForm, status: e.target.value as OccurrenceStatus })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="OPEN">Open (Pending follow-up)</option>
                   <option value="INVESTIGATING">Investigating (Under inquiry)</option>
@@ -1121,39 +1121,39 @@ export const OccurrenceBookView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Resolution & Follow-up Notes</label>
+                <label className="block font-semibold text-on-surface-variant mb-1">Resolution & Follow-up Notes</label>
                 <textarea
                   rows={4}
                   required
                   placeholder="Detail the final action taken, counseling provided, disciplinary outcome, or current status..."
                   value={resolveForm.resolutionNotes}
                   onChange={(e) => setResolveForm({ ...resolveForm, resolutionNotes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Resolved / Handled By</label>
+                <label className="block font-semibold text-on-surface-variant mb-1">Resolved / Handled By</label>
                 <input
                   type="text"
                   required
                   value={resolveForm.resolvedBy}
                   onChange={(e) => setResolveForm({ ...resolveForm, resolvedBy: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
+                  className="w-full px-3 py-2 border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => setIsResolveModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                  className="px-4 py-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#7a1228] hover:bg-[#600e20] text-white font-bold rounded-lg shadow-sm"
+                  className="px-5 py-2 bg-primary hover:bg-primary-container text-white font-bold rounded-lg shadow-sm"
                 >
                   Save Status
                 </button>
@@ -1166,19 +1166,19 @@ export const OccurrenceBookView: React.FC = () => {
       {/* FULL DETAILS MODAL */}
       {selectedOccurrenceDetail && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
               <div>
-                <span className="font-mono text-xs font-bold text-gray-500">
+                <span className="font-mono text-xs font-bold text-on-surface-variant">
                   {selectedOccurrenceDetail.occurrenceNumber}
                 </span>
-                <h3 className="text-base font-bold text-gray-900 mt-0.5">
+                <h3 className="text-base font-bold text-on-surface mt-0.5">
                   {selectedOccurrenceDetail.title}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedOccurrenceDetail(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-gray-400 hover:text-on-surface-variant p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1190,28 +1190,28 @@ export const OccurrenceBookView: React.FC = () => {
               {getStatusBadge(selectedOccurrenceDetail.status)}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-xl">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-surface rounded-xl">
               <div>
-                <span className="text-gray-500 font-medium">Date & Time:</span>
-                <p className="font-semibold text-gray-800 mt-0.5">
+                <span className="text-on-surface-variant font-medium">Date & Time:</span>
+                <p className="font-semibold text-on-surface mt-0.5">
                   {selectedOccurrenceDetail.date} at {selectedOccurrenceDetail.time}
                 </p>
               </div>
               <div>
-                <span className="text-gray-500 font-medium">Location:</span>
-                <p className="font-semibold text-gray-800 mt-0.5">
+                <span className="text-on-surface-variant font-medium">Location:</span>
+                <p className="font-semibold text-on-surface mt-0.5">
                   {selectedOccurrenceDetail.location}
                 </p>
               </div>
               <div>
-                <span className="text-gray-500 font-medium">Reported By:</span>
-                <p className="font-semibold text-gray-800 mt-0.5">
+                <span className="text-on-surface-variant font-medium">Reported By:</span>
+                <p className="font-semibold text-on-surface mt-0.5">
                   {selectedOccurrenceDetail.reportedByTeacherName} ({selectedOccurrenceDetail.reportedByRole || 'Teacher'})
                 </p>
               </div>
               <div>
-                <span className="text-gray-500 font-medium">Parent Notified:</span>
-                <p className="font-semibold text-gray-800 mt-0.5">
+                <span className="text-on-surface-variant font-medium">Parent Notified:</span>
+                <p className="font-semibold text-on-surface mt-0.5">
                   {selectedOccurrenceDetail.parentNotified
                     ? `Yes (${selectedOccurrenceDetail.parentNotificationMethod || 'SMS'})`
                     : 'No'}
@@ -1221,16 +1221,16 @@ export const OccurrenceBookView: React.FC = () => {
 
             {selectedOccurrenceDetail.studentNames && selectedOccurrenceDetail.studentNames.length > 0 && (
               <div>
-                <span className="font-semibold text-gray-700">Learners Involved:</span>
-                <p className="mt-1 text-gray-800 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                <span className="font-semibold text-on-surface-variant">Learners Involved:</span>
+                <p className="mt-1 text-on-surface bg-surface p-2.5 rounded-lg border border-outline-variant/30">
                   {selectedOccurrenceDetail.studentNames.join(', ')}
                 </p>
               </div>
             )}
 
             <div>
-              <span className="font-semibold text-gray-700">Narrative Account:</span>
-              <p className="mt-1 text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-line leading-relaxed">
+              <span className="font-semibold text-on-surface-variant">Narrative Account:</span>
+              <p className="mt-1 text-on-surface bg-surface p-3 rounded-lg border border-outline-variant/30 whitespace-pre-line leading-relaxed">
                 {selectedOccurrenceDetail.description}
               </p>
             </div>
@@ -1246,8 +1246,8 @@ export const OccurrenceBookView: React.FC = () => {
 
             {selectedOccurrenceDetail.witnesses && (
               <div>
-                <span className="font-semibold text-gray-700">Witnesses:</span>
-                <p className="mt-1 text-gray-600 bg-gray-50 p-2 rounded-lg">
+                <span className="font-semibold text-on-surface-variant">Witnesses:</span>
+                <p className="mt-1 text-on-surface-variant bg-surface p-2 rounded-lg">
                   {selectedOccurrenceDetail.witnesses}
                 </p>
               </div>
@@ -1267,10 +1267,10 @@ export const OccurrenceBookView: React.FC = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-end pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-end pt-3 border-t border-outline-variant/30">
               <button
                 onClick={() => setSelectedOccurrenceDetail(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg"
+                className="px-4 py-2 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-semibold rounded-lg"
               >
                 Close
               </button>
@@ -1282,23 +1282,23 @@ export const OccurrenceBookView: React.FC = () => {
       {/* PRINT DAILY OB REGISTER MODAL */}
       {isPrintPreviewOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Official Daily Occurrence Book (OB) Print Sheet</h3>
-                <p className="text-xs text-gray-500">Ministry of Education / School Daily Record Sheet</p>
+                <h3 className="text-base font-bold text-on-surface">Official Daily Occurrence Book (OB) Print Sheet</h3>
+                <p className="text-xs text-on-surface-variant">Ministry of Education / School Daily Record Sheet</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 bg-[#7a1228] text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-sm">print</span>
                   Print
                 </button>
                 <button
                   onClick={() => setIsPrintPreviewOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                  className="text-gray-400 hover:text-on-surface-variant p-1 rounded-lg"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
@@ -1306,12 +1306,12 @@ export const OccurrenceBookView: React.FC = () => {
             </div>
 
             {/* Printable Content Container */}
-            <div className="p-6 bg-white border border-gray-300 rounded-xl space-y-4 text-xs font-serif print:border-none print:p-0">
+            <div className="p-6 bg-surface-container-lowest border border-outline-variant/30 rounded-xl space-y-4 text-xs font-serif print:border-none print:p-0">
               {/* Official School Header */}
               <div className="text-center border-b-2 border-black pb-3 space-y-1">
                 <h2 className="text-xl font-bold uppercase tracking-wide">{user?.schoolName || 'GRACE SEEDS SCHOOL'}</h2>
                 <h3 className="text-sm font-semibold tracking-wider">DAILY OCCURRENCE BOOK REGISTER (O.B.)</h3>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-on-surface-variant">
                   Date: <strong>{selectedDate || todayStr}</strong> | Academic Session: <strong>{new Date().getFullYear()}</strong> | Duty Master Daily Handover Sheet
                 </p>
               </div>
@@ -1319,7 +1319,7 @@ export const OccurrenceBookView: React.FC = () => {
               {/* Table of Entries */}
               <table className="w-full border-collapse border border-black text-left text-[11px]">
                 <thead>
-                  <tr className="bg-gray-100 border-b border-black">
+                  <tr className="bg-surface-container-low border-b border-black">
                     <th className="border border-black p-1.5 font-bold">OB No.</th>
                     <th className="border border-black p-1.5 font-bold">Time</th>
                     <th className="border border-black p-1.5 font-bold">Category</th>
@@ -1332,7 +1332,7 @@ export const OccurrenceBookView: React.FC = () => {
                 <tbody>
                   {filteredOccurrences.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="border border-black p-4 text-center text-gray-500 italic">
+                      <td colSpan={7} className="border border-black p-4 text-center text-on-surface-variant italic">
                         No incidents recorded for this day. Nil returns.
                       </td>
                     </tr>
@@ -1350,7 +1350,7 @@ export const OccurrenceBookView: React.FC = () => {
                         </td>
                         <td className="border border-black p-1.5 align-top">
                           <strong>{occ.title}</strong> ({occ.location})
-                          <p className="mt-1 text-gray-700">{occ.description}</p>
+                          <p className="mt-1 text-on-surface-variant">{occ.description}</p>
                         </td>
                         <td className="border border-black p-1.5 align-top">
                           {occ.studentNames && occ.studentNames.length > 0 ? occ.studentNames.join(', ') : 'None'}

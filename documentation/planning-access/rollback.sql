@@ -1,0 +1,8 @@
+-- REVIEW ONLY. Preferred rollback is reverting the app and RETAINING additive data.
+-- Export configuration, records_of_work, schemes_of_work and lesson_plans first.
+-- This optional destructive schema rollback is intentionally not executable as-is.
+-- BEGIN;
+-- DROP TABLE curriculum_planning_config;
+-- ALTER TABLE records_of_work DROP COLUMN planning_link;
+-- COMMIT;
+-- Keep lesson_details and scheme JSON metadata: they preserve teacher work/history.

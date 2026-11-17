@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { ensurePlanningSchema } from './PostgresPlanningSchema';
 import { PhoneUtils } from '../../utils/PhoneUtils';
 import { IUserRepository } from '../../../core/ports/repositories/IUserRepository';
 import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/repositories/IStudentRepository';
@@ -25,8 +26,11 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
-  OtherIncomeFilterCriteria
+  OtherIncomeFilterCriteria,
+  ReversalRequestFilterCriteria,
+  BulkBillingBatchRecord
 } from '../../../core/ports/repositories/IFeeRepository';
+import { TransactionReversalRequest } from '../../../core/domain/finance/TransactionReversalRequest';
 import {
   IDeletedStudentRepository,
   DeletedStudentFilterCriteria
@@ -59,6 +63,7 @@ import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardi
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../../core/domain/academic/ClassRoom';
+import { GlobalSubject } from '../../../core/domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
@@ -87,7 +92,7 @@ import {
   CreditStatus
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
-import { IdGenerator } from '../../../core/domain/shared/Errors';
+import { IdGenerator, ConflictError } from '../../../core/domain/shared/Errors';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -453,6 +458,8 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_attendance_register_cohort ON attendance_registers (school_id, classroom_id, COALESCE(stream_id, ''), date, type);
 
       CREATE TABLE IF NOT EXISTS fee_structures (
         id VARCHAR(100) PRIMARY KEY,
@@ -1383,12 +1390,31 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_ediary_teacher ON ediary_entries(teacher_id);
       CREATE INDEX IF NOT EXISTS idx_ediary_date ON ediary_entries(date);
       CREATE INDEX IF NOT EXISTS idx_ediary_status ON ediary_entries(status);
+      CREATE TABLE IF NOT EXISTS biometric_credentials (
+        id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        credential_id TEXT NOT NULL UNIQUE,
+        public_key TEXT NOT NULL,
+        counter BIGINT NOT NULL DEFAULT 0,
+        device_label VARCHAR(255) NOT NULL,
+        device_type VARCHAR(64) NOT NULL DEFAULT 'platform_generic',
+        transports TEXT[] DEFAULT '{}',
+        aaguid VARCHAR(100),
+        backup_eligible BOOLEAN DEFAULT false,
+        backup_state BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMP WITH TIME ZONE
+      );
+      CREATE INDEX IF NOT EXISTS idx_biometric_user_id ON biometric_credentials(user_id);
+      CREATE INDEX IF NOT EXISTS idx_biometric_credential_id ON biometric_credentials(credential_id);
     `;
 
     await pool.query(ddl);
+    await ensurePlanningSchema(pool);
 
     // Schema migrations for lesson_plans status & reviews, nullability, and foreign key constraint fixes
     await pool.query(`
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS lesson_details JSONB NOT NULL DEFAULT '{}';
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
@@ -1441,11 +1467,31 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans DROP CONSTRAINT IF EXISTS fk_lesson_plans_teacher;
       ALTER TABLE payments DROP CONSTRAINT IF EXISTS fk_payments_invoice;
 
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_code ON strands (learning_area_id, grade_level, code);
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_code ON strands (learning_area_id, grade_level, code);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_strands_area_grade_code deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_strands_area_grade_title deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_sub_strands_strand_code deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_sub_strands_strand_title deferred: existing duplicate records require review';
+      END $$;
+      DO $$ BEGIN
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
+      EXCEPTION WHEN unique_violation THEN
+        RAISE NOTICE 'Index uq_summative_student_area_term_year deferred: existing duplicate records require review';
+      END $$;
 
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(50);
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
@@ -1471,7 +1517,181 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS total_marks NUMERIC;
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_points NUMERIC;
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_grade VARCHAR(10);
-    `).catch(() => {});
+
+      -- Student withdrawal metadata
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_date VARCHAR(30);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_reason TEXT;
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS destination_school VARCHAR(255);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawn_by_user_id VARCHAR(100);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_notes TEXT;
+
+      -- Deleted students archive metadata
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS retention_policy_years INT DEFAULT 7;
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS retention_expires_at TIMESTAMP WITHOUT TIME ZONE;
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW();
+
+      -- Lunch program enhancements
+      ALTER TABLE lunch_enrollments ADD COLUMN IF NOT EXISTS payment_frequency VARCHAR(20) DEFAULT 'TERMLY';
+      ALTER TABLE lunch_enrollments ADD COLUMN IF NOT EXISTS daily_rate NUMERIC DEFAULT 0;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS is_reversed BOOLEAN DEFAULT FALSE;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversed_at TIMESTAMP WITHOUT TIME ZONE;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversed_by_user_id VARCHAR(255);
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversal_reason TEXT;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversal_audit_metadata JSONB;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);
+
+      -- Student parent normalized links
+      CREATE TABLE IF NOT EXISTS student_parent_links (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          parent_user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          guardian_id VARCHAR(100) REFERENCES guardians(id) ON DELETE SET NULL,
+          student_id VARCHAR(100) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          relationship_type VARCHAR(50) DEFAULT 'PARENT',
+          is_primary BOOLEAN DEFAULT true,
+          can_view_academics BOOLEAN DEFAULT true,
+          can_view_finances BOOLEAN DEFAULT true,
+          created_by_user_id VARCHAR(100),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT uq_student_parent_link UNIQUE (school_id, parent_user_id, student_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_student_parent_links_parent ON student_parent_links(parent_user_id);
+      CREATE INDEX IF NOT EXISTS idx_student_parent_links_student ON student_parent_links(student_id);
+
+      -- Bulk billing batches
+      CREATE TABLE IF NOT EXISTS bulk_billing_batches (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          academic_year_id VARCHAR(100) NOT NULL,
+          term_id VARCHAR(100) NOT NULL,
+          scope VARCHAR(50) NOT NULL,
+          target_grade_level VARCHAR(50),
+          total_eligible INT DEFAULT 0,
+          total_generated INT DEFAULT 0,
+          total_skipped INT DEFAULT 0,
+          total_failed INT DEFAULT 0,
+          total_amount_billed NUMERIC(15, 2) DEFAULT 0,
+          status VARCHAR(50) DEFAULT 'COMPLETED',
+          execution_summary JSONB DEFAULT '{}'::jsonb,
+          created_by_user_id VARCHAR(100),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Parent consent requests and immutable responses
+      CREATE TABLE IF NOT EXISTS parent_consent_requests (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+          description TEXT,
+          terms_and_conditions TEXT NOT NULL,
+          version INT NOT NULL DEFAULT 1,
+          target_type VARCHAR(50) NOT NULL DEFAULT 'WHOLE_SCHOOL',
+          target_class_ids JSONB DEFAULT '[]'::jsonb,
+          target_student_ids JSONB DEFAULT '[]'::jsonb,
+          is_mandatory BOOLEAN NOT NULL DEFAULT true,
+          deadline TIMESTAMP WITH TIME ZONE,
+          status VARCHAR(50) NOT NULL DEFAULT 'PUBLISHED',
+          created_by_user_id VARCHAR(100),
+          created_by_name VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS parent_consent_responses (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          consent_request_id VARCHAR(100) NOT NULL REFERENCES parent_consent_requests(id) ON DELETE CASCADE,
+          consent_version INT NOT NULL DEFAULT 1,
+          student_id VARCHAR(100) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          parent_user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          parent_guardian_id VARCHAR(100),
+          parent_name VARCHAR(255) NOT NULL,
+          parent_relationship VARCHAR(50) DEFAULT 'PARENT',
+          parent_national_id VARCHAR(50),
+          parent_phone VARCHAR(50),
+          decision VARCHAR(50) NOT NULL,
+          notes TEXT,
+          signature_type VARCHAR(50) DEFAULT 'DRAWN',
+          signature_data TEXT,
+          signature_hash VARCHAR(128),
+          ip_address VARCHAR(100),
+          user_agent TEXT,
+          submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          previous_response_id VARCHAR(100),
+          is_latest BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Payroll dispute columns
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS dispute_reason TEXT;
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_by_user_id VARCHAR(100);
+
+      -- High-Performance Production Indexes
+      -- 1. Students & Enrollment
+      CREATE INDEX IF NOT EXISTS idx_students_school ON students(school_id);
+      CREATE INDEX IF NOT EXISTS idx_students_admission ON students(admission_number);
+      CREATE INDEX IF NOT EXISTS idx_students_grade_school ON students(school_id, grade_level);
+      CREATE INDEX IF NOT EXISTS idx_students_classroom ON students(classroom_id);
+      CREATE INDEX IF NOT EXISTS idx_students_stream ON students(stream_id);
+      CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+      CREATE INDEX IF NOT EXISTS idx_students_upi ON students(upi_number);
+
+      -- 2. Student Invoices & Billing
+      CREATE INDEX IF NOT EXISTS idx_invoices_student ON student_invoices(student_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_school ON student_invoices(school_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_term_year ON student_invoices(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_status ON student_invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON student_invoices(due_date);
+
+      -- 3. Payments & Receipts
+      CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_school ON payments(school_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_receipt ON payments(receipt_number);
+      CREATE INDEX IF NOT EXISTS idx_payments_tx_ref ON payments(transaction_reference);
+      CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+
+      -- 4. Users & Authentication
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_school ON users(school_id);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+      -- 5. Guardians & Teachers
+      CREATE INDEX IF NOT EXISTS idx_guardians_user ON guardians(user_id);
+      CREATE INDEX IF NOT EXISTS idx_guardians_national_id ON guardians(national_id);
+      CREATE INDEX IF NOT EXISTS idx_teachers_user ON teachers(user_id);
+      CREATE INDEX IF NOT EXISTS idx_teachers_emp_no ON teachers(employee_number);
+      CREATE INDEX IF NOT EXISTS idx_teachers_tsc_no ON teachers(tsc_number);
+
+      -- 6. CBC Assessments (Formative & Summative)
+      CREATE INDEX IF NOT EXISTS idx_formative_student ON formative_assessments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_teacher ON formative_assessments(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_learning_area ON formative_assessments(learning_area_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_term_year ON formative_assessments(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_sub_strand ON formative_assessments(sub_strand_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_student ON summative_assessments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_teacher ON summative_assessments(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_learning_area ON summative_assessments(learning_area_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_term_year ON summative_assessments(academic_year_id, term_id);
+
+      -- 7. Attendance, Fees & School Operations
+      CREATE INDEX IF NOT EXISTS idx_attendance_school_date ON attendance_registers(school_id, date);
+      CREATE INDEX IF NOT EXISTS idx_attendance_class_stream ON attendance_registers(classroom_id, stream_id);
+      CREATE INDEX IF NOT EXISTS idx_attendance_term_year ON attendance_registers(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_fee_struct_school_grade ON fee_structures(school_id, grade_level);
+      CREATE INDEX IF NOT EXISTS idx_fee_struct_year_term ON fee_structures(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_expenses_school ON expenses(school_id);
+      CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
+      CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+    `).catch((err) => {
+      console.warn('[PostgreSQL Init Warning] Error running supplemental migrations:', err?.message || err);
+    });
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
   }
@@ -1515,14 +1735,17 @@ export class PostgresUserRepository implements IUserRepository {
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     if (subscriber.length >= 7) {
       const res = await this.pool.query(
-        "SELECT * FROM users WHERE RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        "SELECT * FROM users WHERE RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $1 ORDER BY (email IS NOT NULL) DESC, updated_at DESC, created_at DESC LIMIT 1",
         [subscriber]
       );
       if (res.rows.length > 0) {
         return this.mapRow(res.rows[0]);
       }
     }
-    const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone.trim()]);
+    const res = await this.pool.query(
+      'SELECT * FROM users WHERE phone = $1 ORDER BY (email IS NOT NULL) DESC, updated_at DESC, created_at DESC LIMIT 1',
+      [phone.trim()]
+    );
     if (res.rows.length === 0) return null;
     return this.mapRow(res.rows[0]);
   }
@@ -1530,7 +1753,7 @@ export class PostgresUserRepository implements IUserRepository {
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     let q = 'SELECT * FROM users WHERE 1=1';
     const params: any[] = [];
-    if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND (school_id = $${params.length} OR school_id IS NULL OR school_id = '')`; }
     if (filters?.role) { params.push(filters.role); q += ` AND role = $${params.length}`; }
     const res = await this.pool.query(q, params);
     return res.rows.map(r => this.mapRow(r));
@@ -1665,13 +1888,24 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByGuardianId(guardianId: string): Promise<Student[]> {
-    const res = await this.pool.query(
-      `SELECT * FROM students 
-       WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
-       ORDER BY created_at ASC`,
-      [JSON.stringify([guardianId]), `%"${guardianId}"%`]
-    );
-    return res.rows.map(r => this.mapRow(r));
+    try {
+      const res = await this.pool.query(
+        `SELECT DISTINCT s.* FROM students s 
+         LEFT JOIN student_parent_links spl ON spl.student_id = s.id
+         WHERE (s.guardian_ids @> $1::jsonb OR s.guardian_ids::text LIKE $2 OR spl.guardian_id = $3 OR spl.parent_user_id = $3)
+         ORDER BY s.created_at ASC`,
+        [JSON.stringify([guardianId]), `%"${guardianId}"%`, guardianId]
+      );
+      return res.rows.map(r => this.mapRow(r));
+    } catch {
+      const res = await this.pool.query(
+        `SELECT * FROM students 
+         WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
+         ORDER BY created_at ASC`,
+        [JSON.stringify([guardianId]), `%"${guardianId}"%`]
+      );
+      return res.rows.map(r => this.mapRow(r));
+    }
   }
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     let q = 'SELECT * FROM students WHERE 1=1';
@@ -2032,12 +2266,19 @@ export class PostgresGuardianRepository implements IGuardianRepository {
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     if (subscriber.length >= 7) {
       const res = await this.pool.query(
-        "SELECT * FROM guardians WHERE RIGHT(regexp_replace(COALESCE(emergency_contact, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        `SELECT * FROM guardians 
+         WHERE RIGHT(regexp_replace(COALESCE(emergency_contact, ''), '[^0-9]', '', 'g'), 9) = $1 
+         ORDER BY jsonb_array_length(CASE WHEN jsonb_typeof(student_ids) = 'array' THEN student_ids ELSE '[]'::jsonb END) DESC, updated_at DESC LIMIT 1`,
         [subscriber]
       );
       if (res.rows.length > 0) return this.mapRow(res.rows[0]);
     }
-    const res = await this.pool.query('SELECT * FROM guardians WHERE emergency_contact = $1 LIMIT 1', [phone]);
+    const res = await this.pool.query(
+      `SELECT * FROM guardians 
+       WHERE emergency_contact = $1 
+       ORDER BY jsonb_array_length(CASE WHEN jsonb_typeof(student_ids) = 'array' THEN student_ids ELSE '[]'::jsonb END) DESC, updated_at DESC LIMIT 1`,
+      [phone]
+    );
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findAll(): Promise<Guardian[]> {
@@ -2112,13 +2353,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findCurrentYear(schoolId?: string): Promise<AcademicYear | null> {
-    const res = await this.pool.query('SELECT * FROM academic_years WHERE is_current = true LIMIT 1');
+    const res = await this.pool.query('SELECT * FROM academic_years WHERE is_current = true'+(schoolId?' AND school_id=$1':'')+' LIMIT 1',schoolId?[schoolId]:[]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findAllYears(schoolId?: string): Promise<AcademicYear[]> {
-    const res = await this.pool.query('SELECT * FROM academic_years');
+    const res = await this.pool.query('SELECT * FROM academic_years'+(schoolId?' WHERE school_id=$1':''),schoolId?[schoolId]:[]);
     return res.rows.map(r => AcademicYear.create({ name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
   }
   public async saveYear(y: AcademicYear): Promise<void> {
@@ -2135,7 +2376,15 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return AcademicTerm.create({ academicYearId: r.academic_year_id, termNumber: r.term_number, name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current }, r.id, r.created_at, r.updated_at);
   }
   public async findCurrentTerm(yearId?: string): Promise<AcademicTerm | null> {
-    const res = await this.pool.query('SELECT * FROM academic_terms WHERE is_current = true LIMIT 1');
+    // Never let another year's current term hide this year's saved teaching duties.
+    // During a transition an explicitly current year can have no flagged term yet.
+    // Read-only fallback: use its latest started term, without changing stored flags.
+    const res = yearId
+      ? await this.pool.query(`SELECT * FROM academic_terms
+          WHERE academic_year_id = $1 AND (is_current = true OR start_date::text <= $2)
+          ORDER BY is_current DESC, start_date DESC, updated_at DESC NULLS LAST, id ASC LIMIT 1`,
+        [yearId, new Date().toISOString().slice(0, 10)])
+      : await this.pool.query('SELECT * FROM academic_terms WHERE is_current = true ORDER BY updated_at DESC NULLS LAST, id ASC LIMIT 1');
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return AcademicTerm.create({ academicYearId: r.academic_year_id, termNumber: r.term_number, name: r.name, startDate: r.start_date, endDate: r.end_date, isCurrent: r.is_current }, r.id, r.created_at, r.updated_at);
@@ -2147,7 +2396,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
   public async saveTerm(t: AcademicTerm): Promise<void> {
     const q = `INSERT INTO academic_terms (id, academic_year_id, term_number, name, start_date, end_date, is_current, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (id) DO UPDATE SET is_current = EXCLUDED.is_current, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET
+                 name = EXCLUDED.name,
+                 term_number = EXCLUDED.term_number,
+                 start_date = EXCLUDED.start_date,
+                 end_date = EXCLUDED.end_date,
+                 is_current = EXCLUDED.is_current,
+                 updated_at = NOW()`;
     await this.pool.query(q, [t.id, t.academicYearId, t.termNumber, t.name, t.startDate, t.endDate, t.isCurrent, t.createdAt, t.updatedAt]);
   }
   public async updateTerm(t: AcademicTerm): Promise<void> { await this.saveTerm(t); }
@@ -2170,7 +2425,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return this.mapClassRoom(res.rows[0]);
   }
   public async findAllClasses(schoolId?: string): Promise<ClassRoom[]> {
-    const res = await this.pool.query('SELECT * FROM classrooms');
+    const res = await this.pool.query('SELECT * FROM classrooms'+(schoolId?' WHERE school_id=$1':''),schoolId?[schoolId]:[]);
     return res.rows.map(r => this.mapClassRoom(r));
   }
   public async saveClass(c: ClassRoom): Promise<void> {
@@ -2200,6 +2455,50 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     await this.pool.query(q, [s.id, s.classRoomId, s.name, s.capacity, (s.classTeacherId && s.classTeacherId.trim() !== '') ? s.classTeacherId : null, s.createdAt, s.updatedAt]);
   }
   public async updateStream(s: Stream): Promise<void> { await this.saveStream(s); }
+
+  public async findGlobalSubjectById(id: string): Promise<GlobalSubject | null> {
+    const res = await this.pool.query('SELECT * FROM global_subjects WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return GlobalSubject.create({
+      schoolId: r.school_id,
+      code: r.code,
+      name: r.name,
+      department: r.department || undefined,
+      description: r.description || undefined,
+    }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findAllGlobalSubjects(schoolId?: string): Promise<GlobalSubject[]> {
+    let q = 'SELECT * FROM global_subjects WHERE 1=1';
+    const params: any[] = [];
+    if (schoolId) {
+      params.push(schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    q += ' ORDER BY name ASC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => GlobalSubject.create({
+      schoolId: r.school_id,
+      code: r.code,
+      name: r.name,
+      department: r.department || undefined,
+      description: r.description || undefined,
+    }, r.id, r.created_at, r.updated_at));
+  }
+
+  public async saveGlobalSubject(s: GlobalSubject): Promise<void> {
+    const q = `INSERT INTO global_subjects (id, school_id, code, name, department, description, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               ON CONFLICT (id) DO UPDATE SET
+                 code = EXCLUDED.code,
+                 name = EXCLUDED.name,
+                 department = EXCLUDED.department,
+                 description = EXCLUDED.description,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [s.id, s.schoolId, s.code, s.name, s.department || null, s.description || null, s.createdAt, s.updatedAt]);
+  }
+
   public async findLearningAreaById(id: string): Promise<LearningArea | null> {
     const res = await this.pool.query('SELECT * FROM learning_areas WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -2210,11 +2509,12 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
       educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
       isElective: r.is_elective, 
-      schoolId: r.school_id 
+      schoolId: r.school_id,
+      globalSubjectId: r.global_subject_id || undefined
     }, r.id, r.created_at, r.updated_at);
   }
 
-  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string }): Promise<LearningArea[]> {
     let q = 'SELECT * FROM learning_areas WHERE 1=1';
     const params: any[] = [];
     
@@ -2222,14 +2522,16 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       params.push(filters.schoolId);
       q += ` AND school_id = $${params.length}`;
     }
-    // Note: gradeLevel filtering is optional/bypassed for global subjects, 
-    // but if requested, we can filter or return all global school subjects.
     if (filters?.gradeLevel) {
       params.push(filters.gradeLevel);
-      q += ` AND (grade_level = $${params.length} OR grade_level IS NULL)`;
+      q += ` AND grade_level = $${params.length}`;
+    }
+    if (filters?.globalSubjectId) {
+      params.push(filters.globalSubjectId);
+      q += ` AND global_subject_id = $${params.length}`;
     }
 
-    q += ' ORDER BY name ASC';
+    q += ' ORDER BY grade_level ASC, name ASC';
     const res = await this.pool.query(q, params);
     return res.rows.map(r => LearningArea.create({ 
       name: r.name, 
@@ -2237,17 +2539,21 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
       educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
       isElective: r.is_elective, 
-      schoolId: r.school_id 
+      schoolId: r.school_id,
+      globalSubjectId: r.global_subject_id || undefined
     }, r.id, r.created_at, r.updated_at));
   }
 
   public async saveLearningArea(la: LearningArea): Promise<void> {
-    const q = `INSERT INTO learning_areas (id, name, code, grade_level, education_level, is_elective, school_id, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (school_id, code) DO UPDATE SET 
+    const q = `INSERT INTO learning_areas (id, name, code, grade_level, education_level, is_elective, school_id, global_subject_id, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT (id) DO UPDATE SET 
                  name = EXCLUDED.name, 
+                 code = EXCLUDED.code,
+                 grade_level = EXCLUDED.grade_level,
                  education_level = EXCLUDED.education_level,
                  is_elective = EXCLUDED.is_elective,
+                 global_subject_id = EXCLUDED.global_subject_id,
                  updated_at = NOW()`;
     await this.pool.query(q, [
       la.id, 
@@ -2257,6 +2563,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       la.educationLevel || EducationLevel.UPPER_PRIMARY, 
       la.isElective, 
       la.schoolId, 
+      la.globalSubjectId || null,
       la.createdAt, 
       la.updatedAt
     ]);
@@ -2271,7 +2578,8 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                  effective_to = EXCLUDED.effective_to,
                  is_active = EXCLUDED.is_active,
                  updated_at = NOW()`;
-    await this.pool.query(q, [
+    try {
+      await this.pool.query(q, [
       a.id,
       a.schoolId,
       a.academicYearId,
@@ -2284,7 +2592,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       a.isActive,
       a.createdAt,
       a.updatedAt
-    ]);
+      ]);
+    } catch (error: any) {
+      if (error.code === '23505' && error.constraint === 'uq_class_teacher_one_active_duty') {
+        throw new ConflictError('This teacher already has an active class-teacher duty for this academic year. Refresh assignments and try again.');
+      }
+      throw error;
+    }
   }
 
   public async findClassTeacherAssignments(filters?: {
@@ -2489,101 +2803,24 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    // 1. Resolve candidate learning areas for this subject (by id, code, name, or canonical alias)
-    const candidateQuery = `
-      WITH target_la AS (
-        SELECT id, code, name FROM learning_areas
-        WHERE id = $1 
-           OR UPPER(code) = UPPER($1) 
-           OR UPPER(name) = UPPER($1)
-        LIMIT 1
-      )
-      SELECT id FROM learning_areas
-      WHERE id = $1
-         OR id IN (SELECT id FROM target_la)
-         OR (
-           (SELECT code FROM target_la) IS NOT NULL 
-           AND (
-             UPPER(code) = (SELECT UPPER(code) FROM target_la)
-             OR (UPPER(code) IN ('MATH', 'MAT') AND (SELECT UPPER(code) FROM target_la) IN ('MATH', 'MAT'))
-             OR (UPPER(code) IN ('KIS', 'KISW', 'KUSO') AND (SELECT UPPER(code) FROM target_la) IN ('KIS', 'KISW', 'KUSO'))
-             OR (UPPER(code) IN ('ENG', 'REA', 'LIT', 'LAN') AND (SELECT UPPER(code) FROM target_la) IN ('ENG', 'REA', 'LIT', 'LAN'))
-             OR (UPPER(code) IN ('AGR', 'AGRI') AND (SELECT UPPER(code) FROM target_la) IN ('AGR', 'AGRI'))
-             OR (UPPER(code) IN ('ARTS', 'CREA') AND (SELECT UPPER(code) FROM target_la) IN ('ARTS', 'CREA'))
-             OR (UPPER(code) IN ('CRE', 'IRE', 'HRE', 'SRE') AND (SELECT UPPER(code) FROM target_la) IN ('CRE', 'IRE', 'HRE', 'SRE'))
-             OR (UPPER(code) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV') AND (SELECT UPPER(code) FROM target_la) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV'))
-             OR (UPPER(code) IN ('PRETECH', 'PRET') AND (SELECT UPPER(code) FROM target_la) IN ('PRETECH', 'PRET'))
-             OR (UPPER(code) IN ('BUS') AND (SELECT UPPER(code) FROM target_la) IN ('BUS'))
-             OR (UPPER(code) IN ('HLTH') AND (SELECT UPPER(code) FROM target_la) IN ('HLTH'))
-           )
-         )
-    `;
-    let candidateIds: string[] = [learningAreaId];
-    try {
-      const candRes = await this.pool.query(candidateQuery, [learningAreaId]);
-      candidateIds = candRes.rows.map(r => r.id);
-      if (!candidateIds.includes(learningAreaId)) {
-        candidateIds.push(learningAreaId);
-      }
-    } catch {
-      candidateIds = [learningAreaId];
+    const params: any[] = [learningAreaId];
+    let query = 'SELECT * FROM strands WHERE learning_area_id = $1';
+    if (gradeLevel) {
+      params.push(gradeLevel);
+      query += ' AND grade_level = $2';
     }
-
-    const normGrade = gradeLevel 
-      ? gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '')
-      : null;
-
-    let res;
-    if (normGrade) {
-      const q = `
-        SELECT * FROM strands 
-        WHERE learning_area_id = ANY($1) OR code = ANY($1)
-        ORDER BY 
-          CASE 
-            WHEN UPPER(REPLACE(REPLACE(REPLACE(COALESCE(grade_level, ''), ' ', '_'), '-', '_'), 'GRADE_', '')) = $2 THEN 0
-            WHEN grade_level IS NULL OR grade_level = '' THEN 1
-            ELSE 2
-          END,
-          code, title
-      `;
-      res = await this.pool.query(q, [candidateIds, normGrade]);
-
-      const exactOrUniversal = res.rows.filter(r => {
-        const rowGradeNorm = (r.grade_level || '').trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '');
-        return !rowGradeNorm || rowGradeNorm === normGrade;
-      });
-
-      if (exactOrUniversal.length > 0) {
-        res.rows = exactOrUniversal;
-      }
-    } else {
-      const q = `
-        SELECT * FROM strands 
-        WHERE learning_area_id = ANY($1) OR code = ANY($1)
-        ORDER BY code, title
-      `;
-      res = await this.pool.query(q, [candidateIds]);
-    }
-
-    // Deduplicate strands by normalized title so no duplicates are returned
-    const seenTitles = new Set<string>();
-    const deduplicatedStrands: Strand[] = [];
-
-    for (const r of res.rows) {
-      const normTitle = (r.title || '').trim().toLowerCase();
-      if (!normTitle || seenTitles.has(normTitle)) continue;
-      seenTitles.add(normTitle);
-
-      deduplicatedStrands.push(Strand.create({ 
-        learningAreaId: r.learning_area_id, 
-        gradeLevel: r.grade_level, 
-        code: r.code, 
-        title: r.title, 
-        description: r.description 
-      }, r.id, r.created_at, r.updated_at));
-    }
-
-    return deduplicatedStrands;
+    query += ' ORDER BY code, title';
+    const res = await this.pool.query(query, params);
+    const seen = new Set<string>();
+    return res.rows.filter(r => {
+      const title = String(r.title).trim().toLowerCase();
+      if (seen.has(title)) return false;
+      seen.add(title);
+      return true;
+    }).map(r => Strand.create({
+      learningAreaId: r.learning_area_id, gradeLevel: r.grade_level,
+      code: r.code, title: r.title, description: r.description
+    }, r.id, r.created_at, r.updated_at));
   }
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)
@@ -2605,29 +2842,13 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1 OR code = $1 LIMIT 1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) }, r.id, r.created_at, r.updated_at);
+    return SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), suggestedExperiences: typeof r.suggested_experiences==='string'?JSON.parse(r.suggested_experiences):(r.suggested_experiences||[]) }, r.id, r.created_at, r.updated_at);
   }
   public async findSubStrandsByStrand(strandId: string): Promise<SubStrand[]> {
-    const q = `
-      SELECT * FROM sub_strands 
-      WHERE strand_id = $1 
-         OR strand_id IN (
-           SELECT id FROM strands 
-           WHERE code = $1 
-              OR code = (SELECT code FROM strands WHERE id = $1 LIMIT 1)
-              OR (
-                LOWER(title) = (SELECT LOWER(title) FROM strands WHERE id = $1 LIMIT 1)
-                AND grade_level = (SELECT grade_level FROM strands WHERE id = $1 LIMIT 1)
-              )
-         )
-      ORDER BY code, title
-    `;
-    let res;
-    try {
-      res = await this.pool.query(q, [strandId]);
-    } catch {
-      res = await this.pool.query('SELECT * FROM sub_strands WHERE strand_id = $1 ORDER BY code, title', [strandId]);
-    }
+    const res = await this.pool.query(
+      'SELECT * FROM sub_strands WHERE strand_id = $1 ORDER BY code, title',
+      [strandId]
+    );
 
     const seenTitles = new Set<string>();
     const deduplicatedSubs: SubStrand[] = [];
@@ -2641,7 +2862,7 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
         strandId: r.strand_id, 
         code: r.code, 
         title: r.title, 
-        specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) 
+        specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), suggestedExperiences: typeof r.suggested_experiences==='string'?JSON.parse(r.suggested_experiences):(r.suggested_experiences||[])
       }, r.id, r.created_at, r.updated_at));
     }
 
@@ -2668,12 +2889,73 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const r = res.rows[0];
     return FormativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, subStrandId: r.sub_strand_id, termId: r.term_id, academicYearId: r.academic_year_id, assessmentDate: r.assessment_date, assessmentMethod: r.assessment_method, performanceLevel: r.performance_level, specificOutcomeTested: r.specific_outcome_tested, teacherRemarks: r.teacher_remarks, evidenceNotes: r.evidence_notes, targetedCompetencies: r.targeted_competencies, valuesObserved: r.values_observed }, r.id, r.created_at, r.updated_at);
   }
+  private static readonly LEGACY_SUBJECT_ALIASES: Record<string, string> = {
+    'la-lan': 'LAN',
+    'la-mat': 'MATH',
+    'la-eng': 'ENG',
+    'la-rea': 'REA',
+    'la-kis': 'KISW',
+    'la-kuso': 'KUSO',
+    'la-envi': 'ENVI',
+    'la-sci': 'SCI',
+    'la-soc': 'SST',
+    'la-cre': 'CRE',
+    'la-crea': 'CREA',
+    'la-agr': 'AGRI',
+    'la-art': 'ARTS',
+    'la-pret': 'PRETECH',
+    'la-hlth': 'HLTH',
+    'la-bus': 'BUS',
+    'la-comp': 'COMP',
+    'la-ind': 'IND',
+    'la-fre': 'FRE',
+    'la-ger': 'GER',
+    'la-ara': 'ARA'
+  };
+
   public async findFormatives(filters: FormativeFilterCriteria): Promise<FormativeAssessment[]> {
     let q = 'SELECT * FROM formative_assessments WHERE 1=1';
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
-    if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
-    if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
+    if (filters.learningAreaId) {
+      const targetLa = filters.learningAreaId.trim();
+      const canonicalCode = PostgresCBCAssessmentRepository.LEGACY_SUBJECT_ALIASES[targetLa.toLowerCase()] || targetLa;
+
+      params.push(targetLa, canonicalCode);
+      const p1 = params.length - 1;
+      const p2 = params.length;
+
+      q += ` AND (
+        learning_area_id = $${p1}
+        OR learning_area_id = $${p2}
+        OR learning_area_id IN (
+          SELECT id FROM learning_areas
+          WHERE id = $${p1}
+             OR code ILIKE $${p1}
+             OR code ILIKE $${p2}
+             OR global_subject_id = $${p1}
+             OR global_subject_id = $${p2}
+             OR global_subject_id IN (
+               SELECT id FROM global_subjects 
+               WHERE id = $${p1} OR id = $${p2} OR code ILIKE $${p1} OR code ILIKE $${p2} OR name ILIKE $${p1} OR name ILIKE $${p2}
+             )
+        )
+      )`;
+    }
+    if (filters.termId) {
+      const rawTerm = filters.termId.trim();
+      const altTerm1 = rawTerm.includes('-t')
+        ? rawTerm.replace('-t', '-')
+        : rawTerm.replace(/-(\d)$/, '-t$1');
+      const matchNum = rawTerm.match(/[-_t]?([1-3])$/i);
+      const termNum = matchNum ? matchNum[1] : '';
+      const altTerm2 = termNum ? `term-${termNum}` : rawTerm;
+      const altTerm3 = termNum && filters.academicYearId ? `term-${filters.academicYearId.replace('year-', '')}-${termNum}` : rawTerm;
+
+      params.push(rawTerm, altTerm1, altTerm2, altTerm3);
+      const startP = params.length - 3;
+      q += ` AND (term_id = $${startP} OR term_id = $${startP + 1} OR term_id = $${startP + 2} OR term_id = $${startP + 3})`;
+    }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
     const res = await this.pool.query(q, params);
@@ -2735,13 +3017,44 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     let q = 'SELECT * FROM summative_assessments WHERE 1=1';
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
-    if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
+    if (filters.learningAreaId) {
+      const targetLa = filters.learningAreaId.trim();
+      const canonicalCode = PostgresCBCAssessmentRepository.LEGACY_SUBJECT_ALIASES[targetLa.toLowerCase()] || targetLa;
+
+      params.push(targetLa, canonicalCode);
+      const p1 = params.length - 1;
+      const p2 = params.length;
+
+      q += ` AND (
+        learning_area_id = $${p1}
+        OR learning_area_id = $${p2}
+        OR learning_area_id IN (
+          SELECT id FROM learning_areas
+          WHERE id = $${p1}
+             OR code ILIKE $${p1}
+             OR code ILIKE $${p2}
+             OR global_subject_id = $${p1}
+             OR global_subject_id = $${p2}
+             OR global_subject_id IN (
+               SELECT id FROM global_subjects 
+               WHERE id = $${p1} OR id = $${p2} OR code ILIKE $${p1} OR code ILIKE $${p2} OR name ILIKE $${p1} OR name ILIKE $${p2}
+             )
+        )
+      )`;
+    }
     if (filters.termId) {
-      const altTermId = filters.termId.includes('-t')
-        ? filters.termId.replace('-t', '-')
-        : filters.termId.replace(/-(\d)$/, '-t$1');
-      params.push(filters.termId, altTermId);
-      q += ` AND (term_id = $${params.length - 1} OR term_id = $${params.length})`;
+      const rawTerm = filters.termId.trim();
+      const altTerm1 = rawTerm.includes('-t')
+        ? rawTerm.replace('-t', '-')
+        : rawTerm.replace(/-(\d)$/, '-t$1');
+      const matchNum = rawTerm.match(/[-_t]?([1-3])$/i);
+      const termNum = matchNum ? matchNum[1] : '';
+      const altTerm2 = termNum ? `term-${termNum}` : rawTerm;
+      const altTerm3 = termNum && filters.academicYearId ? `term-${filters.academicYearId.replace('year-', '')}-${termNum}` : rawTerm;
+
+      params.push(rawTerm, altTerm1, altTerm2, altTerm3);
+      const startP = params.length - 3;
+      q += ` AND (term_id = $${startP} OR term_id = $${startP + 1} OR term_id = $${startP + 2} OR term_id = $${startP + 3})`;
     }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
@@ -2749,10 +3062,9 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return res.rows.map(r => SummativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, termId: r.term_id, academicYearId: r.academic_year_id, strandScores: typeof r.strand_scores === 'string' ? JSON.parse(r.strand_scores) : r.strand_scores, overallPerformanceLevel: r.overall_performance_level, teacherRemarks: r.teacher_remarks, evaluationDate: r.evaluation_date }, r.id, r.created_at, r.updated_at));
   }
   public async saveSummative(s: SummativeAssessment): Promise<void> {
-    try {
       const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                 ON CONFLICT (student_id, learning_area_id, term_id, academic_year_id)
+                 ON CONFLICT (id)
                  DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`;
       await this.pool.query(q, [
         s.id,
@@ -2768,47 +3080,6 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
         s.createdAt,
         s.updatedAt
       ]);
-    } catch (err) {
-      // Robust fallback: query existing record by composite key
-      const altTerm = s.termId?.includes('-t') ? s.termId.replace('-t', '-') : s.termId?.replace(/-(\d)$/, '-t$1');
-      const existing = await this.pool.query(
-        'SELECT id FROM summative_assessments WHERE student_id = $1 AND learning_area_id = $2 AND (term_id = $3 OR term_id = $4) AND academic_year_id = $5 LIMIT 1',
-        [s.studentId, s.learningAreaId, s.termId, altTerm || s.termId, s.academicYearId]
-      );
-      if (existing.rows.length > 0) {
-        await this.pool.query(
-          `UPDATE summative_assessments SET overall_performance_level = $1, strand_scores = $2, teacher_remarks = $3, evaluation_date = $4, teacher_id = $5, updated_at = NOW() WHERE id = $6`,
-          [
-            s.overallPerformanceLevel,
-            JSON.stringify(s.strandScores || []),
-            s.teacherRemarks || 'Meeting expectations',
-            s.evaluationDate || new Date().toISOString().split('T')[0],
-            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
-            existing.rows[0].id
-          ]
-        );
-      } else {
-        await this.pool.query(
-          `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-             ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`,
-          [
-            s.id,
-            s.studentId,
-            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
-            s.learningAreaId,
-            (s.termId && s.termId.trim() !== '') ? s.termId : 'term-default',
-            (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : 'year-default',
-            JSON.stringify(s.strandScores || []),
-            s.overallPerformanceLevel,
-            s.teacherRemarks || 'Meeting expectations',
-            s.evaluationDate || new Date().toISOString().split('T')[0],
-            s.createdAt,
-            s.updatedAt
-          ]
-        );
-      }
-    }
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
   public async deleteSummative(id: string): Promise<void> {
@@ -2976,16 +3247,19 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     const res = await this.pool.query('SELECT * FROM schemes_of_work WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus }, r.id, r.created_at, r.updated_at);
+    return SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined,submittedAt:r.submitted_at||undefined,reviewedByUserId:r.reviewed_by_user_id||undefined,reviewedAt:r.reviewed_at||undefined,reviewRemarks:r.review_remarks||undefined }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: SchemeFilterCriteria): Promise<SchemeOfWork[]> {
-    const res = await this.pool.query('SELECT * FROM schemes_of_work');
-    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus }, r.id, r.created_at, r.updated_at));
+    const clauses:string[]=[];const params:any[]=[];
+    for(const [key,column] of Object.entries({teacherId:'teacher_id',learningAreaId:'learning_area_id',classRoomId:'classroom_id',academicYearId:'academic_year_id',status:'status'})){const value=(filters as any)?.[key];if(value){params.push(value);clauses.push(`${column}=$${params.length}`);}}
+    if(filters?.termId){params.push(filters.termId.replace(/-t([1-3])$/,'-$1'));clauses.push(`(CASE WHEN term_id ~ '-t[1-3]$' THEN left(term_id,length(term_id)-3)||'-'||right(term_id,1) ELSE term_id END)=$${params.length}`);}
+    const res = await this.pool.query('SELECT * FROM schemes_of_work'+(clauses.length?' WHERE '+clauses.join(' AND '):''),params);
+    return res.rows.map(r => SchemeOfWork.create({ teacherId: r.teacher_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, title: r.title, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries, status: r.status as SchemeStatus, planningState:r.planning_state || undefined,submittedAt:r.submitted_at||undefined,reviewedByUserId:r.reviewed_by_user_id||undefined,reviewedAt:r.reviewed_at||undefined,reviewRemarks:r.review_remarks||undefined }, r.id, r.created_at, r.updated_at));
   }
   public async save(s: SchemeOfWork): Promise<void> {
     const q = `INSERT INTO schemes_of_work (id, teacher_id, learning_area_id, classroom_id, stream_id, academic_year_id, term_id, title, entries, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-               ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, status = EXCLUDED.status, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET entries = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) THEN schemes_of_work.entries ELSE EXCLUDED.entries END, status = CASE WHEN coalesce((schemes_of_work.planning_state->>'locked')::boolean,false) AND EXCLUDED.status='DRAFT' THEN schemes_of_work.status ELSE EXCLUDED.status END, submitted_at=EXCLUDED.submitted_at, reviewed_by_user_id=EXCLUDED.reviewed_by_user_id, reviewed_at=EXCLUDED.reviewed_at, review_remarks=EXCLUDED.review_remarks, updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : null,
@@ -3006,7 +3280,13 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     ]);
   }
   public async update(s: SchemeOfWork): Promise<void> { await this.save(s); }
-  public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM schemes_of_work WHERE id = $1', [id]); }
+  public async savePlanning(s:SchemeOfWork, expectedRevision:number, expectedEntries?:any[]):Promise<void>{
+    const result=await this.pool.query(`UPDATE schemes_of_work SET entries=CASE WHEN $6 THEN $1::jsonb ELSE entries END, status=$2, planning_state=$3, submitted_at=$8, reviewed_by_user_id=$9, reviewed_at=$10, review_remarks=$11, updated_at=now()
+      WHERE id=$4 AND coalesce((planning_state->>'revision')::int,0)=$5 AND (NOT $6 OR entries::jsonb=$7::jsonb) RETURNING id`,
+      [JSON.stringify(s.entries),s.status,JSON.stringify(s.planningState),s.id,expectedRevision,expectedEntries!==undefined,JSON.stringify(expectedEntries||[]),s.toJSON().submittedAt||null,s.toJSON().reviewedByUserId||null,s.toJSON().reviewedAt||null,s.reviewRemarks||null]);
+    if(!result.rowCount)throw new ConflictError('Planning changed; reload before saving.');
+  }
+  public async delete(id: string): Promise<void> { const r=await this.pool.query("DELETE FROM schemes_of_work WHERE id = $1 AND NOT coalesce((planning_state->>'locked')::boolean,false) RETURNING id", [id]);if(!r.rowCount)throw new ConflictError('Reopen the saved plan before deleting it.'); }
 }
 
 export class PostgresLessonPlanRepository implements ILessonPlanRepository {
@@ -3016,6 +3296,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3045,6 +3326,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
   public async findAll(filters?: LessonPlanFilterCriteria): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans');
     return res.rows.map(r => LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3074,6 +3356,7 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
   public async findBySchemeEntryId(schemeEntryId: string): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans WHERE scheme_of_work_entry_id = $1', [schemeEntryId]);
     return res.rows.map(r => LessonPlan.create({
+      ...(r.lesson_details || {}),
       teacherId: r.teacher_id,
       schemeOfWorkEntryId: r.scheme_of_work_entry_id,
       learningAreaId: r.learning_area_id,
@@ -3101,8 +3384,8 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     }, r.id, r.created_at, r.updated_at));
   }
   public async save(lp: LessonPlan): Promise<void> {
-    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at, lesson_details)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
                ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, reviewed_by_user_id = EXCLUDED.reviewed_by_user_id, reviewed_at = EXCLUDED.reviewed_at, review_remarks = EXCLUDED.review_remarks, updated_at = NOW()`;
     await this.pool.query(q, [
       lp.id,
@@ -3131,7 +3414,8 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
       lp.reviewedAt || null,
       lp.reviewRemarks || null,
       lp.createdAt,
-      lp.updatedAt
+      lp.updatedAt,
+      JSON.stringify({ weekNumber: lp.toJSON().weekNumber, lessonNumber: lp.toJSON().lessonNumber, lessonTime: lp.toJSON().lessonTime, pcis: lp.toJSON().pcis, otherLearningAreas: lp.toJSON().otherLearningAreas, communityServiceActivities: lp.toJSON().communityServiceActivities, nonFormalActivity: lp.toJSON().nonFormalActivity, assessmentRubric: lp.toJSON().assessmentRubric, learningExperiences: lp.toJSON().learningExperiences, assessmentMethods: lp.toJSON().assessmentMethods })
     ]);
   }
   public async update(lp: LessonPlan): Promise<void> { await this.save(lp); }
@@ -3283,11 +3567,17 @@ export class PostgresTimetableRepository implements ITimetableRepository {
 
 export class PostgresAttendanceRepository implements IAttendanceRepository {
   constructor(private pool: Pool) {}
+  private normalizeDate(d: any): string {
+    if (!d) return '';
+    if (typeof d === 'string') return d.split('T')[0];
+    if (d instanceof Date) return d.toISOString().split('T')[0];
+    return String(d).split('T')[0];
+  }
   public async findRegisterById(id: string): Promise<AttendanceRegister | null> {
     const res = await this.pool.query('SELECT * FROM attendance_registers WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+    return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
   }
   public async findRegister(streamId: string, date: string, type: AttendanceType, classRoomId?: string): Promise<AttendanceRegister | null> {
     if (streamId && streamId.trim() !== '') {
@@ -3297,7 +3587,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       );
       if (res.rows.length) {
         const r = res.rows[0];
-        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
       }
     }
     if (classRoomId && classRoomId.trim() !== '') {
@@ -3307,7 +3597,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       );
       if (res.rows.length) {
         const r = res.rows[0];
-        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
       }
     }
     return null;
@@ -3326,12 +3616,18 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
     if (filters.type) { params.push(filters.type); q += ` AND type = $${params.length}`; }
     q += ' ORDER BY date DESC';
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
   }
   public async saveRegister(reg: AttendanceRegister): Promise<void> {
     const q = `INSERT INTO attendance_registers (id, school_id, classroom_id, stream_id, academic_year_id, term_id, date, type, lesson_id, marked_by_teacher_id, entries, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-               ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, updated_at = NOW()`;
+               ON CONFLICT (school_id, classroom_id, COALESCE(stream_id, ''), date, type)
+               DO UPDATE SET
+                 entries = EXCLUDED.entries,
+                 marked_by_teacher_id = EXCLUDED.marked_by_teacher_id,
+                 academic_year_id = EXCLUDED.academic_year_id,
+                 term_id = EXCLUDED.term_id,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       reg.id,
       reg.schoolId,
@@ -3354,7 +3650,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       `SELECT * FROM attendance_registers WHERE entries::text LIKE $1`,
       [`%"studentId":"${studentId}"%`]
     );
-    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
   }
   public async removeStudentFromRegisters(studentId: string): Promise<void> {
     const registers = await this.findRegistersByStudent(studentId);
@@ -3897,6 +4193,254 @@ export class PostgresFeeRepository implements IFeeRepository {
       status: r.status as CreditStatus,
       notes: r.notes
     }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findCreditApplicationById(id: string): Promise<FeeCreditApplication | null> {
+    const res = await this.pool.query('SELECT * FROM fee_credit_applications WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return FeeCreditApplication.create({
+      creditId: r.credit_id,
+      studentId: r.student_id,
+      invoiceId: r.invoice_id,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amountApplied: Number(r.amount_applied),
+      appliedByUserId: r.applied_by_user_id
+    }, r.id, r.created_at, r.applied_at);
+  }
+
+  public async findCreditApplicationByReceiptNumber(receiptNumber: string): Promise<FeeCreditApplication | null> {
+    const res = await this.pool.query('SELECT * FROM fee_credit_applications WHERE receipt_number = $1 LIMIT 1', [receiptNumber]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return FeeCreditApplication.create({
+      creditId: r.credit_id,
+      studentId: r.student_id,
+      invoiceId: r.invoice_id,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amountApplied: Number(r.amount_applied),
+      appliedByUserId: r.applied_by_user_id
+    }, r.id, r.created_at, r.applied_at);
+  }
+
+  public async saveReversalRequest(request: TransactionReversalRequest): Promise<void> {
+    const q = `INSERT INTO transaction_reversal_requests (
+      id, school_id, request_reference, transaction_type, transaction_id, transaction_reference,
+      original_receipt_number, student_id, student_name, admission_number, original_amount,
+      requested_reversal_amount, transaction_date, reason, explanation, supporting_attachment_url,
+      status, requested_by_user_id, requested_by_name, requested_by_role, requested_at,
+      reviewed_by_user_id, reviewed_by_name, reviewed_at, approval_comment, rejection_reason,
+      reversal_receipt_number, reversal_receipt_payload, financial_impact_preview, error_message,
+      audit_trail, created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+      $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+      $31, $32, $33
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      reviewed_by_user_id = EXCLUDED.reviewed_by_user_id,
+      reviewed_by_name = EXCLUDED.reviewed_by_name,
+      reviewed_at = EXCLUDED.reviewed_at,
+      approval_comment = EXCLUDED.approval_comment,
+      rejection_reason = EXCLUDED.rejection_reason,
+      reversal_receipt_number = EXCLUDED.reversal_receipt_number,
+      reversal_receipt_payload = EXCLUDED.reversal_receipt_payload,
+      financial_impact_preview = EXCLUDED.financial_impact_preview,
+      error_message = EXCLUDED.error_message,
+      audit_trail = EXCLUDED.audit_trail,
+      updated_at = NOW()`;
+
+    await this.pool.query(q, [
+      request.id,
+      request.schoolId,
+      request.requestReference,
+      request.transactionType,
+      request.transactionId,
+      request.transactionReference,
+      request.originalReceiptNumber || null,
+      request.studentId,
+      request.studentName,
+      request.admissionNumber,
+      request.originalAmount,
+      request.requestedReversalAmount,
+      request.transactionDate,
+      request.reason,
+      request.explanation || null,
+      request.supportingAttachmentUrl || null,
+      request.status,
+      request.requestedByUserId,
+      request.requestedByName,
+      request.requestedByRole,
+      request.requestedAt,
+      request.reviewedByUserId || null,
+      request.reviewedByName || null,
+      request.reviewedAt || null,
+      request.approvalComment || null,
+      request.rejectionReason || null,
+      request.reversalReceiptNumber || null,
+      request.reversalReceiptPayload ? JSON.stringify(request.reversalReceiptPayload) : null,
+      request.financialImpactPreview ? JSON.stringify(request.financialImpactPreview) : null,
+      request.errorMessage || null,
+      JSON.stringify(request.auditTrail),
+      request.createdAt,
+      request.updatedAt
+    ]);
+  }
+
+  private mapReversalRow(r: any): TransactionReversalRequest {
+    return TransactionReversalRequest.create({
+      schoolId: r.school_id,
+      requestReference: r.request_reference,
+      transactionType: r.transaction_type,
+      transactionId: r.transaction_id,
+      transactionReference: r.transaction_reference,
+      originalReceiptNumber: r.original_receipt_number || undefined,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      admissionNumber: r.admission_number,
+      originalAmount: Number(r.original_amount),
+      requestedReversalAmount: Number(r.requested_reversal_amount),
+      transactionDate: r.transaction_date,
+      reason: r.reason,
+      explanation: r.explanation || undefined,
+      supportingAttachmentUrl: r.supporting_attachment_url || undefined,
+      status: r.status,
+      requestedByUserId: r.requested_by_user_id,
+      requestedByName: r.requested_by_name,
+      requestedByRole: r.requested_by_role,
+      requestedAt: r.requested_at ? new Date(r.requested_at) : new Date(),
+      reviewedByUserId: r.reviewed_by_user_id || undefined,
+      reviewedByName: r.reviewed_by_name || undefined,
+      reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
+      approvalComment: r.approval_comment || undefined,
+      rejectionReason: r.rejection_reason || undefined,
+      reversalReceiptNumber: r.reversal_receipt_number || undefined,
+      reversalReceiptPayload: typeof r.reversal_receipt_payload === 'string' ? JSON.parse(r.reversal_receipt_payload) : r.reversal_receipt_payload,
+      financialImpactPreview: typeof r.financial_impact_preview === 'string' ? JSON.parse(r.financial_impact_preview) : r.financial_impact_preview,
+      errorMessage: r.error_message || undefined,
+      auditTrail: typeof r.audit_trail === 'string' ? JSON.parse(r.audit_trail) : (r.audit_trail || [])
+    }, r.id, r.created_at ? new Date(r.created_at) : undefined, r.updated_at ? new Date(r.updated_at) : undefined);
+  }
+
+  public async findReversalRequestById(id: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query('SELECT * FROM transaction_reversal_requests WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query('SELECT * FROM transaction_reversal_requests WHERE request_reference = $1', [ref]);
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]> {
+    let q = 'SELECT * FROM transaction_reversal_requests WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      params.push(filters.studentIds);
+      q += ` AND student_id = ANY($${params.length})`;
+    }
+    if (filters.status) { params.push(filters.status); q += ` AND status = $${params.length}`; }
+    if (filters.transactionType) { params.push(filters.transactionType); q += ` AND transaction_type = $${params.length}`; }
+    if (filters.transactionId) { params.push(filters.transactionId); q += ` AND transaction_id = $${params.length}`; }
+    if (filters.transactionReference) { params.push(filters.transactionReference); q += ` AND transaction_reference = $${params.length}`; }
+    if (filters.requestReference) { params.push(filters.requestReference); q += ` AND request_reference = $${params.length}`; }
+    if (filters.requestedByUserId) { params.push(filters.requestedByUserId); q += ` AND requested_by_user_id = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND requested_at >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND requested_at <= $${params.length}`; }
+    if (filters.search) {
+      params.push(`%${filters.search.toLowerCase()}%`);
+      q += ` AND (LOWER(request_reference) LIKE $${params.length} OR LOWER(transaction_reference) LIKE $${params.length} OR LOWER(student_name) LIKE $${params.length} OR LOWER(admission_number) LIKE $${params.length} OR LOWER(reason) LIKE $${params.length})`;
+    }
+    q += ' ORDER BY requested_at DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => this.mapReversalRow(r));
+  }
+
+  public async findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query(
+      "SELECT * FROM transaction_reversal_requests WHERE transaction_id = $1 AND status IN ('PENDING_ADMIN_APPROVAL', 'PROCESSING') LIMIT 1",
+      [transactionId]
+    );
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async saveBulkBillingBatch(batch: BulkBillingBatchRecord): Promise<void> {
+    try {
+      await this.pool.query(
+        `INSERT INTO bulk_billing_batches (
+          id, school_id, academic_year_id, term_id, scope, target_grade_level,
+          total_eligible, total_generated, total_skipped, total_failed,
+          total_amount_billed, status, execution_summary, created_by_user_id,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ON CONFLICT (id) DO UPDATE SET
+          total_eligible = EXCLUDED.total_eligible,
+          total_generated = EXCLUDED.total_generated,
+          total_skipped = EXCLUDED.total_skipped,
+          total_failed = EXCLUDED.total_failed,
+          total_amount_billed = EXCLUDED.total_amount_billed,
+          status = EXCLUDED.status,
+          execution_summary = EXCLUDED.execution_summary,
+          updated_at = NOW()`,
+        [
+          batch.id,
+          batch.schoolId,
+          batch.academicYearId,
+          batch.termId,
+          batch.scope,
+          batch.targetGradeLevel || null,
+          batch.totalEligible,
+          batch.totalGenerated,
+          batch.totalSkipped,
+          batch.totalFailed,
+          batch.totalAmountBilled,
+          batch.status,
+          JSON.stringify(batch.executionSummary || {}),
+          batch.createdByUserId || null,
+          batch.createdAt || new Date(),
+          batch.updatedAt || new Date()
+        ]
+      );
+    } catch (err) {
+      console.error('Failed to save bulk billing batch record:', err);
+    }
+  }
+
+  public async findBulkBillingBatches(schoolId: string): Promise<BulkBillingBatchRecord[]> {
+    try {
+      const res = await this.pool.query(
+        `SELECT * FROM bulk_billing_batches WHERE school_id = $1 ORDER BY created_at DESC`,
+        [schoolId]
+      );
+      return res.rows.map(r => ({
+        id: r.id,
+        schoolId: r.school_id,
+        academicYearId: r.academic_year_id,
+        termId: r.term_id,
+        scope: r.scope,
+        targetGradeLevel: r.target_grade_level,
+        totalEligible: Number(r.total_eligible) || 0,
+        totalGenerated: Number(r.total_generated) || 0,
+        totalSkipped: Number(r.total_skipped) || 0,
+        totalFailed: Number(r.total_failed) || 0,
+        totalAmountBilled: Number(r.total_amount_billed) || 0,
+        status: r.status,
+        executionSummary: typeof r.execution_summary === 'string' ? JSON.parse(r.execution_summary) : (r.execution_summary || {}),
+        createdByUserId: r.created_by_user_id,
+        createdAt: r.created_at ? new Date(r.created_at) : undefined,
+        updatedAt: r.updated_at ? new Date(r.updated_at) : undefined
+      }));
+    } catch {
+      return [];
+    }
   }
 }
 

@@ -4,6 +4,8 @@ import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
+import { ParentLinkingModal } from '../modals/ParentLinkingModal';
+import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -54,6 +56,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   // Deleted Students Archive & Modal States
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
+  const [isParentLinkingModalOpen, setIsParentLinkingModalOpen] = useState(false);
+  const [parentLinkingTargetStudent, setParentLinkingTargetStudent] = useState<Student | null>(null);
+  const [isGenerateInvoiceModalOpen, setIsGenerateInvoiceModalOpen] = useState(false);
+  const [billingTargetStudent, setBillingTargetStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleteReason, setDeleteReason] = useState('Transferred to another institution');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -196,7 +202,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const getRatingBadge = (rating: CBCRubric) => {
     switch (rating) {
       case 'EE':
-        return <span className="px-2 py-0.5 rounded bg-secondary text-white text-xs font-bold">EE · Exceeding</span>;
+        return <span className="px-2 py-0.5 rounded bg-success text-white text-xs font-bold">EE · Exceeding</span>;
       case 'ME':
         return <span className="px-2 py-0.5 rounded bg-primary text-white text-xs font-bold">ME · Meeting</span>;
       case 'AE':
@@ -234,18 +240,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         {!isTeacher && (
           <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
             {isBillingAuthorized && (
-              <button
-                type="button"
-                onClick={handleSyncFeeBalances}
-                disabled={isSyncingFees}
-                title="Authorize and attach ratified fee structures to enrolled learners missing invoices"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
-                  {isSyncingFees ? 'sync' : 'account_balance_wallet'}
-                </span>
-                <span>{isSyncingFees ? 'Authorizing & Syncing...' : 'Authorize & Sync Fee Balances'}</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBillingTargetStudent(null);
+                    setIsGenerateInvoiceModalOpen(true);
+                  }}
+                  title="Generate term fee invoices from grade fee structures (Individual Pupil or Cohort)"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white hover:bg-primary-container rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                  <span>Generate Invoices</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSyncFeeBalances}
+                  disabled={isSyncingFees}
+                  title="Authorize and attach ratified fee structures to enrolled learners missing invoices"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
+                    {isSyncingFees ? 'sync' : 'account_balance_wallet'}
+                  </span>
+                  <span>{isSyncingFees ? 'Authorizing & Syncing...' : 'Authorize & Sync Fee Balances'}</span>
+                </button>
+              </>
             )}
 
             <button
@@ -274,6 +295,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               <span>Archived Learners</span>
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setParentLinkingTargetStudent(null);
+                setIsParentLinkingModalOpen(true);
+              }}
+              title="Manage parent accounts, multi-learner linkages and Parent Portal access"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-on-surface hover:bg-surface-container border border-outline-variant/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">family_restroom</span>
+              <span>Parent Directory & Linking</span>
+            </button>
+
 
             <button
               type="button"
@@ -291,7 +325,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       {deletionFeedback && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[24px] text-emerald-600 shrink-0 mt-0.5">
+            <span className="material-symbols-outlined text-[24px] text-primary shrink-0 mt-0.5">
               archive
             </span>
             <div>
@@ -319,14 +353,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 }
                 setDeletionFeedback(null);
               }}
-              className="text-xs font-semibold px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg cursor-pointer transition-colors"
+              className="text-xs font-semibold px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg cursor-pointer transition-colors"
             >
               Open Archive Table
             </button>
             <button
               type="button"
               onClick={() => setDeletionFeedback(null)}
-              className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+              className="text-primary hover:text-on-primary-fixed p-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
@@ -490,7 +524,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                         <div className="font-semibold text-on-surface flex items-center gap-1.5">
                           <span>{s.name}</span>
                           {s.specialNeeds && s.specialNeeds.includes('Article 54') && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200" title={s.specialNeeds}>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary" title={s.specialNeeds}>
                               Art. 54 SNE
                             </span>
                           )}
@@ -510,14 +544,50 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <span className="text-xs text-on-surface-variant block">{s.stream ? `${s.stream} Stream` : 'Single Cohort'}</span>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-medium text-on-surface">{s.guardianName}</div>
-                    <div className="text-xs font-data-mono text-on-surface-variant">{s.guardianPhone}</div>
+                    {s.guardianName || s.guardianPhone ? (
+                      <div className="group/g flex items-start justify-between gap-1">
+                        <div>
+                          <div className="font-semibold text-xs text-on-surface">{s.guardianName || 'Guardian'}</div>
+                          <div className="text-[11px] font-data-mono text-primary font-bold">{s.guardianPhone}</div>
+                        </div>
+                        {!isTeacher && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setParentLinkingTargetStudent(s);
+                              setIsParentLinkingModalOpen(true);
+                            }}
+                            title={`Manage or switch linked parent for ${s.name}`}
+                            className="p-1 rounded text-slate-400 hover:text-primary hover:bg-rose-50 transition-colors opacity-70 group-hover/g:opacity-100 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">edit</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      !isTeacher ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParentLinkingTargetStudent(s);
+                            setIsParentLinkingModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-fixed text-on-primary-fixed border border-primary hover:bg-primary-fixed transition-colors cursor-pointer shadow-2xs"
+                          title={`Search and link a parent account to ${s.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-primary">link</span>
+                          <span>+ Link Parent</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Not Linked</span>
+                      )
+                    )}
                   </td>
                   <td className="py-3 px-4">{getRatingBadge(s.CBCRating)}</td>
                   
                   {isTeacher ? (
                     <td className="py-3 px-4 text-right">
-                      <span className="font-data-mono font-bold text-secondary">
+                      <span className="font-data-mono font-bold text-success">
                         {s.attendanceRate}% Present
                       </span>
                     </td>
@@ -530,14 +600,32 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           </div>
                           <span className="text-[11px] text-outline">due this term</span>
                         </div>
-                      ) : (s.totalFee || 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
+                      ) : ((s.creditBalance && s.creditBalance > 0) || s.feeBalance < 0) ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-on-primary-fixed bg-primary-fixed px-2 py-0.5 rounded-full border border-primary">
+                            <span className="material-symbols-outlined text-[13px]">savings</span> +KES {Math.abs(s.creditBalance || s.feeBalance).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-primary block mt-0.5">Advance Credit</span>
+                        </div>
+                      ) : ((s.totalFee || 0) > 0 || (s.hasInvoices && !s.isUnbilled)) ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
                           <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                          <span className="material-symbols-outlined text-[13px]">receipt_long</span> Pending Invoice
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isBillingAuthorized) {
+                              setBillingTargetStudent(s);
+                              setIsGenerateInvoiceModalOpen(true);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-surface-container-low hover:bg-primary-fixed hover:text-on-primary-fixed px-2 py-0.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
+                          title="Click to generate term fee invoice for this pupil"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                          <span>Unbilled</span>
+                        </button>
                       )}
                     </td>
                   )}
@@ -563,16 +651,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       <button
                         onClick={() => onOpenCBCWithStudent(s)}
                         title="Log CBE Rubric / Upload Marks"
-                        className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">rule</span>
                       </button>
+
+                      {isBillingAuthorized && (
+                        <button
+                          onClick={() => {
+                            setBillingTargetStudent(s);
+                            setIsGenerateInvoiceModalOpen(true);
+                          }}
+                          title={`Generate Term Fee Invoice for ${s.name} (${s.grade})`}
+                          className="p-1.5 rounded-lg text-primary hover:bg-primary-fixed transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                        </button>
+                      )}
 
                       {!isTeacher && s.feeBalance > 0 && (
                         <button
                           onClick={() => onOpenMpesaWithStudent(s)}
                           title="Record Fee Payment"
-                          className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                         </button>
@@ -580,6 +681,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
                       {!isTeacher && (
                         <>
+                          <button
+                            onClick={() => {
+                              setParentLinkingTargetStudent(s);
+                              setIsParentLinkingModalOpen(true);
+                            }}
+                            title={`Search & link parent or manage family connections for ${s.name}`}
+                            className="p-1.5 rounded-lg text-primary hover:bg-rose-50 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">family_restroom</span>
+                          </button>
                           <button
                             onClick={() => setPromotingStudent(s)}
                             title="Promote Learner to Next Grade & Carry Forward Balance"
@@ -624,6 +735,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         onGradeStudent={(st) => {
           setProfileStudent(null);
           onOpenCBCWithStudent(st);
+        }}
+        onManageParents={(st) => {
+          setProfileStudent(null);
+          setParentLinkingTargetStudent(st);
+          setIsParentLinkingModalOpen(true);
         }}
       />
 
@@ -674,11 +790,24 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         }}
       />
 
+      {/* Parent-to-Learner Linking & Directory Modal */}
+      <ParentLinkingModal
+        isOpen={isParentLinkingModalOpen}
+        onClose={() => {
+          setIsParentLinkingModalOpen(false);
+          setParentLinkingTargetStudent(null);
+        }}
+        preSelectedStudent={parentLinkingTargetStudent}
+        onLinksUpdated={async () => {
+          await onRefreshStudents?.();
+        }}
+      />
+
       {/* Learner Withdrawal or Archive & Delete Modal */}
       {studentToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
+            <div className="bg-primary text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-[24px]">
                   {exitActionType === 'withdraw' ? 'person_remove' : 'archive'}
@@ -840,7 +969,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   type="button"
                   onClick={exitActionType === 'withdraw' ? confirmWithdrawStudent : confirmDeleteStudent}
                   disabled={isDeleting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className={`material-symbols-outlined text-[16px] ${isDeleting ? 'animate-spin' : ''}`}>
                     {isDeleting ? 'progress_activity' : exitActionType === 'withdraw' ? 'person_remove' : 'archive'}
@@ -858,6 +987,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bulk & Individual Invoice Generator Modal */}
+      <GenerateInvoicesModal
+        isOpen={isGenerateInvoiceModalOpen}
+        onClose={() => {
+          setIsGenerateInvoiceModalOpen(false);
+          setBillingTargetStudent(null);
+        }}
+        onInvoicesGenerated={() => {
+          if (onRefreshStudents) onRefreshStudents();
+        }}
+        targetStudent={billingTargetStudent}
+        students={students}
+      />
 
     </div>
   );

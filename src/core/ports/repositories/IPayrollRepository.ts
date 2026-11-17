@@ -2,7 +2,7 @@ import { PayrollRecord, StaffLeave } from '../../domain/payroll/PayrollRecord';
 
 export interface IPayrollRepository {
   findPayrollById(id: string): Promise<PayrollRecord | null>;
-  findPayrollsByMonth(month: string, schoolId?: string): Promise<PayrollRecord[]>;
+  findPayrollsByMonth(month?: string, schoolId?: string): Promise<PayrollRecord[]>;
   findPayrollsByTeacher(teacherId: string): Promise<PayrollRecord[]>;
   savePayroll(record: PayrollRecord): Promise<void>;
   updatePayroll(record: PayrollRecord): Promise<void>;

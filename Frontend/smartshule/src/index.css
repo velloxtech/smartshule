@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-maroon: #7b1c35;
+  --color-maroon: #7a1228;
   --color-maroon-deep: #5a1226;
   --color-maroon-light: #9e2644;
   --color-maroon-pale: #f9eef1;
@@ -11,7 +11,7 @@
   --color-text: #0f172a;
   --color-muted: #64748b;
 
-  --color-primary: #800000;
+  --color-primary: #7a1228;
   --color-on-primary: #ffffff;
   --color-primary-container: #5c0a1a;
   --color-on-primary-container: #fce8ec;
@@ -20,23 +20,41 @@
   --color-on-primary-fixed: #40000e;
   --color-on-primary-fixed-variant: #660d20;
 
-  --color-secondary: #006a63;
+  --color-secondary: #754654;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #ccfbf1;
-  --color-on-secondary-container: #004d47;
-  --color-secondary-fixed: #9cf2e8;
-  --color-secondary-fixed-dim: #80d5cb;
-  --color-on-secondary-fixed: #00201d;
-  --color-on-secondary-fixed-variant: #00504a;
+  --color-secondary-container: #f9eef1;
+  --color-on-secondary-container: #4c1324;
+  --color-secondary-fixed: #fce8ec;
+  --color-secondary-fixed-dim: #f6bdc8;
+  --color-on-secondary-fixed: #40000e;
+  --color-on-secondary-fixed-variant: #660d20;
 
-  --color-tertiary: #5c2d00;
+  --color-tertiary: #65545c;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #ffedd5;
-  --color-on-tertiary-container: #7c2d12;
-  --color-tertiary-fixed: #ffdcc3;
-  --color-tertiary-fixed-dim: #ffb77d;
-  --color-on-tertiary-fixed: #2f1500;
-  --color-on-tertiary-fixed-variant: #6e3900;
+  --color-tertiary-container: #f3eef0;
+  --color-on-tertiary-container: #35242c;
+  --color-tertiary-fixed: #eee1e7;
+  --color-tertiary-fixed-dim: #d5c2cc;
+  --color-on-tertiary-fixed: #28141d;
+  --color-on-tertiary-fixed-variant: #513b46;
+
+  /* Semantic data colours are independent of brand/action colours. */
+  --color-success: #006a63;
+  --color-on-success: #ffffff;
+  --color-success-container: #ccfbf1;
+  --color-on-success-container: #004d47;
+  --color-success-fixed: #9cf2e8;
+  --color-success-fixed-dim: #80d5cb;
+  --color-on-success-fixed: #00201d;
+  --color-on-success-fixed-variant: #00504a;
+  --color-warning: #5c2d00;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #ffedd5;
+  --color-on-warning-container: #7c2d12;
+  --color-warning-fixed: #ffdcc3;
+  --color-warning-fixed-dim: #ffb77d;
+  --color-on-warning-fixed: #2f1500;
+  --color-on-warning-fixed-variant: #6e3900;
 
   --color-surface: #f3f5f8;
   --color-surface-dim: #dce2ec;
@@ -47,7 +65,7 @@
   --color-surface-container-high: #c5d0df;
   --color-surface-container-highest: #b2c0d4;
   --color-surface-variant: #eaedf4;
-  --color-surface-tint: #800000;
+  --color-surface-tint: #7a1228;
   --color-card-bg: #eaedf4;
 
   --color-on-surface: #0f172a;
@@ -57,7 +75,7 @@
   --color-inverse-primary: #f6bdc8;
 
   --color-outline: #475569;
-  --color-outline-variant: #64748b;
+  --color-outline-variant: #9b8792;
 
   --color-error: #dc2626;
   --color-on-error: #ffffff;
@@ -166,15 +184,15 @@
     overflow: hidden;
   }
   @media (min-width: 640px) {
+    .modal-dialog {
+      max-height: 88vh;
+      max-width: 32rem !important;
+    }
     .modal-dialog-sm { max-width: 24rem !important; }
     .modal-dialog-md { max-width: 28rem !important; }
     .modal-dialog-lg { max-width: 32rem !important; }
     .modal-dialog-xl { max-width: 40rem !important; }
     .modal-dialog-2xl { max-width: 48rem !important; }
-    .modal-dialog {
-      max-height: 88vh;
-      max-width: 32rem !important;
-    }
   }
 
   .font-display {
@@ -254,6 +272,11 @@
 }
 
 .material-symbols-outlined {
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  overflow: hidden;
+  flex-shrink: 0;
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
@@ -302,20 +325,39 @@
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Enhanced component visual contrast and elevation */
-.portal-card,
-[class*="bg-surface-container-lowest"] {
+/* Explicit card styling; utility variants and printable paper keep their own surfaces. */
+.portal-card {
   background-color: var(--color-surface-container-lowest);
   box-shadow: 0 1px 4px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
 }
 
-/* Ensure cards and components in main content area stand out with clear visual depth, without touching sidebar or topbar */
-main [class*="rounded-xl"].bg-white:not(button):not(input):not(select):not(textarea),
-main [class*="rounded-2xl"].bg-white:not(button):not(input):not(select):not(textarea),
-main [class*="rounded-3xl"].bg-white:not(button):not(input):not(select):not(textarea) {
-  background-color: var(--color-surface-container-lowest);
-  border-color: rgba(100, 116, 139, 0.28);
-  box-shadow: 0 1px 4px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+@layer components {
+  .ui-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ui-button-primary {
+    @apply border-primary bg-primary text-on-primary hover:border-primary-container hover:bg-primary-container;
+  }
+
+  .ui-button-danger {
+    @apply border-error/30 bg-error-container text-on-error-container hover:bg-error-container/70;
+  }
+
+  .ui-field {
+    @apply min-h-11 w-full rounded-lg border border-outline-variant/50 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+@layer base {
+  :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+    accent-color: var(--color-primary);
+  }
+
+  :where(button, a, input, select, textarea, summary, [role="button"]):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
 }
 
 @media print {
@@ -357,4 +399,36 @@ main [class*="rounded-3xl"].bg-white:not(button):not(input):not(select):not(text
     color: #000000 !important;
     text-shadow: none !important;
   }
+}
+
+/* Mobile Safe Area & Native Touch Optimizations */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* Prevent accidental text selection when clicking buttons or rapid navigation on mobile touchscreens */
+button, [role="button"], a {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Ensure mobile scroll containers feel native */
+.overflow-x-auto, .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
 }

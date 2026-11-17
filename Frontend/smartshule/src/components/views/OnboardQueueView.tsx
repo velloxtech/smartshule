@@ -478,7 +478,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
       {/* Top Banner Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950 via-amber-900 to-[#5a1226] p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-primary-container p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -510,14 +510,14 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
               <>
                 <button
                   onClick={() => onNavigateTab('slot-applications')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">event_available</span>
                   <span>Slot Applications</span>
                 </button>
                 <button
                   onClick={() => onNavigateTab('students-guardians')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-[#5a1226] hover:bg-amber-50 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-primary-container hover:bg-primary-fixed rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">group</span>
                   <span>Active Learners Directory</span>
@@ -530,7 +530,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
 
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-amber-200 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-amber-200 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Pending Review</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-amber-950">{pendingCount}</span>
@@ -538,7 +538,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-emerald-200 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-emerald-200 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">Approved & Enrolled</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-emerald-950">{approvedCount}</span>
@@ -546,7 +546,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-rose-200 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-rose-200 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-rose-800">Revision Required</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-rose-950">{rejectedCount}</span>
@@ -554,7 +554,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Total Submissions</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-data-mono text-on-surface">{applications.length}</span>
@@ -588,7 +588,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
       )}
 
       {/* Filters & Search Toolbar */}
-      <div className="bg-white rounded-2xl border border-outline-variant/30 p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((status) => {
@@ -607,7 +607,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                 onClick={() => setFilterStatus(status)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-[#5a1226] text-white shadow-xs'
+                    ? 'bg-primary-container text-white shadow-xs'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
@@ -657,7 +657,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
 
       {/* Applications Cards Grid */}
       {filteredApps.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-outline-variant/30">
+        <div className="text-center py-20 bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
           <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-3 text-on-surface-variant">
             <span className="material-symbols-outlined text-[32px]">inbox</span>
           </div>
@@ -673,7 +673,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
           {filteredApps.map((app) => (
             <div
               key={app.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between bg-white shadow-xs hover:shadow-md ${
+              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between bg-surface-container-lowest shadow-xs hover:shadow-md ${
                 app.status === 'PENDING'
                   ? 'border-amber-300 hover:border-amber-500'
                   : app.status === 'APPROVED'
@@ -702,7 +702,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                 <h4 className="font-bold text-base text-on-surface">
                   {app.firstName} {app.middleName ? app.middleName + ' ' : ''}{app.lastName}
                 </h4>
-                <p className="text-xs font-semibold text-[#5a1226] mt-0.5">
+                <p className="text-xs font-semibold text-primary-container mt-0.5">
                   {app.targetGrade} · {app.entryTerm}
                 </p>
 
@@ -733,7 +733,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                     <div className="mt-2.5 p-2 bg-amber-500/10 border border-amber-300 rounded-xl text-xs space-y-1">
                       <div className="flex items-center justify-between gap-1">
                         <span className="font-bold text-amber-950 truncate flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[15px] text-amber-800">event</span>
+                          <span className="material-symbols-outlined text-[15px] text-on-primary-fixed">event</span>
                           <span>{app.scheduledStep.stepTitle}</span>
                         </span>
                         <span className="text-[9px] uppercase font-bold text-amber-900 bg-amber-200/80 px-1.5 py-0.2 rounded shrink-0">
@@ -777,12 +777,12 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                     onClick={() => openScheduleModal(app)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 border ${
                       app.scheduledStep
-                        ? 'bg-amber-100/80 text-amber-900 border-amber-300 hover:bg-amber-200'
-                        : 'bg-white text-[#5a1226] border-[#5a1226]/30 hover:bg-[#5a1226]/5'
+                        ? 'bg-primary-fixed/80 text-on-primary-fixed border-primary hover:bg-primary-fixed-dim'
+                        : 'bg-white text-primary-container border-primary-container/30 hover:bg-primary-container/5'
                     }`}
                     title="Schedule school tour or readiness assessment"
                   >
-                    <span className="material-symbols-outlined text-[15px] text-amber-800">calendar_month</span>
+                    <span className="material-symbols-outlined text-[15px] text-on-primary-fixed">calendar_month</span>
                     <span>{app.scheduledStep ? 'Reschedule' : 'Schedule Step'}</span>
                   </button>
                 </div>
@@ -805,7 +805,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                         setSelectedApp(app);
                         setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">check_circle</span>
                       <span>Ratify</span>
@@ -816,7 +816,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleSyncToDatabase(app)}
-                    className="px-2.5 py-1.5 rounded-lg text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-1.5 rounded-lg text-primary hover:bg-primary-fixed text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[15px]">sync</span>
                     <span>Re-sync DB</span>
@@ -893,9 +893,9 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
               <div className="bg-amber-500/10 border border-amber-300 rounded-2xl p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px] text-amber-800">event_available</span>
+                    <span className="material-symbols-outlined text-[20px] text-on-primary-fixed">event_available</span>
                     <div>
-                      <h5 className="font-bold text-amber-950 text-xs uppercase tracking-wider">
+                      <h5 className="font-bold text-on-primary-fixed text-xs uppercase tracking-wider">
                         Step 02: Learner Interaction & School Tour Scheduling
                       </h5>
                       <p className="text-[11px] text-amber-900/80">
@@ -906,7 +906,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                   <button
                     type="button"
                     onClick={() => openScheduleModal(selectedApp)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0 self-start sm:self-auto"
+                    className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0 self-start sm:self-auto"
                   >
                     <span className="material-symbols-outlined text-[15px]">calendar_month</span>
                     <span>{selectedApp.scheduledStep ? 'Reschedule Appointment' : 'Schedule Step 02'}</span>
@@ -993,7 +993,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
 
               {selectedApp.status === 'PENDING' ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
-                  <h5 className="font-bold text-emerald-900 text-xs uppercase tracking-wider">
+                  <h5 className="font-bold text-on-primary-fixed text-xs uppercase tracking-wider">
                     Administrative Ratification & Database Enrolment
                   </h5>
                   <p className="text-xs text-emerald-950">
@@ -1013,7 +1013,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                         value={customAdmNo}
                         onChange={(e) => setCustomAdmNo(e.target.value)}
                         placeholder="e.g. 01, 02"
-                        className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none"
+                        className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs font-mono font-bold text-on-primary-fixed focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1021,7 +1021,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                       <select
                         value={streamAssignment}
                         onChange={(e) => setStreamAssignment(e.target.value)}
-                        className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs focus:outline-none"
+                        className="w-full bg-surface border border-primary rounded-lg px-3 py-2 text-xs focus:outline-none"
                       >
                         <option value="East">East</option>
                         <option value="West">West</option>
@@ -1032,12 +1032,12 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                   </div>
                 </div>
               ) : selectedApp.status === 'APPROVED' ? (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-3">
+                <div className="p-4 bg-primary-fixed border border-primary rounded-2xl flex items-center justify-between gap-3">
                   <div>
                     <h5 className="font-bold text-blue-900 text-xs uppercase tracking-wider">
                       Approved Learner Status
                     </h5>
-                    <p className="text-xs text-blue-950 mt-0.5">
+                    <p className="text-xs text-on-primary-fixed mt-0.5">
                       Assigned Admission Number: <strong>{selectedApp.assignedAdmNo || 'Pending'}</strong>.
                       Reviewed by {selectedApp.reviewedBy} ({selectedApp.reviewerRole}).
                     </p>
@@ -1046,7 +1046,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleSyncToDatabase(selectedApp)}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-[16px]">sync</span>
                     <span>Sync to DB</span>
@@ -1077,7 +1077,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleApprove(selectedApp)}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[18px]">verified</span>
                     <span>{isProcessing ? 'Enrolling & Sending Email...' : 'Approve, Enrol & Send Email'}</span>
@@ -1168,9 +1168,9 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
           <div className="bg-surface rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-amber-300 overflow-hidden">
             <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between bg-amber-500/10">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[22px] text-amber-800">event_available</span>
+                <span className="material-symbols-outlined text-[22px] text-on-primary-fixed">event_available</span>
                 <div>
-                  <h4 className="font-bold text-sm text-amber-950">
+                  <h4 className="font-bold text-sm text-on-primary-fixed">
                     Schedule Admission Step / Interaction
                   </h4>
                   <p className="text-[11px] text-amber-900/80 font-mono">
@@ -1220,7 +1220,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                       key={item.type}
                       className={`p-3 rounded-xl border flex flex-col justify-between cursor-pointer transition-all ${
                         stepType === item.type
-                          ? 'border-[#5a1226] bg-[#5a1226]/5 text-[#5a1226] font-bold shadow-2xs'
+                          ? 'border-primary-container bg-primary-container/5 text-primary-container font-bold shadow-2xs'
                           : 'border-outline-variant/30 hover:bg-surface-container-low text-on-surface-variant'
                       }`}
                     >
@@ -1231,7 +1231,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                           value={item.type}
                           checked={stepType === item.type}
                           onChange={() => handleStepTypeChange(item.type)}
-                          className="mt-0.5 text-[#5a1226] focus:ring-[#5a1226]"
+                          className="mt-0.5 text-primary-container focus:ring-primary-container"
                         />
                         <span className="text-xs leading-snug">{item.title}</span>
                       </div>
@@ -1337,7 +1337,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
               </div>
 
               <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
-                <span className="material-symbols-outlined text-[16px] text-amber-800 shrink-0 mt-0.5">mail</span>
+                <span className="material-symbols-outlined text-[16px] text-on-primary-fixed shrink-0 mt-0.5">mail</span>
                 <span>Saving this schedule will record the appointment and immediately dispatch a formal confirmation email with appointment details to parent <strong>{schedulingApp.parentEmail}</strong>.</span>
               </div>
 
@@ -1351,7 +1351,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
                   <span>Confirm Schedule & Dispatch Notice</span>

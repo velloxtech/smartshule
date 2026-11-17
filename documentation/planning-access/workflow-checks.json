@@ -1,0 +1,93 @@
+[
+  {
+    "actor": "planning-teacher",
+    "path": "planning-create-lesson-export-teaching-record",
+    "width": 390,
+    "mainLength": 100,
+    "overflow": false,
+    "errors": [],
+    "failures": [],
+    "pdfBytes": 16200
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 5481,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 5481,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 5481,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 5413,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 5413,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 5413,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  }
+]

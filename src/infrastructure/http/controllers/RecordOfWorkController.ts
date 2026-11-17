@@ -10,6 +10,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { RecordOfWorkFilterCriteria } from '../../../core/ports/repositories/IRecordOfWorkRepository';
 
 export const CreateRecordOfWorkSchema = z.object({
+  planningLink: z.object({lessonPlanId:z.string().optional(),schemeId:z.string(),schemeEntryId:z.string(),slotId:z.string()}).optional(),
   schoolId: z.string().optional(),
   teacherId: z.string().optional(),
   teacherName: z.string().optional(),
@@ -44,6 +45,9 @@ export const CreateRecordOfWorkSchema = z.object({
   reflection: z.string().optional(),
   reflectionData: z
     .object({
+      teachingStatus: z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).optional(),
+      outcomesCovered: z.array(z.string()).optional(),
+      remainingWork: z.string().optional(),
       comprehensionLevel: z.enum(['EXCELLENT', 'GOOD', 'AVERAGE', 'BELOW_AVERAGE', 'POOR']).optional(),
       whatWentWell: z.string().optional(),
       challengesFaced: z.string().optional(),
@@ -71,6 +75,8 @@ export const OverrideProgressionSchema = z.object({
   reason: z.string().min(5, 'Progression override reason must be at least 5 characters long'),
   status: z.enum(['EXEMPTED', 'RESCHEDULED']).optional()
 });
+
+export const NoInstructionExemptionSchema = z.object({reason:z.string().trim().min(5,'Explain why no instruction took place (at least 5 characters).').max(1000)});
 
 export class RecordOfWorkController {
   constructor(private useCases: RecordOfWorkUseCases) {}
@@ -208,6 +214,15 @@ export class RecordOfWorkController {
     }
   };
 
+  exemptPreviousWeekForNoInstruction = async (req:AuthenticatedRequest,res:Response,next:NextFunction)=>{
+    try{
+      const user=this.extractUserContext(req);
+      const {reason}=NoInstructionExemptionSchema.parse(req.body);
+      const result=await this.useCases.exemptPreviousWeekForNoInstruction(String(req.params.id),reason,user);
+      res.status(200).json({success:true,message:`Week ${result.weekNumber} marked exempt because no instruction took place.`,data:result});
+    }catch(error:any){next(error);}
+  };
+
   delete = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id as string;
@@ -225,7 +240,7 @@ export class RecordOfWorkController {
       const schoolId = (req.query.schoolId as string) || user.schoolId;
       const term = req.query.term as string;
       const academicYear = req.query.academicYear as string;
-      const summary = await this.useCases.getCurriculumProgressSummary(schoolId, term, academicYear);
+      const summary = await this.useCases.getCurriculumProgressSummary(schoolId, term, academicYear, (req as any).canAccessTeachingRecord);
       res.status(200).json({ success: true, data: summary });
     } catch (error: any) {
       next(error);

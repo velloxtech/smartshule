@@ -1,3 +1,5 @@
+import {TeacherAssignmentAccess} from '../shared/TeacherAssignmentAccess';
+import { assessmentScore, assessmentResults } from '../../core/domain/cbc/AssessmentScore';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
@@ -206,6 +208,16 @@ const CANONICAL_ORDER = [
   'IND'
 ];
 
+// Pre-fetched shared context to avoid N+1 queries across evaluateSingleStream calls
+interface SharedBroadsheetContext {
+  allSummatives: any[];
+  allReportCards: any[];
+  allStudents: any[];
+  allLearningAreas: any[];
+  summativesByStudent: Map<string, any[]>;
+  reportCardsByStudent: Map<string, any>;
+}
+
 export class BroadsheetUseCases {
   constructor(
     private readonly academicRepository: IAcademicRepository,
@@ -215,32 +227,12 @@ export class BroadsheetUseCases {
   ) {}
 
   public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string, requestingUser?: UserContext) {
-    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      if (this.teacherRepository) {
-        let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
-        if (!teacher) teacher = await this.teacherRepository.findById(requestingUser.userId);
-        if (teacher) {
-          const assignedClasses = new Set<string>();
-          const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
-          try {
-            const ctas = await this.academicRepository.findClassTeacherAssignments({ teacherId: teacher.id, isActive: true });
-            for (const a of ctas) {
-              if (a.classRoomId) assignedClasses.add(a.classRoomId);
-              if (a.streamId) assignedStreams.add(a.streamId);
-            }
-          } catch {}
-          try {
-            const stas = await this.academicRepository.findSubjectTeacherAssignments({ teacherId: teacher.id, isActive: true });
-            for (const s of stas) {
-              if (s.classRoomId) assignedClasses.add(s.classRoomId);
-              if (s.streamId) assignedStreams.add(s.streamId);
-            }
-          } catch {}
-          if (!assignedClasses.has(classId) && !assignedStreams.has(classId)) {
-            throw new ForbiddenError('Access denied: You are not authorized to view analytics for this class.');
-          }
-        }
-      }
+    if(requestingUser?.role===UserRole.TEACHER){
+      if(!this.teacherRepository)throw new ForbiddenError('Teaching assignments cannot be verified.');
+      const access=new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+      const streams=await this.academicRepository.findStreamsByClass(classId);
+      const scopes=[{classRoomId:classId,academicYearId,termId},...streams.map(stream=>({classRoomId:classId,streamId:stream.id,academicYearId,termId}))];
+      if(!(await Promise.all(scopes.map(scope=>access.can(requestingUser,scope)))).some(Boolean))throw new ForbiddenError('No active assignment permits this class.');
     }
 
     const allClasses = await this.academicRepository.findAllClasses();
@@ -267,58 +259,6 @@ export class BroadsheetUseCases {
       query.streamId.toLowerCase().startsWith('all_') ||
       query.streamId.toLowerCase().startsWith('all-');
 
-    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      if (!this.teacherRepository) {
-        throw new ForbiddenError('Teacher repository unavailable to verify permissions.');
-      }
-      let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
-      if (!teacher) {
-        teacher = await this.teacherRepository.findById(requestingUser.userId);
-      }
-      if (!teacher) {
-        throw new ForbiddenError('No teacher profile associated with your account.');
-      }
-
-      const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
-      const assignedClasses = new Set<string>();
-
-      try {
-        const ctas = await this.academicRepository.findClassTeacherAssignments({
-          teacherId: teacher.id,
-          isActive: true
-        });
-        for (const a of ctas) {
-          if (a.streamId) assignedStreams.add(a.streamId);
-          if (a.classRoomId) assignedClasses.add(a.classRoomId);
-        }
-      } catch {}
-
-      try {
-        const stas = await this.academicRepository.findSubjectTeacherAssignments({
-          teacherId: teacher.id,
-          isActive: true
-        });
-        for (const s of stas) {
-          if (s.streamId) assignedStreams.add(s.streamId);
-          if (s.classRoomId) assignedClasses.add(s.classRoomId);
-        }
-      } catch {}
-
-      const matchesStream = query.streamId && (assignedStreams.has(query.streamId) || assignedClasses.has(query.streamId));
-      const matchesClass = query.classId && assignedClasses.has(query.classId);
-
-      let matchesAllClass = false;
-      if (isAllStreams) {
-        const targetClassId = query.classId || (query.streamId.includes('_') ? query.streamId.split('_')[1] : undefined);
-        if (targetClassId && assignedClasses.has(targetClassId)) {
-          matchesAllClass = true;
-        }
-      }
-
-      if (!matchesStream && !matchesClass && !matchesAllClass) {
-        throw new ForbiddenError('Access denied: You are not authorized to view the broadsheet for this stream or class.');
-      }
-    }
 
     const allClasses = typeof this.academicRepository.findAllClasses === 'function'
       ? await this.academicRepository.findAllClasses()
@@ -527,32 +467,53 @@ export class BroadsheetUseCases {
       }
     }
 
-    // Ensure all examination subjects with saved marks for this cohort are included in canonicalMap
+    // ─── PERFORMANCE: Pre-fetch ALL data once for the entire request ─────────────
+    // This eliminates N+1 queries across evaluateSingleStream() calls.
     const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
-    let cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId }).catch(() => []);
-    if (!cohortSummatives || cohortSummatives.length === 0) {
-      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId }).catch(() => []);
-    }
-    if (!cohortSummatives || cohortSummatives.length === 0) {
-      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId }).catch(() => []);
-    }
 
-    let cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId).catch(() => []);
-    if (!cohortReportCards || cohortReportCards.length === 0) {
-      cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId).catch(() => []);
+    const [prefetchedSummatives, prefetchedReportCards, prefetchedAllStudents] = await Promise.all([
+      (async () => {
+        let s = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId }).catch(() => []);
+        if (!s || s.length === 0) s = await this.CBCAssessmentRepository.findSummatives({ termId }).catch(() => []);
+        if (!s || s.length === 0) s = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId }).catch(() => []);
+        return s;
+      })(),
+      (async () => {
+        let rc = await this.CBCAssessmentRepository.findReportCardsByTerm(termId).catch(() => []);
+        if (!rc || rc.length === 0) rc = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId).catch(() => []);
+        return rc;
+      })(),
+      this.studentRepository.findAll({}).catch(() => [])
+    ]);
+
+    const cohortSummatives = prefetchedSummatives;
+    const cohortReportCards = prefetchedReportCards;
+
+    // Build shared context for downstream evaluateSingleStream calls
+    const sharedCtx: SharedBroadsheetContext = {
+      allSummatives: prefetchedSummatives,
+      allReportCards: prefetchedReportCards,
+      allStudents: prefetchedAllStudents,
+      allLearningAreas,
+      summativesByStudent: new Map(),
+      reportCardsByStudent: new Map(prefetchedReportCards.map((rc: any) => [rc.studentId, rc]))
+    };
+    for (const s of prefetchedSummatives) {
+      if (!sharedCtx.summativesByStudent.has(s.studentId)) {
+        sharedCtx.summativesByStudent.set(s.studentId, []);
+      }
+      sharedCtx.summativesByStudent.get(s.studentId)!.push(s);
     }
 
     // Cohort student IDs to ensure we include subjects assessed for this class/grade
     let cohortStudentIds: Set<string> | null = null;
     if (classRoom?.id) {
-      const cohortStudents = await this.studentRepository.findAll({ classroomId: classRoom.id }).catch(() => []);
-      if (cohortStudents && cohortStudents.length > 0) {
-        cohortStudentIds = new Set(cohortStudents.map(s => s.id));
-      } else if (classRoom.gradeLevel) {
-        const gradeStudents = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any }).catch(() => []);
-        if (gradeStudents && gradeStudents.length > 0) {
-          cohortStudentIds = new Set(gradeStudents.map(s => s.id));
-        }
+      const cohortStudents = prefetchedAllStudents.filter(
+        (s: any) => s.classroomId === classRoom.id ||
+          (classRoom.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'))
+      );
+      if (cohortStudents.length > 0) {
+        cohortStudentIds = new Set(cohortStudents.map((s: any) => s.id));
       }
     }
 
@@ -599,6 +560,18 @@ export class BroadsheetUseCases {
     }
 
     let learningAreas = Array.from(canonicalMap.values());
+    const teacherAccess=requestingUser?.role===UserRole.TEACHER;
+    const assignmentAccess=this.teacherRepository?new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository):null;
+    const visibilityCache=new Map<string,Promise<boolean>>();
+    const visibleAreas=async <T extends {id:string;name:string}>(clsId:string,streamId:string|undefined,areas:T[]):Promise<T[]>=>{
+      if(!teacherAccess)return areas;
+      if(!assignmentAccess||!requestingUser)throw new ForbiddenError('Teaching assignments cannot be verified.');
+      const allowed:T[]=[];
+      for(const area of areas){const scope={classRoomId:clsId,streamId,learningAreaId:area.id,academicYearId,termId};const key=JSON.stringify(scope);if(!visibilityCache.has(key))visibilityCache.set(key,assignmentAccess.can(requestingUser,scope));if(await visibilityCache.get(key))allowed.push(area);}
+      return allowed;
+    };
+    if(teacherAccess&&stream){learningAreas=await visibleAreas(classRoom.id,stream.id,learningAreas);if(!learningAreas.length)throw new ForbiddenError('No active assignment permits this broadsheet.');}
+
 
     // 4. Streams for selected class
     let streamsToCompare = classRoom ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
@@ -614,12 +587,20 @@ export class BroadsheetUseCases {
       }
     }
 
-    // Evaluate target class streams
-    const allStreamResults: StreamSection[] = [];
-    for (const s of streamsToCompare) {
-      const evaluated = await this.evaluateSingleStream(s, classRoom, termId, academicYearId, learningAreas);
-      allStreamResults.push(evaluated);
+    if(teacherAccess){
+      const allowed=[];
+      for(const candidate of streamsToCompare){if(stream&&candidate.id!==stream.id)continue;if((await visibleAreas(classRoom.id,candidate.id===classRoom.id?undefined:candidate.id,learningAreas)).length)allowed.push(candidate);}
+      streamsToCompare=allowed;
+      const visibleIds=new Set<string>();
+      for(const candidate of streamsToCompare)for(const area of await visibleAreas(classRoom.id,candidate.id===classRoom.id?undefined:candidate.id,learningAreas))visibleIds.add(area.id);
+      learningAreas=learningAreas.filter(area=>visibleIds.has(area.id));
+      if(!streamsToCompare.length)throw new ForbiddenError('No active assignment permits this broadsheet.');
     }
+
+    // Evaluate target class streams (parallel, using shared pre-fetched context)
+    const allStreamResults: StreamSection[] = await Promise.all(
+      streamsToCompare.map(async s => this.evaluateSingleStream(s, classRoom, termId, academicYearId, await visibleAreas(classRoom.id,s.id===classRoom.id?undefined:s.id,learningAreas), sharedCtx))
+    );
 
     const allClassRows: BroadsheetRow[] = [];
     allStreamResults.forEach(sr => {
@@ -722,9 +703,8 @@ export class BroadsheetUseCases {
     // ==========================================
     // 5. SCHOOL-WIDE ANALYTICS COMPUTATION
     // ==========================================
-    const allSchoolLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
-      ? await this.academicRepository.findAllLearningAreas()
-      : [];
+    // Reuse already-fetched allLearningAreas instead of refetching
+    const allSchoolLearningAreas = teacherAccess?[]:allLearningAreas;
     const schoolAllLearningAreasMap = new Map<string, { id: string; name: string }>();
     allSchoolLearningAreas.forEach(la => {
       schoolAllLearningAreasMap.set(la.id, { id: la.id, name: la.name });
@@ -733,20 +713,27 @@ export class BroadsheetUseCases {
     const schoolSections: StreamSection[] = [];
     const allSchoolStudentsRows: BroadsheetRow[] = [];
 
-    for (const cls of allClasses) {
-      let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
-      if (!clsStreams || clsStreams.length === 0) {
-        clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
-      }
+    // Fetch all streams for all classes in parallel
+    const clsLearningAreasList = allSchoolLearningAreas.map(la => ({ id: la.id, name: la.name }));
+    const allClsStreamsArr = await Promise.all(
+      (teacherAccess?[]:allClasses).map(async cls => {
+        let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
+        if (!clsStreams || clsStreams.length === 0) {
+          clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
+        }
+        return { cls, clsStreams };
+      })
+    );
 
-      const clsLearningAreas = allSchoolLearningAreas
-        .map(la => ({ id: la.id, name: la.name }));
-
-      for (const stm of clsStreams) {
-        const sec = await this.evaluateSingleStream(stm, cls, termId, academicYearId, clsLearningAreas);
-        schoolSections.push(sec);
-        allSchoolStudentsRows.push(...sec.rows);
-      }
+    // Evaluate all streams in parallel, using shared pre-fetched context
+    const schoolEvalResults = await Promise.all(
+      allClsStreamsArr.flatMap(({ cls, clsStreams }) =>
+        clsStreams.map(stm => this.evaluateSingleStream(stm, cls, termId, academicYearId, clsLearningAreasList, sharedCtx))
+      )
+    );
+    for (const sec of schoolEvalResults) {
+      schoolSections.push(sec);
+      allSchoolStudentsRows.push(...sec.rows);
     }
 
     // Assign school-wide rank to all learners in the entire institution
@@ -962,29 +949,48 @@ export class BroadsheetUseCases {
     classRoom: any,
     termId: string,
     academicYearId: string,
-    learningAreas: Array<{ id: string; name: string }>
+    learningAreas: Array<{ id: string; name: string }>,
+    ctx?: SharedBroadsheetContext
   ): Promise<StreamSection> {
     let students: Student[] = [];
-    if (stream && stream.id !== classRoom?.id) {
-      students = await this.studentRepository.findAll({ streamId: stream.id });
-      if (!students || students.length === 0) {
-        const allInClass = classRoom?.id ? await this.studentRepository.findAll({ classroomId: classRoom.id }) : [];
-        students = allInClass.filter(s => s.streamId === stream.id);
-      }
-      if (!students || students.length === 0) {
-        const allStreamsInClass = classRoom?.id ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
-        if (allStreamsInClass.length <= 1) {
-          const unassigned = await this.studentRepository.findAll({ gradeLevel: classRoom?.gradeLevel as any });
-          students = unassigned.filter(s => !s.streamId || s.streamId === stream.id);
+
+    // Use pre-fetched students from context when available to avoid extra DB calls
+    if (ctx) {
+      const classStreams = classRoom?.id
+        ? await this.academicRepository.findStreamsByClass(classRoom.id)
+        : [];
+      const clsStudents = ctx.allStudents.filter(s => {
+        const belongsToClass = s.classroomId
+          ? s.classroomId === classRoom?.id
+          : Boolean(classRoom?.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'));
+        if (stream && stream.id !== classRoom?.id) {
+          return s.streamId === stream.id || (!s.streamId && classStreams.length <= 1 && belongsToClass);
         }
-      }
-    } else if (classRoom?.id) {
-      students = await this.studentRepository.findAll({ classroomId: classRoom.id });
-      if ((!students || students.length === 0) && classRoom.gradeLevel) {
+        return belongsToClass;
+      });
+      students = clsStudents as unknown as Student[];
+    } else {
+      if (stream && stream.id !== classRoom?.id) {
+        students = await this.studentRepository.findAll({ streamId: stream.id });
+        if (!students || students.length === 0) {
+          const allInClass = classRoom?.id ? await this.studentRepository.findAll({ classroomId: classRoom.id }) : [];
+          students = allInClass.filter(s => s.streamId === stream.id);
+        }
+        if (!students || students.length === 0) {
+          const allStreamsInClass = classRoom?.id ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
+          if (allStreamsInClass.length <= 1) {
+            const unassigned = await this.studentRepository.findAll({ gradeLevel: classRoom?.gradeLevel as any });
+            students = unassigned.filter(s => !s.streamId || s.streamId === stream.id);
+          }
+        }
+      } else if (classRoom?.id) {
+        students = await this.studentRepository.findAll({ classroomId: classRoom.id });
+        if ((!students || students.length === 0) && classRoom.gradeLevel) {
+          students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
+        }
+      } else if (classRoom?.gradeLevel) {
         students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
       }
-    } else if (classRoom?.gradeLevel) {
-      students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
     }
 
     // Strict active student filter: Only ACTIVE students are eligible for academic ranking
@@ -993,35 +999,44 @@ export class BroadsheetUseCases {
       return st === StudentStatus.ACTIVE || st === 'ACTIVE' || st === 'Active' || !st;
     });
 
-    const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
+    // Use pre-fetched summatives and report cards from shared context
+    let summatives: any[];
+    let reportCardsByStudent: Map<string, any>;
+    let allLearningAreas: any[];
 
-    let summatives = await this.CBCAssessmentRepository.findSummatives({
-      termId,
-      academicYearId
-    });
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId });
-    }
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
+    if (ctx) {
+      summatives = ctx.allSummatives;
+      reportCardsByStudent = ctx.reportCardsByStudent;
+      allLearningAreas = ctx.allLearningAreas;
+    } else {
+      const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
+
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId });
+      if (!summatives || summatives.length === 0) {
+        summatives = await this.CBCAssessmentRepository.findSummatives({ termId });
+      }
+      if (!summatives || summatives.length === 0) {
+        summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
+      }
+
+      let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId);
+      }
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
+      }
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
+      }
+      reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
+
+      allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
+        ? await this.academicRepository.findAllLearningAreas()
+        : [];
     }
 
-    let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
-    }
-    const reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
-
-    const allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
-      ? await this.academicRepository.findAllLearningAreas()
-      : [];
-
+    summatives = assessmentResults(summatives.map(s => typeof s.toJSON === 'function' ? s.toJSON() : s));
     const summativeMap = new Map<string, any>();
     for (const s of summatives) {
       summativeMap.set(`${s.studentId}_${s.learningAreaId}`, s);
@@ -1093,17 +1108,17 @@ export class BroadsheetUseCases {
         let level: PerformanceLevel = PerformanceLevel.BELOW_EXPECTATIONS;
         let score = 0;
 
-        if (rcScore) {
-          level = rcScore.performanceLevel;
-          score = rcScore.rawScore !== undefined && rcScore.rawScore !== null
-            ? rcScore.rawScore
-            : (rcScore.score !== undefined ? rcScore.score : this.scoreFromLevel(level));
-          hasEvaluation = true;
-        } else if (s) {
+        if (s) {
           level = s.overallPerformanceLevel;
-          const rawSum = s.strandScores?.reduce((acc: number, cur: any) => acc + (cur.rawScore ?? cur.score ?? 0), 0) || 0;
-          const count = s.strandScores?.length || 1;
-          score = Math.round(rawSum / count) || this.scoreFromLevel(level);
+          const calculated = assessmentScore(s.strandScores);
+          if (!s.scoreIssue && !calculated.scoreIssue) {
+            score = calculated.percentageScore ?? this.scoreFromLevel(level);
+            hasEvaluation = true;
+          }
+        } else if (rcScore) {
+          level = rcScore.performanceLevel;
+          // Report score is already a percentage. rawScore has a different unit.
+          score = rcScore.score !== undefined ? rcScore.score : this.scoreFromLevel(level);
           hasEvaluation = true;
         }
 

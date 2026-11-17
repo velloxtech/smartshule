@@ -1,0 +1,4051 @@
+{
+  "testedAt": "2026-11-12/13",
+  "environment": "isolated local PostgreSQL, application localhost:3019",
+  "scope": "Navigation/layout smoke checks; external service mutations not exercised",
+  "checks": [
+    {
+      "role": "Admin",
+      "route": "dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "dashboard",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admissions-dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admissions-dashboard",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admissions-dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admit-learner",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admit-learner",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admit-learner",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "slot-applications",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "slot-applications",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "slot-applications",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-queue",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-queue",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-queue",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "application-review",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "application-review",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "application-review",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admission-reports",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admission-reports",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "admission-reports",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-directory",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-directory",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-directory",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-staff",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-staff",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "onboard-staff",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "teachers-staff",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "teachers-staff",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "teachers-staff",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "non-teaching-staff",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "non-teaching-staff",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "non-teaching-staff",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-verifications",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-verifications",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "staff-verifications",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "geofencing",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "geofencing",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "geofencing",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "report-cards",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "report-cards",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "report-cards",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "timetable",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Admin",
+      "route": "timetable",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Admin",
+      "route": "timetable",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Admin",
+      "route": "library",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "library",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "library",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "student-fee-search",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "student-fee-search",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "student-fee-search",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-structure",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-structure",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-structure",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "forwarded-payments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "forwarded-payments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "forwarded-payments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "arrears",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "arrears",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "arrears",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "expenses-management",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "expenses-management",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "expenses-management",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "financial-reports",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "financial-reports",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "financial-reports",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-deadline-banner",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-deadline-banner",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "fee-deadline-banner",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "payroll",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "payroll",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "payroll",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "sponsored-students",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "sponsored-students",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "sponsored-students",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "lunch-fee-management",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "lunch-fee-management",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "lunch-fee-management",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "clinic",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "clinic",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "clinic",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "discipline",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "discipline",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "discipline",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "inventory",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "inventory",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "inventory",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "announcements",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "announcements",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "announcements",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "ediary",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "ediary",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "ediary",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "whatsapp-bot",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "whatsapp-bot",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "whatsapp-bot",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "concerns",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "concerns",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "concerns",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "user-management",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "user-management",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "user-management",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "system-logs",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "system-logs",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "system-logs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "document-signing",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "document-signing",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "document-signing",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "consent-management",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "consent-management",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "consent-management",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Admin",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "dashboard",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "teacher-profile",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "teacher-profile",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "teacher-profile",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "salary-acknowledgement",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "students-guardians",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "geofencing",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "geofencing",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "geofencing",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "classes-streams",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "learning-areas",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "summative-assessments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "competencies-strands",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "report-cards",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "report-cards",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "report-cards",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "CBC-analytics",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "analytics loading recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "broadsheets",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "schemes-lesson-plans",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "records-of-work",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "curriculum-tracker",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "timetable",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "timetable",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "timetable",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "library",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "library",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "library",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "clinic",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "clinic",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "clinic",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "discipline",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "discipline",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "discipline",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "occurrence-records",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "announcements",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "announcements",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "announcements",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "ediary",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "ediary",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "ediary",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "document-signing",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "document-signing",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "document-signing",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Teacher",
+      "route": "digital-signature",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "dashboard",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-profile",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "parent-consent",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "formative-assessments",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "focused responsive recheck",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "report-cards",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "report-cards",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "report-cards",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "timetable",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Parent",
+      "route": "timetable",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Parent",
+      "route": "timetable",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        },
+        {
+          "path": "/api/v1/timetables/stream",
+          "status": 404
+        }
+      ],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": true
+    },
+    {
+      "role": "Parent",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "attendance-register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "invoices-mpesa",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "announcements",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "announcements",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "announcements",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "ediary",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "ediary",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "ediary",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "visual-CBC",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "concerns",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "concerns",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    },
+    {
+      "role": "Parent",
+      "route": "concerns",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "mainRendered": true,
+      "javascriptErrors": [],
+      "documentOverflow": false,
+      "apiResponses": [],
+      "pass": "full navigation audit",
+      "expectedEmptyTimetable": false
+    }
+  ]
+}

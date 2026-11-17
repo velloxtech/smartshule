@@ -168,23 +168,23 @@ const specStr = Array.isArray(teach.specialization)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+      <div className="bg-surface-container-lowest rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-outline-variant/30">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined">assignment_return</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Issue Book (Check-Out)</h2>
-              <p className="text-xs text-gray-500">Lend textbook or library resource to a learner or teacher</p>
+              <h2 className="text-lg font-bold text-on-surface">Issue Book (Check-Out)</h2>
+              <p className="text-xs text-on-surface-variant">Lend textbook or library resource to a learner or teacher</p>
             </div>
           </div>
           <button 
             onClick={onClose}
             type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors"
           >
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
@@ -203,14 +203,14 @@ const specStr = Array.isArray(teach.specialization)
             
             {/* Book Selection */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Select Book / Title <span className="text-red-500">*</span>
               </label>
               <select
                 value={bookId}
                 onChange={e => setBookId(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors bg-white font-medium"
+                className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface font-medium"
               >
                 {books.map(b => (
                   <option 
@@ -223,10 +223,10 @@ const specStr = Array.isArray(teach.specialization)
                 ))}
               </select>
               {currentBook && (
-                <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-500">
-                  <span>Shelf: <strong className="text-gray-700">{currentBook.shelfLocation || 'Main Bay'}</strong></span>
+                <div className="mt-1.5 flex items-center gap-3 text-xs text-on-surface-variant">
+                  <span>Shelf: <strong className="text-on-surface-variant">{currentBook.shelfLocation || 'Main Bay'}</strong></span>
                   <span>•</span>
-                  <span>Category: <strong className="text-gray-700">{currentBook.category}</strong></span>
+                  <span>Category: <strong className="text-on-surface-variant">{currentBook.category}</strong></span>
                   <span>•</span>
                   <span className={currentBook.copiesAvailable > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
                     {currentBook.copiesAvailable > 0 ? `${currentBook.copiesAvailable} copies in stock` : 'Out of stock'}
@@ -237,7 +237,7 @@ const specStr = Array.isArray(teach.specialization)
 
             {/* Borrower Type Selection */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Borrower Type
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -254,8 +254,8 @@ const specStr = Array.isArray(teach.specialization)
                     }}
                     className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1.5 ${
                       borrowerType === type
-                        ? 'bg-[#800000] text-white border-[#800000] shadow-sm'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                     }`}
                   >
                     <span className="material-symbols-outlined text-base">
@@ -269,7 +269,7 @@ const specStr = Array.isArray(teach.specialization)
 
             {/* Borrower Quick Lookup */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Quick Search {borrowerType === 'STUDENT' ? 'Learner' : 'Teacher'}
               </label>
               <div className="relative">
@@ -278,23 +278,23 @@ const specStr = Array.isArray(teach.specialization)
                   placeholder={`Search ${borrowerType === 'STUDENT' ? 'student name or admission number...' : 'teacher name or TSC number...'}`}
                   value={memberSearch}
                   onChange={e => setMemberSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"
+                  className="w-full pl-10 pr-4 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
               </div>
 
               {/* Suggestions chips */}
               {memberSearch.trim() && (
-                <div className="mt-2 max-h-36 overflow-y-auto border border-gray-100 rounded-xl p-1 bg-gray-50/50 space-y-1">
+                <div className="mt-2 max-h-36 overflow-y-auto border border-outline-variant/30 rounded-xl p-1 bg-surface/50 space-y-1">
                   {borrowerType === 'STUDENT' && filteredStudents.map(s => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => handleSelectStudent(s)}
-                      className="w-full text-left px-3 py-1.5 hover:bg-white rounded-lg text-xs flex items-center justify-between transition-colors border border-transparent hover:border-gray-200"
+                      className="w-full text-left px-3 py-1.5 hover:bg-white rounded-lg text-xs flex items-center justify-between transition-colors border border-transparent hover:border-outline-variant/30"
                     >
-                      <span className="font-semibold text-gray-800">{s.firstName} {s.lastName}</span>
-                      <span className="text-gray-500 font-mono">Adm: {s.admissionNumber} ({s.gradeLevel})</span>
+                      <span className="font-semibold text-on-surface">{s.firstName} {s.lastName}</span>
+                      <span className="text-on-surface-variant font-mono">Adm: {s.admissionNumber} ({s.gradeLevel})</span>
                     </button>
                   ))}
 
@@ -303,10 +303,10 @@ const specStr = Array.isArray(teach.specialization)
                       key={t.id}
                       type="button"
                       onClick={() => handleSelectTeacher(t)}
-                      className="w-full text-left px-3 py-1.5 hover:bg-white rounded-lg text-xs flex items-center justify-between transition-colors border border-transparent hover:border-gray-200"
+                      className="w-full text-left px-3 py-1.5 hover:bg-white rounded-lg text-xs flex items-center justify-between transition-colors border border-transparent hover:border-outline-variant/30"
                     >
-                      <span className="font-semibold text-gray-800">{t.name || 'Teacher'}</span>
-                      <span className="text-gray-500 font-mono">TSC: {t.tscNumber || t.employeeNumber || 'Staff'}</span>
+                      <span className="font-semibold text-on-surface">{t.name || 'Teacher'}</span>
+                      <span className="text-on-surface-variant font-mono">TSC: {t.tscNumber || t.employeeNumber || 'Staff'}</span>
                     </button>
                   ))}
 
@@ -321,7 +321,7 @@ const specStr = Array.isArray(teach.specialization)
             {/* Borrower Details Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Borrower Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -330,12 +330,12 @@ const specStr = Array.isArray(teach.specialization)
                   placeholder="Full Name"
                   value={borrowerName}
                   onChange={e => setBorrowerName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   {borrowerType === 'STUDENT' ? 'Admission No.' : 'TSC / Staff No.'}
                 </label>
                 <input
@@ -343,12 +343,12 @@ const specStr = Array.isArray(teach.specialization)
                   placeholder={borrowerType === 'STUDENT' ? 'e.g. 01' : 'e.g. TSC-54321'}
                   value={borrowerAdmissionOrNumber}
                   onChange={e => setBorrowerAdmissionOrNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   {borrowerType === 'STUDENT' ? 'Class / Grade' : 'Department / Subject'}
                 </label>
                 <input
@@ -356,7 +356,7 @@ const specStr = Array.isArray(teach.specialization)
                   placeholder={borrowerType === 'STUDENT' ? 'e.g. Grade 4 East' : 'e.g. Science Dept'}
                   value={borrowerGradeOrClass}
                   onChange={e => setBorrowerGradeOrClass(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
             </div>
@@ -364,7 +364,7 @@ const specStr = Array.isArray(teach.specialization)
             {/* Dates & Remarks */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Issue Date
                 </label>
                 <input
@@ -372,12 +372,12 @@ const specStr = Array.isArray(teach.specialization)
                   required
                   value={issueDate}
                   onChange={e => setIssueDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none bg-white"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Expected Return Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -386,12 +386,12 @@ const specStr = Array.isArray(teach.specialization)
                   value={dueDate}
                   min={issueDate}
                   onChange={e => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none bg-white font-semibold text-rose-800"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface font-semibold text-rose-800"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Lending Remarks / Notes
                 </label>
                 <input
@@ -399,7 +399,7 @@ const specStr = Array.isArray(teach.specialization)
                   placeholder="e.g. Issued for holiday reading assignment, clean copy"
                   value={remarks}
                   onChange={e => setRemarks(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"
+                  className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 />
               </div>
             </div>
@@ -408,12 +408,12 @@ const specStr = Array.isArray(teach.specialization)
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50">
+        <div className="px-6 py-4 border-t border-outline-variant/30 flex items-center justify-end gap-3 bg-surface/50">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-xl transition-colors"
           >
             Cancel
           </button>
@@ -421,7 +421,7 @@ const specStr = Array.isArray(teach.specialization)
             type="submit"
             form="issue-book-form"
             disabled={saving || (currentBook ? currentBook.copiesAvailable <= 0 : false)}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#800000] hover:bg-[#660000] rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-container rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

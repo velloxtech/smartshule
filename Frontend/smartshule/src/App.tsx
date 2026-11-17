@@ -1,73 +1,85 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import {SchoolCalendarPlanView} from './components/views/SchoolCalendarPlanView';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { Network } from '@capacitor/network';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
 import { isTabPermitted } from './utils/rbac';
 import { resolveStreamName, resolveGradeName, resolveTeacherAssignedClasses } from './utils/formatters';
+import { ViewLoadingSkeleton } from './components/common/ViewLoadingSkeleton';
 
-// Public & Auth Views
+// Public & Auth Views (Immediate eager loading)
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginPage } from './components/auth/LoginPage';
-
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/views/DashboardView';
-import { SuperAdminDashboardView } from './components/views/SuperAdminDashboardView';
-import { HeadTeacherDashboardView } from './components/views/HeadTeacherDashboardView';
-import { DeputyDashboardView } from './components/views/DeputyDashboardView';
-import { AdmissionsDashboardView } from './components/views/AdmissionsDashboardView';
-import { BursarDashboardView } from './components/views/BursarDashboardView';
-import { TeacherDashboardView } from './components/views/TeacherDashboardView';
-import { ParentDashboardView } from './components/views/ParentDashboardView';
-import { StudentsView } from './components/views/StudentsView';
-import { OnboardQueueView } from './components/views/OnboardQueueView';
-import { SlotApplicationsView } from './components/views/SlotApplicationsView';
-import { TeachersView } from './components/views/TeachersView';
-import { GeofenceView } from './components/views/GeofenceView';
-import { ClassesView } from './components/views/ClassesView';
-import { LearningAreasView } from './components/views/LearningAreasView';
-import { AssessmentsView } from './components/views/AssessmentsView';
-import { FormativeAssessmentsView } from './components/views/FormativeAssessmentsView';
-import { SummativeAssessmentsView } from './components/views/SummativeAssessmentsView';
-import { StrandsView } from './components/views/StrandsView';
-import { ReportCardsView } from './components/views/ReportCardsView';
-import { CompetencyAnalyticsView } from './components/views/CompetencyAnalyticsView';
-import { SchemesView } from './components/views/SchemesView';
-import { TimetableView } from './components/views/TimetableView';
-import { AttendanceRegisterView } from './components/views/AttendanceRegisterView';
-import { FeeStructureView } from './components/views/FeeStructureView';
-import { InvoicesMpesaView } from './components/views/InvoicesMpesaView';
-import { CashFlowLedgerView } from './components/views/CashFlowLedgerView';
-import { ExpensesView } from './components/views/ExpensesView';
-import { FinancialReportsView } from './components/views/FinancialReportsView';
-import { EDiaryView } from './components/views/EDiaryView';
-import { VisualCBCView } from './components/views/VisualCBCView';
-import { WhatsAppBotView } from './components/views/WhatsAppBotView';
-import { UserManagementView } from './components/views/UserManagementView';
-import RecordsOfWorkView from './components/views/RecordsOfWorkView';
-import { SystemLogsView } from './components/views/SystemLogsView';
-import { ConcernsView } from './components/views/ConcernsView';
-import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
-import { ParentProfileView } from './components/views/ParentProfileView';
-import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
-import { ArrearsView } from './components/views/ArrearsView';
-import { ForwardedPaymentsView } from './components/views/ForwardedPaymentsView';
-import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
-import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
-import { LibraryView } from './components/views/LibraryView';
-import { AnnouncementsView } from './components/views/AnnouncementsView';
-import { PayrollManagementView } from './components/views/PayrollManagementView';
-import { ClinicManagementView } from './components/views/ClinicManagementView';
-import { InventoryManagementView } from './components/views/InventoryManagementView';
-import { DisciplineClubsView } from './components/views/DisciplineClubsView';
-import { MasterBroadsheetView } from './components/views/MasterBroadsheetView';
-import { OccurrenceBookView } from './components/views/OccurrenceBookView';
-import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
-import { FeeDeadlineBannerManagementView } from './components/views/FeeDeadlineBannerManagementView';
-import { SponsoredStudentsView } from './components/views/SponsoredStudentsView';
-import { MyDigitalSignatureView } from './components/views/MyDigitalSignatureView';
-import { DocumentSigningCenterView } from './components/views/DocumentSigningCenterView';
-import { TeacherProfileView } from './components/views/TeacherProfileView';
+
+// Route-Level Code Splitting (Lazy loaded views)
+const SuperAdminDashboardView = lazy(() => import('./components/views/SuperAdminDashboardView').then(m => ({ default: m.SuperAdminDashboardView })));
+const HeadTeacherDashboardView = lazy(() => import('./components/views/HeadTeacherDashboardView').then(m => ({ default: m.HeadTeacherDashboardView })));
+const DeputyDashboardView = lazy(() => import('./components/views/DeputyDashboardView').then(m => ({ default: m.DeputyDashboardView })));
+const AdmissionsDashboardView = lazy(() => import('./components/views/AdmissionsDashboardView').then(m => ({ default: m.AdmissionsDashboardView })));
+const AdmissionsEnrolmentHubView = lazy(() => import('./components/views/AdmissionsEnrolmentHubView').then(m => ({ default: m.AdmissionsEnrolmentHubView })));
+const BursarDashboardView = lazy(() => import('./components/views/BursarDashboardView').then(m => ({ default: m.BursarDashboardView })));
+const TeacherDashboardView = lazy(() => import('./components/views/TeacherDashboardView').then(m => ({ default: m.TeacherDashboardView })));
+const ParentDashboardView = lazy(() => import('./components/views/ParentDashboardView').then(m => ({ default: m.ParentDashboardView })));
+const StudentsView = lazy(() => import('./components/views/StudentsView').then(m => ({ default: m.StudentsView })));
+const OnboardQueueView = lazy(() => import('./components/views/OnboardQueueView').then(m => ({ default: m.OnboardQueueView })));
+const SlotApplicationsView = lazy(() => import('./components/views/SlotApplicationsView').then(m => ({ default: m.SlotApplicationsView })));
+const TeachersView = lazy(() => import('./components/views/TeachersView').then(m => ({ default: m.TeachersView })));
+const GeofenceView = lazy(() => import('./components/views/GeofenceView').then(m => ({ default: m.GeofenceView })));
+const ClassesView = lazy(() => import('./components/views/ClassesView').then(m => ({ default: m.ClassesView })));
+const LearningAreasView = lazy(() => import('./components/views/LearningAreasView').then(m => ({ default: m.LearningAreasView })));
+const AssessmentsView = lazy(() => import('./components/views/AssessmentsView').then(m => ({ default: m.AssessmentsView })));
+const FormativeAssessmentsView = lazy(() => import('./components/views/FormativeAssessmentsView').then(m => ({ default: m.FormativeAssessmentsView })));
+const SummativeAssessmentsView = lazy(() => import('./components/views/SummativeAssessmentsView').then(m => ({ default: m.SummativeAssessmentsView })));
+const StrandsView = lazy(() => import('./components/views/StrandsView').then(m => ({ default: m.StrandsView })));
+const ReportCardsView = lazy(() => import('./components/views/ReportCardsView').then(m => ({ default: m.ReportCardsView })));
+const CompetencyAnalyticsView = lazy(() => import('./components/views/CompetencyAnalyticsView').then(m => ({ default: m.CompetencyAnalyticsView })));
+const SchemesView = lazy(() => import('./components/views/SchemesView').then(m => ({ default: m.SchemesView })));
+const TimetableView = lazy(() => import('./components/views/TimetableView').then(m => ({ default: m.TimetableView })));
+const AttendanceRegisterView = lazy(() => import('./components/views/AttendanceRegisterView').then(m => ({ default: m.AttendanceRegisterView })));
+const FeeStructureView = lazy(() => import('./components/views/FeeStructureView').then(m => ({ default: m.FeeStructureView })));
+const InvoicesMpesaView = lazy(() => import('./components/views/InvoicesMpesaView').then(m => ({ default: m.InvoicesMpesaView })));
+const CashFlowLedgerView = lazy(() => import('./components/views/CashFlowLedgerView').then(m => ({ default: m.CashFlowLedgerView })));
+const ExpensesView = lazy(() => import('./components/views/ExpensesView').then(m => ({ default: m.ExpensesView })));
+const FinancialReportsView = lazy(() => import('./components/views/FinancialReportsView').then(m => ({ default: m.FinancialReportsView })));
+const EDiaryView = lazy(() => import('./components/views/EDiaryView').then(m => ({ default: m.EDiaryView })));
+const VisualCBCView = lazy(() => import('./components/views/VisualCBCView').then(m => ({ default: m.VisualCBCView })));
+const WhatsAppBotView = lazy(() => import('./components/views/WhatsAppBotView').then(m => ({ default: m.WhatsAppBotView })));
+const UserManagementView = lazy(() => import('./components/views/UserManagementView').then(m => ({ default: m.UserManagementView })));
+const RecordsOfWorkView = lazy(() => import('./components/views/RecordsOfWorkView'));
+const SystemLogsView = lazy(() => import('./components/views/SystemLogsView').then(m => ({ default: m.SystemLogsView })));
+const ConcernsView = lazy(() => import('./components/views/ConcernsView').then(m => ({ default: m.ConcernsView })));
+const LunchFeeManagementView = lazy(() => import('./components/views/LunchFeeManagementView').then(m => ({ default: m.LunchFeeManagementView })));
+const ParentProfileView = lazy(() => import('./components/views/ParentProfileView').then(m => ({ default: m.ParentProfileView })));
+const StudentFeeCheckerView = lazy(() => import('./components/views/StudentFeeCheckerView').then(m => ({ default: m.StudentFeeCheckerView })));
+const ArrearsView = lazy(() => import('./components/views/ArrearsView').then(m => ({ default: m.ArrearsView })));
+const ForwardedPaymentsView = lazy(() => import('./components/views/ForwardedPaymentsView').then(m => ({ default: m.ForwardedPaymentsView })));
+const ArchivedRecordsView = lazy(() => import('./components/views/ArchivedRecordsView').then(m => ({ default: m.ArchivedRecordsView })));
+const StandaloneArchivedRecordsPage = lazy(() => import('./components/views/StandaloneArchivedRecordsPage').then(m => ({ default: m.StandaloneArchivedRecordsPage })));
+const LibraryView = lazy(() => import('./components/views/LibraryView').then(m => ({ default: m.LibraryView })));
+const AnnouncementsView = lazy(() => import('./components/views/AnnouncementsView').then(m => ({ default: m.AnnouncementsView })));
+const PayrollManagementView = lazy(() => import('./components/views/PayrollManagementView').then(m => ({ default: m.PayrollManagementView })));
+const ClinicManagementView = lazy(() => import('./components/views/ClinicManagementView').then(m => ({ default: m.ClinicManagementView })));
+const InventoryManagementView = lazy(() => import('./components/views/InventoryManagementView').then(m => ({ default: m.InventoryManagementView })));
+const DisciplineClubsView = lazy(() => import('./components/views/DisciplineClubsView').then(m => ({ default: m.DisciplineClubsView })));
+const MasterBroadsheetView = lazy(() => import('./components/views/MasterBroadsheetView').then(m => ({ default: m.MasterBroadsheetView })));
+const OccurrenceBookView = lazy(() => import('./components/views/OccurrenceBookView').then(m => ({ default: m.OccurrenceBookView })));
+const CurriculumTrackerView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SyllabusCoveragePlanView })));
+const SchemeOfWorkBuilderView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SchemeOfWorkBuilderView })));
+const FeeDeadlineBannerManagementView = lazy(() => import('./components/views/FeeDeadlineBannerManagementView').then(m => ({ default: m.FeeDeadlineBannerManagementView })));
+const SponsoredStudentsView = lazy(() => import('./components/views/SponsoredStudentsView').then(m => ({ default: m.SponsoredStudentsView })));
+const MyDigitalSignatureView = lazy(() => import('./components/views/MyDigitalSignatureView').then(m => ({ default: m.MyDigitalSignatureView })));
+const DocumentSigningCenterView = lazy(() => import('./components/views/DocumentSigningCenterView').then(m => ({ default: m.DocumentSigningCenterView })));
+const TeacherProfileView = lazy(() => import('./components/views/TeacherProfileView').then(m => ({ default: m.TeacherProfileView })));
+const ParentConsentView = lazy(() => import('./components/views/ParentConsentView').then(m => ({ default: m.ParentConsentView })));
+const AdminConsentManagementView = lazy(() => import('./components/views/AdminConsentManagementView').then(m => ({ default: m.AdminConsentManagementView })));
+const TeacherSalaryAcknowledgementView = lazy(() => import('./components/views/TeacherSalaryAcknowledgementView').then(m => ({ default: m.TeacherSalaryAcknowledgementView })));
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -82,19 +94,39 @@ import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { ChangePasswordPage } from './components/auth/ChangePasswordPage';
+import { BiometricDevicesModal } from './components/modals/BiometricDevicesModal';
 import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
-  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren } = useAuth();
+  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren, updateUser, logout } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSidebarCompact, setIsSidebarCompact] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('smartshule_sidebar_compact') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebarCompact = () => {
+    setIsSidebarCompact((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('smartshule_sidebar_compact', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
   const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTabType>('terms');
 
@@ -144,6 +176,108 @@ export default function App() {
   const [backendConnected, setBackendConnected] = useState(false);
   const [currentContext, setCurrentContext] = useState<any>(null);
   const [school, setSchool] = useState<any>(null);
+
+  // Native Capacitor Status Bar, Splash Screen & Network Handling
+  useEffect(() => {
+    let networkListener: any = null;
+    const initNativeFeatures = async () => {
+      try {
+        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#7b1c35' });
+      } catch {}
+      try {
+        await SplashScreen.hide();
+      } catch {}
+      try {
+        networkListener = await Network.addListener('networkStatusChange', (status) => {
+          if (!status.connected) {
+            showToast('Network disconnected. Check your internet connection.', 'error');
+          } else {
+            showToast('Network connection restored.', 'success');
+          }
+        });
+      } catch {}
+    };
+
+    initNativeFeatures();
+
+    return () => {
+      if (networkListener) {
+        networkListener.remove?.();
+      }
+    };
+  }, [showToast]);
+
+  // Native Android Hardware Back Button Navigation Handling
+  useEffect(() => {
+    let backListener: any = null;
+    const setupBackHandler = async () => {
+      try {
+        backListener = await CapApp.addListener('backButton', () => {
+          // 1. Close open modal dialogs
+          if (changePasswordModalOpen) { setChangePasswordModalOpen(false); return; }
+          if (legalModalOpen) { setLegalModalOpen(false); return; }
+          if (academicTermsModalOpen) { setAcademicTermsModalOpen(false); return; }
+          if (onboardTeacherModalOpen) { setOnboardTeacherModalOpen(false); return; }
+          if (recordPaymentModalOpen) { setRecordPaymentModalOpen(false); return; }
+          if (forwardPaymentModalOpen) { setForwardPaymentModalOpen(false); return; }
+          if (CBCModalOpen) { setCBCModalOpen(false); return; }
+          if (admitModalOpen) { setAdmitModalOpen(false); return; }
+          if (smsModalOpen) { setSmsModalOpen(false); return; }
+          if (exportReportModalOpen) { setExportReportModalOpen(false); return; }
+          if (uploadMarksModalOpen) { setUploadMarksModalOpen(false); return; }
+          if (createLessonPlanModalOpen) { setCreateLessonPlanModalOpen(false); return; }
+          if (createSchemeModalOpen) { setCreateSchemeModalOpen(false); return; }
+
+          // 2. Close mobile drawer sidebar
+          if (mobileSidebarOpen) {
+            setMobileSidebarOpen(false);
+            return;
+          }
+
+          // 3. Return to Dashboard if inside portal on a sub-tab
+          if (appView === 'portal' && currentTab !== 'dashboard') {
+            setCurrentTab('dashboard');
+            return;
+          }
+
+          // 4. Return to landing from login or archive
+          if (appView === 'login' || appView === 'archive') {
+            setAppView('landing');
+            return;
+          }
+
+          // 5. Exit application if on root screen
+          CapApp.exitApp();
+        });
+      } catch {}
+    };
+
+    setupBackHandler();
+
+    return () => {
+      if (backListener) {
+        backListener.remove?.();
+      }
+    };
+  }, [
+    changePasswordModalOpen,
+    legalModalOpen,
+    academicTermsModalOpen,
+    onboardTeacherModalOpen,
+    recordPaymentModalOpen,
+    forwardPaymentModalOpen,
+    CBCModalOpen,
+    admitModalOpen,
+    smsModalOpen,
+    exportReportModalOpen,
+    uploadMarksModalOpen,
+    createLessonPlanModalOpen,
+    createSchemeModalOpen,
+    mobileSidebarOpen,
+    appView,
+    currentTab,
+  ]);
 
   // Synchronize view state with authentication status
   useEffect(() => {
@@ -201,10 +335,18 @@ export default function App() {
         return;
       }
 
+      const canAccessFinance = [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.SCHOOL_ADMIN,
+        UserRole.BURSAR,
+        UserRole.ACCOUNTANT,
+      ].includes(effectiveRole as any);
+
       const [studentData, defaultersRes, invoicesRes] = await Promise.all([
         apiService.getStudents().catch(() => null),
-        apiService.getDefaulters().catch(() => null),
-        apiService.getInvoices().catch(() => null),
+        canAccessFinance ? apiService.getDefaulters().catch(() => null) : Promise.resolve(null),
+        canAccessFinance ? apiService.getInvoices().catch(() => null) : Promise.resolve(null),
       ]);
 
       const feeMap = new Map<string, { balance: number; billed: number; hasInvoices: boolean }>();
@@ -240,12 +382,11 @@ export default function App() {
       if (studentData?.data && Array.isArray(studentData.data)) {
         const mappedStudents: Student[] = studentData.data.map((st: any) => {
           const fee = feeMap.get(st.id);
-          const feeBalance = st.feeBalance !== undefined && st.feeBalance !== null
-            ? Number(st.feeBalance)
-            : (fee !== undefined ? fee.balance : 0);
-          const totalFee = st.totalFee !== undefined && st.totalFee !== null
-            ? Number(st.totalFee)
-            : (fee !== undefined ? fee.billed : 0);
+          const hasInvoices = fee !== undefined ? fee.hasInvoices : Boolean(st.hasInvoices);
+          const feeBalance = fee !== undefined ? fee.balance : (Number(st.feeBalance) || 0);
+          const totalFee = fee !== undefined ? fee.billed : (Number(st.totalFee) || 0);
+          const isSponsored = Boolean(st.isSponsored || st.sponsorship);
+          const isUnbilled = !isSponsored && !hasInvoices && feeBalance === 0;
           const fullName =
             st.name ||
             st.fullName ||
@@ -271,12 +412,14 @@ export default function App() {
             guardianPhone: st.guardian?.phone || st.guardianPhone || st.emergencyContactPhone || '--',
             feeBalance,
             totalFee,
+            hasInvoices,
+            isUnbilled,
             priorArrears: Number(st.priorArrears) || 0,
             totalPaid: Number(st.totalPaid) || 0,
             creditBalance: Number(st.creditBalance) || 0,
             totalDue: Number(st.totalDue) || 0,
             arrearsDue: Number(st.arrearsDue) || 0,
-            isSponsored: Boolean(st.isSponsored || st.sponsorship),
+            isSponsored,
             sponsorship: st.sponsorship || null,
             attendanceRate: st.attendanceRate ?? 0,
             CBCRating: st.CBCRating || '--',
@@ -350,7 +493,7 @@ export default function App() {
             } catch {
               setStudents([]);
             }
-          } else if (!isFinanceOnly) {
+          } else {
             await refreshStudentsAndFees();
           }
         } catch {
@@ -441,8 +584,8 @@ export default function App() {
         } else {
           try {
             const [analyticsData, paymentsRes] = await Promise.all([
-              apiService.getDashboardAnalytics().catch(() => null),
-              apiService.getPayments().catch(() => null),
+              user?.role === UserRole.TEACHER ? Promise.resolve(null) : apiService.getDashboardAnalytics().catch(() => null),
+              user?.role === UserRole.TEACHER ? Promise.resolve(null) : apiService.getPayments().catch(() => null),
             ]);
             if (analyticsData?.data?.finance?.totalCollected) {
               setTotalCollectedFee(analyticsData.data.finance.totalCollected);
@@ -617,7 +760,7 @@ export default function App() {
       title: `Learner Admitted: ${studentWithId.name}`,
       description: `Adm #${studentWithId.admNo} · ${studentWithId.grade}${studentWithId.stream ? ` (${studentWithId.stream})` : ''} · ${studentWithId.upi && studentWithId.upi !== '--' ? `UPI: ${studentWithId.upi}` : 'NEMIS: Pending'}`,
       timestamp: 'Just now',
-      badgeColor: 'bg-tertiary-container text-white',
+      badgeColor: 'bg-warning-container text-white',
     };
     setActivities((prev) => [newAct, ...prev]);
 
@@ -663,7 +806,7 @@ export default function App() {
       title: `Staff Onboarded: ${newT.name}`,
       description: `Role: ${newT.role} · Emp #: ${newT.employeeNumber} · TSC: ${newT.tscNumber} · Class: ${newT.assignedClass}`,
       timestamp: 'Just now',
-      badgeColor: 'bg-secondary text-white',
+      badgeColor: 'bg-success text-white',
     };
     setActivities((prev) => [newAct, ...prev]);
   };
@@ -685,19 +828,12 @@ export default function App() {
     );
   };
 
-  // Guard unpermitted tab access
-  useEffect(() => {
-    if (user && currentTab !== 'dashboard' && !isTabPermitted(currentTab, user.role)) {
-      setCurrentTab('dashboard');
-    }
-  }, [user, currentTab]);
-
   // Listen for standalone hash navigation e.g. #/archive or #/archived-records or ?view=archive
   useEffect(() => {
     const checkHashRoute = () => {
       const hash = window.location.hash;
       const search = window.location.search;
-      if (search.includes('view=reset-password') || search.includes('token=') || hash.includes('reset-password')) {
+      if (!isAuthenticated && (search.includes('view=reset-password') || search.includes('token=') || hash.includes('reset-password'))) {
         setAppView('login');
         return;
       }
@@ -786,14 +922,41 @@ export default function App() {
 
   // Render Single Dedicated Login Page
   if (appView === 'login') {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const initialResetToken = urlParams?.get('token') || urlParams?.get('resetCode') || undefined;
+    const initialResetEmail = urlParams?.get('email') || undefined;
+
     return (
       <>
         <LoginPage
           onSuccess={() => setAppView('portal')}
           onNavigateLanding={() => setAppView('landing')}
           onOpenLegalModal={handleOpenLegalModal}
+          initialResetToken={initialResetToken}
+          initialResetEmail={initialResetEmail}
         />
         <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+        <LegalModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalModalTab}
+        />
+      </>
+    );
+  }
+
+  // Dedicated Mandatory Change Password Page (when admin resets user password or temporary credentials)
+  if (isAuthenticated && user?.mustChangePassword) {
+    return (
+      <>
+        <ChangePasswordPage
+          user={user}
+          onSuccess={() => {
+            updateUser({ mustChangePassword: false });
+          }}
+          onLogout={logout}
+          onOpenLegalModal={handleOpenLegalModal}
+        />
         <LegalModal
           isOpen={legalModalOpen}
           onClose={() => setLegalModalOpen(false)}
@@ -863,10 +1026,14 @@ export default function App() {
         onCloseMobile={() => setMobileSidebarOpen(false)}
         onNavigateLanding={() => setAppView('landing')}
         onOpenLegalModal={handleOpenLegalModal}
+        isCompact={isSidebarCompact}
+        onToggleCompact={handleToggleSidebarCompact}
       />
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
-      <div className="lg:pl-64 print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0 bg-surface">
+      <div className={`print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0 bg-surface transition-all duration-200 ${
+        isSidebarCompact ? 'lg:pl-20' : 'lg:pl-64'
+      }`}>
         {/* Top Operational Header: Pure Maroon (#800000) */}
         <Header
           onToggleMobile={() => setMobileSidebarOpen(true)}
@@ -879,6 +1046,7 @@ export default function App() {
           onNavigateTab={(tab) => setCurrentTab(tab as any)}
           onOpenAcademicTermsModal={() => setAcademicTermsModalOpen(true)}
           onOpenChangePasswordModal={() => setChangePasswordModalOpen(true)}
+          onOpenBiometricModal={() => setBiometricModalOpen(true)}
           academicContext={currentContext}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
@@ -896,9 +1064,9 @@ export default function App() {
           <div
             className={`no-print print:hidden term-lifecycle-banner px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
               currentContext.termNotice.type === 'TERM_ENDED'
-                ? 'bg-[#550000] text-rose-100 border-b border-[#770000]'
+                ? 'bg-primary-container text-rose-100 border-b border-[#770000]'
                 : currentContext.termNotice.type === 'ENDING_SOON'
-                ? 'bg-[#660000] text-amber-100 border-b border-[#880000]'
+                ? 'bg-primary-container text-amber-100 border-b border-[#880000]'
                 : 'bg-[#770000] text-white/90 border-b border-[#990000]'
             }`}
           >
@@ -928,8 +1096,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Dynamic Route Content */}
+        {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
+          <Suspense fallback={<ViewLoadingSkeleton />}>
           {currentTab === 'dashboard' && (
             (() => {
               if (isStaffWithChildren && activeViewMode === 'PARENT') {
@@ -1000,8 +1169,8 @@ export default function App() {
                         setUploadMarksInitialType('SUMMATIVE');
                         setUploadMarksModalOpen(true);
                       }}
-                      onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
-                      onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
+                      onOpenNewLessonPlan={() => setCurrentTab('lesson-plans')}
+                      onOpenNewScheme={() => setCurrentTab('scheme-of-work-builder')}
                       refreshTrigger={marksRefreshTrigger}
                     />
                   );
@@ -1044,17 +1213,25 @@ export default function App() {
           {currentTab === 'students-guardians' && (
             user?.role === UserRole.BURSAR || user?.role === UserRole.ACCOUNTANT ? (
               <div className="p-8 my-8 text-center rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-3 max-w-lg mx-auto">
-                <span className="material-symbols-outlined text-[48px] text-amber-700">account_balance_wallet</span>
+                <span className="material-symbols-outlined text-[48px] text-primary">account_balance_wallet</span>
                 <h3 className="text-base font-bold">Finance Department Access Isolation</h3>
                 <p className="text-xs text-amber-800">
-                  The finance department is strictly isolated to fee structures, invoices, cash flow ledgers, and expenses.
+                  The finance department is strictly isolated to fee structures, invoices, student accounts, cash flow ledgers, and expenses.
                 </p>
-                <button
-                  onClick={() => setCurrentTab('cashflow-ledger')}
-                  className="px-4 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition-colors cursor-pointer"
-                >
-                  Go to Cash Flow Ledger
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setCurrentTab('student-fee-search')}
+                    className="px-4 py-2 rounded-xl bg-primary-container text-white font-bold text-xs hover:bg-primary-container transition-colors cursor-pointer"
+                  >
+                    Fee Collection & Accounts
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('cashflow-ledger')}
+                    className="px-4 py-2 rounded-xl bg-primary-fixed text-on-primary-fixed border border-primary font-bold text-xs hover:bg-primary-fixed-dim transition-colors cursor-pointer"
+                  >
+                    Cash Flow Ledger
+                  </button>
+                </div>
               </div>
             ) : (
               <StudentsView
@@ -1081,30 +1258,76 @@ export default function App() {
             )
           )}
 
-          {currentTab === 'slot-applications' && (
-            <SlotApplicationsView
-              onAdmitLearner={handleAdmitStudent}
-              onRefreshStudents={refreshStudentsAndFees}
+          {currentTab === 'admit-learner' && (
+            <AdmitLearnerModal
+              isPage={true}
+              isOpen={true}
+              onClose={() => setCurrentTab('admissions-dashboard')}
+              onAdmit={handleAdmitStudent}
+              existingStudents={students}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
-          {currentTab === 'onboard-queue' && (
-            <OnboardQueueView
-              onAdmitLearner={handleAdmitStudent}
-              onRefreshStudents={refreshStudentsAndFees}
+          {currentTab === 'onboard-staff' && (
+            <OnboardTeacherModal
+              isPage={true}
+              isOpen={true}
+              onClose={() => setCurrentTab('staff-directory')}
+              onTeacherCreated={handleTeacherCreated}
+              existingTeachers={teachers}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
-          {(currentTab === 'teachers-staff' || (currentTab as string) === 'teachers') && (
+          {[
+            'admissions-dashboard',
+            'new-applications',
+            'slot-applications',
+            'onboard-queue',
+            'application-review',
+            'admission-assessments',
+            'admission-decisions',
+            'admission-offers',
+            'admission-enrolment',
+            'admission-reports',
+            'admission-settings',
+          ].includes(currentTab) && (
+            <AdmissionsEnrolmentHubView
+              currentSubTab={currentTab}
+              onNavigateTab={(tab) => setCurrentTab(tab)}
+              students={students}
+              teachers={teachers}
+              onAdmitLearner={handleAdmitStudent}
+              onRefreshStudents={refreshStudentsAndFees}
+              onOpenAdmitModal={() => setCurrentTab('admit-learner')}
+              onOpenOnboardTeacher={() => setCurrentTab('onboard-staff')}
+            />
+          )}
+
+          {[
+            'staff-directory',
+            'teachers-staff',
+            'teaching-staff',
+            'non-teaching-staff',
+            'staff-verifications',
+            'teachers',
+          ].includes(currentTab) && (
             <TeachersView
               teachers={teachers}
+              initialCategory={
+                currentTab === 'teachers-staff' || currentTab === 'teaching-staff'
+                  ? 'TEACHING'
+                  : currentTab === 'non-teaching-staff'
+                  ? 'NON_TEACHING'
+                  : 'ALL'
+              }
+              initialTab={currentTab === 'staff-verifications' ? 'corrections' : 'roster'}
               onToggleClockIn={handleToggleClockIn}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
               onOpenOnboardTeacher={
                 user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS].includes(user.role)
-                  ? () => setOnboardTeacherModalOpen(true)
+                  ? () => setCurrentTab('onboard-staff')
                   : undefined
               }
               onDeleteTeacher={(deletedId) =>
@@ -1170,10 +1393,15 @@ export default function App() {
           {currentTab === 'CBC-analytics' && <CompetencyAnalyticsView />}
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
-          {currentTab === 'schemes-lesson-plans' && <SchemesView />}
+          {(currentTab === 'schemes-lesson-plans' || currentTab === 'lesson-plans') && (
+            <SchemesView key={currentTab} initialTab={currentTab === 'lesson-plans' ? 'lesson-plans' : 'schemes'} onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
 
-          {currentTab === 'records-of-work' && <RecordsOfWorkView />}
+          {currentTab === 'records-of-work' && (
+            <RecordsOfWorkView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
 
+          {currentTab === 'school-calendar-plan' && <SchoolCalendarPlanView onNavigateTab={tab=>setCurrentTab(tab as any)} onOpenSettings={()=>setAcademicTermsModalOpen(true)}/>}
           {currentTab === 'timetable' && <TimetableView />}
 
           {currentTab === 'library' && <LibraryView />}
@@ -1290,7 +1518,7 @@ export default function App() {
                     setAppView('archive');
                     window.location.hash = '/archive';
                   }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">open_in_full</span>
                   <span>Open Standalone Archive Page</span>
@@ -1298,7 +1526,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/archive`, '_blank')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-low hover:bg-surface-container text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                   <span>New Window</span>
@@ -1313,21 +1541,30 @@ export default function App() {
           {currentTab === 'document-signing' && <DocumentSigningCenterView />}
           {currentTab === 'digital-signature' && <MyDigitalSignatureView />}
           {currentTab === 'teacher-profile' && <TeacherProfileView />}
+          {currentTab === 'salary-acknowledgement' && <TeacherSalaryAcknowledgementView />}
           {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (
             <ParentProfileView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+          {currentTab === 'parent-consent' && <ParentConsentView />}
+          {currentTab === 'consent-management' && <AdminConsentManagementView />}
 
           {currentTab === 'clinic' && <ClinicManagementView />}
           {currentTab === 'discipline' && <DisciplineClubsView />}
           {currentTab === 'inventory' && <InventoryManagementView />}
           {currentTab === 'occurrence-records' && <OccurrenceBookView />}
-          {currentTab === 'curriculum-tracker' && <CurriculumTrackerView />}
+          {currentTab === 'curriculum-tracker' && (
+            <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
+          {currentTab === 'scheme-of-work-builder' && (
+            <SchemeOfWorkBuilderView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
+          </Suspense>
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}
-        <footer className="mt-auto py-3.5 px-6 bg-[#800000] border-t border-[#660000] text-center text-xs text-white flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
+        <footer className="mt-auto py-3.5 px-6 bg-primary border-t border-primary-container text-center text-xs text-white flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Live"></span>
             <span className="font-semibold text-white">
@@ -1435,7 +1672,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setToastNotification(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-surface-container-low transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -1478,14 +1715,16 @@ export default function App() {
         userRole={user?.role}
       />
 
+      
+      <BiometricDevicesModal
+        isOpen={biometricModalOpen}
+        onClose={() => setBiometricModalOpen(false)}
+      />
+
       <ChangePasswordModal
-        isOpen={changePasswordModalOpen || Boolean(user?.mustChangePassword)}
-        isForced={Boolean(user?.mustChangePassword)}
-        onClose={() => {
-          if (!user?.mustChangePassword) {
-            setChangePasswordModalOpen(false);
-          }
-        }}
+        isOpen={changePasswordModalOpen}
+        isForced={false}
+        onClose={() => setChangePasswordModalOpen(false)}
         onSuccessCallback={() => {
           setChangePasswordModalOpen(false);
         }}

@@ -122,7 +122,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
         {/* Header */}
-        <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
+        <div className="bg-primary text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px] text-rose-200">lock_reset</span>
@@ -149,7 +149,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
           {isForced && (
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
-              <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">
+              <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">
                 shield_person
               </span>
               <div>
@@ -285,7 +285,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   passwordsMismatch
                     ? 'border-error/70 focus:border-error'
                     : passwordsMatch
-                    ? 'border-emerald-500 focus:border-emerald-500'
+                    ? 'border-primary focus:border-primary'
                     : 'border-outline-variant/60'
                 }`}
               />
@@ -338,7 +338,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <button
               type="submit"
               disabled={loading || Boolean(passwordsMismatch)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] text-white text-xs font-bold rounded-lg hover:bg-[#5c0a1a] disabled:opacity-50 transition-all cursor-pointer shadow-xs ml-auto"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container disabled:opacity-50 transition-all cursor-pointer shadow-xs ml-auto"
             >
               <span className="material-symbols-outlined text-[16px]">
                 {loading ? 'sync' : 'key'}

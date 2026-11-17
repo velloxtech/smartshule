@@ -23,8 +23,9 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   onOpenMpesaModal,
   onNavigateTab,
 }) => {
-  const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
 
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
@@ -208,12 +209,12 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       case 'UNPAID':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-200">UNPAID</span>;
       case 'DRAFT':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-800 border border-slate-300">DRAFT</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container text-slate-800 border border-slate-300">DRAFT</span>;
       case 'CANCELLED':
       case 'VOIDED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 line-through border border-gray-300">CANCELLED</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-gray-500 line-through border border-gray-300">CANCELLED</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200">{status}</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary">{status}</span>;
     }
   };
 
@@ -227,7 +228,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <span>/</span>
             <span>Finance & Billing</span>
             <span>/</span>
-            <span className="text-[#006a40] font-semibold">
+            <span className="text-primary font-semibold">
               {isGuardian ? 'My Child Fees & Forwarded Payments' : 'Fee Invoicing & Manual Payment Reconciliation'}
             </span>
           </div>
@@ -261,7 +262,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                   setSelectedStudentForPay(students.length > 0 ? students[0] : undefined);
                   setIsRecordPayOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                 <span>Create Individual Invoice</span>
@@ -290,7 +291,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
 
           <button
             onClick={handleGeneralPayment}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#005a36] to-[#006a40] text-white rounded-lg hover:shadow-md text-xs font-bold transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-primary text-white rounded-lg hover:shadow-md text-xs font-bold transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">
               {isGuardian ? 'forward_to_inbox' : 'point_of_sale'}
@@ -309,7 +310,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               Fee Collection Channels
             </span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-bold font-data-mono text-[#006a40]">KCB Bank & M-Pesa</span>
+              <span className="text-base font-bold font-data-mono text-primary">KCB Bank & M-Pesa</span>
               <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                 Paybill 522533
               </span>
@@ -318,7 +319,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               Manual Verification & Ledger Crediting
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#006a40] flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">account_balance</span>
           </div>
         </div>
@@ -329,14 +330,14 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               {isGuardian ? 'Total Cleared Fees' : 'Term Fee Collections'}
             </span>
-            <div className="text-xl font-bold font-data-mono text-secondary mt-1">
+            <div className="text-xl font-bold font-data-mono text-success mt-1">
               KES {totalPaid.toLocaleString()}
             </div>
-            <span className="text-[11px] text-secondary font-medium mt-1 block">
+            <span className="text-[11px] text-success font-medium mt-1 block">
               {collectionRate}% payment clearance rate
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">verified</span>
           </div>
         </div>
@@ -361,12 +362,12 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       </div>
 
       {/* Sub-Tabs: Invoices vs Transaction Feed vs Forwarded Queue */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2">
         <button
           onClick={() => setActiveSubTab('invoices')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'invoices'
-              ? 'bg-[#7a1228] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -378,7 +379,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           onClick={() => setActiveSubTab('transactions')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'transactions'
-              ? 'bg-[#7a1228] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -390,7 +391,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           onClick={() => setActiveSubTab('forwarded')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'forwarded'
-              ? 'bg-[#7a1228] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -413,7 +414,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
                 <span>{deleteSuccess}</span>
               </div>
-              <button onClick={() => setDeleteSuccess(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+              <button onClick={() => setDeleteSuccess(null)} className="text-primary hover:text-on-primary-fixed cursor-pointer">
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             </div>
@@ -453,20 +454,20 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                   value={invoiceSearchQuery}
                   onChange={(e) => setInvoiceSearchQuery(e.target.value)}
                   placeholder="Search by learner, adm no, invoice #, title..."
-                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-surface border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 overflow-x-auto">
+              <div className="flex items-center gap-1 bg-surface-container-lowest p-0.5 rounded-lg border border-slate-200 overflow-x-auto">
                 {(['ALL', 'DRAFT', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setInvoiceStatusFilter(st)}
                     className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
                       invoiceStatusFilter === st
-                        ? 'bg-[#7a1228] text-white shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        ? 'bg-primary text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-surface-container-low'
                     }`}
                   >
                     {st === 'ALL'
@@ -540,7 +541,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                         <td className="py-3 px-4 text-right font-data-mono font-bold text-on-surface">
                           KES {inv.amountPayable.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right font-data-mono text-secondary font-bold">
+                        <td className="py-3 px-4 text-right font-data-mono text-success font-bold">
                           KES {inv.amountPaid.toLocaleString()}
                         </td>
                         <td className="py-3 px-4 text-right font-data-mono font-black text-error">
@@ -557,10 +558,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                 setSelectedInvoiceForDetails(inv);
                                 setIsInvoiceDetailsOpen(true);
                               }}
-                              className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              className="px-2.5 py-1.5 bg-white hover:bg-surface-container-low text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
                               title="View Invoice & Download Official PDF"
                             >
-                              <span className="material-symbols-outlined text-[14px] text-[#7a1228]">visibility</span>
+                              <span className="material-symbols-outlined text-[14px] text-primary">visibility</span>
                               <span>View / PDF</span>
                             </button>
 
@@ -575,7 +576,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                     alert(e.message || 'Failed to issue invoice');
                                   }
                                 }}
-                                className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                className="px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
                                 title="Issue draft invoice officially"
                               >
                                 <span className="material-symbols-outlined text-[14px]">send</span>
@@ -610,13 +611,13 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                     className="px-2.5 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer inline-flex items-center gap-1"
                                     title="Record Cash or Bank Deposit Slip"
                                   >
-                                    <span className="material-symbols-outlined text-[13px] text-emerald-700">payments</span>
+                                    <span className="material-symbols-outlined text-[13px] text-primary">payments</span>
                                     <span>Cash / Slip</span>
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handlePayInvoice(inv)}
-                                  className="px-2.5 py-1.5 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
+                                  className="px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
                                 >
                                   <span className="material-symbols-outlined text-[13px]">
                                     {isGuardian ? 'forward_to_inbox' : 'point_of_sale'}
@@ -625,7 +626,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                 </button>
                               </>
                             ) : inv.status === 'PAID' ? (
-                              <span className="text-xs font-bold text-secondary flex items-center justify-end gap-1">
+                              <span className="text-xs font-bold text-success flex items-center justify-end gap-1">
                                 <span className="material-symbols-outlined text-[15px]">check_circle</span>
                                 <span>Fully Settled</span>
                               </span>
@@ -672,8 +673,8 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               onClick={() => setChannelFilter('CASH')}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 channelFilter === 'CASH'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed border border-primary'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">payments</span>
@@ -683,8 +684,8 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               onClick={() => setChannelFilter('BANK_DEPOSIT')}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 channelFilter === 'BANK_DEPOSIT'
-                  ? 'bg-sky-700 text-white shadow-xs'
-                  : 'bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed border border-primary'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">account_balance</span>
@@ -694,8 +695,8 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               onClick={() => setChannelFilter('MPESA')}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 channelFilter === 'MPESA'
-                  ? 'bg-purple-700 text-white shadow-xs'
-                  : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed border border-primary'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">smartphone</span>
@@ -705,8 +706,8 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               onClick={() => setChannelFilter('CHEQUE')}
               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
                 channelFilter === 'CHEQUE'
-                  ? 'bg-amber-700 text-white shadow-xs'
-                  : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary-fixed border border-primary'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">receipt_long</span>
@@ -754,10 +755,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                             (tx.channel || '').toUpperCase().includes('CASH')
                               ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                               : (tx.channel || '').toUpperCase().includes('DEPOSIT')
-                              ? 'bg-sky-100 text-sky-900 border border-sky-300'
+                              ? 'bg-primary-fixed text-on-primary-fixed border border-primary'
                               : (tx.channel || '').toUpperCase().includes('CHEQUE')
                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                              : 'bg-purple-100 text-purple-900 border border-purple-300'
+                              : 'bg-primary-fixed text-on-primary-fixed border border-primary'
                           }`}
                         >
                           <span className="material-symbols-outlined text-[13px]">
@@ -772,11 +773,11 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                           <span>{tx.channel || 'KCB Bank'}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-data-mono font-bold text-secondary">
+                      <td className="py-3 px-4 text-right font-data-mono font-bold text-success">
                         KES {tx.amount.toLocaleString()}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-bold text-[10px]">
+                        <span className="px-2 py-0.5 rounded bg-success-container text-on-success-container font-bold text-[10px]">
                           {tx.status}
                         </span>
                       </td>
@@ -835,7 +836,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             {isGuardian && (
               <button
                 onClick={() => setIsForwardPaymentOpen(true)}
-                className="px-3.5 py-2 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto"
+                className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto"
               >
                 <span className="material-symbols-outlined text-[16px]">add_comment</span>
                 <span>Forward Payment SMS</span>
@@ -844,7 +845,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             {!isGuardian && onNavigateTab && (
               <button
                 onClick={() => onNavigateTab('forwarded-payments')}
-                className="px-3.5 py-2 bg-gradient-to-r from-[#7a1228] to-[#500b1a] hover:from-[#600e20] hover:to-[#400914] text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto shadow-xs"
+                className="px-3.5 py-2 bg-gradient-to-r from-primary to-primary-container hover:from-primary-container hover:to-[#400914] text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto shadow-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                 <span>Open Dedicated Verification Page</span>
@@ -915,7 +916,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                             {tx.channel || 'M-Pesa'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-data-mono font-bold text-secondary">
+                        <td className="py-3 px-4 text-right font-data-mono font-bold text-success">
                           KES {Number(tx.amount || 0).toLocaleString()}
                         </td>
                         <td className="py-3 px-4 max-w-xs">
@@ -927,7 +928,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               isCompleted
-                                ? 'bg-secondary-container text-on-secondary-container'
+                                ? 'bg-success-container text-on-success-container'
                                 : isPending
                                 ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                 : 'bg-rose-100 text-rose-900 border border-rose-300'
@@ -943,7 +944,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                 <button
                                   onClick={() => handleVerifyForwarded(tx.id, 'APPROVE')}
                                   disabled={isProcessing}
-                                  className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50 shadow-2xs"
+                                  className="px-2.5 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50 shadow-2xs"
                                   title="Verify and credit student fee invoice"
                                 >
                                   {isProcessing ? (
@@ -984,7 +985,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       {selectedTx && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-gradient-to-r from-primary to-[#500b1a] text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-gradient-to-r from-primary to-primary-container text-white p-4 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Official School Receipt</h3>
               <button onClick={() => setSelectedTx(null)} className="text-rose-100 hover:text-white cursor-pointer">
                 <span className="material-symbols-outlined text-[18px]">close</span>
@@ -1019,7 +1020,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 </div>
                 <div className="flex justify-between pt-2 border-t border-surface-container">
                   <span className="font-bold text-on-surface">Amount Paid:</span>
-                  <span className="font-bold font-data-mono text-secondary text-sm">
+                  <span className="font-bold font-data-mono text-success text-sm">
                     KES {selectedTx.amount.toLocaleString()}
                   </span>
                 </div>
@@ -1046,6 +1047,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           loadData();
           setIsGenInvoicesOpen(false);
         }}
+        students={students}
       />
 
       <RecordPaymentModal
@@ -1166,7 +1168,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               </div>
 
               <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-[11px] flex items-start gap-2">
-                <span className="material-symbols-outlined text-[16px] text-amber-700 shrink-0 mt-0.5">info</span>
+                <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">info</span>
                 <span>
                   This action removes this unsettled billing entry from the ledger. Only hanging invoices with <strong>zero payments recorded</strong> can be deleted. This action cannot be undone.
                 </span>

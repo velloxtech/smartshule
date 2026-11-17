@@ -88,7 +88,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('The Future Begins Here', 14, 16);
-    doc.text('KEMRI Street, Kisian, Kisumu, Kenya | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 21);
+    doc.text('P.O Box 12-20123 | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 21);
 
     // Document Title Banner
     doc.setTextColor(122, 18, 40);
@@ -237,23 +237,23 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
       case 'UNPAID':
         return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">UNPAID</span>;
       case 'DRAFT':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-800 border border-slate-300">DRAFT</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-container text-slate-800 border border-slate-300">DRAFT</span>;
       case 'CANCELLED':
       case 'VOIDED':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500 line-through border border-gray-300">CANCELLED</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-container-low text-gray-500 line-through border border-gray-300">CANCELLED</span>;
       default:
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">{status}</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-fixed text-on-primary-fixed border border-primary">{status}</span>;
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden my-8 animate-fade-in flex flex-col max-h-[92vh]">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden my-8 animate-fade-in flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="bg-[#7a1228] px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-primary px-6 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-              <span className="material-symbols-outlined text-amber-300 text-2xl">receipt_long</span>
+              <span className="material-symbols-outlined text-primary-fixed-dim text-2xl">receipt_long</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
           )}
 
           {/* Top Metadata Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-surface rounded-xl border border-slate-200/80 text-xs">
             <div>
               <span className="text-slate-500 block font-medium">Status</span>
               <div className="mt-1">{getStatusBadge(invoice.status)}</div>
@@ -343,7 +343,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
             </div>
             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
               <table className="w-full text-xs text-left">
-                <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <thead className="bg-surface-container-low text-slate-700 font-bold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3 w-10 text-center">#</th>
                     <th className="py-2.5 px-3">Description</th>
@@ -356,11 +356,11 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {invoice.items && invoice.items.length > 0 ? (
                     invoice.items.map((it, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={idx} className="hover:bg-surface/60 transition-colors">
                         <td className="py-2.5 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                         <td className="py-2.5 px-3 font-semibold text-slate-800">{it.name}</td>
                         <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-slate-600 border border-slate-200">
                             {it.category || 'OTHER'}
                           </span>
                         </td>
@@ -387,7 +387,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
 
           {/* Invoice Summary Totals Card */}
           <div className="flex justify-end">
-            <div className="w-full sm:w-80 bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-2 text-xs">
+            <div className="w-full sm:w-80 bg-surface rounded-xl border border-slate-200 p-4 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal (Billed Amount):</span>
                 <span className="font-semibold text-slate-800 font-mono">
@@ -404,7 +404,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
               )}
               <div className="flex justify-between text-slate-900 font-bold border-t border-slate-200 pt-2 text-sm">
                 <span>Total Payable:</span>
-                <span className="font-mono text-[#7a1228]">
+                <span className="font-mono text-primary">
                   KES {Number(invoice.amountPayable || 0).toLocaleString()}
                 </span>
               </div>
@@ -450,7 +450,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowCancelPrompt(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+                  className="px-3 py-1.5 text-xs text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-surface-container-low"
                 >
                   Keep Invoice
                 </button>
@@ -468,7 +468,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-surface border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {canCancel && !showCancelPrompt && (
               <button
@@ -486,7 +486,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                 type="button"
                 disabled={isProcessing}
                 onClick={handleIssueDraft}
-                className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-primary rounded-lg hover:bg-primary-container transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-sm">verified</span>
                 <span>{isProcessing ? 'Issuing...' : 'Issue Invoice Officially'}</span>
@@ -502,7 +502,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                   onClose();
                   onRecordPayment(invoice);
                 }}
-                className="px-3.5 py-1.5 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-primary rounded-lg hover:bg-primary-container transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">payments</span>
                 <span>Record Payment</span>
@@ -512,16 +512,16 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
-              <span className="material-symbols-outlined text-sm text-[#7a1228]">picture_as_pdf</span>
+              <span className="material-symbols-outlined text-sm text-primary">picture_as_pdf</span>
               <span>Download PDF</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors"
+              className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors"
             >
               Close
             </button>

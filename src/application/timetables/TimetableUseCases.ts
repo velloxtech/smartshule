@@ -1,8 +1,9 @@
+import {sameTerm, AcademicActor, TeachingScope, TeacherAssignmentAccess, matchesTeachingCohort} from '../shared/TeacherAssignmentAccess';
 import { ITimetableRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { Timetable, TimetableSlot, DayOfWeek } from '../../core/domain/timetable/Timetable';
-import { IdGenerator, NotFoundError, ConflictError, ValidationError } from '../../core/domain/shared/Errors';
+import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export interface CreateTimetableDTO {
   schoolId?: string;
@@ -45,7 +46,7 @@ export class TimetableUseCases {
     let existing = dto.streamId ? await this.timetableRepository.findByStream(dto.streamId, dto.termId) : null;
     if (!existing && dto.classRoomId) {
       const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
-      if (classTimetables.length > 0) existing = classTimetables[0];
+      existing = classTimetables.find(t=>(t.streamId||'')===(dto.streamId||'')&&(!dto.academicYearId||t.academicYearId===dto.academicYearId))||null;
     }
     if (existing) {
       return existing.toJSON();
@@ -78,25 +79,8 @@ export class TimetableUseCases {
   }
 
   public async addOrUpdateSlot(dto: AddSlotDTO) {
-    let timetable = dto.timetableId ? await this.timetableRepository.findById(dto.timetableId) : null;
-    if (!timetable && dto.streamId && dto.termId) {
-      timetable = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
-    }
-    if (!timetable && dto.classRoomId && dto.termId) {
-      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
-      if (classTimetables && classTimetables.length > 0) {
-        timetable = classTimetables[0];
-      }
-    }
-    if (!timetable && dto.streamId) {
-      timetable = await this.timetableRepository.findByStream(dto.streamId);
-    }
-    if (!timetable && dto.classRoomId) {
-      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId);
-      if (classTimetables && classTimetables.length > 0) {
-        timetable = classTimetables[0];
-      }
-    }
+    const {timetable:found,...scope}=await this.resolveTimetableScope(dto);
+    let timetable=found;dto={...dto,...scope};
 
     if (!timetable) {
       // Auto-create timetable
@@ -211,6 +195,24 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
+  private async resolveTimetableScope(dto:{timetableId?:string;schoolId?:string;academicYearId?:string;termId?:string;classRoomId?:string;streamId?:string}) {
+    let timetable = dto.timetableId?await this.timetableRepository.findById(dto.timetableId):null;
+    const schoolIdForScope=dto.schoolId||timetable?.schoolId||'school-001';
+    const yearIdForScope=dto.academicYearId||timetable?.academicYearId||(await this.academicRepository.findCurrentYear(schoolIdForScope))?.id;
+    const yearForScope=yearIdForScope?await this.academicRepository.findYearById(yearIdForScope):null;
+    let termForScope=dto.termId?await this.academicRepository.findTermById(dto.termId):timetable?.termId?await this.academicRepository.findTermById(timetable.termId):await this.academicRepository.findCurrentTerm(yearIdForScope);
+    if(!termForScope&&dto.termId&&yearIdForScope)termForScope=(await this.academicRepository.findTermsByYear(yearIdForScope)).find(t=>sameTerm(t.id,dto.termId!))||null;
+    if(!yearForScope||yearForScope.schoolId!==schoolIdForScope||!termForScope||termForScope.academicYearId!==yearForScope.id)throw new ValidationError('Select a valid school academic year and term before saving the timetable.');
+    const streamForScope=dto.streamId?await this.academicRepository.findStreamById(dto.streamId):null;
+    const classIdForScope=dto.classRoomId||timetable?.classRoomId||streamForScope?.classRoomId;
+    const classForScope=classIdForScope?await this.academicRepository.findClassById(classIdForScope):null;
+    if(!classForScope||classForScope.schoolId!==schoolIdForScope||(dto.streamId&&(!streamForScope||streamForScope.classRoomId!==classForScope.id)))throw new ValidationError('Select a class and stream belonging to this school.');
+    const streamIdForScope=dto.streamId!==undefined?dto.streamId:timetable?.streamId;
+    if(timetable&&(timetable.schoolId!==schoolIdForScope||timetable.academicYearId!==yearForScope.id||!sameTerm(timetable.termId,termForScope.id)||timetable.classRoomId!==classForScope.id||(timetable.streamId||'')!==(streamIdForScope||'')))throw new ValidationError('The selected timetable belongs to a different class, stream or period. Reload the correct timetable before saving.');
+    if(!timetable){const matches=await this.timetableRepository.findByClass(classForScope.id,termForScope.id);timetable=matches.find(t=>t.schoolId===schoolIdForScope&&t.academicYearId===yearForScope.id&&(t.streamId||'')===(streamIdForScope||''))||null;}
+    return {timetable,schoolId:schoolIdForScope,academicYearId:yearForScope.id,termId:termForScope.id,classRoomId:classForScope.id,streamId:streamIdForScope};
+  }
+
   public async saveTimetableGrid(dto: {
     timetableId?: string;
     streamId?: string;
@@ -222,44 +224,9 @@ export class TimetableUseCases {
     days?: any[];
     slots: TimetableSlot[];
   }) {
-    let timetable = null;
-
-    if (dto.timetableId) {
-      timetable = await this.timetableRepository.findById(dto.timetableId);
-    }
-    if (!timetable && dto.streamId && dto.termId) {
-      timetable = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
-    }
-    if (!timetable && dto.classRoomId && dto.termId) {
-      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
-      if (classTimetables && classTimetables.length > 0) {
-        timetable = classTimetables[0];
-      }
-    }
-    if (!timetable && dto.streamId) {
-      timetable = await this.timetableRepository.findByStream(dto.streamId);
-    }
-    if (!timetable && dto.classRoomId) {
-      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId);
-      if (classTimetables && classTimetables.length > 0) {
-        timetable = classTimetables[0];
-      }
-    }
-
-    // Determine target identifiers and term
-    const targetClassRoomId = timetable?.classRoomId || dto.classRoomId || '';
-    const targetStreamId = timetable?.streamId || dto.streamId || '';
-    const targetTimetableId = timetable?.id || dto.timetableId || '';
-    let effectiveTermId = timetable?.termId || dto.termId;
-    if (!effectiveTermId && this.academicRepository) {
-      try {
-        const curTerm = await this.academicRepository.findCurrentTerm();
-        effectiveTermId = curTerm?.id;
-      } catch {}
-    }
-    if (!effectiveTermId) {
-      effectiveTermId = 'term-t1';
-    }
+    const {timetable:found,...scope}=await this.resolveTimetableScope(dto);
+    let timetable=found;dto={...dto,...scope};
+    const targetClassRoomId=scope.classRoomId,targetStreamId=scope.streamId||'',targetTimetableId=timetable?.id||'',effectiveTermId=scope.termId;
 
     // Conflict Check 1: Intra-grid conflict (same teacher scheduled multiple times in this grid at same day & period)
     const seenTeacherSlots = new Map<string, string>();
@@ -381,32 +348,64 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
-  public async getStreamTimetable(streamIdOrClassId?: string, termId?: string, classRoomId?: string) {
-    let timetable = null;
-    if (streamIdOrClassId && streamIdOrClassId !== classRoomId) {
-      timetable = await this.timetableRepository.findByStream(streamIdOrClassId, termId || '');
-      if (!timetable && termId) {
-        timetable = await this.timetableRepository.findByStream(streamIdOrClassId);
-      }
+  private async readPeriod(actor:AcademicActor,termId?:string,academicYearId?:string){
+    if(!actor.schoolId)throw new ForbiddenError('A school-scoped account is required.');
+    let yearId=academicYearId;
+    if(!yearId&&termId){for(const year of await this.academicRepository.findAllYears(actor.schoolId)){if((await this.academicRepository.findTermsByYear(year.id)).some(t=>sameTerm(t.id,termId))){yearId=year.id;break;}}}
+    return new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository).context(actor,{academicYearId:yearId,termId});
+  }
+
+  public async getTeacherTimetableAccess(actor:AcademicActor,scope:TeachingScope={}){
+    if(actor.role!=='TEACHER')throw new ForbiddenError('Teacher timetable access is for the signed-in teacher.');
+    const period=await this.readPeriod(actor,scope.termId,scope.academicYearId);
+    const assigned=await new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository).assignments(actor,{academicYearId:period.year.id,termId:period.term.id});
+    const classes=[];
+    for(const cls of await this.academicRepository.findAllClasses(actor.schoolId)){
+      const duties=assigned.classes.filter(a=>a.classRoomId===cls.id||(!a.classRoomId&&Boolean(a.streamId)));
+      const streams=(await this.academicRepository.findStreamsByClass(cls.id)).filter(s=>duties.some(a=>matchesTeachingCohort(a,cls.id,s.id)));
+      const allowsWholeClass=duties.some(a=>a.classRoomId===cls.id&&!a.streamId);
+      if(allowsWholeClass||streams.length)classes.push({...cls.toJSON(),streams:streams.map(s=>s.toJSON()),allowsWholeClass});
     }
-    if (!timetable) {
-      const targetClass = classRoomId || streamIdOrClassId;
-      if (targetClass) {
-        let classTimetables = await this.timetableRepository.findByClass(targetClass, termId || '');
-        if ((!classTimetables || classTimetables.length === 0) && termId) {
-          classTimetables = await this.timetableRepository.findByClass(targetClass);
-        }
-        if (classTimetables && classTimetables.length > 0) {
-          timetable = classTimetables[0];
-        }
-      }
+    return {teacherId:assigned.teacher.id,academicYearId:period.year.id,termId:period.term.id,classes};
+  }
+
+  public async getStreamTimetable(streamIdOrClassId?: string, termId?: string, classRoomId?: string,actor?:AcademicActor,academicYearId?:string) {
+    const stream=streamIdOrClassId?await this.academicRepository.findStreamById(streamIdOrClassId):null;
+    const targetClass=classRoomId||stream?.classRoomId||streamIdOrClassId;
+    const requestedStream=stream&&streamIdOrClassId!==classRoomId?stream.id:undefined;
+    if(stream&&classRoomId&&stream.classRoomId!==classRoomId)throw new ValidationError('The stream does not belong to the selected class.');
+    if(classRoomId&&streamIdOrClassId&&streamIdOrClassId!==classRoomId&&!stream)throw new ValidationError('The selected stream does not exist.');
+    const period=actor&&(actor.role==='TEACHER'||termId||academicYearId)?await this.readPeriod(actor,termId,academicYearId):undefined;
+    if(actor){
+      const cls=targetClass?await this.academicRepository.findClassById(targetClass):null;
+      if(!cls||cls.schoolId!==actor.schoolId)throw new ForbiddenError('Class timetable access denied.');
+      if(actor.role==='TEACHER'&&!await new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository).canClassTeacher(actor,{classRoomId:targetClass,streamId:requestedStream,academicYearId:period!.year.id,termId:period!.term.id}))throw new ForbiddenError('The full class timetable requires an active class-teacher assignment. Use My Teaching Timetable for your subject lessons.');
     }
+    const rows=targetClass?(await this.timetableRepository.findByClass(targetClass)).filter(t=>(!termId||sameTerm(t.termId,termId))&&(!period||(t.schoolId===actor!.schoolId&&t.academicYearId===period.year.id&&sameTerm(t.termId,period.term.id)))):[];
+    const timetable=(requestedStream?rows.find(t=>t.streamId===requestedStream):undefined)||rows.find(t=>!t.streamId)||null;
     if (!timetable) throw new NotFoundError('Timetable for this class or stream');
     return timetable.toJSON();
   }
 
-  public async getTeacherTimetable(teacherId: string, termId?: string) {
-    const slots = await this.timetableRepository.findByTeacher(teacherId, termId);
+  public async getTeacherTimetable(teacherId: string, termId?: string,actor?:AcademicActor,academicYearId?:string) {
+    if(!actor)return this.timetableRepository.findByTeacher(teacherId,termId);
+    const period=await this.readPeriod(actor,termId,academicYearId);
+    const access=new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+    const assigned=actor.role==='TEACHER'?await access.assignments(actor,{academicYearId:period.year.id,termId:period.term.id}):null;
+    if(assigned&&teacherId&&![actor.userId,assigned.teacher.id].includes(teacherId))throw new ForbiddenError('Teachers can only view their own teaching timetable.');
+    const ids=assigned?[assigned.teacher.id,actor.userId]:[teacherId];
+    if(!ids[0])throw new ValidationError('Choose a teacher.');
+    const terms=[period.term.id,period.term.id.includes('-t')?period.term.id.replace(/-t([1-3])$/,'-$1'):period.term.id.replace(/-([1-3])$/,'-t$1')];
+    const candidates=(await Promise.all([...new Set(ids)].flatMap(id=>[...new Set(terms)].map(term=>this.timetableRepository.findByTeacher(id,term))))).flat();
+    const parents=new Map<string,Timetable|null>(),seen=new Set<string>(),slots=[];
+    for(const slot of candidates){
+      if(!slot.timetableId)continue;
+      if(!parents.has(slot.timetableId))parents.set(slot.timetableId,await this.timetableRepository.findById(slot.timetableId));
+      const table=parents.get(slot.timetableId);
+      if(!table||table.schoolId!==actor.schoolId||table.academicYearId!==period.year.id||!sameTerm(table.termId,period.term.id))continue;
+      if(assigned&&!assigned.classes.some(a=>matchesTeachingCohort(a,table.classRoomId,table.streamId))&&!assigned.subjects.some(a=>matchesTeachingCohort(a,table.classRoomId,table.streamId)&&a.learningAreaId===slot.learningAreaId))continue;
+      const key=JSON.stringify([slot.timetableId,slot.id||[slot.dayOfWeek,slot.periodNumber]]);if(seen.has(key))continue;seen.add(key);slots.push(slot);
+    }
     return slots;
   }
 }

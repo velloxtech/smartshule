@@ -214,9 +214,9 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">rule</span>
             </div>
             <div>
@@ -231,7 +231,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
 
         {saved ? (
           <div className="p-8 text-center space-y-3 overflow-y-auto flex-1">
-            <div className="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center text-secondary mx-auto">
+            <div className="w-16 h-16 rounded-full bg-success-container flex items-center justify-center text-success mx-auto">
               <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
             <h4 className="font-bold text-lg text-on-surface">Assessment Recorded Successfully!</h4>
@@ -368,7 +368,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">CBE Rubric Level</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { key: 'EE', label: 'Exceeding (EE)', desc: 'Mastery beyond expected standard', activeClass: 'bg-secondary text-white' },
+                  { key: 'EE', label: 'Exceeding (EE)', desc: 'Mastery beyond expected standard', activeClass: 'bg-success text-white' },
                   { key: 'ME', label: 'Meeting (ME)', desc: 'Competently meets standard', activeClass: 'bg-primary text-white' },
                   { key: 'AE', label: 'Approaching (AE)', desc: 'Progressing with teacher guidance', activeClass: 'bg-[#653400] text-white' },
                   { key: 'BE', label: 'Below (BE)', desc: 'Urgent individual intervention required', activeClass: 'bg-error text-white' },
@@ -394,7 +394,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
 
             <div className="pt-3 flex items-center justify-end gap-2 shrink-0 border-t border-outline-variant/20 mt-2">
               <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-              <button type="submit" disabled={!learningAreaId} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+              <button type="submit" disabled={!learningAreaId} className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                 <span className="material-symbols-outlined text-[18px]">save</span>
                 <span>Save CBE Assessment</span>
               </button>

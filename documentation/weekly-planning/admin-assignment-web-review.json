@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Failed formal assignment displays its error and does not report success",
+    "Admin web form saves the real current academic year, class and stream",
+    "Existing teacher session sees the new assignment after focus without signing out",
+    "Fresh teacher sign-in receives the same saved assignment"
+  ],
+  "errors": []
+}

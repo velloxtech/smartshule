@@ -203,7 +203,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
           <div className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant mb-1">
             <span>Administration</span>
             <span>/</span>
-            <span className="text-[#7a1228] font-bold">Archived Accounts & Data</span>
+            <span className="text-primary font-bold">Archived Accounts & Data</span>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-on-surface flex items-center gap-2">
@@ -234,7 +234,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
             type="button"
             onClick={fetchArchivedRecords}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <span className={`material-symbols-outlined text-[16px] ${loading ? 'animate-spin' : ''}`}>
               sync
@@ -270,7 +270,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[11px] font-bold uppercase tracking-wider">Archived Learners</span>
-            <span className="material-symbols-outlined text-[#7a1228] text-[20px]">school</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">school</span>
           </div>
           <div className="mt-2">
             <span className="text-2xl font-black text-on-surface">{totalArchivedLearners}</span>
@@ -281,10 +281,10 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[11px] font-bold uppercase tracking-wider">Parent Accounts</span>
-            <span className="material-symbols-outlined text-blue-600 text-[20px]">diversity_3</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">diversity_3</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-blue-700">{totalArchivedParents}</span>
+            <span className="text-2xl font-black text-primary">{totalArchivedParents}</span>
             <span className="text-[10px] text-on-surface-variant block mt-0.5">Guardian & parent logins</span>
           </div>
         </div>
@@ -305,7 +305,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[11px] font-bold uppercase tracking-wider">Preserved Invoices</span>
-            <span className="material-symbols-outlined text-amber-600 text-[20px]">receipt_long</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
           </div>
           <div className="mt-2">
             <span className="text-2xl font-black text-amber-700">{totalPreservedInvoices}</span>
@@ -316,10 +316,10 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[11px] font-bold uppercase tracking-wider">CBC Marks Preserved</span>
-            <span className="material-symbols-outlined text-purple-600 text-[20px]">assignment_turned_in</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">assignment_turned_in</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-purple-700">{totalAssessmentsPreserved}</span>
+            <span className="text-2xl font-black text-primary">{totalAssessmentsPreserved}</span>
             <span className="text-[10px] text-on-surface-variant block mt-0.5">Formative & Summative</span>
           </div>
         </div>
@@ -334,7 +334,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('accounts')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'accounts'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -347,7 +347,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('learners')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'learners'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -360,7 +360,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('finances')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'finances'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -373,7 +373,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('academic')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'academic'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -386,7 +386,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('attendance')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'attendance'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -399,7 +399,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
               onClick={() => setActiveTab('welfare')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === 'welfare'
-                  ? 'bg-[#7a1228] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
               }`}
             >
@@ -445,7 +445,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                 onClick={() => setAccountTypeFilter('PARENT')}
                 className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   accountTypeFilter === 'PARENT'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                 }`}
               >
@@ -456,7 +456,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                 onClick={() => setAccountTypeFilter('STUDENT')}
                 className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   accountTypeFilter === 'STUDENT'
-                    ? 'bg-[#7a1228] text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                 }`}
               >
@@ -501,7 +501,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             <div className={`w-8 h-8 rounded-full font-bold flex items-center justify-center text-xs text-white shrink-0 ${
-                              acc.accountType === 'PARENT' ? 'bg-blue-600' : 'bg-[#7a1228]'
+                              acc.accountType === 'PARENT' ? 'bg-primary' : 'bg-primary'
                             }`}>
                               {acc.fullName?.[0] || 'U'}
                             </div>
@@ -519,7 +519,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] uppercase ${
                             acc.accountType === 'PARENT'
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              ? 'bg-primary-fixed text-on-primary-fixed border border-primary'
                               : 'bg-rose-50 text-rose-800 border border-rose-200'
                           }`}>
                             <span className="material-symbols-outlined text-[13px]">
@@ -564,7 +564,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                               type="button"
                               onClick={() => handleRestore(acc.record)}
                               disabled={restoringId === acc.archiveId}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[11px] shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                              className="px-2.5 py-1 bg-primary hover:bg-primary-container text-white rounded-lg font-semibold text-[11px] shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
                             >
                               {restoringId === acc.archiveId ? 'Restoring...' : 'Restore'}
                             </button>
@@ -624,7 +624,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                       type="button"
                       onClick={() => handleRestore(record)}
                       disabled={restoringId === record.id}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                     >
                       Restore Learner & Parents
                     </button>
@@ -801,7 +801,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                       <strong className="text-on-surface">{helpRequests.length} closed</strong>
                     </div>
                     <div>
-                      <span className="text-on-surface-variant block">eDiary Homework:</span>
+                      <span className="text-on-surface-variant block">eDiary Homefun:</span>
                       <strong className="text-on-surface">{ediary.length} items</strong>
                     </div>
                   </div>
@@ -817,7 +817,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/10 text-white font-bold flex items-center justify-center border border-white/20">
                   {selectedRecord.firstName?.[0] || 'L'}
@@ -876,7 +876,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                           {g.nationalId && <div>National ID: <strong className="text-on-surface">{g.nationalId}</strong></div>}
                         </div>
                         <span className={`inline-block text-[9.5px] px-1.5 py-0.5 rounded font-semibold ${
-                          g.willArchiveParentAccount ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-900'
+                          g.willArchiveParentAccount ? 'bg-amber-100 text-amber-900' : 'bg-primary-fixed text-on-primary-fixed'
                         }`}>
                           {g.willArchiveParentAccount ? 'User Account Cleared from Directory' : 'User Account Retained (Other Children)'}
                         </span>
@@ -924,7 +924,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                 type="button"
                 onClick={() => handleRestore(selectedRecord)}
                 disabled={restoringId === selectedRecord.id}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {restoringId === selectedRecord.id ? 'Restoring Accounts...' : 'Restore Learner & Parent Accounts'}
               </button>

@@ -1,0 +1,1460 @@
+[
+  {
+    "actor": "planning-teacher",
+    "path": "teacher-profile",
+    "width": 390,
+    "mainLength": 2071,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "teacher-profile",
+    "width": 768,
+    "mainLength": 2071,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "teacher-profile",
+    "width": 1440,
+    "mainLength": 2071,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "salary-acknowledgement",
+    "width": 390,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "salary-acknowledgement",
+    "width": 768,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "salary-acknowledgement",
+    "width": 1440,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "students-guardians",
+    "width": 390,
+    "mainLength": 787,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "students-guardians",
+    "width": 768,
+    "mainLength": 823,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "students-guardians",
+    "width": 1440,
+    "mainLength": 823,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "geofencing",
+    "width": 390,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "geofencing",
+    "width": 768,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "geofencing",
+    "width": 1440,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "classes-streams",
+    "width": 390,
+    "mainLength": 613,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "classes-streams",
+    "width": 768,
+    "mainLength": 613,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "classes-streams",
+    "width": 1440,
+    "mainLength": 613,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "learning-areas",
+    "width": 390,
+    "mainLength": 390,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "learning-areas",
+    "width": 768,
+    "mainLength": 390,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "learning-areas",
+    "width": 1440,
+    "mainLength": 2127,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "formative-assessments",
+    "width": 390,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "formative-assessments",
+    "width": 768,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "formative-assessments",
+    "width": 1440,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "summative-assessments",
+    "width": 390,
+    "mainLength": 1647,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "summative-assessments",
+    "width": 768,
+    "mainLength": 1647,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "summative-assessments",
+    "width": 1440,
+    "mainLength": 1647,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "competencies-strands",
+    "width": 390,
+    "mainLength": 741,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "competencies-strands",
+    "width": 768,
+    "mainLength": 741,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "competencies-strands",
+    "width": 1440,
+    "mainLength": 741,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "report-cards",
+    "width": 390,
+    "mainLength": 1392,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "report-cards",
+    "width": 768,
+    "mainLength": 1694,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "report-cards",
+    "width": 1440,
+    "mainLength": 1694,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "CBC-analytics",
+    "width": 390,
+    "mainLength": 255,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "CBC-analytics",
+    "width": 768,
+    "mainLength": 255,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "CBC-analytics",
+    "width": 1440,
+    "mainLength": 255,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "broadsheets",
+    "width": 390,
+    "mainLength": 1798,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "broadsheets",
+    "width": 768,
+    "mainLength": 1798,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "broadsheets",
+    "width": 1440,
+    "mainLength": 1798,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "schemes-lesson-plans",
+    "width": 390,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "schemes-lesson-plans",
+    "width": 768,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "schemes-lesson-plans",
+    "width": 1440,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "records-of-work",
+    "width": 390,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "records-of-work",
+    "width": 768,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "records-of-work",
+    "width": 1440,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 5344,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 5344,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 5344,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "timetable",
+    "width": 390,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "timetable",
+    "width": 768,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "timetable",
+    "width": 1440,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "library",
+    "width": 390,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "library",
+    "width": 768,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "library",
+    "width": 1440,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "attendance-register",
+    "width": 390,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "attendance-register",
+    "width": 768,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "attendance-register",
+    "width": 1440,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "clinic",
+    "width": 390,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "clinic",
+    "width": 768,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "clinic",
+    "width": 1440,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "discipline",
+    "width": 390,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "discipline",
+    "width": 768,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "discipline",
+    "width": 1440,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "occurrence-records",
+    "width": 390,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "occurrence-records",
+    "width": 768,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "occurrence-records",
+    "width": 1440,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "announcements",
+    "width": 390,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "announcements",
+    "width": 768,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "announcements",
+    "width": 1440,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "ediary",
+    "width": 390,
+    "mainLength": 589,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "ediary",
+    "width": 768,
+    "mainLength": 589,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "ediary",
+    "width": 1440,
+    "mainLength": 589,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "visual-CBC",
+    "width": 390,
+    "mainLength": 497,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "visual-CBC",
+    "width": 768,
+    "mainLength": 648,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "visual-CBC",
+    "width": 1440,
+    "mainLength": 648,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "document-signing",
+    "width": 390,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "document-signing",
+    "width": 768,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "document-signing",
+    "width": 1440,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "digital-signature",
+    "width": 390,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "digital-signature",
+    "width": 768,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-teacher",
+    "path": "digital-signature",
+    "width": 1440,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "teacher-profile",
+    "width": 390,
+    "mainLength": 2106,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "teacher-profile",
+    "width": 768,
+    "mainLength": 2106,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "teacher-profile",
+    "width": 1440,
+    "mainLength": 2106,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "salary-acknowledgement",
+    "width": 390,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "salary-acknowledgement",
+    "width": 768,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "salary-acknowledgement",
+    "width": 1440,
+    "mainLength": 627,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "students-guardians",
+    "width": 390,
+    "mainLength": 648,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "students-guardians",
+    "width": 768,
+    "mainLength": 684,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "students-guardians",
+    "width": 1440,
+    "mainLength": 684,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "geofencing",
+    "width": 390,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "geofencing",
+    "width": 768,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "geofencing",
+    "width": 1440,
+    "mainLength": 814,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "classes-streams",
+    "width": 390,
+    "mainLength": 534,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "classes-streams",
+    "width": 768,
+    "mainLength": 534,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "classes-streams",
+    "width": 1440,
+    "mainLength": 534,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "learning-areas",
+    "width": 390,
+    "mainLength": 390,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "learning-areas",
+    "width": 768,
+    "mainLength": 556,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "learning-areas",
+    "width": 1440,
+    "mainLength": 556,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "formative-assessments",
+    "width": 390,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "formative-assessments",
+    "width": 768,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "formative-assessments",
+    "width": 1440,
+    "mainLength": 890,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "summative-assessments",
+    "width": 390,
+    "mainLength": 1137,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "summative-assessments",
+    "width": 768,
+    "mainLength": 1137,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "summative-assessments",
+    "width": 1440,
+    "mainLength": 1137,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "competencies-strands",
+    "width": 390,
+    "mainLength": 453,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "competencies-strands",
+    "width": 768,
+    "mainLength": 453,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "competencies-strands",
+    "width": 1440,
+    "mainLength": 453,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "report-cards",
+    "width": 390,
+    "mainLength": 1236,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "report-cards",
+    "width": 768,
+    "mainLength": 1236,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "report-cards",
+    "width": 1440,
+    "mainLength": 1236,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "CBC-analytics",
+    "width": 390,
+    "mainLength": 255,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "CBC-analytics",
+    "width": 768,
+    "mainLength": 528,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "CBC-analytics",
+    "width": 1440,
+    "mainLength": 528,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "broadsheets",
+    "width": 390,
+    "mainLength": 1310,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "broadsheets",
+    "width": 768,
+    "mainLength": 1310,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "broadsheets",
+    "width": 1440,
+    "mainLength": 1310,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "schemes-lesson-plans",
+    "width": 390,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "schemes-lesson-plans",
+    "width": 768,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "schemes-lesson-plans",
+    "width": 1440,
+    "mainLength": 714,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "records-of-work",
+    "width": 390,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "records-of-work",
+    "width": 768,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "records-of-work",
+    "width": 1440,
+    "mainLength": 1145,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 3903,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "timetable",
+    "width": 390,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "timetable",
+    "width": 768,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "timetable",
+    "width": 1440,
+    "mainLength": 2153,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "library",
+    "width": 390,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "library",
+    "width": 768,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "library",
+    "width": 1440,
+    "mainLength": 638,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "attendance-register",
+    "width": 390,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "attendance-register",
+    "width": 768,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "attendance-register",
+    "width": 1440,
+    "mainLength": 636,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "clinic",
+    "width": 390,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "clinic",
+    "width": 768,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "clinic",
+    "width": 1440,
+    "mainLength": 774,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "discipline",
+    "width": 390,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "discipline",
+    "width": 768,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "discipline",
+    "width": 1440,
+    "mainLength": 707,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "occurrence-records",
+    "width": 390,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "occurrence-records",
+    "width": 768,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "occurrence-records",
+    "width": 1440,
+    "mainLength": 1101,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "announcements",
+    "width": 390,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "announcements",
+    "width": 768,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "announcements",
+    "width": 1440,
+    "mainLength": 721,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "ediary",
+    "width": 390,
+    "mainLength": 557,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "ediary",
+    "width": 768,
+    "mainLength": 557,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "ediary",
+    "width": 1440,
+    "mainLength": 557,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "visual-CBC",
+    "width": 390,
+    "mainLength": 608,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "visual-CBC",
+    "width": 768,
+    "mainLength": 608,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "visual-CBC",
+    "width": 1440,
+    "mainLength": 608,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "document-signing",
+    "width": 390,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "document-signing",
+    "width": 768,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "document-signing",
+    "width": 1440,
+    "mainLength": 689,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "digital-signature",
+    "width": 390,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "digital-signature",
+    "width": 768,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-subject",
+    "path": "digital-signature",
+    "width": 1440,
+    "mainLength": 1437,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "records-of-work",
+    "width": 390,
+    "mainLength": 1239,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "records-of-work",
+    "width": 768,
+    "mainLength": 1239,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "records-of-work",
+    "width": 1440,
+    "mainLength": 1239,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 390,
+    "mainLength": 5393,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 768,
+    "mainLength": 5393,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "actor": "planning-admin",
+    "path": "curriculum-tracker",
+    "width": 1440,
+    "mainLength": 5393,
+    "overflow": false,
+    "errors": [],
+    "failures": []
+  }
+]

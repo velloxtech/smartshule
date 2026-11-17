@@ -89,7 +89,7 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
     <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-800 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 text-on-primary-fixed flex items-center justify-center">
             <span className="material-symbols-outlined text-[20px]">payments</span>
           </div>
           <div>
@@ -177,19 +177,19 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
                     <td className="py-3.5 px-4">
                       {isAck ? (
                         <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary">
                             <span className="material-symbols-outlined text-[12px]">verified</span>
                             <span>ACKNOWLEDGED</span>
                           </span>
                           {r.acknowledgedAt && (
-                            <div className="text-[10px] text-teal-900 font-mono">
+                            <div className="text-[10px] text-on-primary-fixed font-mono">
                               {new Date(r.acknowledgedAt).toLocaleDateString()}{' '}
                               {new Date(r.acknowledgedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-slate-700 border border-slate-200">
                           <span className="material-symbols-outlined text-[12px]">radio_button_unchecked</span>
                           <span>UNACKNOWLEDGED</span>
                         </span>
@@ -199,13 +199,13 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
                       {isPaid && !isAck ? (
                         <button
                           onClick={() => handleOpenAcknowledge(r)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[15px]">edit_note</span>
                           <span>Acknowledge receipt of salary</span>
                         </button>
                       ) : isAck ? (
-                        <span className="text-[11px] text-teal-800 font-bold inline-flex items-center gap-1">
+                        <span className="text-[11px] text-on-primary-fixed font-bold inline-flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px]">done_all</span>
                           <span>Confirmed</span>
                         </span>
@@ -318,7 +318,7 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>

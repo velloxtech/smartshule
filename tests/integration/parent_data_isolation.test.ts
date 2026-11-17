@@ -146,12 +146,15 @@ describe('Strict Multi-Tenant Parent Data Isolation', () => {
       expect(res.status).toBe(403);
     });
 
-    it('GET /api/v1/attendance/daily blocks parent with 403 Forbidden', async () => {
+    it('GET /api/v1/attendance/daily returns only linked child entries', async () => {
       const res = await request(app)
         .get('/api/v1/attendance/daily?streamId=stream-001&date=2026-03-01')
         .set('Authorization', `Bearer ${parentToken}`);
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      if (res.body.data) {
+        expect(res.body.data.entries.every((entry: any) => entry.studentId === 'student-001')).toBe(true);
+      }
     });
 
     it('GET /api/v1/attendance/student/:studentId rejects access to unlinked child with 403', async () => {

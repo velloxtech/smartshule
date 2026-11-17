@@ -1,3 +1,4 @@
+import { TeacherAssignmentAccess, TeachingScope } from '../shared/TeacherAssignmentAccess';
 import { IAttendanceRepository, AttendanceFilterCriteria } from '../../core/ports/repositories/ITimetableRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -44,9 +45,13 @@ export class AttendanceUseCases {
     private readonly academicRepository?: IAcademicRepository
   ) {}
 
-  private async assertTeacherAssignedToClass(classRoomId?: string, streamId?: string, requestingUser?: UserContext) {
+  private async assertTeacherAssignedToClass(classRoomId?: string, streamId?: string, requestingUser?: UserContext, period: TeachingScope = {}) {
     if (!requestingUser || requestingUser.role !== UserRole.TEACHER) return;
-    if (!this.teacherRepository) return;
+    if (this.academicRepository && this.teacherRepository) {
+      await new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository).assert(requestingUser, {...period,classRoomId,streamId});
+      return;
+    }
+    if (!this.teacherRepository) throw new ForbiddenError('Teacher assignment access is unavailable.');
 
     let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
     if (!teacher) teacher = await this.teacherRepository.findById(requestingUser.userId);
@@ -54,8 +59,15 @@ export class AttendanceUseCases {
       throw new ForbiddenError('No teacher profile associated with your account.');
     }
 
-    const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
+    const assignedStreams = new Set<string>();
     const assignedClasses = new Set<string>();
+
+    if (teacher.assignedClassStreamIds && Array.isArray(teacher.assignedClassStreamIds)) {
+      teacher.assignedClassStreamIds.forEach(id => {
+        assignedStreams.add(id);
+        assignedClasses.add(id);
+      });
+    }
 
     if (this.academicRepository) {
       try {
@@ -85,10 +97,26 @@ export class AttendanceUseCases {
 
   public async markAttendance(dto: MarkAttendanceDTO, requestingUser?: UserContext) {
     if (requestingUser && requestingUser.role === UserRole.TEACHER) {
-      await this.assertTeacherAssignedToClass(dto.classRoomId, dto.streamId, requestingUser);
+      await this.assertTeacherAssignedToClass(dto.classRoomId, dto.streamId, requestingUser, {academicYearId:dto.academicYearId,termId:dto.termId});
     }
 
-    let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, dto.type, dto.classRoomId);
+    if ((!dto.academicYearId || !dto.termId) && this.academicRepository) {
+      try {
+        const curYear = await this.academicRepository.findCurrentYear(dto.schoolId);
+        if (curYear) {
+          if (!dto.academicYearId) dto.academicYearId = curYear.id;
+          if (!dto.termId) {
+            const curTerm = await this.academicRepository.findCurrentTerm(curYear.id);
+            if (curTerm) dto.termId = curTerm.id;
+          }
+        }
+      } catch {}
+    }
+
+    const attendanceType = dto.type || AttendanceType.DAILY_MORNING;
+    dto.type = attendanceType;
+
+    let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, attendanceType, dto.classRoomId);
 
     const formattedEntries: StudentAttendanceEntry[] = [];
     for (const item of dto.entries) {
@@ -121,6 +149,9 @@ export class AttendanceUseCases {
     }
 
     if (register) {
+      if (dto.markedByTeacherId) {
+        register.updateMarkedBy(dto.markedByTeacherId);
+      }
       for (const entry of formattedEntries) {
         register.markEntry(entry);
       }
@@ -151,8 +182,33 @@ export class AttendanceUseCases {
       await this.assertTeacherAssignedToClass(classRoomId, streamId, requestingUser);
     }
     const register = await this.attendanceRepository.findRegister(streamId, date, type, classRoomId);
-    if (!register) throw new NotFoundError('Attendance Register for the specified date');
-    return register.toJSON();
+    if (!register) return null;
+
+    const json = register.toJSON();
+
+    // If requesting user is a parent or guardian, strictly filter entries to only their linked children
+    if (requestingUser && (requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN)) {
+      const guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
+      const linkedStudentIds = new Set<string>(guardian?.studentIds || []);
+
+      const directStudents = await this.studentRepository.findByGuardianId(requestingUser.userId);
+      directStudents.forEach(s => linkedStudentIds.add(s.id));
+
+      const filteredEntries = (json.entries || []).filter((e: any) => linkedStudentIds.has(e.studentId));
+      return {
+        ...json,
+        entries: filteredEntries,
+        summary: {
+          total: filteredEntries.length,
+          present: filteredEntries.filter((e: any) => e.status === 'PRESENT').length,
+          absent: filteredEntries.filter((e: any) => e.status === 'ABSENT').length,
+          late: filteredEntries.filter((e: any) => e.status === 'LATE').length,
+          excused: filteredEntries.filter((e: any) => e.status === 'EXCUSED').length,
+        }
+      };
+    }
+
+    return json;
   }
 
   public async getAttendanceReport(filters: AttendanceFilterCriteria) {
@@ -185,7 +241,7 @@ export class AttendanceUseCases {
         excused: totalExcused + totalSick,
         overallAttendanceRate: totalPossibleAttendances > 0
           ? Math.round(((totalPresent + totalLate) / totalPossibleAttendances) * 100)
-          : 100
+          : 0
       },
       registers: registers.map(r => r.toJSON())
     };

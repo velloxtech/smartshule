@@ -275,8 +275,25 @@ export class PayrollUseCases {
   }
 
   public async listPayrolls(month?: string, schoolId?: string): Promise<any[]> {
-    const targetMonth = month || new Date().toISOString().substring(0, 7);
-    const payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
+    if (month && month.toUpperCase() === 'ALL') {
+      const payrolls = await this.payrollRepository.findPayrollsByMonth(undefined, schoolId);
+      return payrolls.map(p => p.toJSON());
+    }
+
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    const targetMonth = month || currentMonth;
+    let payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
+
+    // If month was not explicitly provided by client and current month has 0 records,
+    // check if there are records in the most recent month so the user doesn't see an empty screen
+    if (!month && payrolls.length === 0) {
+      const allPayrolls = await this.payrollRepository.findPayrollsByMonth(undefined, schoolId);
+      if (allPayrolls.length > 0) {
+        const latestMonth = allPayrolls[0].month;
+        payrolls = allPayrolls.filter(p => p.month === latestMonth);
+      }
+    }
+
     return payrolls.map(p => p.toJSON());
   }
 
@@ -773,7 +790,8 @@ export class PayrollUseCases {
   }
 
   public async getPayrollStats(month?: string, schoolId?: string) {
-    const targetMonth = month || new Date().toISOString().substring(0, 7);
+    const isAll = month && month.toUpperCase() === 'ALL';
+    const targetMonth = isAll ? undefined : (month || new Date().toISOString().substring(0, 7));
     const payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
 
     const totalGross = payrolls.reduce((sum, p) => sum + p.grossSalary, 0);
@@ -858,8 +876,12 @@ export class PayrollUseCases {
       acknowledgementMethod: p.acknowledgementMethod,
       acknowledgementSignature: p.acknowledgementSignature,
       acknowledgementStatus: p.acknowledgementStatus,
+      disputedAt: p.disputedAt,
+      disputeReason: p.disputeReason,
+      disputedByUserId: p.disputedByUserId,
       isPaid: p.status === 'PAID' || p.status === 'PARTIALLY_PAID',
-      canAcknowledge: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED'
+      canAcknowledge: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED',
+      canDispute: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED'
     }));
   }
 
@@ -965,6 +987,97 @@ export class PayrollUseCases {
         acknowledgementStatus: payroll.acknowledgementStatus,
         statement: finalStatement,
         method: payroll.acknowledgementMethod
+      }
+    };
+  }
+
+  /**
+   * Teacher disputes/reports a discrepancy on a salary payment record
+   */
+  public async disputeSalaryPayment(
+    payrollId: string,
+    user: UserContext,
+    dto: {
+      reason: string;
+      ipAddress?: string;
+    }
+  ) {
+    if (!user || !user.userId) {
+      throw new ForbiddenError('Authentication required to dispute salary.');
+    }
+    if (!dto.reason || dto.reason.trim().length < 5) {
+      throw new ValidationError('A detailed reason for the salary discrepancy is required.');
+    }
+
+    const payroll = await this.payrollRepository.findPayrollById(payrollId);
+    if (!payroll) {
+      throw new NotFoundError('Payroll Record', payrollId);
+    }
+
+    // Strict ownership verification: teacher can only dispute their own record
+    const teacher = await this.teacherRepository.findByUserId(user.userId);
+    const authorizedTeacherId = teacher ? teacher.id : null;
+
+    if (payroll.teacherId !== authorizedTeacherId && payroll.teacherId !== user.userId) {
+      throw new ForbiddenError(
+        'Access denied: You are not authorized to dispute salary records belonging to another staff member.'
+      );
+    }
+
+    // State rule: only paid/disbursed records can be disputed
+    if (payroll.status !== 'PAID' && payroll.status !== 'PARTIALLY_PAID') {
+      throw new ValidationError(
+        `Cannot report discrepancy on unpaid salary for ${payroll.month}. Payment has not been recorded as paid.`
+      );
+    }
+
+    // Prevent disputing an already-acknowledged payment
+    if (payroll.acknowledgementStatus === 'ACKNOWLEDGED') {
+      throw new ConflictError(
+        `This salary payment record for ${payroll.month} has already been acknowledged as received.`
+      );
+    }
+
+    payroll.disputeSalary(user.userId, dto.reason.trim());
+    await this.payrollRepository.updatePayroll(payroll);
+
+    // Audit log
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create({
+            schoolId: payroll.schoolId,
+            level: 'WARN',
+            category: 'STAFF',
+            action: 'SALARY_PAYMENT_DISPUTED',
+            actorUserId: user.userId,
+            actorEmail: user.email,
+            actorRole: user.role,
+            status: 'SUCCESS',
+            details: `Teacher ${payroll.teacherName} reported discrepancy on ${payroll.month} salary: ${dto.reason.trim()}`,
+            metadata: {
+              payrollId: payroll.id,
+              teacherId: payroll.teacherId,
+              month: payroll.month,
+              reason: dto.reason.trim(),
+              ipAddress: dto.ipAddress
+            }
+          }, IdGenerator.generate())
+        );
+      } catch (err: any) {
+        console.error('[PayrollUseCases] Failed to log dispute audit:', err.message);
+      }
+    }
+
+    return {
+      success: true,
+      message: `Salary discrepancy reported for ${payroll.month}. The accounts office has been notified and the record is under review.`,
+      payroll: {
+        id: payroll.id,
+        month: payroll.month,
+        acknowledgementStatus: payroll.acknowledgementStatus,
+        disputedAt: payroll.disputedAt,
+        disputeReason: payroll.disputeReason
       }
     };
   }

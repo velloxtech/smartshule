@@ -10,7 +10,7 @@ interface ExportReportModalProps {
 
 const DEFAULT_SCHOOL: Partial<SchoolInfo> = {
   name: 'Grace Seeds School',
-  address: 'KEMRI Street, Kisian, Kisumu, Kenya',
+  address: 'P.O Box 12-20123',
   phone: '0745436312',
   email: 'schoolgraceseeds@gmail.com',
   motto: 'The future begins here',
@@ -106,7 +106,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">description</span>
             </div>
             <div>
@@ -125,12 +125,12 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 text-on-surface overscroll-contain">
           {/* Official Document Header */}
           <div className="text-center border-b border-outline-variant/30 pb-4">
-            <div className="text-xs font-bold text-secondary uppercase tracking-widest">
+            <div className="text-xs font-bold text-success uppercase tracking-widest">
               Ministry of Education · Continuous Assessment Framework
             </div>
             <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBE EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              {school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
+              {school?.address || 'P.O Box 12-20123'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
             </p>
             <div className="mt-2 text-xs font-data-mono text-outline">
               Generated on: {new Date().toLocaleDateString('en-KE', { dateStyle: 'full' })}
@@ -153,8 +153,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-xl text-center">
                   <span className="text-[11px] text-on-surface-variant uppercase font-medium">Fee Collection</span>
-                  <div className="text-xl font-bold text-secondary">{collectionRate}%</div>
-                  <span className="text-[11px] text-secondary font-medium">Rate</span>
+                  <div className="text-xl font-bold text-success">{collectionRate}%</div>
+                  <span className="text-[11px] text-success font-medium">Rate</span>
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-xl text-center">
                   <span className="text-[11px] text-on-surface-variant uppercase font-medium">Fee Collected</span>
@@ -164,7 +164,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 <div className="p-3 bg-surface-container-low rounded-xl text-center">
                   <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBE Mastery</span>
                   <div className="text-xl font-bold text-primary">{CBCMasteryPct}%</div>
-                  <span className="text-[11px] text-secondary font-medium">EE + ME Tier</span>
+                  <span className="text-[11px] text-success font-medium">EE + ME Tier</span>
                 </div>
               </div>
 
@@ -176,11 +176,11 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 <div className="text-xs space-y-1">
                   <div className="flex justify-between py-1 border-b border-surface-container">
                     <span>Enrolled Learners in Database</span>
-                    <span className="font-semibold text-secondary">{totalStudents} Learners</span>
+                    <span className="font-semibold text-success">{totalStudents} Learners</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-surface-container">
                     <span>Active Teaching Staff</span>
-                    <span className="font-semibold text-secondary">{totalTeachers} Teachers</span>
+                    <span className="font-semibold text-success">{totalTeachers} Teachers</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span>CBE Formative & Summative Records Logged</span>
@@ -201,7 +201,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Total Cleared:</span>
-                    <span className="font-bold font-data-mono text-secondary">KES {totalCollected.toLocaleString()}</span>
+                    <span className="font-bold font-data-mono text-success">KES {totalCollected.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between border-t border-outline-variant/30 pt-1.5 font-bold">
                     <span>Outstanding Balance / Arrears:</span>
@@ -217,7 +217,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                   <div className="text-on-surface-variant">Principal Administrator, {schoolName}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-secondary">Institutional System Verification</div>
+                  <div className="font-bold text-success">Institutional System Verification</div>
                   <div className="text-outline font-data-mono">Verified Authentic</div>
                 </div>
               </div>

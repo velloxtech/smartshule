@@ -34,7 +34,7 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
@@ -70,11 +70,11 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
               {(statement?.isSponsored || statement?.sponsorship) && (
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-[22px]">workspace_premium</span>
                     </div>
                     <div>
-                      <div className="font-extrabold text-xs text-[#7a1228]">
+                      <div className="font-extrabold text-xs text-primary">
                         Institutional Full Scholarship Program Active
                       </div>
                       <div className="text-[11px] text-amber-900 mt-0.5">
@@ -88,7 +88,7 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                       </div>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white shadow-2xs shrink-0 flex items-center gap-1">
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary text-white shadow-2xs shrink-0 flex items-center gap-1">
                     <span className="material-symbols-outlined text-[13px]">lock</span>
                     100% SCHOLARSHIP · CHARGE EXEMPT
                   </span>
@@ -105,7 +105,7 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
                   <span className="text-[11px] text-on-surface-variant uppercase font-semibold">Total Paid</span>
-                  <div className="text-lg font-bold font-data-mono text-secondary mt-1">
+                  <div className="text-lg font-bold font-data-mono text-success mt-1">
                     KES {(statement?.totalPaid || 0).toLocaleString()}
                   </div>
                 </div>
@@ -139,7 +139,7 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                             <td className="p-2.5 font-bold text-primary">{inv.invoiceNumber}</td>
                             <td className="p-2.5 text-on-surface-variant">{inv.dueDate}</td>
                             <td className="p-2.5 text-right">KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}</td>
-                            <td className="p-2.5 text-right text-secondary">KES {(inv.amountPaid || 0).toLocaleString()}</td>
+                            <td className="p-2.5 text-right text-success">KES {(inv.amountPaid || 0).toLocaleString()}</td>
                             <td className="p-2.5 text-right text-error font-bold">KES {(inv.balance || 0).toLocaleString()}</td>
                             <td className="p-2.5 text-center">
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary-container">
@@ -162,7 +162,7 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
 
               {/* Payments History */}
               <div className="space-y-3">
-                <h4 className="font-bold text-sm text-secondary uppercase tracking-wider">Payment Receipts</h4>
+                <h4 className="font-bold text-sm text-primary uppercase tracking-wider">Payment Receipts</h4>
                 <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-low">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-surface-container border-b border-outline-variant/30 text-on-surface-variant font-semibold">
@@ -178,11 +178,11 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                       {statement?.payments && statement.payments.length > 0 ? (
                         statement.payments.map((p: any, i: number) => (
                           <tr key={i} className="hover:bg-surface-container">
-                            <td className="p-2.5 font-bold text-secondary">{p.receiptNumber}</td>
+                            <td className="p-2.5 font-bold text-success">{p.receiptNumber}</td>
                             <td className="p-2.5 text-on-surface-variant">{p.paymentDate}</td>
                             <td className="p-2.5 text-on-surface">{p.paymentMethod}</td>
                             <td className="p-2.5 text-on-surface-variant">{p.transactionReference}</td>
-                            <td className="p-2.5 text-right font-bold text-secondary">
+                            <td className="p-2.5 text-right font-bold text-success">
                               KES {p.amount?.toLocaleString()}
                             </td>
                           </tr>

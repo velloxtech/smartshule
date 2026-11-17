@@ -1,0 +1,92 @@
+{
+  "startedAt": "2026-11-16T06:13:18.844Z",
+  "readOnly": true,
+  "adapterStatements": [
+    {
+      "table": "payroll_records",
+      "prepared": true,
+      "executed": false
+    },
+    {
+      "table": "complaints",
+      "prepared": true,
+      "executed": false
+    },
+    {
+      "table": "transaction_reversal_requests",
+      "prepared": true,
+      "executed": false
+    }
+  ],
+  "counts": [
+    {
+      "table_name": "payroll_records",
+      "rows": 9
+    },
+    {
+      "table_name": "complaints",
+      "rows": 0
+    },
+    {
+      "table_name": "transaction_reversal_requests",
+      "rows": 0
+    }
+  ],
+  "columnCounts": [
+    {
+      "table_name": "complaints",
+      "columns": 57
+    },
+    {
+      "table_name": "payroll_records",
+      "columns": 45
+    },
+    {
+      "table_name": "transaction_reversal_requests",
+      "columns": 33
+    }
+  ],
+  "indexes": [
+    {
+      "tablename": "complaints",
+      "indexname": "review_complaints_deadline"
+    },
+    {
+      "tablename": "complaints",
+      "indexname": "review_complaints_parent"
+    },
+    {
+      "tablename": "complaints",
+      "indexname": "review_complaints_school_status"
+    },
+    {
+      "tablename": "transaction_reversal_requests",
+      "indexname": "review_one_live_reversal"
+    },
+    {
+      "tablename": "transaction_reversal_requests",
+      "indexname": "review_reversals_school_status"
+    },
+    {
+      "tablename": "transaction_reversal_requests",
+      "indexname": "review_reversals_transaction"
+    }
+  ],
+  "historicalAcknowledgements": {
+    "rows": 9,
+    "populated": 0
+  },
+  "newTableSecurity": [
+    {
+      "rolname": "anon",
+      "accessible": false
+    },
+    {
+      "rolname": "authenticated",
+      "accessible": false
+    }
+  ],
+  "preExistingUnsafeTables": 58,
+  "success": true,
+  "completedAt": "2026-11-16T06:13:23.487Z"
+}

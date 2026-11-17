@@ -104,20 +104,20 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
       findAll: jest.fn().mockImplementation(({ streamId }: any) => {
         if (streamId === 'stream-east') return Promise.resolve([studentEast1, studentEast2]);
         if (streamId === 'stream-west') return Promise.resolve([studentWest1]);
-        return Promise.resolve([]);
+        return Promise.resolve([studentEast1, studentEast2, studentWest1]);
       }),
     } as any;
 
     const mockAssessments: any[] = [
-      { studentId: 's-e1', learningAreaId: 'math', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 90 }] },
-      { studentId: 's-e1', learningAreaId: 'eng', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 85 }] },
-      { studentId: 's-e1', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 78 }] },
-      { studentId: 's-e2', learningAreaId: 'math', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 72 }] },
-      { studentId: 's-e2', learningAreaId: 'eng', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 70 }] },
-      { studentId: 's-e2', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 68 }] },
-      { studentId: 's-w1', learningAreaId: 'math', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 65 }] },
-      { studentId: 's-w1', learningAreaId: 'eng', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 94 }] },
-      { studentId: 's-w1', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 74 }] },
+      { studentId: 's-e1', learningAreaId: 'math', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 90, maxScore: 100 }] },
+      { studentId: 's-e1', learningAreaId: 'eng', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 85, maxScore: 100 }] },
+      { studentId: 's-e1', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 78, maxScore: 100 }] },
+      { studentId: 's-e2', learningAreaId: 'math', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 72, maxScore: 100 }] },
+      { studentId: 's-e2', learningAreaId: 'eng', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 70, maxScore: 100 }] },
+      { studentId: 's-e2', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 68, maxScore: 100 }] },
+      { studentId: 's-w1', learningAreaId: 'math', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 65, maxScore: 100 }] },
+      { studentId: 's-w1', learningAreaId: 'eng', overallPerformanceLevel: 'EE', strandScores: [{ rawScore: 94, maxScore: 100 }] },
+      { studentId: 's-w1', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 74, maxScore: 100 }] },
     ];
 
     CBCRepo = {

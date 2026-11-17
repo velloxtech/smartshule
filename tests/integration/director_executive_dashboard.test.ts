@@ -26,6 +26,8 @@ describe('SmartShule: Professional School Director Executive Dashboard', () => {
   let testTerm1: AcademicTerm;
   let testTerm2: AcademicTerm;
 
+  beforeEach(() => container.analyticsUseCases.clearDashboardCache());
+
   beforeAll(async () => {
     container = new AppContainer();
     await setupTestFixtures(container);
@@ -128,7 +130,7 @@ describe('SmartShule: Professional School Director Executive Dashboard', () => {
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('restricted to staff');
+      expect(res.body.message).toContain('school leadership');
     });
   });
 
@@ -282,7 +284,7 @@ describe('SmartShule: Professional School Director Executive Dashboard', () => {
         learningAreaId: 'la-math',
         termId: testTerm1.id,
         academicYearId: testYear.id,
-        strandScores: [],
+        strandScores: [{ strandId: 'la-math', strandTitle: 'Mathematics', rawScore: 55, maxScore: 100, performanceLevel: PerformanceLevel.APPROACHING_EXPECTATIONS }],
         overallPerformanceLevel: PerformanceLevel.APPROACHING_EXPECTATIONS, // 55%
         teacherRemarks: 'Fair work',
         evaluationDate: '2026-03-25'
@@ -296,7 +298,7 @@ describe('SmartShule: Professional School Director Executive Dashboard', () => {
         learningAreaId: 'la-math',
         termId: testTerm2.id,
         academicYearId: testYear.id,
-        strandScores: [],
+        strandScores: [{ strandId: 'la-math', strandTitle: 'Mathematics', rawScore: 90, maxScore: 100, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS }],
         overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS, // 90%
         teacherRemarks: 'Excellent improvement',
         evaluationDate: '2026-06-15'
@@ -357,10 +359,10 @@ describe('SmartShule: Professional School Director Executive Dashboard', () => {
       const att = res.body.data.attendanceSummary;
       expect(att.hasData).toBe(true);
       expect(att.totalMarked).toBe(4);
-      expect(att.present).toBe(3); // 2 Present + 1 Late = 3 Present
+      expect(att.present).toBe(2); // PRESENT and LATE are separate dashboard counters
       expect(att.absent).toBe(1);
       expect(att.late).toBe(1);
-      expect(att.presentPercentage).toBe(75); // 3 / 4 = 75%
+      expect(att.presentPercentage).toBe(50); // 2 PRESENT / 4 marked
     });
   });
 

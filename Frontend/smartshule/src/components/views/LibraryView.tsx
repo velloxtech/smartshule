@@ -251,15 +251,15 @@ export const LibraryView: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:border-none print:shadow-none print:p-0">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#800000]/10 text-[#800000] flex items-center justify-center font-bold flex-shrink-0 shadow-inner">
+      <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:border-none print:shadow-none print:p-0">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0 shadow-inner">
             <span className="material-symbols-outlined text-3xl">local_library</span>
           </div>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Library & Textbook System</h1>
-              <span className="bg-[#800000]/10 text-[#800000] text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 CBE Integrated
               </span>
             </div>
@@ -273,7 +273,7 @@ export const LibraryView: React.FC = () => {
         <div className="flex items-center gap-3 w-full md:w-auto print:hidden">
           <button
             onClick={handlePrintCatalog}
-            className="flex-1 md:flex-initial px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+            className="flex-1 md:flex-initial px-4 py-2.5 bg-surface-container-low hover:bg-surface-container text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
           >
             <span className="material-symbols-outlined text-base">print</span>
             Print / Export
@@ -283,7 +283,7 @@ export const LibraryView: React.FC = () => {
               setSelectedBookForIssue(null);
               setIsIssueModalOpen(true);
             }}
-            className="flex-1 md:flex-initial px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-200"
+            className="flex-1 md:flex-initial px-4 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-200"
           >
             <span className="material-symbols-outlined text-base">assignment_return</span>
             Issue Book
@@ -293,7 +293,7 @@ export const LibraryView: React.FC = () => {
               setBookToEdit(null);
               setIsAddBookModalOpen(true);
             }}
-            className="flex-1 md:flex-initial px-5 py-2.5 bg-[#800000] hover:bg-[#660000] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-900/20"
+            className="flex-1 md:flex-initial px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-900/20"
           >
             <span className="material-symbols-outlined text-base">add</span>
             Add Book
@@ -303,60 +303,60 @@ export const LibraryView: React.FC = () => {
 
       {/* KPI Stats Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
+        <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">menu_book</span>
           </div>
           <div>
-            <div className="text-2xl font-black text-gray-900">{calculatedStats.totalTitles}</div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Distinct Titles</div>
+            <div className="text-2xl font-black text-on-surface">{calculatedStats.totalTitles}</div>
+            <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Distinct Titles</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+        <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">inventory_2</span>
           </div>
           <div>
             <div className="text-2xl font-black text-emerald-800">{calculatedStats.availableCopies} <span className="text-xs text-gray-400 font-normal">/ {calculatedStats.totalCopies}</span></div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Available on Shelf</div>
+            <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Available on Shelf</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0">
+        <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">book</span>
           </div>
           <div>
-            <div className="text-2xl font-black text-purple-800">{calculatedStats.issuedCopies}</div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Circulation</div>
+            <div className="text-2xl font-black text-on-primary-fixed">{calculatedStats.issuedCopies}</div>
+            <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">In Circulation</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm flex flex-wrap items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-2xl">schedule</span>
           </div>
           <div>
-            <div className={`text-2xl font-black ${calculatedStats.overdueCount > 0 ? 'text-rose-700' : 'text-gray-900'}`}>
+            <div className={`text-2xl font-black ${calculatedStats.overdueCount > 0 ? 'text-rose-700' : 'text-on-surface'}`}>
               {calculatedStats.overdueCount}
             </div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overdue Returns</div>
+            <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Overdue Returns</div>
           </div>
         </div>
       </div>
 
       {/* Main Container */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/30 overflow-hidden">
         
         {/* Navigation Tabs */}
-        <div className="px-6 pt-4 border-b border-gray-100 flex items-center gap-6 overflow-x-auto print:hidden">
+        <div className="px-6 pt-4 border-b border-outline-variant/30 flex flex-wrap items-center gap-6 print:hidden">
           <button
             onClick={() => setActiveTab('catalog')}
             className={`pb-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'catalog'
-                ? 'border-[#800000] text-[#800000]'
-                : 'border-transparent text-gray-400 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-400 hover:text-on-surface-variant'
             }`}
           >
             <span className="material-symbols-outlined text-lg">shelves</span>
@@ -367,8 +367,8 @@ export const LibraryView: React.FC = () => {
             onClick={() => setActiveTab('circulation')}
             className={`pb-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'circulation'
-                ? 'border-[#800000] text-[#800000]'
-                : 'border-transparent text-gray-400 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-400 hover:text-on-surface-variant'
             }`}
           >
             <span className="material-symbols-outlined text-lg">sync_alt</span>
@@ -380,7 +380,7 @@ export const LibraryView: React.FC = () => {
             className={`pb-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'overdue'
                 ? 'border-rose-600 text-rose-700'
-                : 'border-transparent text-gray-400 hover:text-gray-700'
+                : 'border-transparent text-gray-400 hover:text-on-surface-variant'
             }`}
           >
             <span className="material-symbols-outlined text-lg">alarm_on</span>
@@ -391,8 +391,8 @@ export const LibraryView: React.FC = () => {
             onClick={() => setActiveTab('history')}
             className={`pb-3.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'history'
-                ? 'border-[#800000] text-[#800000]'
-                : 'border-transparent text-gray-400 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-400 hover:text-on-surface-variant'
             }`}
           >
             <span className="material-symbols-outlined text-lg">history</span>
@@ -401,20 +401,20 @@ export const LibraryView: React.FC = () => {
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="p-6 bg-gray-50/50 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden">
+        <div className="p-6 bg-surface/50 border-b border-outline-variant/30 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden">
           <div className="relative w-full md:w-80">
             <input
               type="text"
               placeholder="Search title, author, ISBN, borrower..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none bg-white transition-colors"
+              className="w-full pl-10 pr-4 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface transition-colors"
             />
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-on-surface-variant"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -427,7 +427,7 @@ export const LibraryView: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-xs border border-gray-200 rounded-xl bg-white outline-none focus:border-[#800000] font-medium"
+                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-surface outline-none focus:border-primary font-medium"
               >
                 <option value="ALL">All Categories</option>
                 {availableCategories.map(cat => (
@@ -439,7 +439,7 @@ export const LibraryView: React.FC = () => {
               <select
                 value={gradeFilter}
                 onChange={e => setGradeFilter(e.target.value)}
-                className="px-3 py-2 text-xs border border-gray-200 rounded-xl bg-white outline-none focus:border-[#800000] font-medium"
+                className="px-3 py-2 text-xs border border-outline-variant/30 rounded-xl bg-surface outline-none focus:border-primary font-medium"
               >
                 <option value="ALL">All Grades</option>
                 {availableGrades.map(gr => (
@@ -448,12 +448,12 @@ export const LibraryView: React.FC = () => {
               </select>
 
               {/* Available Only Checkbox */}
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none bg-white px-3 py-2 border border-gray-200 rounded-xl">
+              <label className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant cursor-pointer select-none bg-surface-container-lowest px-3 py-2 border border-outline-variant/30 rounded-xl">
                 <input
                   type="checkbox"
                   checked={availableOnlyFilter}
                   onChange={e => setAvailableOnlyFilter(e.target.checked)}
-                  className="rounded text-[#800000] focus:ring-[#800000]"
+                  className="rounded text-primary focus:ring-primary"
                 />
                 <span>Available Only</span>
               </label>
@@ -464,8 +464,8 @@ export const LibraryView: React.FC = () => {
         {/* Content Section */}
         {loading ? (
           <div className="py-24 text-center">
-            <span className="material-symbols-outlined text-4xl text-[#800000] animate-spin">progress_activity</span>
-            <p className="text-xs text-gray-500 font-semibold mt-3">Loading library inventory & circulation records...</p>
+            <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+            <p className="text-xs text-on-surface-variant font-semibold mt-3">Loading library inventory & circulation records...</p>
           </div>
         ) : (
           <div>
@@ -476,11 +476,11 @@ export const LibraryView: React.FC = () => {
               <div className="overflow-x-auto">
                 {filteredBooks.length === 0 ? (
                   <div className="py-20 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-3">
+                    <div className="w-16 h-16 rounded-2xl bg-surface-container-low text-gray-400 flex items-center justify-center mx-auto mb-3">
                       <span className="material-symbols-outlined text-3xl">menu_book</span>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900">No books found</h3>
-                    <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                    <h3 className="text-base font-bold text-on-surface">No books found</h3>
+                    <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
                       {searchQuery
                         ? 'Try modifying your search criteria or filters.'
                         : 'Your library catalogue is empty. Add curriculum textbooks to begin.'}
@@ -490,7 +490,7 @@ export const LibraryView: React.FC = () => {
                         setBookToEdit(null);
                         setIsAddBookModalOpen(true);
                       }}
-                      className="mt-4 px-4 py-2 bg-[#800000] text-white text-xs font-bold rounded-xl hover:bg-[#660000] transition-colors"
+                      className="mt-4 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container transition-colors"
                     >
                       Add Book to Catalog
                     </button>
@@ -498,7 +498,7 @@ export const LibraryView: React.FC = () => {
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <tr className="border-b border-outline-variant/30 bg-surface/70 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                         <th className="py-3.5 px-6">Book Details</th>
                         <th className="py-3.5 px-4">Category & Grade</th>
                         <th className="py-3.5 px-4">Location</th>
@@ -511,15 +511,15 @@ export const LibraryView: React.FC = () => {
                       {filteredBooks.map(book => {
                         const isAvailable = book.copiesAvailable > 0;
                         return (
-                          <tr key={book.id} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={book.id} className="hover:bg-surface/80 transition-colors">
                             <td className="py-4 px-6">
                               <div className="flex items-start gap-3">
-                                <div className="w-10 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0 text-gray-500">
+                                <div className="w-10 h-12 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-center justify-center flex-shrink-0 text-on-surface-variant">
                                   <span className="material-symbols-outlined text-xl">auto_stories</span>
                                 </div>
                                 <div>
-                                  <div className="font-bold text-gray-900 text-sm">{book.title}</div>
-                                  <div className="text-gray-500 text-[11px] mt-0.5">by <span className="font-medium text-gray-700">{book.author}</span></div>
+                                  <div className="font-bold text-on-surface text-sm">{book.title}</div>
+                                  <div className="text-on-surface-variant text-[11px] mt-0.5">by <span className="font-medium text-on-surface-variant">{book.author}</span></div>
                                   {book.isbn && (
                                     <div className="font-mono text-[10px] text-gray-400 mt-0.5">ISBN: {book.isbn}</div>
                                   )}
@@ -531,13 +531,13 @@ export const LibraryView: React.FC = () => {
                               <span className="inline-block px-2.5 py-1 bg-amber-50 text-amber-800 rounded-lg text-[11px] font-semibold border border-amber-200/50">
                                 {book.category}
                               </span>
-                              <div className="text-[11px] text-gray-500 mt-1 font-medium">
-                                Level: <strong className="text-gray-700">{book.gradeLevel || 'All Grades'}</strong>
+                              <div className="text-[11px] text-on-surface-variant mt-1 font-medium">
+                                Level: <strong className="text-on-surface-variant">{book.gradeLevel || 'All Grades'}</strong>
                               </div>
                             </td>
 
                             <td className="py-4 px-4">
-                              <div className="flex items-center gap-1.5 text-gray-700 font-medium">
+                              <div className="flex items-center gap-1.5 text-on-surface-variant font-medium">
                                 <span className="material-symbols-outlined text-sm text-gray-400">shelves</span>
                                 {book.shelfLocation || 'Unassigned'}
                               </div>
@@ -560,7 +560,7 @@ export const LibraryView: React.FC = () => {
                             <td className="py-4 px-4 text-center">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                 book.condition === 'NEW'
-                                  ? 'bg-blue-100 text-blue-800'
+                                  ? 'bg-primary-fixed text-on-primary-fixed'
                                   : book.condition === 'GOOD'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : book.condition === 'FAIR'
@@ -580,7 +580,7 @@ export const LibraryView: React.FC = () => {
                                   }}
                                   disabled={!isAvailable}
                                   title={isAvailable ? 'Issue copy to borrower' : 'No copies available'}
-                                  className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-colors"
+                                  className="px-2.5 py-1.5 bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40 transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-sm">assignment_return</span>
                                   Issue
@@ -591,7 +591,7 @@ export const LibraryView: React.FC = () => {
                                     setIsAddBookModalOpen(true);
                                   }}
                                   title="Edit book details"
-                                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-400 hover:text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-base">edit</span>
                                 </button>
@@ -623,13 +623,13 @@ export const LibraryView: React.FC = () => {
                     <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
                       <span className="material-symbols-outlined text-3xl">task_alt</span>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900">No books currently issued out</h3>
-                    <p className="text-xs text-gray-500 mt-1">All borrowed resources have been safely returned.</p>
+                    <h3 className="text-base font-bold text-on-surface">No books currently issued out</h3>
+                    <p className="text-xs text-on-surface-variant mt-1">All borrowed resources have been safely returned.</p>
                   </div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <tr className="border-b border-outline-variant/30 bg-surface/70 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                         <th className="py-3.5 px-6">Borrowed Title</th>
                         <th className="py-3.5 px-4">Borrower Details</th>
                         <th className="py-3.5 px-4">Dates</th>
@@ -646,18 +646,18 @@ export const LibraryView: React.FC = () => {
                         );
 
                         return (
-                          <tr key={loan.id} className="hover:bg-gray-50/80 transition-colors">
+                          <tr key={loan.id} className="hover:bg-surface/80 transition-colors">
                             <td className="py-4 px-6">
-                              <div className="font-bold text-gray-900">{loan.bookTitle}</div>
+                              <div className="font-bold text-on-surface">{loan.bookTitle}</div>
                               {loan.remarks && (
                                 <div className="text-[11px] text-gray-400 italic mt-0.5">{loan.remarks}</div>
                               )}
                             </td>
 
                             <td className="py-4 px-4">
-                              <div className="font-bold text-gray-800">{loan.borrowerName}</div>
-                              <div className="text-gray-500 text-[11px]">
-                                {loan.borrowerType === 'STUDENT' ? 'Student' : 'Staff'} • Adm/No: <span className="font-mono text-gray-700">{loan.borrowerAdmissionOrNumber || 'N/A'}</span>
+                              <div className="font-bold text-on-surface">{loan.borrowerName}</div>
+                              <div className="text-on-surface-variant text-[11px]">
+                                {loan.borrowerType === 'STUDENT' ? 'Student' : 'Staff'} • Adm/No: <span className="font-mono text-on-surface-variant">{loan.borrowerAdmissionOrNumber || 'N/A'}</span>
                               </div>
                               {loan.borrowerGradeOrClass && (
                                 <div className="text-[10px] text-gray-400">{loan.borrowerGradeOrClass}</div>
@@ -665,8 +665,8 @@ export const LibraryView: React.FC = () => {
                             </td>
 
                             <td className="py-4 px-4 font-mono">
-                              <div>Issued: <span className="text-gray-700 font-medium">{loan.issueDate}</span></div>
-                              <div className={isOverdue ? 'text-rose-700 font-bold' : 'text-gray-700'}>
+                              <div>Issued: <span className="text-on-surface-variant font-medium">{loan.issueDate}</span></div>
+                              <div className={isOverdue ? 'text-rose-700 font-bold' : 'text-on-surface-variant'}>
                                 Due: {loan.dueDate}
                               </div>
                             </td>
@@ -690,7 +690,7 @@ export const LibraryView: React.FC = () => {
                                   setLoanToReturn(loan);
                                   setIsReturnModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <span className="material-symbols-outlined text-sm">library_add_check</span>
                                 Return Book
@@ -715,13 +715,13 @@ export const LibraryView: React.FC = () => {
                     <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
                       <span className="material-symbols-outlined text-3xl">verified</span>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900">No overdue items</h3>
-                    <p className="text-xs text-gray-500 mt-1">All borrowed books are within the permitted loan period.</p>
+                    <h3 className="text-base font-bold text-on-surface">No overdue items</h3>
+                    <p className="text-xs text-on-surface-variant mt-1">All borrowed books are within the permitted loan period.</p>
                   </div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-rose-50/50 text-[11px] font-bold text-rose-800 uppercase tracking-wider">
+                      <tr className="border-b border-outline-variant/30 bg-rose-50/50 text-[11px] font-bold text-rose-800 uppercase tracking-wider">
                         <th className="py-3.5 px-6">Overdue Book Title</th>
                         <th className="py-3.5 px-4">Borrower & Class</th>
                         <th className="py-3.5 px-4">Due Date</th>
@@ -739,10 +739,10 @@ export const LibraryView: React.FC = () => {
 
                         return (
                           <tr key={loan.id} className="hover:bg-rose-50/30 transition-colors">
-                            <td className="py-4 px-6 font-bold text-gray-900">{loan.bookTitle}</td>
+                            <td className="py-4 px-6 font-bold text-on-surface">{loan.bookTitle}</td>
                             <td className="py-4 px-4">
-                              <div className="font-bold text-gray-800">{loan.borrowerName}</div>
-                              <div className="text-gray-500 text-[11px]">{loan.borrowerAdmissionOrNumber} • {loan.borrowerGradeOrClass}</div>
+                              <div className="font-bold text-on-surface">{loan.borrowerName}</div>
+                              <div className="text-on-surface-variant text-[11px]">{loan.borrowerAdmissionOrNumber} • {loan.borrowerGradeOrClass}</div>
                             </td>
                             <td className="py-4 px-4 font-mono font-bold text-rose-700">{loan.dueDate}</td>
                             <td className="py-4 px-4 text-center">
@@ -759,7 +759,7 @@ export const LibraryView: React.FC = () => {
                                   setLoanToReturn(loan);
                                   setIsReturnModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-[#800000] hover:bg-[#660000] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
+                                className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm transition-colors"
                               >
                                 <span className="material-symbols-outlined text-sm">library_add_check</span>
                                 Return & Settle
@@ -781,16 +781,16 @@ export const LibraryView: React.FC = () => {
               <div className="overflow-x-auto">
                 {historicalLoans.length === 0 ? (
                   <div className="py-20 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-3">
+                    <div className="w-16 h-16 rounded-2xl bg-surface-container-low text-gray-400 flex items-center justify-center mx-auto mb-3">
                       <span className="material-symbols-outlined text-3xl">history_toggle_off</span>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900">No circulation history yet</h3>
-                    <p className="text-xs text-gray-500 mt-1">Returned books will be logged here with timestamps and condition notes.</p>
+                    <h3 className="text-base font-bold text-on-surface">No circulation history yet</h3>
+                    <p className="text-xs text-on-surface-variant mt-1">Returned books will be logged here with timestamps and condition notes.</p>
                   </div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <tr className="border-b border-outline-variant/30 bg-surface/70 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                         <th className="py-3.5 px-6">Book Title</th>
                         <th className="py-3.5 px-4">Borrower</th>
                         <th className="py-3.5 px-4">Issue & Return Date</th>
@@ -801,15 +801,15 @@ export const LibraryView: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-xs">
                       {historicalLoans.map(loan => (
-                        <tr key={loan.id} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="py-4 px-6 font-bold text-gray-900">{loan.bookTitle}</td>
+                        <tr key={loan.id} className="hover:bg-surface/80 transition-colors">
+                          <td className="py-4 px-6 font-bold text-on-surface">{loan.bookTitle}</td>
                           <td className="py-4 px-4">
-                            <div className="font-semibold text-gray-800">{loan.borrowerName}</div>
+                            <div className="font-semibold text-on-surface">{loan.borrowerName}</div>
                             <div className="text-[10px] text-gray-400">{loan.borrowerAdmissionOrNumber}</div>
                           </td>
-                          <td className="py-4 px-4 font-mono text-gray-600">
+                          <td className="py-4 px-4 font-mono text-on-surface-variant">
                             <div>Out: {loan.issueDate}</div>
-                            <div>In: <strong className="text-gray-900">{loan.returnDate || 'N/A'}</strong></div>
+                            <div>In: <strong className="text-on-surface">{loan.returnDate || 'N/A'}</strong></div>
                           </td>
                           <td className="py-4 px-4 text-center">
                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -831,7 +831,7 @@ export const LibraryView: React.FC = () => {
                               <span className="text-gray-400 font-mono">—</span>
                             )}
                           </td>
-                          <td className="py-4 px-6 text-gray-500 italic">
+                          <td className="py-4 px-6 text-on-surface-variant italic">
                             {loan.remarks || 'Clean return'}
                           </td>
                         </tr>

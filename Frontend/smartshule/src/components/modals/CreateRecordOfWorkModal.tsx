@@ -51,6 +51,22 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
     status: 'SUBMITTED' as RecordOfWorkStatus
   });
 
+  const availableLearningAreas = React.useMemo(() => {
+    if (!selectedClassId) return learningAreas;
+    const selectedClass = classes.find(c => c.id === selectedClassId);
+    if (!selectedClass?.gradeLevel) return learningAreas;
+    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, selectedClass.gradeLevel));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, selectedClassId, classes]);
+
+  useEffect(() => {
+    if (availableLearningAreas.length > 0) {
+      if (!availableLearningAreas.some(la => la.id === selectedLearningAreaId)) {
+        setSelectedLearningAreaId(availableLearningAreas[0].id);
+      }
+    }
+  }, [availableLearningAreas, selectedLearningAreaId]);
+
   useEffect(() => {
     async function loadInitial() {
       try {
@@ -241,20 +257,20 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 text-[#7a1228] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-primary flex items-center justify-center">
               <span className="material-symbols-outlined">menu_book</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">New Teacher Diary Record</h2>
-              <p className="text-xs text-gray-500">Record curriculum delivery, lesson outcomes & learner reflections</p>
+              <h2 className="text-lg font-bold text-on-surface">New Teacher Diary Record</h2>
+              <p className="text-xs text-on-surface-variant">Record curriculum delivery, lesson outcomes & learner reflections</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -274,22 +290,22 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
         <div className="p-6 overflow-y-auto space-y-5">
           
           {/* Metadata: Term, Week, Day, Date, Period */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-surface p-4 rounded-xl border border-outline-variant/30">
             <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Term</label>
-              <select name="term" value={formData.term} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Term</label>
+              <select name="term" value={formData.term} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface">
                 <option value="Term 1">Term 1</option>
                 <option value="Term 2">Term 2</option>
                 <option value="Term 3">Term 3</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Week No. *</label>
-              <input required type="number" name="week" min="1" max="15" value={formData.week} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white font-bold" />
+              <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Week No. *</label>
+              <input required type="number" name="week" min="1" max="15" value={formData.week} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface font-bold" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Day *</label>
-              <select name="day" value={formData.day} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white cursor-pointer">
+              <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Day *</label>
+              <select name="day" value={formData.day} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface cursor-pointer">
                 <option value="Mon">Monday</option>
                 <option value="Tue">Tuesday</option>
                 <option value="Wed">Wednesday</option>
@@ -298,29 +314,29 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Lesson Date *</label>
-              <input type="date" name="lessonDate" value={formData.lessonDate} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white" />
+              <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Lesson Date *</label>
+              <input type="date" name="lessonDate" value={formData.lessonDate} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Period</label>
-              <input type="text" name="period" value={formData.period} onChange={handleChange} placeholder="e.g. 1" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white" />
+              <label className="block text-xs font-bold text-on-surface-variant uppercase mb-1">Period</label>
+              <input type="text" name="period" value={formData.period} onChange={handleChange} placeholder="e.g. 1" className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg bg-surface" />
             </div>
           </div>
 
           {/* Class & Subject Selection */}
-          <div className="p-4 bg-white border border-gray-200 rounded-xl space-y-4">
+          <div className="p-4 bg-surface-container-lowest border border-outline-variant/30 rounded-xl space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1.5">Class / Grade *</label>
-                <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer">
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1.5">Class / Grade *</label>
+                <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg cursor-pointer">
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1.5">Learning Area / Subject *</label>
-                <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer">
-                  {learningAreas.length > 0 ? (
-                    learningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1.5">Learning Area / Subject *</label>
+                <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg cursor-pointer">
+                  {availableLearningAreas.length > 0 ? (
+                    availableLearningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)
                   ) : (
                     <option value="">No subjects found</option>
                   )}
@@ -329,10 +345,10 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
             </div>
 
             {/* CBC Strand & Substrand */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-outline-variant/30 pt-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold uppercase text-gray-600">Curriculum Strand *</label>
+                  <label className="block text-xs font-bold uppercase text-on-surface-variant">Curriculum Strand *</label>
                   {strands.length > 0 && (
                     <button
                       type="button"
@@ -342,21 +358,21 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                           setCustomStrandTitle(strands.find(s => s.id === selectedStrandId)?.title || '');
                         }
                       }}
-                      className="text-[11px] text-[#7a1228] hover:underline font-bold"
+                      className="text-[11px] text-primary hover:underline font-bold"
                     >
                       {isCustomStrand ? 'Select From List' : '+ Custom Strand'}
                     </button>
                   )}
                 </div>
                 {loadingStrands ? (
-                  <div className="px-3 py-2 text-xs text-gray-500">Loading strands...</div>
+                  <div className="px-3 py-2 text-xs text-on-surface-variant">Loading strands...</div>
                 ) : isCustomStrand || strands.length === 0 ? (
                   <input
                     type="text"
                     placeholder="Enter strand name..."
                     value={customStrandTitle}
                     onChange={(e) => setCustomStrandTitle(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg"
                   />
                 ) : (
                   <select
@@ -369,7 +385,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                         setSelectedStrandId(e.target.value);
                       }
                     }}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer"
+                    className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg cursor-pointer"
                   >
                     {strands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     <option value="__custom__">+ Enter Custom Strand...</option>
@@ -379,7 +395,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold uppercase text-gray-600">Sub-Strand</label>
+                  <label className="block text-xs font-bold uppercase text-on-surface-variant">Sub-Strand</label>
                   {!isCustomStrand && subStrands.length > 0 && (
                     <button
                       type="button"
@@ -389,7 +405,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                           setCustomSubStrandTitle(subStrands.find(s => s.id === selectedSubStrandId)?.title || '');
                         }
                       }}
-                      className="text-[11px] text-[#7a1228] hover:underline font-bold"
+                      className="text-[11px] text-primary hover:underline font-bold"
                     >
                       {isCustomSubStrand ? 'Select From List' : '+ Custom Sub-Strand'}
                     </button>
@@ -401,7 +417,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                     placeholder="Enter sub-strand title..."
                     value={customSubStrandTitle}
                     onChange={(e) => setCustomSubStrandTitle(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg"
                   />
                 ) : (
                   <select
@@ -414,7 +430,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                         setSelectedSubStrandId(e.target.value);
                       }
                     }}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer"
+                    className="w-full px-3 py-2 text-sm border border-outline-variant/30 rounded-lg cursor-pointer"
                   >
                     {subStrands.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     <option value="__custom__">+ Enter Custom Sub-strand...</option>
@@ -427,51 +443,51 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
           {/* Lesson Details: Topic, Objectives, Activities, Resources */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Lesson Topic / Focus *</label>
+              <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Lesson Topic / Focus *</label>
               <input
                 type="text"
                 name="lessonTopic"
                 placeholder="e.g. Identifying renewable and non-renewable energy sources"
                 value={formData.lessonTopic}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                className="w-full px-3.5 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Learning Objectives</label>
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Learning Objectives</label>
                 <textarea
                   name="learningObjectives"
                   rows={2}
                   placeholder="By the end of the lesson, the learner should be able to..."
                   value={formData.learningObjectives}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] resize-none"
+                  className="w-full px-3.5 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Learning Activities & Methods</label>
+                <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Learning Activities & Methods</label>
                 <textarea
                   name="learningActivities"
                   rows={2}
                   placeholder="Group discussion, hands-on experiment, question and answer..."
                   value={formData.learningActivities}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] resize-none"
+                  className="w-full px-3.5 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-gray-700 mb-1">Teaching Resources & Reference Materials</label>
+              <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Teaching Resources & Reference Materials</label>
               <input
                 type="text"
                 name="reference"
                 placeholder="e.g. Oxford Growing in Christ Grade 3, realia, charts, digital slides"
                 value={formData.reference}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                className="w-full px-3.5 py-2 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
           </div>
@@ -480,7 +496,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
           <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-sm font-bold text-amber-900 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-amber-600 text-[19px]">psychology</span>
+                <span className="material-symbols-outlined text-primary text-[19px]">psychology</span>
                 Lesson Outcome & Reflection
               </label>
               <div className="flex items-center gap-2">
@@ -489,7 +505,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   name="comprehensionLevel"
                   value={formData.comprehensionLevel}
                   onChange={handleChange}
-                  className="px-2.5 py-1 text-xs border border-amber-300 rounded-lg bg-white font-semibold text-amber-900"
+                  className="px-2.5 py-1 text-xs border border-primary rounded-lg bg-surface font-semibold text-on-primary-fixed"
                 >
                   <option value="EXCELLENT">Excellent (90%+ Mastery)</option>
                   <option value="GOOD">Good (75-89% Mastery)</option>
@@ -509,7 +525,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   placeholder="Most learners grasped the concept quickly during the activity..."
                   value={formData.whatWentWell}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 text-xs bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 resize-none"
+                  className="w-full px-3 py-2 text-xs bg-surface border border-primary/80 rounded-xl focus:ring-2 focus:ring-primary/20 resize-none"
                 />
               </div>
               <div>
@@ -520,32 +536,32 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
                   placeholder="3 learners struggled with calculation; scheduled remedial session..."
                   value={formData.remedialPlan}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 text-xs bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 resize-none"
+                  className="w-full px-3 py-2 text-xs bg-surface border border-primary/80 rounded-xl focus:ring-2 focus:ring-primary/20 resize-none"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Additional Teacher Comments <span className="font-normal">(Optional)</span></label>
+            <label className="block text-xs font-bold uppercase text-on-surface-variant mb-1">Additional Teacher Comments <span className="font-normal">(Optional)</span></label>
             <input
               type="text"
               name="comments"
               placeholder="Any supervisor notes or remarks..."
               value={formData.comments}
               onChange={handleChange}
-              className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl"
+              className="w-full px-3.5 py-2 text-sm border border-outline-variant/30 rounded-xl"
             />
           </div>
         </div>
 
         {/* Modal Footer with Draft vs Submit Options */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-outline-variant/30 bg-surface/80 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+            className="px-4 py-2.5 text-sm font-semibold text-on-surface-variant bg-white border border-outline-variant/30 rounded-xl hover:bg-surface transition-colors shadow-sm cursor-pointer"
           >
             Cancel
           </button>
@@ -555,7 +571,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
               type="button"
               disabled={submitting}
               onClick={() => handleSave('DRAFT')}
-              className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 text-sm font-semibold text-on-surface-variant bg-white border border-outline-variant/30 rounded-xl hover:bg-surface hover:text-on-surface transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">draft</span>
               {submitting ? 'Saving...' : 'Save as Draft'}
@@ -565,7 +581,7 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
               type="button"
               disabled={submitting}
               onClick={() => handleSave('SUBMITTED')}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-[#7a1228] rounded-xl hover:bg-[#901530] transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">send</span>
               {submitting ? 'Submitting...' : 'Submit for Review'}

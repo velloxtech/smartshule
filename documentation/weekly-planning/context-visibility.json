@@ -1,0 +1,23 @@
+{
+  "checks": [
+    {
+      "name": "Phone sidebar → assigned class/stream → learning area",
+      "width": 390
+    },
+    {
+      "name": "Selected class, stream, learning area and term remain visible beneath app header at 390",
+      "width": 390
+    },
+    {
+      "name": "Selected class, stream, learning area and term remain visible beneath app header at 768",
+      "width": 768
+    },
+    {
+      "name": "Selected class, stream, learning area and term remain visible beneath app header at 1440",
+      "width": 1440
+    }
+  ],
+  "errors": [],
+  "failures": [],
+  "exports": []
+}

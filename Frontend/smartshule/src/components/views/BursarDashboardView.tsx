@@ -68,7 +68,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Bursar Top Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950 via-amber-900 to-yellow-950 p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -91,35 +91,35 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={() => onNavigateTab('student-fee-search')}
-              className="px-4 py-2.5 rounded-xl bg-white text-amber-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white text-on-primary-fixed font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px] text-amber-900">person_search</span>
+              <span className="material-symbols-outlined text-[18px] text-on-primary-fixed">person_search</span>
               <span>Student Fee Accounts</span>
             </button>
             <button
               onClick={onOpenMpesa}
-              className="px-4 py-2.5 rounded-xl bg-amber-800/90 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary-container/90 hover:bg-primary-container text-white font-semibold text-xs border border-primary/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">payments</span>
               <span>Record Fee Payment</span>
             </button>
             <button
               onClick={() => onNavigateTab('arrears')}
-              className="px-4 py-2.5 rounded-xl bg-amber-700/80 hover:bg-amber-700 text-white font-semibold text-xs border border-amber-300/40 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="px-4 py-2.5 rounded-xl bg-primary/80 hover:bg-primary-container text-white font-semibold text-xs border border-primary/40 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">assignment_late</span>
               <span>Fee Arrears Ledger ({safeDefaulters.length})</span>
             </button>
             <button
               onClick={() => onNavigateTab('financial-reports')}
-              className="px-4 py-2.5 rounded-xl bg-amber-800/60 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary-container/60 hover:bg-primary-container text-white font-semibold text-xs border border-primary/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">analytics</span>
               <span>Financial Reports</span>
             </button>
             <button
               onClick={() => onNavigateTab('forwarded-payments')}
-              className="px-4 py-2.5 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 text-white font-semibold text-xs border border-emerald-400/30 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+              className="px-4 py-2.5 rounded-xl bg-primary-container/80 hover:bg-primary-container text-white font-semibold text-xs border border-primary/30 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
               <span>Forwarded Payments</span>
@@ -130,10 +130,10 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
       {/* Core Financial Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Total Fee Collected</span>
-            <span className="material-symbols-outlined text-emerald-600 text-[20px]">account_balance_wallet</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-emerald-700">
@@ -145,7 +145,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Outstanding Arrears</span>
             <span className="material-symbols-outlined text-rose-600 text-[20px]">pending</span>
@@ -160,10 +160,10 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Operating Expenses</span>
-            <span className="material-symbols-outlined text-amber-600 text-[20px]">receipt</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">receipt</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-amber-700">
@@ -173,10 +173,10 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Net Cash Position</span>
-            <span className="material-symbols-outlined text-blue-600 text-[20px]">balance</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">balance</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">
@@ -189,7 +189,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
       {/* Priority Defaulters & High Balance Table */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-on-surface">Priority Fee Defaulters</h2>
@@ -199,7 +199,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('arrears')}
-              className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-on-primary-fixed hover:text-on-primary-fixed flex items-center gap-1 cursor-pointer"
             >
               <span>View Full Ledger</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -242,7 +242,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
                       <td className="py-2.5 px-3 text-right">
                         <button
                           onClick={onOpenMpesa}
-                          className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                          className="px-2.5 py-1 rounded bg-primary hover:bg-primary-container text-white font-bold text-[11px] transition-colors cursor-pointer"
                         >
                           Clear
                         </button>
@@ -256,7 +256,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
         </div>
 
         {/* Finance Department Modules Navigation */}
-        <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <h2 className="text-base font-bold text-on-surface mb-1">Treasury Modules</h2>
             <p className="text-xs text-on-surface-variant mb-4">
@@ -266,9 +266,9 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
             <div className="space-y-2.5">
               <button
                 onClick={() => onNavigateTab('forwarded-payments')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-primary-fixed/50 hover:border-primary transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-emerald-700 text-[22px]">forward_to_inbox</span>
+                <span className="material-symbols-outlined text-primary text-[22px]">forward_to_inbox</span>
                 <div>
                   <div className="text-xs font-bold text-on-surface">Parent Forwarded Payments</div>
                   <div className="text-[11px] text-on-surface-variant">Verify M-Pesa &amp; Bank SMS confirmations</div>
@@ -277,9 +277,9 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('expenses-management')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-primary-fixed/50 hover:border-primary transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">payments</span>
+                <span className="material-symbols-outlined text-primary text-[22px]">payments</span>
                 <div>
                   <div className="text-xs font-bold text-on-surface">Operating Expenses</div>
                   <div className="text-[11px] text-on-surface-variant">Utilities, supplies, salaries & repairs</div>
@@ -288,9 +288,9 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('fee-structure')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-primary-fixed/50 hover:border-primary transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">table_chart</span>
+                <span className="material-symbols-outlined text-primary text-[22px]">table_chart</span>
                 <div>
                   <div className="text-xs font-bold text-on-surface">Fee Structures</div>
                   <div className="text-[11px] text-on-surface-variant">Configure term tuition & levies</div>
@@ -299,9 +299,9 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('financial-reports')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-primary-fixed/50 hover:border-primary transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">analytics</span>
+                <span className="material-symbols-outlined text-primary text-[22px]">analytics</span>
                 <div>
                   <div className="text-xs font-bold text-on-surface">Financial Reports & Statements</div>
                   <div className="text-[11px] text-on-surface-variant">Income statements, cash flow & fee analytics</div>
@@ -310,9 +310,9 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
               <button
                 onClick={() => onNavigateTab('fee-deadline-banner')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-primary-fixed/50 hover:border-primary transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">settings_suggest</span>
+                <span className="material-symbols-outlined text-primary text-[22px]">settings_suggest</span>
                 <div>
                   <div className="text-xs font-bold text-on-surface">Finance Settings & Notices</div>
                   <div className="text-[11px] text-on-surface-variant">School bank details, Paybill & fee deadlines</div>

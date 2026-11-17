@@ -109,7 +109,7 @@ export class OccurrenceController {
       const today = new Date().toISOString().split('T')[0];
       const targetDate = (req.query.date as string) || today;
 
-      const summary = await this.occurrenceUseCases.getDailyOccurrenceSummary(targetDate, schoolId);
+      const summary = await this.occurrenceUseCases.getDailyOccurrenceSummary(targetDate, schoolId, (req as any).canAccessTeachingRecord);
       return res.status(200).json({
         success: true,
         data: summary

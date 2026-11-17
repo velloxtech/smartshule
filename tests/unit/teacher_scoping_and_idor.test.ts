@@ -110,6 +110,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
       classRoomId: g3Class.id,
       streamId: g3StreamEast.id,
       teacherId: teacherG3.id,
+      effectiveFrom: '2026-01-01',
       isActive: true
     }, 'cta-g3');
     await container.academicRepository.saveClassTeacherAssignment(ctaG3);
@@ -142,6 +143,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
       learningAreaId: sciLA.id,
       teacherId: teacherG7Sci.id,
       role: 'SUBJECT_TEACHER',
+      effectiveFrom: '2026-01-01',
       isActive: true
     }, 'sta-g7sci');
     await container.academicRepository.saveSubjectTeacherAssignment(staG7Sci);
@@ -204,7 +206,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
   test('1. Teacher lists students: only receives students in assigned classes/streams', async () => {
     const g3TeacherStudents = await container.studentUseCases.listStudents({
       schoolId,
-      requestingUser: { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com' }
+      requestingUser: { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com', schoolId }
     });
 
     expect(g3TeacherStudents.some(s => s.id === g3Student.id)).toBe(true);
@@ -215,21 +217,20 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
     await expect(
       container.studentUseCases.getStudentById(
         g7Student.id,
-        { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com' }
+        { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com', schoolId }
       )
     ).rejects.toThrow(ForbiddenError);
   });
 
-  test('3. Data Privacy: Subject teacher cannot see guardian National ID or Fee Balance', async () => {
-    const result = await container.studentUseCases.getStudentById(
-      g7Student.id,
-      { userId: teacherUserG7Sci.id, role: UserRole.TEACHER, email: 'tr.g7sci@school.com' }
-    );
-
-    expect(result.feeBalance).toBeNull();
-    if (result.guardian) {
-      expect(result.guardian.nationalId).toBeUndefined();
-    }
+  test('3. Subject-only teachers have minimal roster access and no learner/guardian dossier access', async () => {
+    const actor={userId:teacherUserG7Sci.id,role:UserRole.TEACHER,email:'tr.g7sci@school.com',schoolId};
+    await expect(container.studentUseCases.getStudentById(g7Student.id,actor)).rejects.toThrow(ForbiddenError);
+    const roster=await container.studentUseCases.listAssessmentRoster({requestingUser:actor,academicYearId,termId});
+    const learner=roster.find(row=>row.id===g7Student.id);
+    expect(learner).toBeDefined();
+    expect(learner).not.toHaveProperty('feeBalance');
+    expect(learner).not.toHaveProperty('guardianIds');
+    expect(learner).not.toHaveProperty('guardian');
   });
 
   test('4. Lower primary class teacher can enter marks for all learning areas in their class', async () => {
@@ -244,7 +245,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
         performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS,
         specificOutcomeTested: 'Count numbers up to 1000'
       },
-      { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com' }
+      { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com', schoolId }
     );
 
     expect(formative).toBeDefined();
@@ -264,7 +265,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
           performanceLevel: PerformanceLevel.MEETING_EXPECTATIONS,
           specificOutcomeTested: 'Solve algebraic expressions'
         },
-        { userId: teacherUserG7Sci.id, role: UserRole.TEACHER, email: 'tr.g7sci@school.com' }
+        { userId: teacherUserG7Sci.id, role: UserRole.TEACHER, email: 'tr.g7sci@school.com', schoolId }
       )
     ).rejects.toThrow(ForbiddenError);
   });
@@ -273,7 +274,7 @@ describe('Phase 5: Teacher Scoping, IDOR Prevention, and Sensitive Data Protecti
     await expect(
       container.broadsheetUseCases.getStreamBroadsheet(
         { streamId: g7StreamAlpha.id },
-        { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com' }
+        { userId: teacherUserG3.id, role: UserRole.TEACHER, email: 'tr.g3@school.com', schoolId }
       )
     ).rejects.toThrow(ForbiddenError);
   });

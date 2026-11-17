@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import {selectPlanningTerm,rememberedPlanningScope,rememberPlanningScope} from '../../utils/planningPeriod';
+import React, { useState, useEffect, useRef } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
@@ -71,10 +72,11 @@ export const formatSubjectAbbreviation = (rawName?: string, rawCode?: string): s
 };
 
 export const TimetableView: React.FC = () => {
-  const { user } = useAuth();
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
-  const canEditGrid = !isParent && (user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN || user?.role === UserRole.HEAD_TEACHER || isTeacher);
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isTeacher = effectiveRole === UserRole.TEACHER;
+  const isParent = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
+  const canEditGrid = !isParent && (effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.DEPUTY_HEAD_TEACHER);
 
   const [viewMode, setViewMode] = useState<'class' | 'teacher'>(isTeacher ? 'teacher' : 'class');
   
@@ -90,10 +92,14 @@ export const TimetableView: React.FC = () => {
   const [teacherId, setTeacherId] = useState('');
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [teachersList, setTeachersList] = useState<any[]>([]);
+  const [teacherAccessPeriod,setTeacherAccessPeriod]=useState('');
+  const [accessMessage,setAccessMessage]=useState('');
 
   // Dynamic context and entities
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [currentContext, setCurrentContext] = useState<any>(null);
+  const [planningYears,setPlanningYears]=useState<any[]>([]),[planningTerms,setPlanningTerms]=useState<any[]>([]);
+  const [planningYear,setPlanningYear]=useState('');const tableRequest=useRef(0);
 
   const [timetable, setTimetable] = useState<TimetableData | null>(null);
   const [teacherSlots, setTeacherSlots] = useState<TimetableSlot[]>([]);
@@ -132,15 +138,15 @@ export const TimetableView: React.FC = () => {
         const [scRes, ctxRes, cRes] = await Promise.all([
           apiService.getSchool().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
-          apiService.getClasses().catch(() => null),
+          isTeacher ? Promise.resolve(null) : apiService.getClasses().catch(() => null),
         ]);
         if (scRes?.data) setSchoolInfo(scRes.data);
-        if (ctxRes?.data) setCurrentContext(ctxRes.data);
+        if (ctxRes?.data) {setCurrentContext(ctxRes.data);if(!isParent){const years=(await apiService.getAcademicYears()).data||[];setPlanningYears(years);const saved=rememberedPlanningScope(user);setPlanningYear(years.some(y=>y.id===saved.academicYearId)?saved.academicYearId:ctxRes.data.currentYear?.id||'');}}
         if (cRes?.data && Array.isArray(cRes.data)) {
           const sorted = sortClassesInCBCSequence(cRes.data);
           setClassesList(sorted);
           if (sorted.length > 0 && !selectedClassId) {
-            setSelectedClassId(sorted[0].id);
+            setSelectedClassId(sorted.some(c=>c.id===rememberedPlanningScope(user).classRoomId)?rememberedPlanningScope(user).classRoomId:sorted[0].id);
           }
         }
       } catch (err) {
@@ -150,7 +156,26 @@ export const TimetableView: React.FC = () => {
     loadTimetableContext();
   }, []);
 
+  useEffect(()=>{if(isParent||!planningYear)return;let live=true;
+    setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===planningYear),currentTerm:undefined}));
+    apiService.getTerms(planningYear).then(r=>{if(!live)return;const list=r.data||[],saved=rememberedPlanningScope(user);setPlanningTerms(list);const id=list.some(t=>t.id===saved.termId)?saved.termId:selectPlanningTerm(list);setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===planningYear),currentTerm:list.find(t=>t.id===id)}));}).catch(()=>{if(live)setPlanningTerms([]);});
+    return()=>{live=false;};},[planningYear]);
+
   // Parent context: lock timetable to parent's child
+  useEffect(()=>{
+    if(!isTeacher)return;
+    const year=currentContext?.currentYear?.id,term=currentContext?.currentTerm?.id;
+    let live=true;setTeacherAccessPeriod('');setClassesList([]);setSelectedClassId('');setClassStreams([]);setSelectedStreamId('');setTimetable(null);setAccessMessage('');
+    if(year&&term)apiService.getMyTimetableAccess(year,term).then(r=>{
+      if(!live)return;
+      const classes=sortClassesInCBCSequence(r.data?.classes||[]),saved=rememberedPlanningScope(user);
+      setClassesList(classes);setSelectedClassId(classes.find(c=>c.id===saved.classRoomId)?.id||classes[0]?.id||'');
+      if(r.data?.teacherId)setTeacherId(r.data.teacherId);
+      setTeacherAccessPeriod(year+':'+term);
+    }).catch(e=>{if(live)setAccessMessage(e.message||'Ask the administrator to check your teacher profile and assignments for this period.');});
+    return()=>{live=false;};
+  },[isTeacher,currentContext?.currentYear?.id,currentContext?.currentTerm?.id]);
+
   useEffect(() => {
     if (!isParent) return;
     async function loadParentTimetableContext() {
@@ -178,6 +203,12 @@ export const TimetableView: React.FC = () => {
       return;
     }
     async function loadClassStreams() {
+      if(isTeacher){
+        const cls=classesList.find(c=>c.id===selectedClassId),streams=cls?.streams||[];
+        setClassStreams(streams);
+        setSelectedStreamId(previous=>streams.some((s:any)=>s.id===previous)?previous:cls?.allowsWholeClass?'':streams[0]?.id||'');
+        return;
+      }
       try {
         const sRes = await apiService.getStreamsByClass(selectedClassId).catch(() => null);
         if (sRes?.data && Array.isArray(sRes.data)) {
@@ -191,7 +222,7 @@ export const TimetableView: React.FC = () => {
       setSelectedStreamId('');
     }
     loadClassStreams();
-  }, [selectedClassId]);
+  }, [selectedClassId,classesList,isTeacher]);
 
   // Initialize teacher profile if educator & load teachers list
   useEffect(() => {
@@ -202,14 +233,14 @@ export const TimetableView: React.FC = () => {
           if (res?.data) {
             setTeacherProfile(res.data);
             setTeacherId(res.data.id);
-            if (res.data.assignedClassId) {
-              setSelectedClassId(res.data.assignedClassId);
-            }
+            setTeachersList([{...res.data,name:user?.fullName||'My teaching timetable'}]);
           }
         } catch {
-          // Keep defaults
+          setAccessMessage('Your teacher profile could not be loaded. Ask the administrator to check your staff account link.');
         }
+        return;
       }
+      if(isParent)return;
       try {
         const tList = await apiService.getTeachers();
         if (tList?.data && Array.isArray(tList.data)) {
@@ -223,13 +254,19 @@ export const TimetableView: React.FC = () => {
       }
     }
     initTeacher();
-  }, [isTeacher]);
+  }, [isTeacher,isParent]);
 
   const loadTimetable = async () => {
+    const generation=++tableRequest.current;
+    if(!currentContext?.currentYear?.id||!currentContext?.currentTerm?.id){setTimetable(null);setLoading(false);return;}
     setLoading(true);
     const activeTermId = currentContext?.currentTerm?.id || '';
     try {
       if (viewMode === 'class') {
+        const cls=classesList.find(c=>c.id===selectedClassId);
+        if(isTeacher&&(teacherAccessPeriod!==currentContext.currentYear.id+':'+activeTermId||!cls||(!cls.allowsWholeClass&&!cls.streams?.some((s:any)=>s.id===selectedStreamId)))){
+          setTimetable(null);setLoading(false);return;
+        }
         if (!selectedClassId) {
           setTimetable(null);
           setPeriods(DEFAULT_PERIODS);
@@ -237,7 +274,8 @@ export const TimetableView: React.FC = () => {
           setLoading(false);
           return;
         }
-        const res = await apiService.getStreamTimetable(selectedStreamId || undefined, activeTermId, selectedClassId);
+        const res = await apiService.getStreamTimetable(selectedStreamId || undefined, activeTermId, selectedClassId,currentContext?.currentYear?.id);
+        if(generation!==tableRequest.current)return;
         if (res.success && res.data) {
           setTimetable(res.data);
           if (res.data.periods && res.data.periods.length > 0) {
@@ -261,7 +299,8 @@ export const TimetableView: React.FC = () => {
           setLoading(false);
           return;
         }
-        const res = await apiService.getTeacherTimetable(teacherId, activeTermId);
+        const res = await apiService.getTeacherTimetable(teacherId, activeTermId,currentContext?.currentYear?.id);
+        if(generation!==tableRequest.current)return;
         if (res.success && res.data) {
           setTeacherSlots(res.data);
         } else {
@@ -270,6 +309,7 @@ export const TimetableView: React.FC = () => {
       }
       setIsGridDirty(false);
     } catch {
+      if(generation!==tableRequest.current)return;
       if (viewMode === 'class') {
         setTimetable(null);
         setPeriods(DEFAULT_PERIODS);
@@ -278,13 +318,13 @@ export const TimetableView: React.FC = () => {
         setTeacherSlots([]);
       }
     } finally {
-      setLoading(false);
+      if(generation===tableRequest.current)setLoading(false);
     }
   };
 
   useEffect(() => {
     loadTimetable();
-  }, [viewMode, selectedClassId, selectedStreamId, teacherId, currentContext]);
+  }, [viewMode, selectedClassId, selectedStreamId, teacherId, currentContext,teacherAccessPeriod,classesList]);
 
   const activeSlots: TimetableSlot[] = viewMode === 'class'
     ? (timetable?.slots || [])
@@ -308,6 +348,7 @@ export const TimetableView: React.FC = () => {
     setIsSavingGrid(true);
     setSaveSuccessMsg(null);
 
+    if(!currentContext?.currentYear?.id||!currentContext?.currentTerm?.id){setIsSavingGrid(false);alert('Select a valid academic year and term before saving a timetable.');return;}
     const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
     const curYear = new Date().getFullYear();
     const activeAcademicYearId = currentContext?.currentYear?.id || `year-${curYear}`;
@@ -315,7 +356,7 @@ export const TimetableView: React.FC = () => {
 
     try {
       const res = await apiService.saveTimetableGrid({
-        timetableId: timetable?.id,
+        timetableId: timetable&&(timetable.streamId||'')===(selectedStreamId||'')?timetable.id:undefined,
         schoolId: activeSchoolId,
         academicYearId: activeAcademicYearId,
         termId: activeTermId,
@@ -456,7 +497,7 @@ export const TimetableView: React.FC = () => {
   };
 
   const handleCellClick = (dayKey: string, pDef: PeriodDefinition, existingSlot?: TimetableSlot) => {
-    if (!canEditGrid) return;
+    if (!canEditGrid || loading || !currentContext?.currentTerm?.id) return;
     if (existingSlot) {
       setSelectedSlotForEdit({
         ...existingSlot,
@@ -481,7 +522,7 @@ export const TimetableView: React.FC = () => {
   // Generates complete, full-page A4 Landscape calibrated HTML for Print & PDF download
   const buildTimetablePrintHTML = (titleContext: string, yearName: string) => {
     const schoolTitle = schoolInfo?.name || 'GRACE SEEDS SCHOOL';
-    const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu';
+    const schoolAddress = schoolInfo?.address || 'P.O Box 12-20123';
     const schoolPhone = schoolInfo?.phone || '0745436312';
     const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
     const numDays = days.length || 5;
@@ -1274,7 +1315,7 @@ export const TimetableView: React.FC = () => {
             <span>/</span>
             <span>Operations</span>
             <span>/</span>
-            <span className="text-[#800000] font-semibold">Master Timetable</span>
+            <span className="text-primary font-semibold">Master Timetable</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Grace Seeds School Timetable Engine
@@ -1288,7 +1329,7 @@ export const TimetableView: React.FC = () => {
           {/* Download and Print Buttons */}
           <button
             onClick={handleDownloadTimetable}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] text-xs font-bold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-bold shadow-xs transition-all cursor-pointer"
             title="Download or print official timetable in landscape orientation covering the full page"
           >
             <span className="material-symbols-outlined text-[16px]">print</span>
@@ -1329,7 +1370,7 @@ export const TimetableView: React.FC = () => {
                   setSelectedSlotForEdit(null);
                   setIsAddSlotOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] text-xs font-bold shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add_circle</span>
                 <span>Assign Slot</span>
@@ -1340,10 +1381,10 @@ export const TimetableView: React.FC = () => {
                 disabled={isSavingGrid}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold shadow-md transition-all cursor-pointer ${
                   isSavingGrid
-                    ? 'bg-amber-600 text-white cursor-wait'
+                    ? 'bg-primary text-white cursor-wait'
                     : isGridDirty
-                    ? 'bg-[#800000] text-white hover:bg-[#600000] ring-2 ring-[#800000]/30 animate-pulse'
-                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    ? 'bg-primary text-white hover:bg-primary-container ring-2 ring-primary/30 animate-pulse'
+                    : 'bg-primary text-white hover:bg-primary-container'
                 }`}
                 title="Actively commit all timetable slots, periods, and day columns to database"
               >
@@ -1363,17 +1404,18 @@ export const TimetableView: React.FC = () => {
             <span className="material-symbols-outlined text-lg text-emerald-700">check_circle</span>
             <span>{saveSuccessMsg}</span>
           </div>
-          <button onClick={() => setSaveSuccessMsg(null)} className="text-emerald-800 hover:text-emerald-950 p-1 cursor-pointer">
+          <button onClick={() => setSaveSuccessMsg(null)} className="text-on-primary-fixed hover:text-on-primary-fixed p-1 cursor-pointer">
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
         </div>
       )}
 
+      {!isParent&&<section className="no-print flex flex-wrap gap-4 rounded-xl border bg-surface-container-lowest p-4"><label>Planning academic year<select aria-label="Timetable academic year" className="ui-field" value={planningYear} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setTimetable(null);setIsGridDirty(false);setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===e.target.value),currentTerm:undefined}));setPlanningYear(e.target.value);}}}>{planningYears.map(y=><option key={y.id} value={y.id}>{y.name}{y.isCurrent?' · Operational':''}</option>)}</select></label><label>Planning term<select aria-label="Timetable term" className="ui-field" value={currentContext?.currentTerm?.id||''} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setCurrentContext((old:any)=>({...old,currentTerm:planningTerms.find(t=>t.id===e.target.value)}));rememberPlanningScope(user,{academicYearId:planningYear,termId:e.target.value,classRoomId:selectedClassId,streamId:selectedStreamId});}}}>{planningTerms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><p className="text-sm">This selects the timetable you are preparing. It does not activate a future school year.</p></section>}
       {/* Control Filters (Class, Stream, Teacher Selection) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 no-print">
         {isParent ? (
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#800000] text-white shadow-xs flex items-center gap-1.5">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-white shadow-xs flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[15px]">school</span>
               <span>Child Class Timetable</span>
             </span>
@@ -1384,21 +1426,21 @@ export const TimetableView: React.FC = () => {
               onClick={() => setViewMode('class')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'class'
-                  ? 'bg-[#800000] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              Class Schedule
+              {isTeacher ? 'My Class Timetable' : 'Class Schedule'}
             </button>
             <button
               onClick={() => setViewMode('teacher')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'teacher'
-                  ? 'bg-[#800000] text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              Teacher Individual View
+              {isTeacher ? 'My Teaching Timetable' : 'Teacher Individual View'}
             </button>
           </div>
         )}
@@ -1454,7 +1496,7 @@ export const TimetableView: React.FC = () => {
                 className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
               >
                 {classesList.length === 0 ? (
-                  <option value="">No classes configured</option>
+                  <option value="">{isTeacher?'No class-teacher assignment':'No classes configured'}</option>
                 ) : (
                   sortAndGroupClasses(classesList).map((group) => (
                     <optgroup key={group.category} label={group.category}>
@@ -1477,7 +1519,7 @@ export const TimetableView: React.FC = () => {
                 onChange={(e) => setSelectedStreamId(e.target.value)}
                 className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
               >
-                <option value="">Main Cohort (No Stream)</option>
+                {(!isTeacher||activeClassObj?.allowsWholeClass)&&<option value="">Main Cohort (No Stream)</option>}
                 {classStreams.map((st) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
@@ -1493,7 +1535,7 @@ export const TimetableView: React.FC = () => {
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-on-surface-variant">Teacher:</span>
-            <select
+            {isTeacher?<span className="text-xs font-semibold">{activeTeacherName} (You)</span>:<select
               value={teacherId}
               onChange={(e) => setTeacherId(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
@@ -1507,19 +1549,21 @@ export const TimetableView: React.FC = () => {
                   </option>
                 ))
               )}
-            </select>
+            </select>}
           </div>
         )}
       </div>
+
+      {isTeacher&&<p role="status" className="no-print rounded-xl bg-surface-container-low p-3 text-sm">{accessMessage||'My Teaching Timetable shows only your lessons. Full class timetables are available only for your active class-teacher assignments.'}{!accessMessage&&teacherAccessPeriod&&!classesList.length&&' You have no class-teacher assignment for this period. You can still view your own teaching timetable.'}</p>}
 
       {/* Main Printable Card (Contains Centered School Logo, Letterhead, and Full-Page Grid) */}
       <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 print:p-0 space-y-4 print:space-y-0 print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:rounded-none">
         
         {/* School Letterhead Header - Logo and Class or Teacher prominently displayed WITHOUT term ribbon */}
-        <div className="printable-header flex flex-col items-center justify-center text-center pb-4 print:pb-1 border-b-2 border-[#800000] print:flex-row print:justify-between print:items-center print:text-left">
+        <div className="printable-header flex flex-col items-center justify-center text-center pb-4 print:pb-1 border-b-2 border-primary print:flex-row print:justify-between print:items-center print:text-left">
           {/* Brand Left (Logo + School Info) */}
           <div className="flex flex-col items-center sm:flex-row print:flex-row print:items-center gap-3">
-            <div className="school-logo-wrapper w-20 h-20 sm:w-24 sm:h-24 print:w-11 print:h-11 rounded-2xl print:rounded-md border-2 print:border border-[#800000] p-1 print:p-0.5 bg-white flex items-center justify-center shadow-md print:shadow-none mx-auto mb-1 sm:mb-0 print:mb-0 shrink-0">
+            <div className="school-logo-wrapper w-20 h-20 sm:w-24 sm:h-24 print:w-11 print:h-11 rounded-2xl print:rounded-md border-2 print:border border-primary p-1 print:p-0.5 bg-white flex items-center justify-center shadow-md print:shadow-none mx-auto mb-1 sm:mb-0 print:mb-0 shrink-0">
               <img
                 src="/logo.png"
                 alt="Grace Seeds School Logo"
@@ -1534,21 +1578,21 @@ export const TimetableView: React.FC = () => {
             </div>
 
             <div className="text-center sm:text-left print:text-left">
-              <h2 className="text-xl sm:text-2xl print:text-[15px] font-black uppercase text-[#800000] tracking-wider leading-tight">
+              <h2 className="text-xl sm:text-2xl print:text-[15px] font-black uppercase text-primary tracking-wider leading-tight">
                 GRACE SEEDS SCHOOL
               </h2>
               <p className="text-xs print:text-[8px] font-bold text-gray-700 uppercase tracking-wide mt-0.5 print:mt-0">
                 MINISTRY OF EDUCATION · CBE MASTER TIMETABLE
               </p>
               <p className="text-[11px] print:text-[7.5px] text-gray-500 font-medium">
-                KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · schoolgraceseeds@gmail.com
+                P.O Box 12-20123 · Tel: 0745436312 · schoolgraceseeds@gmail.com
               </p>
             </div>
           </div>
 
           {/* Context & Class or Teacher Title (NO TERM RIBBON) */}
           <div className="mt-3 sm:mt-0 print:mt-0 flex flex-col items-center sm:items-end print:items-end">
-            <div className="inline-flex items-center gap-2 px-4 py-2 print:py-1 print:px-2.5 bg-[#800000] text-white rounded-xl print:rounded-md text-xs sm:text-sm print:text-[10px] font-black uppercase tracking-wider shadow-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 print:py-1 print:px-2.5 bg-primary text-white rounded-xl print:rounded-md text-xs sm:text-sm print:text-[10px] font-black uppercase tracking-wider shadow-sm">
               <span className="material-symbols-outlined text-[18px] print:hidden">
                 {viewMode === 'class' ? 'school' : 'person'}
               </span>
@@ -1599,12 +1643,12 @@ export const TimetableView: React.FC = () => {
               <tr>
                 <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-28 print:w-[75px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-on-surface print:text-[#800000]">Day / Period</span>
+                    <span className="font-bold text-on-surface print:text-primary">Day / Period</span>
                     {canEditGrid && (
                       <button
                         onClick={() => setIsAddDayOpen(true)}
                         title="Add day row"
-                        className="text-[#800000] hover:opacity-80 cursor-pointer no-print"
+                        className="text-primary hover:opacity-80 cursor-pointer no-print"
                       >
                         <span className="material-symbols-outlined text-[16px]">add_box</span>
                       </button>
@@ -1620,7 +1664,7 @@ export const TimetableView: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="text-left">
-                        <span className="font-bold text-[#800000] block text-xs print:text-[8px] leading-tight">
+                        <span className="font-bold text-primary block text-xs print:text-[8px] leading-tight">
                           P{pDef.periodNumber} · {pDef.name}
                         </span>
                         <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0 font-data-mono">
@@ -1639,7 +1683,7 @@ export const TimetableView: React.FC = () => {
                             type="button"
                             onClick={() => setEditingPeriod(pDef)}
                             title="Edit Period Times & Label"
-                            className="text-on-surface-variant hover:text-[#800000] cursor-pointer p-0.5 rounded hover:bg-surface-container"
+                            className="text-on-surface-variant hover:text-primary cursor-pointer p-0.5 rounded hover:bg-surface-container"
                           >
                             <span className="material-symbols-outlined text-[14px]">edit</span>
                           </button>
@@ -1669,7 +1713,7 @@ export const TimetableView: React.FC = () => {
                   {/* Day Header Row Label */}
                   <td className="col-day-cell py-2.5 px-3 print:py-1 print:px-1.5 border-r border-surface-container print:border-gray-400 align-middle print:bg-[#fbfbfb]">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#800000] block text-xs print:text-[8.5px] uppercase tracking-wider">
+                      <span className="font-bold text-primary block text-xs print:text-[8.5px] uppercase tracking-wider">
                         {d.label}
                       </span>
                       {canEditGrid && days.length > 1 && (
@@ -1702,13 +1746,13 @@ export const TimetableView: React.FC = () => {
                         {slot ? (
                           slot.isBreak ? (
                             <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-amber-50 border border-amber-200/60 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
-                              <span className="material-symbols-outlined text-amber-700 text-sm no-print">coffee</span>
+                              <span className="material-symbols-outlined text-primary text-sm no-print">coffee</span>
                               <span className="text-[11px] print:text-[8px] font-bold text-amber-900 print:text-[#886200] mt-0.5 print:mt-0">
                                 {slot.label || (slot.isLunch ? 'Lunch & Rest' : 'Morning Break')}
                               </span>
                             </div>
                           ) : (
-                            <div className="slot-card h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-1.5 print:p-0.5 shadow-xs print:shadow-none hover:border-[#800000]/50 transition-all flex flex-col justify-between items-center text-center">
+                            <div className="slot-card h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-1.5 print:p-0.5 shadow-xs print:shadow-none hover:border-primary/50 transition-all flex flex-col justify-between items-center text-center">
                               <div className="slot-teacher w-full text-center">
                                 <span className="text-[10px] print:text-[7px] text-on-surface-variant print:text-gray-600 font-semibold block truncate">
                                   {slot.teacherName || 'Assigned Teacher'}
@@ -1716,7 +1760,7 @@ export const TimetableView: React.FC = () => {
                               </div>
 
                               <div className="subject-abbr-wrapper my-1 print:my-0.5 flex-1 flex items-center justify-center w-full">
-                                <span className="subject-abbr font-black text-[#800000] text-sm sm:text-base print:text-[14px] uppercase tracking-wider block">
+                                <span className="subject-abbr font-black text-primary text-sm sm:text-base print:text-[14px] uppercase tracking-wider block">
                                   {formatSubjectAbbreviation(slot.learningAreaName)}
                                 </span>
                               </div>
@@ -1733,7 +1777,7 @@ export const TimetableView: React.FC = () => {
                             </span>
                           </div>
                         ) : (
-                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center text-outline hover:text-[#800000] hover:border-[#800000] transition-all group">
+                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center text-outline hover:text-primary hover:border-primary transition-all group">
                             {canEditGrid && (
                               <div className="no-print flex flex-col items-center">
                                 <span className="material-symbols-outlined text-xs group-hover:scale-110 transition-transform">add</span>
@@ -1825,7 +1869,7 @@ export const TimetableView: React.FC = () => {
                   id="periodIsBreak"
                   checked={editingPeriod.isBreak}
                   onChange={(e) => setEditingPeriod({ ...editingPeriod, isBreak: e.target.checked })}
-                  className="w-4 h-4 text-[#800000] rounded"
+                  className="w-4 h-4 text-primary rounded"
                 />
                 <label htmlFor="periodIsBreak" className="text-xs font-semibold text-on-surface">
                   This period is a Break or Interval
@@ -1844,7 +1888,7 @@ export const TimetableView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleUpdatePeriod(editingPeriod)}
-                className="flex-1 py-2 bg-[#800000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 Update Period
               </button>
@@ -1906,7 +1950,7 @@ export const TimetableView: React.FC = () => {
                   id="newIsBreak"
                   checked={newPeriodData.isBreak}
                   onChange={(e) => setNewPeriodData({ ...newPeriodData, isBreak: e.target.checked })}
-                  className="w-4 h-4 text-[#800000] rounded"
+                  className="w-4 h-4 text-primary rounded"
                 />
                 <label htmlFor="newIsBreak" className="text-xs font-semibold text-on-surface">
                   This period is a Break / Tea / Rest
@@ -1925,7 +1969,7 @@ export const TimetableView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAddPeriod}
-                className="flex-1 py-2 bg-[#800000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 Add Period
               </button>
@@ -1972,7 +2016,7 @@ export const TimetableView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAddDay}
-                className="flex-1 py-2 bg-[#800000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 Add Day
               </button>

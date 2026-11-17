@@ -40,6 +40,12 @@ describe('Strict Overpayment Eligibility & Payment Allocation Tests (Scenarios 1
     schoolId
   };
 
+  const adminUserContext = {
+    userId: 'usr-admin-1',
+    role: UserRole.ADMIN,
+    schoolId
+  };
+
   beforeEach(async () => {
     feeRepo = new InMemoryFeeRepository();
     studentRepo = new InMemoryStudentRepository();
@@ -568,11 +574,20 @@ describe('Strict Overpayment Eligibility & Payment Allocation Tests (Scenarios 1
     expect(credits.length).toBe(1);
     expect(credits[0].balance).toBe(1000);
 
-    // Reverse the payment
+    // Bursar direct reversal execution is blocked (403 Forbidden)
+    await expect(
+      feeUseCases.reversePayment(
+        paymentId,
+        'Parent requested refund for wrong counter deposit',
+        bursarUserContext
+      )
+    ).rejects.toThrow(/Bursars and Accountants cannot directly execute payment reversals/i);
+
+    // Reverse the payment with Administrator authority
     const revRes = await feeUseCases.reversePayment(
       paymentId,
       'Parent requested refund for wrong counter deposit',
-      bursarUserContext
+      adminUserContext
     );
 
     expect(revRes.success).toBe(true);

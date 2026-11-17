@@ -1,0 +1,168 @@
+{
+  "inspected_commit": "b18836c643e8cb1cee0e42b65b9f1a0f7def16d2",
+  "deployed_commit": null,
+  "source_document": "SmartShule_Supabase_Production_Database_Audit_2026-11-15.docx",
+  "source_sha256": "e222c6a0887dc210edb89c305b9652ae015b6bc3a6a25292adbcca59af0f4aae",
+  "production_modified": false,
+  "isolated_database": {
+    "host": "127.0.0.1",
+    "port": 55471,
+    "name": "smartshule_audit_review_20261116",
+    "data_directory": "/tmp/smartshule-review-20261116/pgdata",
+    "data": "synthetic only",
+    "stopped_after_verification": true
+  },
+  "review_tests": {
+    "success": true,
+    "passed": 19,
+    "failed": 0,
+    "suites": 2,
+    "results": [
+      {
+        "file": "documentation/audit-review-20261116/tests/database_contracts.test.ts",
+        "assertions": [
+          {
+            "name": "F01/F13: synthetic observed grants reproduce anonymous private-table/backup access",
+            "status": "passed"
+          },
+          {
+            "name": "F02/F03: current repositories fail on the observed schema before additive proposals",
+            "status": "passed"
+          },
+          {
+            "name": "F01/F13: apply the permission proposal twice without changing private rows/backend grants",
+            "status": "passed"
+          },
+          {
+            "name": "F01: inherited backend membership fails verification instead of silently claiming containment",
+            "status": "passed"
+          },
+          {
+            "name": "F01: creator-specific defaults deny future tables, sequences and functions, including PUBLIC fallback",
+            "status": "passed"
+          },
+          {
+            "name": "F02/F03/F10: additive proposals are repeatable; historical paid salary remains unacknowledged",
+            "status": "passed"
+          },
+          {
+            "name": "F02: actual payroll and complaint adapters persist/reload after the proposal",
+            "status": "passed"
+          },
+          {
+            "name": "F03: actual reversal request adapter persists; concurrent active requests are rejected",
+            "status": "passed"
+          },
+          {
+            "name": "F10: proposed reviewed bridge reveals existing salaries only to the linked account without regeneration",
+            "status": "passed"
+          },
+          {
+            "name": "F01: authorised backend API still lists school/learners while browser roles cannot read the same tables",
+            "status": "passed"
+          },
+          {
+            "name": "F01: authorised admin payroll list survives grants changes without permitting staff impersonation",
+            "status": "passed"
+          },
+          {
+            "name": "F01: actual linked-parent portal still works through backend while an unrelated parent is denied",
+            "status": "passed"
+          },
+          {
+            "name": "F01/F13: every existing public table, including new proposal tables, denies browser SELECT and DML",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "documentation/audit-review-20261116/tests/workflow_observations.test.ts",
+        "assertions": [
+          {
+            "name": "F04/F11 CURRENT GAP: assigned teacher creates curriculum visible immediately without publication approval",
+            "status": "passed"
+          },
+          {
+            "name": "F11 CURRENT GAP: a complete DRAFT lesson is saved but reflection, taught creation and planned progress require approval",
+            "status": "passed"
+          },
+          {
+            "name": "F11 CURRENT BYPASS: teacher-supplied APPROVED status is accepted and marks session taught without reviewer evidence",
+            "status": "passed"
+          },
+          {
+            "name": "F11 ordinary submitted records do not count taught; leadership approval does, but overconfirms an entire week",
+            "status": "passed"
+          },
+          {
+            "name": "F11 CURRENT GAP: leadership can approve a DRAFT record without teacher submission",
+            "status": "passed"
+          },
+          {
+            "name": "F11 CURRENT BYPASS: teacher can directly confirm tracker coverage without approved records",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "existing_workflow_suite": {
+    "path": "tests/integration/syllabus_weekly_scheme_workflow.test.ts",
+    "passed": 22
+  },
+  "configuration_probe": {
+    "capturedAt": "2026-11-16T05:42:58.115Z",
+    "managementTokenConfigured": false,
+    "renderTokenConfigured": false,
+    "checks": [
+      {
+        "name": "read_only",
+        "sql": "SHOW transaction_read_only",
+        "rows": [
+          {
+            "transaction_read_only": "on"
+          }
+        ]
+      },
+      {
+        "name": "role_api_settings",
+        "sql": "SELECT r.rolname,setting FROM pg_db_role_setting s LEFT JOIN pg_roles r ON r.oid=s.setrole CROSS JOIN LATERAL unnest(s.setconfig) setting WHERE setting LIKE 'pgrst.db_schemas=%' OR setting LIKE 'pgrst.db_anon_role=%' OR setting LIKE 'pgrst.db_extra_search_path=%'",
+        "rows": []
+      },
+      {
+        "name": "session_api_schema",
+        "sql": "SELECT current_setting('pgrst.db_schemas',true) exposed_schemas",
+        "rows": [
+          {
+            "exposed_schemas": null
+          }
+        ]
+      },
+      {
+        "name": "public_browser_access",
+        "sql": "SELECT count(*)::int tables FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND NOT c.relrowsecurity AND has_table_privilege('anon',c.oid,'SELECT')",
+        "rows": [
+          {
+            "tables": 58
+          }
+        ]
+      }
+    ],
+    "completedAt": "2026-11-16T05:43:01.099Z"
+  },
+  "health_response": {
+    "status": "UP",
+    "service": "SmartShule CBC School Management Backend",
+    "version": "1.0.0",
+    "uptimeSeconds": 230,
+    "timestamp": "2026-11-16T05:43:01.244Z"
+  },
+  "limitations": [
+    "No deployed SHA established",
+    "No hosted Data API exposure configuration established",
+    "Local schema metadata omits varchar lengths",
+    "Six observation tests reproduce current workflow defects",
+    "Bridge is proposed SQL, not implemented staff API",
+    "PostgreSQL role tests are not Supabase gateway tests"
+  ]
+}

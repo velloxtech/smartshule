@@ -209,7 +209,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       const pos = await feeUseCases.calculateAuthoritativeFeePosition(studentId);
       expect(pos.outstandingBalance).toBe(4500);
       expect(pos.netCreditBalance).toBe(0);
-      expect(pos.maxAcceptedPayment).toBe(4500);
+      expect(pos.maxAcceptedPayment).toBe(Number.MAX_SAFE_INTEGER);
     });
 
     test('2. Payment below outstanding balance succeeds and updates balance accurately', async () => {
@@ -248,44 +248,32 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       expect(updatedInv?.status).toBe(InvoiceStatus.PAID);
     });
 
-    test('4. Payment exceeding outstanding balance is strictly rejected with authoritative error message', async () => {
-      // Cashier attempts to enter KES 9,000 when only KES 4,500 is outstanding
-      await expect(
-        feeUseCases.recordPayment({
-          schoolId,
-          invoiceId,
-          studentId,
-          amount: 9000,
-          paymentMethod: PaymentMethod.CASH,
-          recordedByUserId: 'usr-cashier-001'
-        })
-      ).rejects.toThrow(
-        'Payment exceeds the outstanding balance of KES 4,500. Please enter an amount equal to or less than the outstanding balance.'
-      );
+    test('4. Excess payment clears the invoice and creates traceable advance credit', async () => {
+      const result = await feeUseCases.recordPayment({
+        schoolId, invoiceId, studentId, amount: 9000,
+        paymentMethod: PaymentMethod.CASH, recordedByUserId: 'usr-cashier-001'
+      });
+      expect(result.allocation.currentFeesPaid).toBe(4500);
+      expect(result.allocation.overpaymentAmount).toBe(4500);
+      expect(result.creditBalance).toBe(4500);
+      expect((await feeRepo.findInvoiceById(invoiceId))?.balance).toBe(0);
     });
 
-    test('5. Rejected payment creates NO payment record, receipt, or fee credit in database', async () => {
-      try {
-        await feeUseCases.recordPayment({
-          schoolId,
-          invoiceId,
-          studentId,
-          amount: 9000,
-          paymentMethod: PaymentMethod.CASH,
-          recordedByUserId: 'usr-cashier-001'
-        });
-      } catch {
-        // Expected rejection
-      }
-
-      const allPayments = await feeRepo.findPayments({ studentId });
-      expect(allPayments.length).toBe(0);
-
-      const allCredits = await feeRepo.findCredits({ studentId });
-      expect(allCredits.length).toBe(0);
-
-      const unchangedInv = await feeRepo.findInvoiceById(invoiceId);
-      expect(unchangedInv?.balance).toBe(4500);
+    test('5. Advance payment persists one receipt and one linked credit without overpaying the invoice', async () => {
+      const result = await feeUseCases.recordPayment({
+        schoolId, invoiceId, studentId, amount: 9000,
+        paymentMethod: PaymentMethod.CASH, recordedByUserId: 'usr-cashier-001'
+      });
+      const payments = await feeRepo.findPayments({ studentId });
+      const credits = await feeRepo.findCredits({ studentId });
+      expect(payments).toHaveLength(1);
+      expect(credits).toHaveLength(1);
+      expect(credits[0].originatingPaymentId).toBe(payments[0].id);
+      expect(credits[0].balance).toBe(4500);
+      expect(result.receipt.receiptNumber).toBe(payments[0].receiptNumber);
+      const invoice = await feeRepo.findInvoiceById(invoiceId);
+      expect(invoice?.balance).toBe(0);
+      expect(invoice?.amountPaid).toBe(15000);
     });
 
     test('6. Negative and zero payment amounts are rejected immediately', async () => {

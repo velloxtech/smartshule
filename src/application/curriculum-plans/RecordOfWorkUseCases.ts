@@ -25,6 +25,8 @@ import {
 } from '../../core/domain/shared/Errors';
 
 export interface CreateDiaryEntryDTO {
+  planningLink?: { lessonPlanId?:string; schemeId:string; schemeEntryId:string; slotId:string };
+
   schoolId?: string;
   teacherId?: string;
   teacherName?: string;
@@ -162,65 +164,6 @@ export class RecordOfWorkUseCases {
   }
 
   /**
-   * Helper: validates sequential progression
-   */
-  private async assertSequentialProgression(
-    record: {
-      schoolId: string;
-      classRoomId?: string;
-      learningAreaId?: string;
-      academicYear?: string;
-      term?: string;
-      weekNumber: number;
-      lessonDate?: string;
-      period?: string;
-    }
-  ): Promise<void> {
-    if (!record.weekNumber || record.weekNumber <= 1) {
-      return; // Week 1 is the starting point
-    }
-
-    const previousWeek = record.weekNumber - 1;
-
-    // Check if previous week has an approved entry in records_of_work
-    const previousEntries = await this.recordOfWorkRepo.find({
-      schoolId: record.schoolId,
-      classRoomId: record.classRoomId,
-      learningAreaId: record.learningAreaId,
-      weekNumber: previousWeek
-    });
-
-    const hasApproved = previousEntries.some(
-      e => e.status === 'APPROVED' || e.isOfficialCoverage || (e.reviewRemarks && e.reviewRemarks.includes('[ADMIN OVERRIDE'))
-    );
-
-    // Also check overarching CurriculumTracker if available
-    let trackerApproved = false;
-    if (this.curriculumTrackerRepo && record.classRoomId && record.learningAreaId) {
-      const trackers = await this.curriculumTrackerRepo.findTrackers({
-        schoolId: record.schoolId,
-        classRoomId: record.classRoomId,
-        learningAreaId: record.learningAreaId,
-        term: record.term,
-        academicYear: record.academicYear
-      });
-
-      if (trackers.length > 0) {
-        const item = trackers[0].items.find(i => i.weekNumber === previousWeek);
-        if (item && (item.status === 'APPROVED' || item.status === 'EXEMPTED' || item.isCovered)) {
-          trackerApproved = true;
-        }
-      }
-    }
-
-    if (!hasApproved && !trackerApproved) {
-      throw new ValidationError(
-        `Progression Locked: Week ${record.weekNumber} cannot be submitted as completed because preceding Week ${previousWeek} has not been officially approved by academic supervision. Upcoming lessons can remain saved as Drafts until preceding coverage is confirmed.`
-      );
-    }
-  }
-
-  /**
    * 1. Create a Teacher Diary Entry (Record of Work)
    * Supports DRAFT preparation and full SUBMISSION
    */
@@ -228,6 +171,7 @@ export class RecordOfWorkUseCases {
     const rawUserId = this.resolveEffectiveUserId(requestingUser);
     const userRole = requestingUser?.role;
     const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    if(requestingUser?.schoolId&&schoolId!==requestingUser.schoolId)throw new ForbiddenError('School access denied.');
 
     let teacherId = dto.teacherId || rawUserId || 'teacher-001';
     let teacherName = dto.teacherName || requestingUser?.fullName || 'Assigned Teacher';
@@ -251,26 +195,15 @@ export class RecordOfWorkUseCases {
     let termId = dto.termId || dto.term;
     let term = dto.term;
 
-    if (this.academicRepo && (!academicYear || !term)) {
-      try {
-        const currentYear = await this.academicRepo.findCurrentYear(schoolId);
-        if (currentYear) {
-          academicYearId = academicYearId || currentYear.id;
-          academicYear = academicYear || currentYear.name;
-          const currentTerm = await this.academicRepo.findCurrentTerm(currentYear.id);
-          if (currentTerm) {
-            termId = termId || currentTerm.id;
-            term = term || currentTerm.name;
-          } else {
-            const terms = await this.academicRepo.findTermsByYear(currentYear.id);
-            if (terms && terms.length > 0) {
-              termId = termId || terms[0].id;
-              term = term || terms[0].name;
-            }
-          }
-        }
-      } catch {
-        // Fallback gracefully
+    if (this.academicRepo) {
+      const year=academicYearId?await this.academicRepo.findYearById(academicYearId):academicYear?(await this.academicRepo.findAllYears(schoolId)).find(y=>y.name===academicYear)||null:await this.academicRepo.findCurrentYear(schoolId);
+      if(academicYearId&&(!year||year.schoolId!==schoolId))throw new ValidationError('Select an academic year belonging to this school.');
+      if(year){
+        academicYearId=year.id;academicYear=year.name;
+        let selected=termId?await this.academicRepo.findTermById(termId):await this.academicRepo.findCurrentTerm(year.id);
+        if(!selected&&termId)selected=(await this.academicRepo.findTermsByYear(year.id)).find(t=>t.name===termId||String(t.termNumber)===termId!.replace(/^term[-_ ]*/i,'')||t.id.replace(/-t([1-3])$/,'-$1')===termId!.replace(/-t([1-3])$/,'-$1'))||null;
+        if(termId&&(!selected||selected.academicYearId!==year.id))throw new ValidationError('Select a term belonging to the selected academic year.');
+        if(selected){termId=selected.id;term=selected.name;}
       }
     }
 
@@ -282,6 +215,8 @@ export class RecordOfWorkUseCases {
     const lessonPeriod = dto.lessonPeriod || dto.period || 'Period 1';
     const lessonDate = dto.lessonDate || new Date().toISOString().split('T')[0];
     const initialStatus = dto.status || 'DRAFT';
+    if(initialStatus==='SUBMITTED'&&lessonDate>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
+    if (!['DRAFT','SUBMITTED'].includes(initialStatus)) throw new ValidationError('Create work as a draft or submit it. Approval is a separate leadership action.');
 
     // If attempting to submit immediately as SUBMITTED, enforce full lesson validation
     if (initialStatus === 'SUBMITTED') {
@@ -308,17 +243,6 @@ export class RecordOfWorkUseCases {
         }
       }
 
-      // Sequential Progression Gate
-      await this.assertSequentialProgression({
-        schoolId,
-        classRoomId: dto.classRoomId,
-        learningAreaId: dto.learningAreaId,
-        academicYear,
-        term,
-        weekNumber,
-        lessonDate,
-        period: lessonPeriod
-      });
     }
 
     const subjectAndGrade = dto.subjectAndGrade || `${dto.className || 'Class'} ${dto.subjectName || 'Subject'}`;
@@ -326,6 +250,7 @@ export class RecordOfWorkUseCases {
 
     const entry = RecordOfWork.create(
       {
+        planningLink: dto.planningLink,
         schoolId,
         teacherId,
         teacherName,
@@ -422,23 +347,11 @@ export class RecordOfWorkUseCases {
       throw new ForbiddenError('Approved teaching diary records cannot be edited without administrative supervision.');
     }
 
-    // Check transition to SUBMITTED
+    // A record can be submitted independently of preceding calendar weeks.
+    if (['APPROVED','RETURNED'].includes(dto.status || '')) throw new ValidationError('Use the leadership review action to approve or return work.');
+    if (existing.status === 'SUBMITTED') throw new ValidationError('Submitted work is awaiting review. Ask leadership to return it before editing.');
     const targetStatus = dto.status || existing.status;
-    if (targetStatus === 'SUBMITTED' && existing.status !== 'SUBMITTED') {
-      const hasOverride = existing.reviewRemarks && existing.reviewRemarks.includes('[ADMIN OVERRIDE');
-      if (!hasOverride) {
-        await this.assertSequentialProgression({
-          schoolId: existing.schoolId,
-          classRoomId: dto.classRoomId || existing.classRoomId,
-          learningAreaId: dto.learningAreaId || existing.learningAreaId,
-          academicYear: dto.academicYear || existing.academicYear,
-          term: dto.term || existing.term,
-          weekNumber: dto.weekNumber || existing.weekNumber,
-          lessonDate: dto.lessonDate || existing.lessonDate,
-          period: dto.lessonPeriod || dto.period || existing.period
-        });
-      }
-    }
+    if(targetStatus==='SUBMITTED'&&(dto.lessonDate||existing.lessonDate||'')>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
 
     const updatedProps: Partial<RecordOfWorkProps> = {
       ...dto,
@@ -460,6 +373,8 @@ export class RecordOfWorkUseCases {
     if (!existing) {
       throw new NotFoundError('Record of Work / Diary Entry', id);
     }
+
+    if((existing.lessonDate||'')>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
 
     const rawUserId = this.resolveEffectiveUserId(requestingUser);
     const userRole = requestingUser?.role;
@@ -484,20 +399,7 @@ export class RecordOfWorkUseCases {
       throw new ValidationError('A lesson topic and work covered are required before submitting for review.');
     }
 
-    // Progression Gating (bypassed if explicit supervisor exception/override exists)
-    const hasOverride = existing.reviewRemarks && existing.reviewRemarks.includes('[ADMIN OVERRIDE');
-    if (!hasOverride) {
-      await this.assertSequentialProgression({
-        schoolId: existing.schoolId,
-        classRoomId: existing.classRoomId,
-        learningAreaId: existing.learningAreaId,
-        academicYear: existing.academicYear,
-        term: existing.term,
-        weekNumber: existing.weekNumber,
-        lessonDate: existing.lessonDate,
-        period: existing.period
-      });
-    }
+    // Teaching records are reviewed independently; calendar weeks do not gate pacing.
 
     existing.submit(rawUserId, requestingUser?.fullName);
     const saved = await this.recordOfWorkRepo.update(id, existing);
@@ -567,12 +469,14 @@ export class RecordOfWorkUseCases {
       return existing;
     }
 
+    if (existing.status !== 'SUBMITTED') throw new ValidationError('Only submitted records of work can be approved.');
+    if (requestingUser?.schoolId && existing.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
     const reviewerName = requestingUser?.fullName || 'Academic Supervisor';
     existing.approve(rawUserId || 'admin-001', reviewerName, dto.remarks);
     const saved = await this.recordOfWorkRepo.update(id, existing);
 
     // Synchronize Official Curriculum Progression in CurriculumTracker
-    if (this.curriculumTrackerRepo && existing.classRoomId && existing.learningAreaId) {
+    if (this.curriculumTrackerRepo && existing.classRoomId && existing.learningAreaId && !existing.toJSON().planningLink) {
       try {
         let trackers = await this.curriculumTrackerRepo.findTrackers({
           schoolId: existing.schoolId,
@@ -840,6 +744,34 @@ export class RecordOfWorkUseCases {
     return saved!;
   }
 
+  /** Mark the week immediately before a diary entry as exempt when no teaching took place. */
+  public async exemptPreviousWeekForNoInstruction(id:string,reason:string,requestingUser?:UserContext) {
+    const existing=await this.recordOfWorkRepo.findById(id);
+    if(!existing)throw new NotFoundError('Record of Work / Diary Entry',id);
+    const rawUserId=this.resolveEffectiveUserId(requestingUser);
+    const userRole=requestingUser?.role;
+    if(!this.isSupervisoryRole(userRole))throw new ForbiddenError('Only school leadership can mark a teaching week as exempt.');
+    if(existing.weekNumber<=1)throw new ValidationError('Week 1 is the starting week and has no preceding week to exempt.');
+    if(!reason?.trim()||reason.trim().length<5)throw new ValidationError('Explain why no instruction took place in the preceding week.');
+    if(!existing.classRoomId||!existing.learningAreaId)throw new ValidationError('The diary entry must have a class and learning area.');
+    if(!this.curriculumTrackerRepo)throw new ValidationError('Curriculum progression records are not available.');
+
+    const weekNumber=existing.weekNumber-1;
+    let trackers=await this.curriculumTrackerRepo.findTrackers({schoolId:existing.schoolId,classRoomId:existing.classRoomId,streamId:existing.streamId,learningAreaId:existing.learningAreaId,term:existing.term,academicYear:existing.academicYear})||[];
+    let tracker=trackers[0];
+    if(!tracker){
+      tracker=CurriculumTracker.create({schoolId:existing.schoolId,teacherId:existing.teacherId,teacherName:existing.teacherName||'Assigned Teacher',learningAreaId:existing.learningAreaId,subjectName:existing.subjectName||'Subject',classRoomId:existing.classRoomId,className:existing.className||'Class',streamId:existing.streamId,streamName:existing.streamName,academicYear:existing.academicYear||new Date().getFullYear().toString(),term:existing.term||'Term 1',totalWeeks:12,items:[],dailyLogs:[],status:'ACTIVE'},IdGenerator.generate());
+    }
+    const prior=tracker.items.find(item=>item.weekNumber===weekNumber);
+    if(prior?.status==='APPROVED'||prior?.isCovered)throw new ValidationError(`Week ${weekNumber} already has approved coverage and cannot be marked as no instruction.`);
+    const overrideName=requestingUser?.fullName||'School Administrator';
+    tracker.setWeekPlan(weekNumber,{strand:'No instruction',subStrand:'No class held',learningOutcomes:reason.trim(),plannedLessons:0});
+    tracker.exemptOrRescheduleWeek(weekNumber,{status:'EXEMPTED',overrideByUserId:rawUserId||'admin-001',overrideByName:overrideName,reason:reason.trim()});
+    if(trackers.length)await this.curriculumTrackerRepo!.update(tracker);else await this.curriculumTrackerRepo?.save(tracker);
+    if(this.systemLogRepo){try{await this.systemLogRepo.create(SystemLog.create({schoolId:existing.schoolId,timestamp:new Date(),level:'WARN',category:'ACADEMICS',action:'DIARY_WEEK_EXEMPTED',actorUserId:rawUserId,actorRole:userRole,details:`Week ${weekNumber} marked exempt for no instruction before Week ${existing.weekNumber} in ${existing.subjectAndGrade}. Reason: ${reason.trim()}`,metadata:{recordId:id,exemptedWeek:weekNumber,followingWeek:existing.weekNumber,reason:reason.trim()}},IdGenerator.generate()));}catch{}}
+    return {weekNumber,status:'EXEMPTED',reason:reason.trim(),trackerId:tracker.id};
+  }
+
   /**
    * 7. List diary entries with scoping and status filtering
    */
@@ -906,6 +838,13 @@ export class RecordOfWorkUseCases {
 
     const rawUserId = this.resolveEffectiveUserId(requestingUser);
     const userRole = requestingUser?.role;
+    if (!this.isSupervisoryRole(userRole) && (userRole !== 'TEACHER' || !rawUserId)) {
+      throw new ForbiddenError('Only the record owner or school leadership can delete teaching records.');
+    }
+    if (requestingUser?.schoolId && existing.schoolId !== requestingUser.schoolId) {
+      throw new ForbiddenError('Cannot delete a record from another school.');
+    }
+
 
     if (userRole === 'TEACHER' && rawUserId) {
       let tId = rawUserId;
@@ -922,19 +861,33 @@ export class RecordOfWorkUseCases {
       throw new ForbiddenError('Approved teaching diary records cannot be deleted.');
     }
 
+    // Remove only evidence contributed by this record; retain other records in the week.
+    if (this.curriculumTrackerRepo) {
+      const trackers = await this.curriculumTrackerRepo.findTrackers({schoolId: existing.schoolId, classRoomId: existing.classRoomId, learningAreaId: existing.learningAreaId, term: existing.term, academicYear: existing.academicYear});
+      for (const tracker of trackers) {
+        if (!tracker.dailyLogs.some(log => log.id === id)) continue;
+        tracker.removeDailyLog(id);
+        if (!tracker.dailyLogs.some(log => log.weekNumber === existing.weekNumber && log.endorsement) && tracker.items.some(item => item.weekNumber === existing.weekNumber && item.isCovered)) {
+          tracker.returnWeekCoverage(existing.weekNumber, {returnedByUserId: rawUserId || 'admin', returnedByName: requestingUser?.fullName || 'School leadership', reason: 'The supporting Record of Work was deleted.'});
+        }
+        await this.curriculumTrackerRepo.update(tracker);
+      }
+    }
+
     return await this.recordOfWorkRepo.delete(id);
   }
 
   /**
    * 10. Dashboard & Report Metrics for Official Curriculum Coverage
    */
-  public async getCurriculumProgressSummary(schoolId?: string, term?: string, academicYear?: string) {
-    const allRecords = await this.recordOfWorkRepo.find({
+  public async getCurriculumProgressSummary(schoolId?: string, term?: string, academicYear?: string, authorize?: (record:any)=>Promise<boolean>) {
+    let allRecords = await this.recordOfWorkRepo.find({
       schoolId: schoolId || 'school-001',
       term,
       academicYear
     });
 
+    if(authorize){const permitted=[];for(const record of allRecords)if(await authorize(record))permitted.push(record);allRecords=permitted;}
     const totalLessons = allRecords.length;
     const draftsCount = allRecords.filter(r => r.status === 'DRAFT').length;
     const submittedCount = allRecords.filter(r => r.status === 'SUBMITTED').length;

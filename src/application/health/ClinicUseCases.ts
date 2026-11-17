@@ -173,9 +173,10 @@ export class ClinicUseCases {
     return visit.toJSON();
   }
 
-  public async getClinicStats(schoolId?: string) {
+  public async getClinicStats(schoolId?: string, authorize?: (record:any)=>Promise<boolean>) {
     const today = new Date().toISOString().split('T')[0];
-    const allVisits = await this.clinicRepository.findVisits({ schoolId });
+    let allVisits = await this.clinicRepository.findVisits({ schoolId });
+    if(authorize){const permitted=[];for(const record of allVisits)if(await authorize(record))permitted.push(record);allVisits=permitted;}
     const todayVisits = allVisits.filter(v => v.visitDate === today);
 
     const underObservation = allVisits.filter(v => v.status === 'UNDER_OBSERVATION').length;

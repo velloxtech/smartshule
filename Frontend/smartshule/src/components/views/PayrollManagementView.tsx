@@ -75,12 +75,16 @@ export const PayrollManagementView: React.FC = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([]);
+  const [hasAutoDetected, setHasAutoDetected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [ackFilter, setAckFilter] = useState<'ALL' | 'ACKNOWLEDGED' | 'AWAITING' | 'DISPUTED'>('ALL');
   const [notification, setNotification] = useState<string | null>(null);
 
   // Modals
   const [selectedPayslip, setSelectedPayslip] = useState<PayrollRecord | null>(null);
+  const [selectedAckDossier, setSelectedAckDossier] = useState<PayrollRecord | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -171,16 +175,45 @@ export const PayrollManagementView: React.FC = () => {
     return null;
   };
 
-  const loadData = async () => {
+  const loadData = async (monthOverride?: string) => {
     setLoading(true);
+    const targetMonth = monthOverride !== undefined ? monthOverride : selectedMonth;
     try {
-      const [payrollRes, leaveRes, teacherRes, schoolRes] = await Promise.all([
-        apiService.getPayrolls(selectedMonth),
+      const [payrollRes, allPayrollsRes, leaveRes, teacherRes, schoolRes] = await Promise.all([
+        apiService.getPayrolls(targetMonth),
+        apiService.getPayrolls('ALL').catch(() => null),
         apiService.getLeaves(),
         apiService.getTeachers().catch(() => null),
         apiService.getSchool().catch(() => null),
       ]);
-      if (payrollRes?.data) setPayrolls(payrollRes.data);
+
+      // Discover all available months and counts across the database
+      const allRecords: PayrollRecord[] = allPayrollsRes?.data || [];
+      const monthMap = new Map<string, number>();
+      allRecords.forEach((p) => {
+        if (p.month) {
+          monthMap.set(p.month, (monthMap.get(p.month) || 0) + 1);
+        }
+      });
+      const monthList = Array.from(monthMap.entries())
+        .map(([m, c]) => ({ month: m, count: c }))
+        .sort((a, b) => b.month.localeCompare(a.month));
+      setAvailableMonths(monthList);
+
+      const activePayrolls = payrollRes?.data || [];
+
+      // If initial load for current month returned 0 records, but earlier months have records,
+      // intelligently auto-switch to the most recent month with records so the user immediately sees their records
+      if (!hasAutoDetected && targetMonth !== 'ALL' && activePayrolls.length === 0 && monthList.length > 0) {
+        const latestMonth = monthList[0].month;
+        setHasAutoDetected(true);
+        setSelectedMonth(latestMonth);
+        const fallbackRecords = allRecords.filter(p => p.month === latestMonth);
+        setPayrolls(fallbackRecords);
+      } else {
+        setPayrolls(activePayrolls);
+      }
+
       if (leaveRes?.data) setLeaves(leaveRes.data);
       if (schoolRes?.data) setSchool(schoolRes.data);
 
@@ -210,7 +243,7 @@ export const PayrollManagementView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    loadData(selectedMonth);
     if (activeSubTab === 'reconciliation') {
       loadReconciliation();
     }
@@ -266,6 +299,9 @@ export const PayrollManagementView: React.FC = () => {
   const filteredPayrolls = useMemo(() => {
     return payrolls.filter((p) => {
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+      if (ackFilter === 'ACKNOWLEDGED' && p.acknowledgementStatus !== 'ACKNOWLEDGED') return false;
+      if (ackFilter === 'AWAITING' && (p.status !== 'PAID' || p.acknowledgementStatus === 'ACKNOWLEDGED' || p.acknowledgementStatus === 'UNDER_REVIEW')) return false;
+      if (ackFilter === 'DISPUTED' && p.acknowledgementStatus !== 'UNDER_REVIEW') return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const staffId = getStaffDisplayId(p, staffList).toLowerCase();
@@ -273,7 +309,7 @@ export const PayrollManagementView: React.FC = () => {
       }
       return true;
     });
-  }, [payrolls, statusFilter, searchQuery, staffList]);
+  }, [payrolls, statusFilter, ackFilter, searchQuery, staffList]);
 
   const handleGeneratePayroll = async () => {
     try {
@@ -833,7 +869,7 @@ export const PayrollManagementView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
     const schoolName = school?.name || 'Grace Seeds School';
-    const address = school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+    const address = school?.address || 'P.O Box 12-20123';
     const phone = school?.phone || '0745436312';
 
     // Top burgundy accent band
@@ -1062,7 +1098,7 @@ export const PayrollManagementView: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1">
             <span className="material-symbols-outlined text-base">payments</span>
@@ -1078,7 +1114,7 @@ export const PayrollManagementView: React.FC = () => {
           {stats.approvedCount > 0 && (
             <button
               onClick={() => setIsBulkPayModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md animate-pulse"
+              className="bg-primary hover:bg-primary-container text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md animate-pulse"
               title="Bulk disburse all approved payroll records with financial posting"
             >
               <span className="material-symbols-outlined text-lg">bolt</span>
@@ -1102,7 +1138,7 @@ export const PayrollManagementView: React.FC = () => {
           </button>
           <button
             onClick={handleOpenCustomModal}
-            className="bg-white text-[#7a1228] hover:bg-rose-50 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
+            className="bg-white text-primary hover:bg-rose-50 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
           >
             <span className="material-symbols-outlined text-lg">add_circle</span>
             Add Staff Payslip
@@ -1111,13 +1147,13 @@ export const PayrollManagementView: React.FC = () => {
       </div>
 
       {/* Sub Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30">
         <button
           onClick={() => setActiveSubTab('payroll')}
           className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
             activeSubTab === 'payroll'
-              ? 'border-[#7a1228] text-[#7a1228] font-bold'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">grid_on</span>
@@ -1131,8 +1167,8 @@ export const PayrollManagementView: React.FC = () => {
           }}
           className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
             activeSubTab === 'reconciliation'
-              ? 'border-[#7a1228] text-[#7a1228] font-bold'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
@@ -1143,14 +1179,14 @@ export const PayrollManagementView: React.FC = () => {
           onClick={() => setActiveSubTab('leaves')}
           className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
             activeSubTab === 'leaves'
-              ? 'border-[#7a1228] text-[#7a1228] font-bold'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">event_available</span>
           Staff Leaves
           {stats.pendingLeaves > 0 && (
-            <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+            <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full font-bold">
               {stats.pendingLeaves}
             </span>
           )}
@@ -1159,26 +1195,43 @@ export const PayrollManagementView: React.FC = () => {
 
       {/* TAB 1: PAYROLL ROSTER (STRUCTURED TABLE WITH CRISP GRIDLINES - NO CARDS) */}
       {activeSubTab === 'payroll' && (
-        <div className="bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden font-sans">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-sm overflow-hidden font-sans">
           {/* Filters Bar & Quick Actions */}
-          <div className="p-3.5 bg-slate-50 border-b border-slate-300 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="p-3.5 bg-surface border-b border-outline-variant/30 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Payroll Period</label>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
-                />
+                <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Payroll Period</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="month"
+                    value={selectedMonth === 'ALL' ? '' : selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {availableMonths.length > 0 && (
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      title="Select period from existing records"
+                    >
+                      <option value="ALL">All Periods ({availableMonths.reduce((acc, m) => acc + m.count, 0)} records)</option>
+                      {availableMonths.map((m) => (
+                        <option key={m.month} value={m.month}>
+                          {m.month} ({m.count} records)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Status Filter</label>
+                <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Status Filter</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
+                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="ALL">All Statuses (Draft, Approved, Paid)</option>
                   <option value="DRAFT">Draft (Pending Approval)</option>
@@ -1188,7 +1241,21 @@ export const PayrollManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Search Faculty / Staff</label>
+                <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Teacher Acknowledgement</label>
+                <select
+                  value={ackFilter}
+                  onChange={(e) => setAckFilter(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="ALL">All Acknowledgements</option>
+                  <option value="ACKNOWLEDGED">✓ Acknowledged by Staff</option>
+                  <option value="AWAITING">⏳ Awaiting Acknowledgement</option>
+                  <option value="DISPUTED">⚠ Discrepancy Reported</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Search Faculty / Staff</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-2 top-1.5 text-slate-400 text-sm">search</span>
                   <input
@@ -1196,7 +1263,7 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="Search name, TSC No, ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-7 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
+                    className="pl-7 pr-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -1205,14 +1272,14 @@ export const PayrollManagementView: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDownloadLedgerPdf}
-                className="bg-[#7a1228] text-white hover:bg-[#600e1f] px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                className="bg-primary text-white hover:bg-primary-container px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
               >
                 <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
                 Download PDF
               </button>
               <button
                 onClick={() => window.print()}
-                className="border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+                className="border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-sm">print</span>
                 Print
@@ -1223,129 +1290,166 @@ export const PayrollManagementView: React.FC = () => {
           {/* Structured Table Grid with Crisp Cell Lines (Excel-Style Lines) */}
           <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
             {loading ? (
-              <div className="p-16 text-center text-slate-500">
-                <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-[#7a1228]">progress_activity</span>
+              <div className="p-16 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined animate-spin text-3xl mb-2 text-primary">progress_activity</span>
                 <p className="text-xs font-medium">Loading remuneration ledger records...</p>
               </div>
             ) : filteredPayrolls.length === 0 ? (
               <div className="p-16 text-center">
                 <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">table_rows</span>
-                <p className="text-slate-700 font-semibold text-sm">No payroll records found for {selectedMonth}.</p>
-                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                  Click "Run Monthly Run" to automatically calculate all faculty salaries, or "Add Staff Payslip" to create an individual entry.
-                </p>
+                <p className="text-on-surface-variant font-semibold text-sm">No payroll records found for {selectedMonth}.</p>
+                {availableMonths.length > 0 ? (
+                  <div className="mt-4 p-4 max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl text-left shadow-sm">
+                    <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-primary text-sm">history</span>
+                      Existing records found in database:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableMonths.map((m) => (
+                        <button
+                          key={m.month}
+                          onClick={() => setSelectedMonth(m.month)}
+                          className="px-3 py-1.5 bg-white hover:bg-primary-fixed text-primary border border-primary rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-xs">calendar_month</span>
+                          {m.month} ({m.count} records)
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSelectedMonth('ALL')}
+                        className="px-3 py-1.5 bg-primary hover:bg-primary-container text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-xs">view_list</span>
+                        View All
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                    Click "Run Monthly Run" to automatically calculate all faculty salaries, or "Add Staff Payslip" to create an individual entry.
+                  </p>
+                )}
               </div>
             ) : (
-              <table className="w-full border-collapse border border-slate-300 text-left text-xs text-slate-800 font-mono table-auto">
+              <table className="w-full border-collapse border border-outline-variant/30 text-left text-xs text-on-surface font-mono table-auto">
                 {/* Column Headers with Clear Dividing Lines - Self-Adjusting Column Sizes */}
-                <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold border-b border-slate-300 uppercase text-[10px] select-none">
+                <thead className="sticky top-0 z-20 bg-surface-container-low text-on-surface-variant font-bold border-b border-outline-variant/30 uppercase text-[10px] select-none">
                   <tr>
-                    <th className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 w-8 whitespace-nowrap">#</th>
-                    <th className="px-2 py-1.5 border border-slate-300 whitespace-nowrap" title="Staff TSC Number or Employee Number">Staff ID</th>
-                    <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Staff Member</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Basic Salary">Basic</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="House Allowance">House</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Commuter Allowance">Comm.</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Responsibility Allowance">Resp.</th>
-                    <th className="px-2 py-1.5 border border-slate-300 text-right bg-slate-200/70 font-extrabold text-slate-900 whitespace-nowrap" title="Gross Salary">Gross</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-700 whitespace-nowrap" title="KRA PAYE Income Tax">PAYE</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-700 whitespace-nowrap" title="SHIF (2.75%)">SHIF</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-700 whitespace-nowrap" title="NSSF Tier 1 & 2">NSSF</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-700 whitespace-nowrap" title="Housing Levy (1.5%)">H.Levy</th>
-                    <th className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-600 whitespace-nowrap" title="Other Deductions">Other</th>
-                    <th className="px-2 py-1.5 border border-slate-300 text-right bg-rose-50 font-bold text-rose-800 whitespace-nowrap" title="Total Deductions">Tot. Ded</th>
-                    <th className="px-2 py-1.5 border border-slate-300 text-right bg-emerald-50 font-extrabold text-emerald-900 whitespace-nowrap" title="Net Salary / Take-home">Net Pay</th>
-                    <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap" title="Payment Disbursal Status & Reference">Status</th>
-                    <th className="px-2 py-1.5 border border-slate-300 text-center font-sans whitespace-nowrap sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)]">Actions</th>
+                    <th className="px-1.5 py-1.5 text-center bg-surface-container border border-outline-variant/30 w-8 whitespace-nowrap">#</th>
+                    {selectedMonth === 'ALL' && (
+                      <th className="px-2 py-1.5 border border-outline-variant/30 whitespace-nowrap bg-amber-100 text-amber-950 font-bold">Month</th>
+                    )}
+                    <th className="px-2 py-1.5 border border-outline-variant/30 whitespace-nowrap" title="Staff TSC Number or Employee Number">Staff ID</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">Staff Member</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap" title="Basic Salary">Basic</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap" title="House Allowance">House</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap" title="Commuter Allowance">Comm.</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap" title="Responsibility Allowance">Resp.</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 text-right bg-surface-container/70 font-extrabold text-on-surface whitespace-nowrap" title="Gross Salary">Gross</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-700 whitespace-nowrap" title="KRA PAYE Income Tax">PAYE</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-700 whitespace-nowrap" title="SHIF (2.75%)">SHIF</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-700 whitespace-nowrap" title="NSSF Tier 1 & 2">NSSF</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-700 whitespace-nowrap" title="Housing Levy (1.5%)">H.Levy</th>
+                    <th className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-600 whitespace-nowrap" title="Other Deductions">Other</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 text-right bg-rose-50 font-bold text-rose-800 whitespace-nowrap" title="Total Deductions">Tot. Ded</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 text-right bg-emerald-50 font-extrabold text-emerald-900 whitespace-nowrap" title="Net Salary / Take-home">Net Pay</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap" title="Payment Disbursal Status & Reference">Status</th>
+                    <th className="px-2 py-1.5 border border-outline-variant/30 text-center font-sans whitespace-nowrap sticky right-0 z-30 bg-surface-container-low shadow-[-3px_0_5px_rgba(0,0,0,0.06)]">Actions</th>
                   </tr>
                 </thead>
 
                 {/* Table Rows with Explicit Cell Borders (Gridlines) & Self-Adjusting Dimensions */}
-                <tbody className="divide-y divide-slate-200 bg-white">
+                <tbody className="divide-y divide-slate-200 bg-surface-container-lowest">
                   {filteredPayrolls.map((p, idx) => {
                     const rowNumber = idx + 1;
                     const isPaid = p.status === 'PAID';
 
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors group">
+                      <tr key={p.id} className="hover:bg-surface transition-colors group">
                         {/* Row Index */}
-                        <td className="px-1.5 py-1 text-center bg-slate-50 border border-slate-300 font-bold text-slate-500 text-[11px] select-none whitespace-nowrap">
+                        <td className="px-1.5 py-1 text-center bg-surface border border-outline-variant/30 font-bold text-on-surface-variant text-[11px] select-none whitespace-nowrap">
                           {rowNumber}
                         </td>
 
+                        {selectedMonth === 'ALL' && (
+                          <td className="px-2 py-1 border border-outline-variant/30 font-bold text-on-surface bg-amber-50/50 whitespace-nowrap text-[11px]">
+                            {p.month}
+                          </td>
+                        )}
+
                         {/* Staff ID */}
-                        <td className="px-2 py-1 border border-slate-300 text-slate-700 font-mono text-[11px] font-semibold whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 text-on-surface-variant font-mono text-[11px] font-semibold whitespace-nowrap">
                           {getStaffDisplayId(p, staffList)}
                         </td>
 
                         {/* Staff Name */}
-                        <td className="px-2 py-1 border border-slate-300 font-sans font-bold text-slate-900 whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 font-sans font-bold text-on-surface whitespace-nowrap">
                           <div className="leading-tight">{p.teacherName}</div>
                           {p.notes && <div className="text-[9px] text-slate-400 font-normal italic truncate max-w-[120px]">{p.notes}</div>}
                         </td>
 
                         {/* Basic Pay */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right font-medium text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right font-medium text-[11px] whitespace-nowrap">
                           {(p.basicSalary || 0).toLocaleString()}
                         </td>
 
                         {/* House Allowance */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-slate-600 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-on-surface-variant text-[11px] whitespace-nowrap">
                           {(p.houseAllowance || 0).toLocaleString()}
                         </td>
 
                         {/* Commuter Allowance */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-slate-600 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-on-surface-variant text-[11px] whitespace-nowrap">
                           {(p.commuterAllowance || 0).toLocaleString()}
                         </td>
 
                         {/* Responsibility Allowance */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-slate-600 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-on-surface-variant text-[11px] whitespace-nowrap">
                           {(p.responsibilityAllowance || 0).toLocaleString()}
                         </td>
 
                         {/* Gross Pay */}
-                        <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-slate-900 bg-slate-50/70 text-[11px] whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 text-right font-extrabold text-on-surface bg-surface/70 text-[11px] whitespace-nowrap">
                           {(p.grossSalary || 0).toLocaleString()}
                         </td>
 
                         {/* KRA PAYE */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-rose-700 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-rose-700 text-[11px] whitespace-nowrap">
                           {(p.paye || 0).toLocaleString()}
                         </td>
 
                         {/* SHIF (2.75%) */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-rose-700 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-rose-700 text-[11px] whitespace-nowrap">
                           {(p.shif || 0).toLocaleString()}
                         </td>
 
                         {/* NSSF */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-rose-700 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-rose-700 text-[11px] whitespace-nowrap">
                           {(p.nssf || 0).toLocaleString()}
                         </td>
 
                         {/* Housing Levy (1.5%) */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-rose-700 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-rose-700 text-[11px] whitespace-nowrap">
                           {(p.housingLevy || 0).toLocaleString()}
                         </td>
 
                         {/* Other Deductions */}
-                        <td className="px-1.5 py-1 border border-slate-300 text-right text-rose-600 text-[11px] whitespace-nowrap">
+                        <td className="px-1.5 py-1 border border-outline-variant/30 text-right text-rose-600 text-[11px] whitespace-nowrap">
                           {(p.otherDeductions || 0).toLocaleString()}
                         </td>
 
                         {/* Total Deductions */}
-                        <td className="px-2 py-1 border border-slate-300 text-right font-bold text-rose-800 bg-rose-50/40 text-[11px] whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 text-right font-bold text-rose-800 bg-rose-50/40 text-[11px] whitespace-nowrap">
                           {(p.totalDeductions || 0).toLocaleString()}
                         </td>
 
                         {/* Net Salary */}
-                        <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-emerald-800 bg-emerald-50/50 text-xs whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 text-right font-extrabold text-emerald-800 bg-emerald-50/50 text-xs whitespace-nowrap">
                           {(p.netSalary || 0).toLocaleString()}
                         </td>
 
                         {/* Payment Tracking / Status */}
-                        <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 font-sans whitespace-nowrap">
                           {isPaid ? (
                             <div className="flex flex-col gap-0.5">
                               <div className="flex items-center gap-1">
@@ -1354,20 +1458,40 @@ export const PayrollManagementView: React.FC = () => {
                                   PAID{p.paymentMethod ? ` · ${p.paymentMethod}` : ''}
                                 </span>
                                 {p.voucherNumber && (
-                                  <span className="text-[9.5px] text-[#7a1228] font-bold font-mono">
+                                  <span className="text-[9.5px] text-primary font-bold font-mono">
                                     {p.voucherNumber}
                                   </span>
                                 )}
                               </div>
                               {p.paymentReference && (
-                                <span className="text-[9.5px] text-slate-500 font-mono truncate max-w-[120px]" title={p.paymentReference}>
+                                <span className="text-[9.5px] text-on-surface-variant font-mono truncate max-w-[120px]" title={p.paymentReference}>
                                   Ref: {p.paymentReference}
                                 </span>
                               )}
                               {p.acknowledgementStatus === 'ACKNOWLEDGED' ? (
-                                <span className="inline-flex items-center gap-1 text-[9.5px] text-teal-800 font-bold">
-                                  <span className="material-symbols-outlined text-[11px]">verified</span>
-                                  <span>Teacher Acknowledged</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAckDossier(p)}
+                                  className="inline-flex items-center gap-1 text-[9.5px] text-on-primary-fixed font-bold bg-primary-fixed hover:bg-primary-fixed px-1.5 py-0.5 rounded border border-primary transition-colors cursor-pointer text-left"
+                                  title="Click to view verified teacher acknowledgement slip"
+                                >
+                                  <span className="material-symbols-outlined text-[11px] text-teal-700">verified</span>
+                                  <span>Acknowledged ({p.acknowledgedAt ? new Date(p.acknowledgedAt).toLocaleDateString() : 'Signed'})</span>
+                                </button>
+                              ) : p.acknowledgementStatus === 'UNDER_REVIEW' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAckDossier(p)}
+                                  className="inline-flex items-center gap-1 text-[9.5px] text-rose-800 font-bold bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 transition-colors cursor-pointer text-left"
+                                  title="Teacher reported discrepancy: click to view dispute details"
+                                >
+                                  <span className="material-symbols-outlined text-[11px] text-rose-700">warning</span>
+                                  <span>Discrepancy Reported ({p.disputedAt ? new Date(p.disputedAt).toLocaleDateString() : 'Under Review'})</span>
+                                </button>
+                              ) : isPaid ? (
+                                <span className="inline-flex items-center gap-1 text-[9.5px] text-amber-800 font-medium bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                  <span className="material-symbols-outlined text-[11px] text-primary">schedule</span>
+                                  <span>Awaiting Acknowledgement</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 font-medium">
@@ -1382,7 +1506,7 @@ export const PayrollManagementView: React.FC = () => {
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
                                 PARTIAL · Bal: KES {(p.balance || 0).toLocaleString()}
                               </span>
-                              <span className="text-[9.5px] text-slate-500 font-mono">
+                              <span className="text-[9.5px] text-on-surface-variant font-mono">
                                 Paid: KES {(p.amountPaid || 0).toLocaleString()}
                               </span>
                             </div>
@@ -1391,23 +1515,23 @@ export const PayrollManagementView: React.FC = () => {
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
                                 Approved
                               </span>
-                              <span className="text-[10px] text-blue-600 font-medium">Ready</span>
+                              <span className="text-[10px] text-primary font-medium">Ready</span>
                             </div>
                           ) : p.status === 'REVERSED' ? (
                             <div className="flex items-center gap-1">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed">
                                 Reversed
                               </span>
-                              <span className="text-[10px] text-purple-600">Refunded</span>
+                              <span className="text-[10px] text-primary">Refunded</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-on-surface-variant">
                                 Draft
                               </span>
                               <button
                                 onClick={() => handleApprovePayroll(p.id, p.teacherName)}
-                                className="text-[10px] text-blue-600 hover:underline font-bold"
+                                className="text-[10px] text-primary hover:underline font-bold"
                               >
                                 Approve
                               </button>
@@ -1416,7 +1540,7 @@ export const PayrollManagementView: React.FC = () => {
                         </td>
 
                         {/* Actions - Sticky Right to ALWAYS remain visible */}
-                        <td className="px-2 py-1 border border-slate-300 font-sans text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                        <td className="px-2 py-1 border border-outline-variant/30 font-sans text-center sticky right-0 z-10 bg-surface-container-lowest group-hover:bg-surface shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">
                             {/* Issue Payment Button */}
                             <button
@@ -1430,12 +1554,12 @@ export const PayrollManagementView: React.FC = () => {
                               title={isPaid ? 'Payment details recorded' : 'Issue Payment / Disburse Funds'}
                               className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all ${
                                 isPaid
-                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300'
+                                  ? 'bg-primary-fixed text-primary hover:bg-primary-fixed border border-primary'
                                   : p.status === 'PARTIALLY_PAID'
-                                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                  ? 'bg-primary hover:bg-primary-container text-white'
                                   : p.status === 'APPROVED'
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                  : 'bg-slate-500 hover:bg-slate-600 text-white'
+                                  ? 'bg-primary hover:bg-primary-container text-white'
+                                  : 'bg-surface0 hover:bg-slate-600 text-white'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">payments</span>
@@ -1451,7 +1575,7 @@ export const PayrollManagementView: React.FC = () => {
                                   setIsReverseModalOpen(true);
                                 }}
                                 title="Reverse Salary Payment (Restores School Financial Account Balance)"
-                                className="p-1 text-amber-600 hover:text-white hover:bg-amber-600 rounded transition-colors"
+                                className="p-1 text-primary hover:text-white hover:bg-primary-container rounded transition-colors"
                               >
                                 <span className="material-symbols-outlined text-[15px]">undo</span>
                               </button>
@@ -1461,7 +1585,7 @@ export const PayrollManagementView: React.FC = () => {
                             <button
                               onClick={() => setSelectedPayslip(p)}
                               title="View & Download Official Payslip Advice"
-                              className="p-1 text-slate-600 hover:text-[#7a1228] hover:bg-slate-100 rounded transition-colors"
+                              className="p-1 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded transition-colors"
                             >
                               <span className="material-symbols-outlined text-[15px]">receipt_long</span>
                             </button>
@@ -1482,57 +1606,62 @@ export const PayrollManagementView: React.FC = () => {
                 </tbody>
 
                 {/* Accounting Totals Row with Clean Accounting Double Underlines */}
-                <tfoot className="sticky bottom-0 z-20 bg-slate-100 text-slate-900 border-t-2 border-b-4 border-double border-slate-700 font-bold text-xs select-none shadow-md">
+                <tfoot className="sticky bottom-0 z-20 bg-surface-container-low text-on-surface border-t-2 border-b-4 border-double border-slate-700 font-bold text-xs select-none shadow-md">
                   <tr>
-                    <td className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 font-black text-slate-800 whitespace-nowrap">
+                    <td className="px-1.5 py-1.5 text-center bg-surface-container border border-outline-variant/30 font-black text-on-surface whitespace-nowrap">
                       ∑
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 text-slate-700 font-sans uppercase text-[10px] whitespace-nowrap">
+                    {selectedMonth === 'ALL' && (
+                      <td className="px-1.5 py-1.5 border border-outline-variant/30 text-on-surface-variant font-sans uppercase text-[10px] whitespace-nowrap">
+                        ALL
+                      </td>
+                    )}
+                    <td className="px-2 py-1.5 border border-outline-variant/30 text-on-surface-variant font-sans uppercase text-[10px] whitespace-nowrap">
                       TOTALS
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 font-sans whitespace-nowrap">
                       {filteredPayrolls.length} Staff
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px]">
                       {stats.totalBasic.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px]">
                       {stats.totalHouse.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px]">
                       {stats.totalCommuter.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right whitespace-nowrap text-[11px]">
                       {stats.totalResp.toLocaleString()}
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 text-right text-slate-900 font-black bg-slate-200/60 whitespace-nowrap text-[11px]">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 text-right text-on-surface font-black bg-surface-container/60 whitespace-nowrap text-[11px]">
                       {stats.totalGross.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-800 whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-800 whitespace-nowrap text-[11px]">
                       {stats.totalPaye.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-800 whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-800 whitespace-nowrap text-[11px]">
                       {stats.totalShif.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-800 whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-800 whitespace-nowrap text-[11px]">
                       {stats.totalNssf.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-800 whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-800 whitespace-nowrap text-[11px]">
                       {stats.totalHousingLevy.toLocaleString()}
                     </td>
-                    <td className="px-1.5 py-1.5 border border-slate-300 text-right text-rose-700 whitespace-nowrap text-[11px]">
+                    <td className="px-1.5 py-1.5 border border-outline-variant/30 text-right text-rose-700 whitespace-nowrap text-[11px]">
                       {stats.totalOther.toLocaleString()}
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 text-right text-rose-900 font-black bg-rose-100/60 whitespace-nowrap text-[11px]">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 text-right text-rose-900 font-black bg-rose-100/60 whitespace-nowrap text-[11px]">
                       {stats.totalDeductions.toLocaleString()}
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 text-right text-emerald-950 font-black bg-emerald-100 whitespace-nowrap text-xs">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 text-right text-emerald-950 font-black bg-emerald-100 whitespace-nowrap text-xs">
                       KES {stats.totalNet.toLocaleString()}
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 font-sans text-[11px] whitespace-nowrap">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 font-sans text-[11px] whitespace-nowrap">
                       Paid: <strong className="text-emerald-800">{stats.paidCount}</strong>/{payrolls.length}
                     </td>
-                    <td className="px-2 py-1.5 border border-slate-300 text-center font-sans text-[10px] text-slate-600 sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                    <td className="px-2 py-1.5 border border-outline-variant/30 text-center font-sans text-[10px] text-on-surface-variant sticky right-0 z-30 bg-surface-container-low shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
                       Audited
                     </td>
                   </tr>
@@ -1542,16 +1671,16 @@ export const PayrollManagementView: React.FC = () => {
           </div>
 
           {/* Ledger Summary Strip */}
-          <div className="bg-slate-100 text-slate-700 text-xs px-4 py-2 border-t border-slate-300 flex flex-wrap items-center justify-between gap-3 font-medium">
+          <div className="bg-surface-container-low text-on-surface-variant text-xs px-4 py-2 border-t border-outline-variant/30 flex flex-wrap items-center justify-between gap-3 font-medium">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm text-[#7a1228]">verified</span>
+              <span className="material-symbols-outlined text-sm text-primary">verified</span>
               <span>Showing {filteredPayrolls.length} records for <strong>{selectedMonth}</strong></span>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-[11px]">
-              <span>TOTAL GROSS: <strong className="text-slate-900 font-mono">KES {stats.totalGross.toLocaleString()}</strong></span>
+              <span>TOTAL GROSS: <strong className="text-on-surface font-mono">KES {stats.totalGross.toLocaleString()}</strong></span>
               <span>TOTAL DEDUCTIONS: <strong className="text-rose-700 font-mono">KES {stats.totalDeductions.toLocaleString()}</strong></span>
               <span>NET PAYABLE: <strong className="text-emerald-700 font-mono font-bold">KES {stats.totalNet.toLocaleString()}</strong></span>
-              <span>DISBURSED: <strong className="text-slate-900">{stats.paidCount} of {payrolls.length}</strong></span>
+              <span>DISBURSED: <strong className="text-on-surface">{stats.paidCount} of {payrolls.length}</strong></span>
             </div>
           </div>
         </div>
@@ -1559,15 +1688,15 @@ export const PayrollManagementView: React.FC = () => {
 
       {/* TAB 2: FINANCIAL RECONCILIATION */}
       {activeSubTab === 'reconciliation' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm p-6 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
             <div>
-              <div className="flex items-center gap-2 text-[#7a1228] text-xs font-bold uppercase tracking-wider mb-1">
+              <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
                 <span className="material-symbols-outlined text-base">account_balance</span>
                 School Finance & Payroll Integrity
               </div>
-              <h2 className="text-xl font-black text-slate-900">Payroll vs. Financial Expense Reconciliation</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h2 className="text-xl font-black text-on-surface">Payroll vs. Financial Expense Reconciliation</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 Verifies exact 1:1 agreement between payroll disbursements and financial outflow expense vouchers for {selectedMonth}.
               </p>
             </div>
@@ -1575,7 +1704,7 @@ export const PayrollManagementView: React.FC = () => {
               <button
                 onClick={loadReconciliation}
                 disabled={reconciliationLoading}
-                className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+                className="px-3.5 py-2 border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-low rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
               >
                 <span className={`material-symbols-outlined text-sm ${reconciliationLoading ? 'animate-spin' : ''}`}>sync</span>
                 Re-check Alignment
@@ -1585,9 +1714,9 @@ export const PayrollManagementView: React.FC = () => {
 
           {/* 4 KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Net Payroll</p>
-              <p className="text-xl font-black text-slate-900 font-mono mt-1">
+            <div className="bg-surface border border-outline-variant/30 p-4 rounded-xl">
+              <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wide">Total Net Payroll</p>
+              <p className="text-xl font-black text-on-surface font-mono mt-1">
                 KES {(reconciliationData?.totalNetSalaries ?? stats.totalNet).toLocaleString()}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">All {payrolls.length} scheduled staff records</p>
@@ -1601,12 +1730,12 @@ export const PayrollManagementView: React.FC = () => {
               <p className="text-[11px] text-emerald-600 mt-1">{stats.paidCount} paid · {stats.partialCount} partial</p>
             </div>
 
-            <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl">
-              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide">Financial Cash Outflows</p>
-              <p className="text-xl font-black text-blue-700 font-mono mt-1">
+            <div className="bg-primary-fixed/60 border border-primary p-4 rounded-xl">
+              <p className="text-xs font-medium text-on-primary-fixed uppercase tracking-wide">Financial Cash Outflows</p>
+              <p className="text-xl font-black text-primary font-mono mt-1">
                 KES {(reconciliationData?.totalFinancialExpenseAmount ?? stats.totalDisbursedAmount).toLocaleString()}
               </p>
-              <p className="text-[11px] text-blue-600 mt-1">Expense category: SALARIES_WAGES</p>
+              <p className="text-[11px] text-primary mt-1">Expense category: SALARIES_WAGES</p>
             </div>
 
             <div className={`p-4 rounded-xl border ${
@@ -1614,7 +1743,7 @@ export const PayrollManagementView: React.FC = () => {
                 ? 'bg-emerald-50 border-emerald-300'
                 : 'bg-rose-50 border-rose-300'
             }`}>
-              <p className="text-xs font-medium text-slate-700 uppercase tracking-wide">Reconciliation Status</p>
+              <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wide">Reconciliation Status</p>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`material-symbols-outlined text-lg ${
                   reconciliationData?.isReconciled !== false ? 'text-emerald-600' : 'text-rose-600'
@@ -1627,7 +1756,7 @@ export const PayrollManagementView: React.FC = () => {
                   {reconciliationData?.isReconciled !== false ? 'FULLY BALANCED' : 'VARIANCE DETECTED'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-on-surface-variant mt-1">
                 {reconciliationData?.variance === 0 || !reconciliationData?.variance
                   ? 'KES 0.00 discrepancy with finance ledger'
                   : `Variance: KES ${Math.abs(reconciliationData?.variance || 0).toLocaleString()}`}
@@ -1636,14 +1765,14 @@ export const PayrollManagementView: React.FC = () => {
           </div>
 
           {/* Traceability Table */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
+          <div className="border border-outline-variant/30 rounded-xl overflow-hidden">
+            <div className="bg-surface-container-low px-4 py-2.5 border-b border-outline-variant/30 font-bold text-xs text-on-surface-variant flex justify-between items-center">
               <span>Payroll Disbursement & Financial Ledger Traceability</span>
-              <span className="text-[11px] text-slate-500">Auto-audited against General Cash Flow Ledger</span>
+              <span className="text-[11px] text-on-surface-variant">Auto-audited against General Cash Flow Ledger</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50 text-slate-600 font-bold border-b text-[11px] uppercase">
+                <thead className="bg-surface text-on-surface-variant font-bold border-b text-[11px] uppercase">
                   <tr>
                     <th className="px-3 py-2">Staff Member</th>
                     <th className="px-3 py-2 text-right">Net Payable</th>
@@ -1658,32 +1787,32 @@ export const PayrollManagementView: React.FC = () => {
                   {payrolls.map((p) => {
                     const balance = p.balance != null ? p.balance : (p.status === 'PAID' ? 0 : p.netSalary);
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 font-sans font-medium text-slate-900">
+                      <tr key={p.id} className="hover:bg-surface">
+                        <td className="px-3 py-2 font-sans font-medium text-on-surface">
                           {p.teacherName}
                           <div className="text-[10px] text-slate-400 font-mono">{getStaffDisplayId(p, staffList)}</div>
                         </td>
-                        <td className="px-3 py-2 text-right font-medium text-slate-800">
+                        <td className="px-3 py-2 text-right font-medium text-on-surface">
                           KES {p.netSalary?.toLocaleString()}
                         </td>
                         <td className="px-3 py-2 text-right font-bold text-emerald-700">
                           KES {(p.amountPaid || (p.status === 'PAID' ? p.netSalary : 0)).toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 text-right font-medium text-slate-600">
+                        <td className="px-3 py-2 text-right font-medium text-on-surface-variant">
                           KES {balance.toLocaleString()}
                         </td>
                         <td className="px-3 py-2 font-sans">
                           {p.fundingAccount ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container-low text-on-surface-variant">
                               {p.fundingAccount}
                             </span>
                           ) : (
                             <span className="text-slate-400 text-[10px]">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-slate-700 text-[11px]">
+                        <td className="px-3 py-2 text-on-surface-variant text-[11px]">
                           {p.voucherNumber ? (
-                            <span className="text-[#7a1228] font-bold">{p.voucherNumber}</span>
+                            <span className="text-primary font-bold">{p.voucherNumber}</span>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
@@ -1700,7 +1829,7 @@ export const PayrollManagementView: React.FC = () => {
                           ) : p.status === 'APPROVED' ? (
                             <span className="text-blue-600 font-medium text-[11px]">Approved Commitment (Undeducted)</span>
                           ) : p.status === 'REVERSED' ? (
-                            <span className="text-purple-700 font-medium text-[11px]">Reversed & Refunded</span>
+                            <span className="text-primary font-medium text-[11px]">Reversed & Refunded</span>
                           ) : (
                             <span className="text-slate-400 text-[11px]">Draft Preparation</span>
                           )}
@@ -1717,15 +1846,15 @@ export const PayrollManagementView: React.FC = () => {
 
       {/* TAB 3: STAFF LEAVES */}
       {activeSubTab === 'leaves' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Faculty Leave Applications</h2>
-              <p className="text-xs text-slate-500">Review teacher absence requests, substitute teacher coverages, and approval logs.</p>
+              <h2 className="text-lg font-bold text-on-surface">Faculty Leave Applications</h2>
+              <p className="text-xs text-on-surface-variant">Review teacher absence requests, substitute teacher coverages, and approval logs.</p>
             </div>
             <button
               onClick={handleOpenLeaveModal}
-              className="bg-[#7a1228] text-white hover:bg-[#600e1f] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm"
+              className="bg-primary text-white hover:bg-primary-container px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm"
             >
               <span className="material-symbols-outlined text-base">add</span>
               Apply for Leave
@@ -1736,11 +1865,11 @@ export const PayrollManagementView: React.FC = () => {
             {leaves.length === 0 ? (
               <div className="p-12 text-center">
                 <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">event_busy</span>
-                <p className="text-slate-600 font-medium">No leave records registered.</p>
+                <p className="text-on-surface-variant font-medium">No leave records registered.</p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm text-slate-700">
-                <thead className="bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+              <table className="w-full text-left text-sm text-on-surface-variant">
+                <thead className="bg-surface text-xs font-semibold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/30">
                   <tr>
                     <th className="px-4 py-3">Staff Member</th>
                     <th className="px-4 py-3">Leave Type</th>
@@ -1753,10 +1882,10 @@ export const PayrollManagementView: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {leaves.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-semibold text-slate-900">{l.teacherName}</td>
+                    <tr key={l.id} className="hover:bg-surface/50">
+                      <td className="px-4 py-3 font-semibold text-on-surface">{l.teacherName}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-fixed text-primary">
                           {l.leaveType}
                         </span>
                       </td>
@@ -1792,7 +1921,7 @@ export const PayrollManagementView: React.FC = () => {
                               setSelectedLeaveForReview(l);
                               setReviewStatus('APPROVED');
                             }}
-                            className="px-3 py-1 bg-[#7a1228] text-white hover:bg-[#600e1f] rounded-lg text-xs font-semibold"
+                            className="px-3 py-1 bg-primary text-white hover:bg-primary-container rounded-lg text-xs font-semibold"
                           >
                             Review
                           </button>
@@ -1810,26 +1939,26 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: RUN MONTHLY PAYROLL */}
       {isGenerateModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center gap-3 text-[#7a1228] mb-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-3 text-primary mb-4">
               <span className="material-symbols-outlined text-3xl">calculate</span>
-              <h3 className="text-lg font-bold text-slate-900">Generate Monthly Staff Payroll</h3>
+              <h3 className="text-lg font-bold text-on-surface">Generate Monthly Staff Payroll</h3>
             </div>
-            <p className="text-sm text-slate-600 mb-4">
-              This will calculate basic pay, statutory KRA PAYE bands, SHIF 2.75%, NSSF Tier 1 & 2 (up to KES 2,160), and Housing Levy 1.5% for all registered staff members in <strong className="text-slate-900">{selectedMonth}</strong>.
+            <p className="text-sm text-on-surface-variant mb-4">
+              This will calculate basic pay, statutory KRA PAYE bands, SHIF 2.75%, NSSF Tier 1 & 2 (up to KES 2,160), and Housing Levy 1.5% for all registered staff members in <strong className="text-on-surface">{selectedMonth}</strong>.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsGenerateModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                className="px-4 py-2 border border-outline-variant/30 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleGeneratePayroll}
-                className="px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-bold shadow-md"
+                className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-md"
               >
                 Confirm & Compute
               </button>
@@ -1841,14 +1970,14 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: CREATE CUSTOM PAYSLIP (INDIVIDUAL STATUTORY DEDUCTION CHECKBOXES) */}
       {isCustomModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3 mb-4">
               <div>
-                <div className="flex items-center gap-1.5 text-[#7a1228] text-xs font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 text-primary text-xs font-bold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-base">badge</span>
                   Faculty & Staff Remuneration
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900">Add Staff Payslip</h3>
+                <h3 className="text-lg font-extrabold text-on-surface">Add Staff Payslip</h3>
               </div>
               <button
                 onClick={() => {
@@ -1856,7 +1985,7 @@ export const PayrollManagementView: React.FC = () => {
                   setSelectedStaffId('');
                   setIsCustomStaff(false);
                 }}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-on-surface-variant p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1866,7 +1995,7 @@ export const PayrollManagementView: React.FC = () => {
               {/* Staff Member Selector */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-on-surface-variant">
                     Staff Member (Database Dropdown)
                   </label>
                   {selectedStaff && (
@@ -1880,7 +2009,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={selectedStaffId}
                   onChange={(e) => handleSelectStaffForPayroll(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- Select Registered Staff Member --</option>
                   {staffList.map((s) => (
@@ -1895,20 +2024,20 @@ export const PayrollManagementView: React.FC = () => {
               {/* Rich Staff Profile Card */}
               {selectedStaff && (
                 <div className="p-3.5 bg-rose-50/60 rounded-xl border border-rose-100 flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#500b1b] to-[#7a1228] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-container to-primary text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                     {selectedStaff.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-bold text-sm text-slate-900 truncate">{selectedStaff.name}</h4>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#7a1228]/10 text-[#7a1228] uppercase tracking-wider shrink-0">
+                      <h4 className="font-bold text-sm text-on-surface truncate">{selectedStaff.name}</h4>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-primary/10 text-primary uppercase tracking-wider shrink-0">
                         {selectedStaff.role}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-600">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1.5 text-xs text-on-surface-variant">
                       <div>
                         <span className="text-slate-400">Staff ID (Active): </span>
-                        <span className="font-mono font-bold text-[#7a1228] bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                        <span className="font-mono font-bold text-primary bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
                           {selectedStaff.tscNumber && selectedStaff.tscNumber !== 'Not Issued / Pending' && selectedStaff.tscNumber.trim() !== ''
                             ? selectedStaff.tscNumber
                             : (selectedStaff.employeeNumber !== 'N/A' && selectedStaff.employeeNumber.trim() !== '' ? selectedStaff.employeeNumber : selectedStaff.id)}
@@ -1916,20 +2045,20 @@ export const PayrollManagementView: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-slate-400">Assignment: </span>
-                        <span className="font-medium text-slate-800">{selectedStaff.assignedClasses}</span>
+                        <span className="font-medium text-on-surface">{selectedStaff.assignedClasses}</span>
                       </div>
                       <div>
                         <span className="text-slate-400">TSC No: </span>
-                        <span className="font-mono font-medium text-slate-800">{selectedStaff.tscNumber}</span>
+                        <span className="font-mono font-medium text-on-surface">{selectedStaff.tscNumber}</span>
                       </div>
                       <div>
                         <span className="text-slate-400">Employee ID: </span>
-                        <span className="font-mono font-medium text-slate-800">{selectedStaff.employeeNumber}</span>
+                        <span className="font-mono font-medium text-on-surface">{selectedStaff.employeeNumber}</span>
                       </div>
                       {selectedStaff.phone !== '--' && (
                         <div>
                           <span className="text-slate-400">Phone: </span>
-                          <span className="font-medium text-slate-800">{selectedStaff.phone}</span>
+                          <span className="font-medium text-on-surface">{selectedStaff.phone}</span>
                         </div>
                       )}
                     </div>
@@ -1969,24 +2098,24 @@ export const PayrollManagementView: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Staff Full Name</label>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1">Staff Full Name</label>
                       <input
                         type="text"
                         required
                         placeholder="e.g., Peter Kamau"
                         value={customForm.teacherName}
                         onChange={(e) => setCustomForm({ ...customForm, teacherName: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Staff ID (TSC No or Employee No)</label>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1">Staff ID (TSC No or Employee No)</label>
                       <input
                         type="text"
                         placeholder="e.g., 234567 or EMP-105"
                         value={customForm.teacherId}
                         onChange={(e) => setCustomForm({ ...customForm, teacherId: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] font-mono"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
                       />
                     </div>
                   </div>
@@ -1995,20 +2124,20 @@ export const PayrollManagementView: React.FC = () => {
 
               {/* Month Selection */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Payroll Month</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Payroll Month</label>
                 <input
                   type="month"
                   required
                   value={customForm.month}
                   onChange={(e) => setCustomForm({ ...customForm, month: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               {/* Salary Breakdown Inputs */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Basic Salary (KES) *</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Basic Salary (KES) *</label>
                   <input
                     type="number"
                     min="0"
@@ -2017,11 +2146,11 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.basicSalary}
                     onChange={(e) => setCustomForm({ ...customForm, basicSalary: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">House Allowance (KES)</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">House Allowance (KES)</label>
                   <input
                     type="number"
                     min="0"
@@ -2029,14 +2158,14 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.houseAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, houseAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Commuter Allowance (KES)</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Commuter Allowance (KES)</label>
                   <input
                     type="number"
                     min="0"
@@ -2044,11 +2173,11 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.commuterAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, commuterAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Responsibility Allowance (KES)</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Responsibility Allowance (KES)</label>
                   <input
                     type="number"
                     min="0"
@@ -2056,13 +2185,13 @@ export const PayrollManagementView: React.FC = () => {
                     placeholder="0"
                     value={customForm.responsibilityAllowance}
                     onChange={(e) => setCustomForm({ ...customForm, responsibilityAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Other Voluntary Deductions (KES)</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Other Voluntary Deductions (KES)</label>
                 <input
                   type="number"
                   min="0"
@@ -2070,36 +2199,36 @@ export const PayrollManagementView: React.FC = () => {
                   placeholder="0"
                   value={customForm.otherDeductions}
                   onChange={(e) => setCustomForm({ ...customForm, otherDeductions: e.target.value === '' ? '' : Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Remarks / Note</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Remarks / Note</label>
                 <textarea
                   rows={2}
                   placeholder="e.g., Remuneration schedule for regular teaching activities"
                   value={customForm.notes}
                   onChange={(e) => setCustomForm({ ...customForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               {/* INDIVIDUAL KENYAN STATUTORY DEDUCTION CHECKBOXES */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+              <div className="bg-surface border border-outline-variant/30 rounded-xl p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
                   <div>
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-[#7a1228]">checklist</span>
+                    <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-primary">checklist</span>
                       Kenyan Statutory Deductions (Toggle Individually)
                     </span>
-                    <p className="text-[11px] text-slate-500">Enable or disable specific statutory deductions for this staff member</p>
+                    <p className="text-[11px] text-on-surface-variant">Enable or disable specific statutory deductions for this staff member</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setCustomForm(prev => ({ ...prev, applyPaye: true, applyShif: true, applyNssf: true, applyHousingLevy: true }))}
-                      className="text-[11px] text-emerald-700 hover:underline font-bold"
+                      className="text-[11px] text-primary hover:underline font-bold"
                     >
                       Select All
                     </button>
@@ -2107,7 +2236,7 @@ export const PayrollManagementView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setCustomForm(prev => ({ ...prev, applyPaye: false, applyShif: false, applyNssf: false, applyHousingLevy: false }))}
-                      className="text-[11px] text-slate-500 hover:underline font-bold"
+                      className="text-[11px] text-on-surface-variant hover:underline font-bold"
                     >
                       Clear All
                     </button>
@@ -2117,89 +2246,89 @@ export const PayrollManagementView: React.FC = () => {
                 {/* 4 Dedicated Cards with Individual Checkboxes */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {/* 1. KRA PAYE */}
-                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyPaye ? 'bg-white border-rose-300 shadow-sm' : 'bg-slate-100/70 border-slate-200 opacity-60'}`}>
+                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyPaye ? 'bg-surface-container-lowest border-rose-300 shadow-sm' : 'bg-surface-container-low/70 border-outline-variant/30 opacity-60'}`}>
                     <input
                       type="checkbox"
                       checked={customForm.applyPaye}
                       onChange={(e) => setCustomForm(prev => ({ ...prev, applyPaye: e.target.checked }))}
-                      className="w-4 h-4 mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                      className="w-4 h-4 mt-0.5 rounded text-primary focus:ring-primary border-outline-variant/30"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800">KRA PAYE</span>
+                        <span className="font-bold text-xs text-on-surface">KRA PAYE</span>
                         <span className="font-mono font-bold text-xs text-rose-700">
                           {customForm.applyPaye ? `KES ${customStatutory.paye.toLocaleString()}` : 'KES 0'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">KRA graduated monthly bands less KES 2,400 relief</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">KRA graduated monthly bands less KES 2,400 relief</p>
                     </div>
                   </label>
 
                   {/* 2. SHIF 2.75% */}
-                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyShif ? 'bg-white border-rose-300 shadow-sm' : 'bg-slate-100/70 border-slate-200 opacity-60'}`}>
+                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyShif ? 'bg-surface-container-lowest border-rose-300 shadow-sm' : 'bg-surface-container-low/70 border-outline-variant/30 opacity-60'}`}>
                     <input
                       type="checkbox"
                       checked={customForm.applyShif}
                       onChange={(e) => setCustomForm(prev => ({ ...prev, applyShif: e.target.checked }))}
-                      className="w-4 h-4 mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                      className="w-4 h-4 mt-0.5 rounded text-primary focus:ring-primary border-outline-variant/30"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800">SHIF (2.75%)</span>
+                        <span className="font-bold text-xs text-on-surface">SHIF (2.75%)</span>
                         <span className="font-mono font-bold text-xs text-rose-700">
                           {customForm.applyShif ? `KES ${customStatutory.shif.toLocaleString()}` : 'KES 0'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Social Health Insurance Fund (2.75% of Gross)</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">Social Health Insurance Fund (2.75% of Gross)</p>
                     </div>
                   </label>
 
                   {/* 3. NSSF Tier 1 & 2 */}
-                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyNssf ? 'bg-white border-rose-300 shadow-sm' : 'bg-slate-100/70 border-slate-200 opacity-60'}`}>
+                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyNssf ? 'bg-surface-container-lowest border-rose-300 shadow-sm' : 'bg-surface-container-low/70 border-outline-variant/30 opacity-60'}`}>
                     <input
                       type="checkbox"
                       checked={customForm.applyNssf}
                       onChange={(e) => setCustomForm(prev => ({ ...prev, applyNssf: e.target.checked }))}
-                      className="w-4 h-4 mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                      className="w-4 h-4 mt-0.5 rounded text-primary focus:ring-primary border-outline-variant/30"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800">NSSF (Tier 1 & 2)</span>
+                        <span className="font-bold text-xs text-on-surface">NSSF (Tier 1 & 2)</span>
                         <span className="font-mono font-bold text-xs text-rose-700">
                           {customForm.applyNssf ? `KES ${customStatutory.nssf.toLocaleString()}` : 'KES 0'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">National Social Security Fund (6% up to KES 2,160)</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">National Social Security Fund (6% up to KES 2,160)</p>
                     </div>
                   </label>
 
                   {/* 4. Housing Levy 1.5% */}
-                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyHousingLevy ? 'bg-white border-rose-300 shadow-sm' : 'bg-slate-100/70 border-slate-200 opacity-60'}`}>
+                  <label className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${customForm.applyHousingLevy ? 'bg-surface-container-lowest border-rose-300 shadow-sm' : 'bg-surface-container-low/70 border-outline-variant/30 opacity-60'}`}>
                     <input
                       type="checkbox"
                       checked={customForm.applyHousingLevy}
                       onChange={(e) => setCustomForm(prev => ({ ...prev, applyHousingLevy: e.target.checked }))}
-                      className="w-4 h-4 mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                      className="w-4 h-4 mt-0.5 rounded text-primary focus:ring-primary border-outline-variant/30"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-800">Housing Levy (1.5%)</span>
+                        <span className="font-bold text-xs text-on-surface">Housing Levy (1.5%)</span>
                         <span className="font-mono font-bold text-xs text-rose-700">
                           {customForm.applyHousingLevy ? `KES ${customStatutory.housingLevy.toLocaleString()}` : 'KES 0'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Affordable Housing Levy (1.5% of Gross)</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">Affordable Housing Levy (1.5% of Gross)</p>
                     </div>
                   </label>
                 </div>
 
                 {/* Live Real-Time Breakdown Totals */}
-                <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs gap-2">
-                  <div className="text-slate-600">
-                    Gross: <strong className="font-mono font-bold text-slate-900">KES {customStatutory.gross.toLocaleString()}</strong> &nbsp;|&nbsp;
+                <div className="pt-2 border-t border-outline-variant/30 flex flex-wrap items-center justify-between text-xs gap-2">
+                  <div className="text-on-surface-variant">
+                    Gross: <strong className="font-mono font-bold text-on-surface">KES {customStatutory.gross.toLocaleString()}</strong> &nbsp;|&nbsp;
                     Total Deductions: <strong className="font-mono font-bold text-rose-700">KES {customStatutory.totalDeductions.toLocaleString()}</strong>
                   </div>
-                  <div className="font-extrabold text-sm text-[#7a1228] bg-rose-50 px-3 py-1 rounded-lg border border-rose-200">
+                  <div className="font-extrabold text-sm text-primary bg-rose-50 px-3 py-1 rounded-lg border border-rose-200">
                     Net Pay: KES {customStatutory.netSalary.toLocaleString()}
                   </div>
                 </div>
@@ -2213,13 +2342,13 @@ export const PayrollManagementView: React.FC = () => {
                     setSelectedStaffId('');
                     setIsCustomStaff(false);
                   }}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#7a1228] text-white font-bold text-xs rounded-xl hover:bg-[#600e1f] flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-sm">save</span>
                   Save & Issue Payslip
@@ -2236,33 +2365,33 @@ export const PayrollManagementView: React.FC = () => {
         const currentDisburse = typeof disburseAmount === 'number' && disburseAmount > 0 ? disburseAmount : remaining;
         return (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
               <div className="flex items-center gap-2.5 text-emerald-700 mb-2">
                 <span className="material-symbols-outlined text-2xl">payments</span>
-                <h3 className="text-lg font-bold text-slate-900">Issue Payment & Record Disbursal</h3>
+                <h3 className="text-lg font-bold text-on-surface">Issue Payment & Record Disbursal</h3>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs mb-4 space-y-1">
-                <div className="flex justify-between text-slate-600">
+              <div className="bg-surface border border-outline-variant/30 rounded-xl p-3 text-xs mb-4 space-y-1">
+                <div className="flex justify-between text-on-surface-variant">
                   <span>Faculty Member:</span>
-                  <span className="font-bold text-slate-900">{selectedPayrollForPay.teacherName}</span>
+                  <span className="font-bold text-on-surface">{selectedPayrollForPay.teacherName}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-on-surface-variant">
                   <span>Total Net Salary:</span>
-                  <span className="font-mono font-semibold text-slate-900">KES {selectedPayrollForPay.netSalary.toLocaleString()}</span>
+                  <span className="font-mono font-semibold text-on-surface">KES {selectedPayrollForPay.netSalary.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-on-surface-variant">
                   <span>Already Disbursed:</span>
                   <span className="font-mono text-emerald-700 font-bold">KES {(selectedPayrollForPay.amountPaid || 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-slate-600 border-t pt-1">
-                  <span className="font-bold text-slate-700">Remaining Balance:</span>
-                  <span className="font-mono font-extrabold text-[#7a1228]">KES {remaining.toLocaleString()}</span>
+                <div className="flex justify-between text-on-surface-variant border-t pt-1">
+                  <span className="font-bold text-on-surface-variant">Remaining Balance:</span>
+                  <span className="font-mono font-extrabold text-primary">KES {remaining.toLocaleString()}</span>
                 </div>
               </div>
 
               <form onSubmit={handleMarkPaid} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Amount (KES)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disbursement Amount (KES)</label>
                   <input
                     type="number"
                     required
@@ -2271,19 +2400,19 @@ export const PayrollManagementView: React.FC = () => {
                     value={disburseAmount}
                     onChange={(e) => setDisburseAmount(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder={`e.g., ${remaining}`}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono font-bold focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono font-bold focus:ring-2 focus:ring-primary"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">
+                  <p className="text-[10px] text-on-surface-variant mt-1">
                     Enter full or partial payment amount to disburse and deduct from school accounts.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">School Funding Account (Deduction Source)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">School Funding Account (Deduction Source)</label>
                   <select
                     value={fundingAccount}
                     onChange={(e: any) => setFundingAccount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                   >
                     <option value="BANK">Bank Account (School Operating Bank Account)</option>
                     <option value="MPESA">M-Pesa Account (School Remittance Paybill / Till)</option>
@@ -2293,11 +2422,11 @@ export const PayrollManagementView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Channel / Method</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disbursement Channel / Method</label>
                   <select
                     value={paymentMethod}
                     onChange={(e: any) => setPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                   >
                     <option value="BANK_TRANSFER">Bank Transfer (EFT / RTGS / KCB Buni / Pesalink)</option>
                     <option value="MPESA">M-Pesa B2C / Paybill Remittance</option>
@@ -2307,24 +2436,24 @@ export const PayrollManagementView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Reference / Voucher Code</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Transaction Reference / Voucher Code</label>
                   <input
                     type="text"
                     placeholder="e.g., MPESA-QK892348 or KCB-RTGS-991204"
                     value={paymentRef}
                     onChange={(e) => setPaymentRef(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Date</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Payment Date</label>
                   <input
                     type="date"
                     required
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
@@ -2342,13 +2471,13 @@ export const PayrollManagementView: React.FC = () => {
                       setIsPayModalOpen(false);
                       setSelectedPayrollForPay(null);
                     }}
-                    className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                    className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
+                    className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-md"
                   >
                     <span className="material-symbols-outlined text-sm">check_circle</span>
                     Confirm & Deduct Funds
@@ -2363,12 +2492,12 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: BULK DISBURSE APPROVED SALARIES */}
       {isBulkPayModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center gap-2.5 text-emerald-700 mb-2">
               <span className="material-symbols-outlined text-2xl">bolt</span>
-              <h3 className="text-lg font-bold text-slate-900">Bulk Disburse Approved Salaries</h3>
+              <h3 className="text-lg font-bold text-on-surface">Bulk Disburse Approved Salaries</h3>
             </div>
-            <p className="text-xs text-slate-600 mb-3">
+            <p className="text-xs text-on-surface-variant mb-3">
               Disbursing <strong>{stats.approvedCount} approved payroll records</strong> for {selectedMonth} simultaneously with automatic financial postings.
             </p>
 
@@ -2386,11 +2515,11 @@ export const PayrollManagementView: React.FC = () => {
 
             <form onSubmit={handleBulkPaySubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Channel / Method</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disbursement Channel / Method</label>
                 <select
                   value={bulkPaymentMethod}
                   onChange={(e: any) => setBulkPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary"
                 >
                   <option value="BANK_TRANSFER">Bank Transfer (Batch EFT / RTGS)</option>
                   <option value="MPESA">M-Pesa B2C Bulk Disbursement</option>
@@ -2400,24 +2529,24 @@ export const PayrollManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Batch Payment Reference</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Batch Payment Reference</label>
                 <input
                   type="text"
                   placeholder="e.g., BATCH-OCT26-SALARIES"
                   value={bulkReference}
                   onChange={(e) => setBulkReference(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-mono focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Date</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Payment Date</label>
                 <input
                   type="date"
                   required
                   value={bulkPaymentDate}
                   onChange={(e) => setBulkPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary"
                 />
               </div>
 
@@ -2429,13 +2558,13 @@ export const PayrollManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsBulkPayModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-md"
                 >
                   <span className="material-symbols-outlined text-sm">payments</span>
                   Confirm Bulk Disbursal
@@ -2449,25 +2578,25 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: REVERSE SALARY PAYMENT */}
       {isReverseModalOpen && payrollToReverse && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center gap-2.5 text-rose-700 mb-2">
               <span className="material-symbols-outlined text-2xl">undo</span>
-              <h3 className="text-lg font-bold text-slate-900">Reverse Salary Payment</h3>
+              <h3 className="text-lg font-bold text-on-surface">Reverse Salary Payment</h3>
             </div>
-            <p className="text-xs text-slate-600 mb-4">
-              Reversing salary disbursement of <strong className="text-slate-900 font-mono">KES {(payrollToReverse.amountPaid || payrollToReverse.netSalary).toLocaleString()}</strong> to <strong>{payrollToReverse.teacherName}</strong>.
+            <p className="text-xs text-on-surface-variant mb-4">
+              Reversing salary disbursement of <strong className="text-on-surface font-mono">KES {(payrollToReverse.amountPaid || payrollToReverse.netSalary).toLocaleString()}</strong> to <strong>{payrollToReverse.teacherName}</strong>.
             </p>
 
             <form onSubmit={handleReversePaymentSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Reason for Reversal</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Reason for Reversal</label>
                 <textarea
                   required
                   rows={3}
                   placeholder="Explain why this disbursement is being reversed (e.g., Wrong bank account entered, payment bounced, administrative recalculation)..."
                   value={reversalReason}
                   onChange={(e) => setReversalReason(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-rose-500"
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-rose-500"
                 />
               </div>
 
@@ -2491,7 +2620,7 @@ export const PayrollManagementView: React.FC = () => {
                     setIsReverseModalOpen(false);
                     setPayrollToReverse(null);
                   }}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>
@@ -2551,22 +2680,22 @@ export const PayrollManagementView: React.FC = () => {
               }
             `}</style>
 
-            <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
               <div id="smartshule-payslip-advice" className="space-y-4">
                 {/* Payslip Header */}
                 <div className="flex items-start justify-between border-b pb-4">
                   <div className="flex items-start gap-3">
                     {school?.logoUrl && (
-                      <img src={school.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-lg border border-slate-200" />
+                      <img src={school.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-lg border border-outline-variant/30" />
                     )}
                     <div>
-                      <h2 className="text-xl font-extrabold text-[#7a1228] uppercase tracking-wide">
+                      <h2 className="text-xl font-extrabold text-primary uppercase tracking-wide">
                         {school?.name || 'Grace Seeds School'}
                       </h2>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {school?.address ? `${school.address} · ` : 'KEMRI Street, Kisian, Kisumu, Kenya · '}{school?.phone ? `Tel: ${school.phone}` : 'Tel: 0745436312'}{school?.email ? ` · ${school.email}` : ' · schoolgraceseeds@gmail.com'}
+                      <p className="text-xs text-on-surface-variant font-medium">
+                        {school?.address ? `${school.address} · ` : 'P.O Box 12-20123 · '}{school?.phone ? `Tel: ${school.phone}` : 'Tel: 0745436312'}{school?.email ? ` · ${school.email}` : ' · schoolgraceseeds@gmail.com'}
                       </p>
-                      <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mt-1">
+                      <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
                         Official Faculty & Staff Payslip Advice
                       </p>
                     </div>
@@ -2577,28 +2706,28 @@ export const PayrollManagementView: React.FC = () => {
                         ? 'bg-emerald-100 text-emerald-800'
                         : selectedPayslip.status === 'APPROVED'
                         ? 'bg-blue-100 text-blue-800'
-                        : 'bg-slate-100 text-slate-800'
+                        : 'bg-surface-container-low text-on-surface'
                     }`}>
                       Status: {selectedPayslip.status}
                     </span>
-                    <p className="text-[11px] font-semibold text-slate-700 mt-1">Period: {selectedPayslip.month}</p>
+                    <p className="text-[11px] font-semibold text-on-surface-variant mt-1">Period: {selectedPayslip.month}</p>
                     <p className="text-[10px] text-slate-400 font-mono">Ref: {selectedPayslip.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                 </div>
 
                 {/* Employee Details */}
-                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl text-xs border border-slate-200">
+                <div className="grid grid-cols-2 gap-3 bg-surface p-4 rounded-xl text-xs border border-outline-variant/30">
                   <div>
-                    <p className="text-slate-500 font-medium">Employee Name:</p>
-                    <p className="font-bold text-slate-900 text-sm">{selectedPayslip.teacherName}</p>
-                    <p className="text-[11px] text-slate-500 mt-1 font-medium">Designation / Role:</p>
-                    <p className="font-semibold text-slate-800">{matchedStaff?.role || 'Teaching Staff / Faculty'}</p>
+                    <p className="text-on-surface-variant font-medium">Employee Name:</p>
+                    <p className="font-bold text-on-surface text-sm">{selectedPayslip.teacherName}</p>
+                    <p className="text-[11px] text-on-surface-variant mt-1 font-medium">Designation / Role:</p>
+                    <p className="font-semibold text-on-surface">{matchedStaff?.role || 'Teaching Staff / Faculty'}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 font-medium">Staff ID (TSC / Emp No):</p>
-                    <p className="font-bold text-slate-900 text-sm font-mono">{getStaffDisplayId(selectedPayslip, staffList)}</p>
-                    <p className="text-[11px] text-slate-500 mt-1 font-medium">Assignment / Stream:</p>
-                    <p className="font-semibold text-slate-800 truncate">{matchedStaff?.assignedClasses || matchedStaff?.specialization?.join(', ') || 'General Faculty'}</p>
+                    <p className="text-on-surface-variant font-medium">Staff ID (TSC / Emp No):</p>
+                    <p className="font-bold text-on-surface text-sm font-mono">{getStaffDisplayId(selectedPayslip, staffList)}</p>
+                    <p className="text-[11px] text-on-surface-variant mt-1 font-medium">Assignment / Stream:</p>
+                    <p className="font-semibold text-on-surface truncate">{matchedStaff?.assignedClasses || matchedStaff?.specialization?.join(', ') || 'General Faculty'}</p>
                   </div>
                 </div>
 
@@ -2606,28 +2735,28 @@ export const PayrollManagementView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-6">
                   {/* Earnings */}
                   <div className="border border-emerald-100 bg-emerald-50/20 rounded-xl p-3">
-                    <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider border-b border-emerald-200 pb-1 mb-2 flex items-center gap-1">
+                    <h4 className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider border-b border-primary pb-1 mb-2 flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">add_circle</span>
                       Earnings
                     </h4>
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Basic Salary</span>
+                        <span className="text-on-surface-variant">Basic Salary</span>
                         <span className="font-semibold font-mono">KES {selectedPayslip.basicSalary?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">House Allowance</span>
+                        <span className="text-on-surface-variant">House Allowance</span>
                         <span className="font-semibold font-mono">KES {selectedPayslip.houseAllowance?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Commuter Allowance</span>
+                        <span className="text-on-surface-variant">Commuter Allowance</span>
                         <span className="font-semibold font-mono">KES {selectedPayslip.commuterAllowance?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Responsibility Allowance</span>
+                        <span className="text-on-surface-variant">Responsibility Allowance</span>
                         <span className="font-semibold font-mono">KES {selectedPayslip.responsibilityAllowance?.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between border-t border-emerald-200 pt-1 font-bold text-slate-900">
+                      <div className="flex justify-between border-t border-emerald-200 pt-1 font-bold text-on-surface">
                         <span>Gross Earnings</span>
                         <span className="font-mono text-emerald-800">KES {selectedPayslip.grossSalary?.toLocaleString()}</span>
                       </div>
@@ -2642,24 +2771,24 @@ export const PayrollManagementView: React.FC = () => {
                     </h4>
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-slate-600">KRA PAYE Tax</span>
+                        <span className="text-on-surface-variant">KRA PAYE Tax</span>
                         <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.paye?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">SHIF (2.75%)</span>
+                        <span className="text-on-surface-variant">SHIF (2.75%)</span>
                         <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.shif?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">NSSF (Tier 1 & 2)</span>
+                        <span className="text-on-surface-variant">NSSF (Tier 1 & 2)</span>
                         <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.nssf?.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Housing Levy (1.5%)</span>
+                        <span className="text-on-surface-variant">Housing Levy (1.5%)</span>
                         <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.housingLevy?.toLocaleString()}</span>
                       </div>
                       {selectedPayslip.otherDeductions > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-slate-600">Other Deductions</span>
+                          <span className="text-on-surface-variant">Other Deductions</span>
                           <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.otherDeductions?.toLocaleString()}</span>
                         </div>
                       )}
@@ -2703,13 +2832,13 @@ export const PayrollManagementView: React.FC = () => {
                 </div>
 
                 {/* Sign-off & Stamp Section */}
-                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200 text-xs">
+                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-outline-variant/30 text-xs">
                   <div>
                     <div className="h-8 border-b border-dashed border-slate-400 mb-1"></div>
-                    <p className="text-[11px] font-semibold text-slate-700">Authorized Signatory (Finance / Bursar)</p>
+                    <p className="text-[11px] font-semibold text-on-surface-variant">Authorized Signatory (Finance / Bursar)</p>
                     <p className="text-[10px] text-slate-400">Date: {new Date().toLocaleDateString('en-KE')}</p>
                   </div>
-                  <div className="border border-dashed border-slate-300 rounded-lg p-2.5 text-center text-slate-400 text-[10px] flex items-center justify-center">
+                  <div className="border border-dashed border-outline-variant/30 rounded-lg p-2.5 text-center text-slate-400 text-[10px] flex items-center justify-center">
                     Official School Stamp / Seal
                   </div>
                 </div>
@@ -2725,7 +2854,7 @@ export const PayrollManagementView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadPayslipPdf(selectedPayslip)}
-                    className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#600e1f] flex items-center gap-1.5 shadow-sm transition-all"
+                    className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-container flex items-center gap-1.5 shadow-sm transition-all"
                   >
                     <span className="material-symbols-outlined text-base">picture_as_pdf</span>
                     Download PDF
@@ -2733,7 +2862,7 @@ export const PayrollManagementView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition-all"
+                    className="px-3.5 py-2 border border-outline-variant/30 rounded-xl text-xs font-bold text-on-surface-variant hover:bg-surface-container-low flex items-center gap-1.5 transition-all"
                   >
                     <span className="material-symbols-outlined text-base">print</span>
                     Print
@@ -2742,7 +2871,7 @@ export const PayrollManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedPayslip(null)}
-                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all"
+                  className="px-4 py-2 border border-outline-variant/30 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low transition-all"
                 >
                   Close
                 </button>
@@ -2755,14 +2884,14 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: APPLY FOR LEAVE */}
       {isApplyLeaveModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3 mb-4">
               <div>
-                <div className="flex items-center gap-1.5 text-[#7a1228] text-xs font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 text-primary text-xs font-bold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-base">event_available</span>
                   HR Faculty Records
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900">Apply for Faculty Leave</h3>
+                <h3 className="text-lg font-extrabold text-on-surface">Apply for Faculty Leave</h3>
               </div>
               <button
                 onClick={() => {
@@ -2770,7 +2899,7 @@ export const PayrollManagementView: React.FC = () => {
                   setSelectedLeaveStaffId('');
                   setSelectedSubstituteId('');
                 }}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-on-surface-variant p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -2780,7 +2909,7 @@ export const PayrollManagementView: React.FC = () => {
               {/* Staff Member Selector */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-700">Applicant Staff Member</label>
+                  <label className="block text-xs font-bold text-on-surface-variant">Applicant Staff Member</label>
                   {selectedLeaveStaff && (
                     <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <span className="material-symbols-outlined text-[13px]">verified</span>
@@ -2792,7 +2921,7 @@ export const PayrollManagementView: React.FC = () => {
                   required
                   value={selectedLeaveStaffId}
                   onChange={(e) => handleSelectApplicantForLeave(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- Select Registered Staff Member --</option>
                   {staffList.map((s) => (
@@ -2806,12 +2935,12 @@ export const PayrollManagementView: React.FC = () => {
               {/* Applicant Profile Preview */}
               {selectedLeaveStaff && (
                 <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#500b1b] to-[#7a1228] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-container to-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
                     {selectedLeaveStaff.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
                   </div>
                   <div className="flex-1 min-w-0 text-xs">
-                    <p className="font-bold text-slate-900 truncate">{selectedLeaveStaff.name}</p>
-                    <p className="text-slate-500 text-[11px]">
+                    <p className="font-bold text-on-surface truncate">{selectedLeaveStaff.name}</p>
+                    <p className="text-on-surface-variant text-[11px]">
                       {selectedLeaveStaff.role} • TSC: <span className="font-mono">{selectedLeaveStaff.tscNumber}</span>
                     </p>
                   </div>
@@ -2819,11 +2948,11 @@ export const PayrollManagementView: React.FC = () => {
               )}
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Leave Category / Type</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Leave Category / Type</label>
                 <select
                   value={leaveForm.leaveType}
                   onChange={(e: any) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="ANNUAL">Annual Leave</option>
                   <option value="SICK">Sick / Medical Leave</option>
@@ -2836,31 +2965,31 @@ export const PayrollManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Start Date</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Start Date</label>
                   <input
                     type="date"
                     required
                     value={leaveForm.startDate}
                     onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">End Date</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">End Date</label>
                   <input
                     type="date"
                     required
                     value={leaveForm.endDate}
                     onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                    className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
               </div>
 
               {leaveDaysCount > 0 && (
-                <div className="px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-                  <span className="text-slate-600">Calculated Leave Duration:</span>
-                  <span className="font-extrabold text-[#7a1228]">
+                <div className="px-3 py-2 bg-surface rounded-lg border border-outline-variant/30 flex items-center justify-between text-xs">
+                  <span className="text-on-surface-variant">Calculated Leave Duration:</span>
+                  <span className="font-extrabold text-primary">
                     {leaveDaysCount} Calendar Day{leaveDaysCount > 1 ? 's' : ''}
                   </span>
                 </div>
@@ -2868,13 +2997,13 @@ export const PayrollManagementView: React.FC = () => {
 
               {/* Substitute / Cover Teacher Selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-on-surface-variant mb-1">
                   Substitute / Cover Teacher (Optional)
                 </label>
                 <select
                   value={selectedSubstituteId}
                   onChange={(e) => handleSelectSubstituteForLeave(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] transition-all font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                 >
                   <option value="">-- No Substitute / Self-Managed Coverage --</option>
                   {staffList
@@ -2891,14 +3020,14 @@ export const PayrollManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Reason / Notes</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Reason / Notes</label>
                 <textarea
                   rows={2}
                   required
                   placeholder="Specify reason or details for the head teacher / school director review..."
                   value={leaveForm.reason}
                   onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
@@ -2910,13 +3039,13 @@ export const PayrollManagementView: React.FC = () => {
                     setSelectedLeaveStaffId('');
                     setSelectedSubstituteId('');
                   }}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#7a1228] text-white font-bold text-xs rounded-xl hover:bg-[#600e1f] flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container flex items-center gap-1.5 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-sm">send</span>
                   Submit Application
@@ -2930,23 +3059,23 @@ export const PayrollManagementView: React.FC = () => {
       {/* MODAL: REVIEW LEAVE */}
       {selectedLeaveForReview && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Review Leave Application</h3>
-            <p className="text-xs text-slate-500 mb-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-on-surface mb-2">Review Leave Application</h3>
+            <p className="text-xs text-on-surface-variant mb-4">
               <strong>{selectedLeaveForReview.teacherName}</strong> requested {selectedLeaveForReview.daysCount} days of {selectedLeaveForReview.leaveType} leave ({selectedLeaveForReview.startDate} to {selectedLeaveForReview.endDate}).
             </p>
 
             <form onSubmit={handleReviewLeave} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Decision</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Decision</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setReviewStatus('APPROVED')}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       reviewStatus === 'APPROVED'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                        ? 'bg-primary text-white border-primary shadow-md'
+                        : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
                     Approve Leave
@@ -2957,7 +3086,7 @@ export const PayrollManagementView: React.FC = () => {
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       reviewStatus === 'REJECTED'
                         ? 'bg-rose-600 text-white border-rose-600 shadow-md'
-                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                        : 'border-outline-variant/30 text-on-surface-variant hover:bg-surface'
                     }`}
                   >
                     Reject Leave
@@ -2966,13 +3095,13 @@ export const PayrollManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Remarks / Conditions</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Remarks / Conditions</label>
                 <textarea
                   rows={2}
                   placeholder="Remarks for the teacher..."
                   value={reviewRemarks}
                   onChange={(e) => setReviewRemarks(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/30 bg-surface text-sm text-on-surface"
                 />
               </div>
 
@@ -2980,18 +3109,129 @@ export const PayrollManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedLeaveForReview(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#7a1228] text-white font-bold text-xs rounded-xl hover:bg-[#600e1f]"
+                  className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary-container"
                 >
                   Save Decision
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: STAFF SALARY ACKNOWLEDGEMENT & DISPUTE DOSSIER */}
+      {selectedAckDossier && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-outline-variant/30 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">verified_user</span>
+                <h3 className="font-bold text-base text-on-surface">Staff Remuneration Acknowledgement Dossier</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAckDossier(null)}
+                className="text-slate-400 hover:text-on-surface-variant p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-surface border border-outline-variant/30 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Faculty / Employee:</span>
+                <span className="font-bold text-on-surface">{selectedAckDossier.teacherName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Payroll Period:</span>
+                <span className="font-bold font-mono text-on-surface">{selectedAckDossier.month}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Net Salary:</span>
+                <span className="font-mono font-bold text-on-surface">
+                  KES {Number(selectedAckDossier.netSalary || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Disbursed Amount:</span>
+                <span className="font-mono font-bold text-emerald-800">
+                  KES {Number(selectedAckDossier.amountPaid > 0 ? selectedAckDossier.amountPaid : selectedAckDossier.netSalary).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Payment Reference:</span>
+                <span className="font-mono text-on-surface">{selectedAckDossier.paymentReference || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Disbursement Date:</span>
+                <span className="font-mono text-on-surface">
+                  {selectedAckDossier.paidAt ? new Date(selectedAckDossier.paidAt).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            {/* Acknowledgement Status Information */}
+            {selectedAckDossier.acknowledgementStatus === 'ACKNOWLEDGED' ? (
+              <div className="p-4 rounded-2xl bg-primary-fixed border border-primary space-y-3">
+                <div className="flex items-center gap-2 text-on-primary-fixed font-bold text-xs">
+                  <span className="material-symbols-outlined text-sm text-teal-700">verified</span>
+                  <span>Officially Acknowledged by Staff Member</span>
+                </div>
+                <p className="text-[11px] text-on-primary-fixed italic bg-surface-container-lowest p-3 rounded-xl border border-primary">
+                  "{selectedAckDossier.acknowledgementStatement || 'I confirm receipt of salary payment.'}"
+                </p>
+                <div className="flex items-center justify-between text-[10px] text-on-primary-fixed font-mono">
+                  <span>Timestamp: {selectedAckDossier.acknowledgedAt ? new Date(selectedAckDossier.acknowledgedAt).toLocaleString() : 'N/A'}</span>
+                  <span>Method: {selectedAckDossier.acknowledgementMethod || 'PORTAL_AUTH'}</span>
+                </div>
+                {selectedAckDossier.acknowledgementSignature && (
+                  <div className="pt-2 border-t border-primary text-center">
+                    <span className="text-[9px] uppercase font-mono text-primary block mb-1">Digital Signature Record</span>
+                    {selectedAckDossier.acknowledgementSignature.startsWith('data:image') ? (
+                      <img src={selectedAckDossier.acknowledgementSignature} alt="Sig" className="h-10 mx-auto object-contain bg-surface-container-lowest px-2 py-0.5 rounded border border-primary" />
+                    ) : (
+                      <span className="font-serif italic text-lg text-on-primary-fixed font-bold">
+                        {selectedAckDossier.acknowledgementSignature}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : selectedAckDossier.acknowledgementStatus === 'UNDER_REVIEW' ? (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-2">
+                <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
+                  <span className="material-symbols-outlined text-sm text-rose-700">warning</span>
+                  <span>Discrepancy / Dispute Reported by Teacher</span>
+                </div>
+                <div className="bg-surface-container-lowest p-3 rounded-xl border border-rose-200 text-xs text-rose-950 font-medium">
+                  {selectedAckDossier.disputeReason || 'Discrepancy reported during salary review.'}
+                </div>
+                <div className="text-[10px] text-rose-800 font-mono">
+                  Reported on: {selectedAckDossier.disputedAt ? new Date(selectedAckDossier.disputedAt).toLocaleString() : 'Recently'}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-primary">schedule</span>
+                <span>Payment disbursed by school accounts; awaiting teacher acknowledgement in Teacher Portal.</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => setSelectedAckDossier(null)}
+                className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors cursor-pointer"
+              >
+                Close Dossier
+              </button>
+            </div>
           </div>
         </div>
       )}

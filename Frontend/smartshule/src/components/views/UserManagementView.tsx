@@ -318,21 +318,21 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       case UserRole.SCHOOL_ADMIN:
         return { label: 'Administrator', bg: 'bg-red-50 text-red-800 border-red-200', icon: 'shield_person' };
       case UserRole.HEAD_TEACHER:
-        return { label: 'Head Teacher', bg: 'bg-purple-50 text-purple-800 border-purple-200', icon: 'school' };
+        return { label: 'Head Teacher', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'school' };
       case UserRole.DEPUTY_HEAD_TEACHER:
-        return { label: 'Deputy Head', bg: 'bg-indigo-50 text-indigo-800 border-indigo-200', icon: 'fact_check' };
+        return { label: 'Deputy Head', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'fact_check' };
       case UserRole.TEACHER:
-        return { label: 'Teacher', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: 'menu_book' };
+        return { label: 'Teacher', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'menu_book' };
       case UserRole.BURSAR:
       case UserRole.ACCOUNTANT:
-        return { label: 'Bursar / Finance', bg: 'bg-amber-50 text-amber-800 border-amber-200', icon: 'account_balance_wallet' };
+        return { label: 'Bursar / Finance', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'account_balance_wallet' };
       case UserRole.ADMISSIONS:
-        return { label: 'Admissions', bg: 'bg-blue-50 text-blue-800 border-blue-200', icon: 'person_add' };
+        return { label: 'Admissions', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'person_add' };
       case UserRole.PARENT:
       case UserRole.GUARDIAN:
-        return { label: 'Parent / Guardian', bg: 'bg-sky-50 text-sky-800 border-sky-200', icon: 'family_restroom' };
+        return { label: 'Parent / Guardian', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'family_restroom' };
       case UserRole.STUDENT:
-        return { label: 'Student', bg: 'bg-teal-50 text-teal-800 border-teal-200', icon: 'backpack' };
+        return { label: 'Student', bg: 'bg-primary-fixed text-on-primary-fixed border-primary', icon: 'backpack' };
       default:
         return { label: role, bg: 'bg-slate-50 text-slate-800 border-slate-200', icon: 'person' };
     }
@@ -343,7 +343,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Administration</span>
             <span>/</span>
             <span>Access Control</span>
@@ -354,7 +354,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
               User Accounts & Access Control
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
               <span className="material-symbols-outlined text-[14px]">verified_user</span>
               <span>RBAC & Chapter 6 Certified</span>
             </span>
@@ -364,7 +364,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('teachers-staff')}
+              title="Onboard teaching faculty or non-teaching operational staff with full credentials and Chapter 6 compliance"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary-fixed hover:bg-primary-fixed border border-primary text-on-primary-fixed rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[17px] text-primary">badge</span>
+              <span>Onboard Staff Member</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onNavigateTab?.('archived-records')}
@@ -403,7 +414,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
               : 'bg-error-container text-on-error-container border-error/20'
           }`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">
               {feedback.type === 'success' ? 'check_circle' : 'error'}
             </span>
@@ -453,22 +464,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs">
           <div className="flex items-center justify-between text-outline">
             <span className="text-[11px] font-bold uppercase tracking-wider">Educators</span>
-            <span className="material-symbols-outlined text-purple-600 text-[20px]">menu_book</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">menu_book</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-purple-800">{facultyCount}</span>
-            <span className="text-[10px] text-purple-600 block mt-0.5">Teachers & staff</span>
+            <span className="text-2xl font-black text-on-primary-fixed">{facultyCount}</span>
+            <span className="text-[10px] text-primary block mt-0.5">Teachers & staff</span>
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xs col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-outline">
             <span className="text-[11px] font-bold uppercase tracking-wider">Leadership</span>
-            <span className="material-symbols-outlined text-indigo-600 text-[20px]">shield_person</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">shield_person</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-indigo-800">{adminCount}</span>
-            <span className="text-[10px] text-indigo-600 block mt-0.5">Executive & Admins</span>
+            <span className="text-2xl font-black text-on-primary-fixed">{adminCount}</span>
+            <span className="text-[10px] text-primary block mt-0.5">Executive & Admins</span>
           </div>
         </div>
       </div>
@@ -624,7 +635,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                               target="_blank"
                               rel="noreferrer"
                               title="Chat on WhatsApp"
-                              className="text-emerald-600 hover:text-emerald-700"
+                              className="text-primary hover:text-primary"
                             >
                               <span className="material-symbols-outlined text-[15px]">chat</span>
                             </a>
@@ -642,7 +653,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                               ? 'bg-rose-100 text-rose-800'
                               : u.status === 'ACTIVE'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-slate-800'
+                              : 'bg-surface-container-low text-slate-800'
                           }`}
                         >
                           <span
@@ -675,7 +686,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                           <button
                             onClick={() => handleOpenResetPwd(u)}
                             title="Reset user password"
-                            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-amber-700 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[17px]">key</span>
                           </button>
@@ -693,8 +704,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                             }
                             className={`p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 ${
                               isSuspended
-                                ? 'text-emerald-700 hover:bg-emerald-100'
-                                : 'text-amber-700 hover:bg-amber-100'
+                                ? 'text-primary hover:bg-primary-fixed'
+                                : 'text-primary hover:bg-primary-fixed'
                             }`}
                           >
                             <span className="material-symbols-outlined text-[17px]">
@@ -726,8 +737,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="bg-primary text-white p-4 flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-rose-200">person_add</span>
                 <h3 className="font-bold text-sm">Create New User Account</h3>
               </div>
@@ -777,7 +788,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="e.g. s.ochieng@smartshule.ac.ke"
+                  placeholder="e.g. s.ochieng@example.com"
                   className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
                 />
               </div>
@@ -872,8 +883,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
             {/* Header */}
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="bg-primary text-white p-4 flex items-center justify-between shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-rose-200">manage_accounts</span>
                 <div>
                   <h3 className="font-bold text-sm">Edit User Profile</h3>
@@ -1155,7 +1166,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
               <div className="pt-1">
                 <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 text-amber-800">
+                    <div className="w-8 h-8 rounded-lg bg-primary-fixed flex items-center justify-center shrink-0 text-on-primary-fixed">
                       <span className="material-symbols-outlined text-[18px]">key</span>
                     </div>
                     <div className="min-w-0">
@@ -1170,7 +1181,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                       setIsEditOpen(false);
                       if (u) handleOpenResetPwd(u);
                     }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-[11px] font-bold cursor-pointer transition-colors shrink-0 shadow-xs"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-container hover:bg-primary-container text-white rounded-lg text-[11px] font-bold cursor-pointer transition-colors shrink-0 shadow-xs"
                   >
                     <span className="material-symbols-outlined text-[14px]">lock_reset</span>
                     <span>Change Password</span>
@@ -1209,13 +1220,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-outline-variant/30 my-auto">
             <div className="bg-amber-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-amber-200">key</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="material-symbols-outlined text-[20px] text-on-primary">key</span>
                 <h3 className="font-bold text-sm">Reset Password</h3>
               </div>
               <button
                 onClick={() => setIsResetPwdOpen(false)}
-                className="text-amber-100 hover:text-white cursor-pointer p-1 rounded-lg"
+                className="text-on-primary hover:text-white cursor-pointer p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
@@ -1276,7 +1287,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                 <button
                   type="submit"
                   disabled={submittingResetPwd}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-800 text-white text-xs font-bold rounded-lg hover:bg-amber-900 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-container text-white text-xs font-bold rounded-lg hover:bg-primary-container disabled:opacity-50 transition-all cursor-pointer shadow-xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">
                     {submittingResetPwd ? 'sync' : 'lock_reset'}

@@ -166,7 +166,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
       {/* Top Notification / Role Check */}
       {!canEditCoordinates ? (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
-          <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 mt-0.5">lock</span>
+          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">lock</span>
           <div>
             <h4 className="font-bold text-sm">Coordinate Entry Restricted</h4>
             <p className="text-xs mt-0.5 leading-relaxed text-amber-800">
@@ -175,11 +175,11 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
           </div>
         </div>
       ) : (
-        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-950 flex items-start gap-3">
-          <span className="material-symbols-outlined text-teal-700 text-2xl shrink-0 mt-0.5">verified_user</span>
+        <div className="p-4 rounded-xl bg-primary-fixed border border-primary text-on-primary-fixed flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">verified_user</span>
           <div>
             <h4 className="font-bold text-sm">Director & Super Admin Geofence Control Active</h4>
-            <p className="text-xs mt-0.5 leading-relaxed text-teal-800">
+            <p className="text-xs mt-0.5 leading-relaxed text-on-primary-fixed">
               You have privileged access to configure the physical perimeter of the school compound. Teachers will only be permitted to clock in when physically situated within this boundary.
             </p>
           </div>
@@ -214,8 +214,8 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
           </div>
 
           {successMsg && (
-            <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 text-xs flex items-center gap-2">
-              <span className="material-symbols-outlined text-teal-700 text-[18px]">check_circle</span>
+            <div className="p-3 bg-primary-fixed border border-primary rounded-xl text-on-primary-fixed text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
               <span>{successMsg}</span>
             </div>
           )}
@@ -349,7 +349,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                   onChange={(e) => setIsEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7a1228]"></div>
+                <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -359,7 +359,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                 <button
                   type="submit"
                   disabled={saving || loading}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#7a1228] hover:bg-[#5e0d1e] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60"
                 >
                   <span className="material-symbols-outlined text-[18px]">
                     {saving ? 'sync' : 'save'}
@@ -382,20 +382,20 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
             <div className="mt-6 flex flex-col items-center justify-center">
               <div className="relative w-48 h-48 rounded-full border-2 border-dashed border-[#7a1228]/40 bg-[#7a1228]/5 flex items-center justify-center">
                 {/* Secondary inner ring */}
-                <div className="w-32 h-32 rounded-full border border-teal-500/30 bg-teal-500/5 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full border border-primary/30 bg-primary/5 flex items-center justify-center">
                   {/* Center pin */}
-                  <div className="w-10 h-10 rounded-full bg-[#7a1228] text-white flex items-center justify-center shadow-md animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-md animate-pulse">
                     <span className="material-symbols-outlined text-[20px]">school</span>
                   </div>
                 </div>
 
                 {/* Boundary tag */}
-                <span className="absolute -top-3 px-2 py-0.5 rounded-full bg-white border border-[#7a1228] text-[#7a1228] text-[10px] font-bold shadow-2xs">
+                <span className="absolute -top-3 px-2 py-0.5 rounded-full bg-white border border-primary text-primary text-[10px] font-bold shadow-2xs">
                   Boundary: {radiusMeters}m
                 </span>
 
                 {/* Verified tag */}
-                <span className="absolute -bottom-3 px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold shadow-2xs">
+                <span className="absolute -bottom-3 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold shadow-2xs">
                   {isEnabled ? 'Enforcement Active' : 'Geofence Standby'}
                 </span>
               </div>
@@ -406,7 +406,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                   LAT: {parseFloat(latitude || '0').toFixed(5)} · LON: {parseFloat(longitude || '0').toFixed(5)}
                 </p>
                 {detectedAccuracy != null && (
-                  <p className="text-[10px] text-teal-700 font-semibold">
+                  <p className="text-[10px] text-primary font-semibold">
                     Acquired via Device GPS (±{detectedAccuracy}m accuracy)
                   </p>
                 )}
@@ -428,7 +428,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
               <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">
                 Compound Compliance
               </span>
-              <span className="text-xl font-bold font-data-mono text-teal-700 mt-1 block">
+              <span className="text-xl font-bold font-data-mono text-primary mt-1 block">
                 100%
               </span>
             </div>
@@ -495,7 +495,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                         className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                           r.status === 'CLOCKED_IN'
                             ? 'bg-teal-100 text-teal-800'
-                            : 'bg-gray-100 text-gray-700'
+                            : 'bg-surface-container-low text-gray-700'
                         }`}
                       >
                         {r.status === 'CLOCKED_IN' ? 'Clocked In' : 'Clocked Out'}
@@ -518,7 +518,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                         : 'GPS Recorded'}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-on-primary-fixed">
                         <span className="material-symbols-outlined text-[14px] text-teal-700">verified</span>
                         <span>Inside Compound</span>
                       </span>

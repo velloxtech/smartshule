@@ -518,7 +518,7 @@ export const InventoryManagementView: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-primary-container via-primary to-maroon-light rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1">
             <span className="material-symbols-outlined text-base">verified_user</span>
@@ -562,66 +562,66 @@ export const InventoryManagementView: React.FC = () => {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Stock Valuation</span>
-            <span className="material-symbols-outlined text-amber-600 text-lg">monetization_on</span>
+            <span className="material-symbols-outlined text-primary text-lg">monetization_on</span>
           </div>
-          <p className="text-xl font-bold text-slate-900 mt-2">
+          <p className="text-xl font-bold text-on-surface mt-2">
             KES {stats.totalValuation.toLocaleString()}
           </p>
-          <p className="text-xs text-slate-500 mt-1">{stats.totalItems} catalog items</p>
+          <p className="text-xs text-on-surface-variant mt-1">{stats.totalItems} catalog items</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Low Stock Alerts</span>
             <span className="material-symbols-outlined text-rose-600 text-lg">warning</span>
           </div>
           <p className="text-xl font-bold text-rose-600 mt-2">{stats.lowStockCount}</p>
-          <p className="text-xs text-slate-500 mt-1">At/below reorder limit</p>
+          <p className="text-xs text-on-surface-variant mt-1">At/below reorder limit</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Pending Approvals</span>
-            <span className="material-symbols-outlined text-blue-600 text-lg">pending_actions</span>
+            <span className="material-symbols-outlined text-primary text-lg">pending_actions</span>
           </div>
-          <p className="text-xl font-bold text-blue-600 mt-2">{stats.pendingPRCount}</p>
-          <p className="text-xs text-slate-500 mt-1">Requires admin review</p>
+          <p className="text-xl font-bold text-primary mt-2">{stats.pendingPRCount}</p>
+          <p className="text-xs text-on-surface-variant mt-1">Requires admin review</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Accounts Payable</span>
-            <span className="material-symbols-outlined text-purple-600 text-lg">receipt_long</span>
+            <span className="material-symbols-outlined text-primary text-lg">receipt_long</span>
           </div>
-          <p className="text-xl font-bold text-purple-600 mt-2">
+          <p className="text-xl font-bold text-primary mt-2">
             KES {stats.totalAccountsPayable.toLocaleString()}
           </p>
-          <p className="text-xs text-slate-500 mt-1">{stats.unpaidInvoicesCount} unpaid invoices</p>
+          <p className="text-xs text-on-surface-variant mt-1">{stats.unpaidInvoicesCount} unpaid invoices</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-on-surface-variant text-xs font-medium">
             <span>Fixed Assets</span>
-            <span className="material-symbols-outlined text-emerald-600 text-lg">domain</span>
+            <span className="material-symbols-outlined text-primary text-lg">domain</span>
           </div>
           <p className="text-xl font-bold text-emerald-600 mt-2">
             KES {stats.totalAssetsValuation.toLocaleString()}
           </p>
-          <p className="text-xs text-slate-500 mt-1">{stats.totalAssets} tagged assets</p>
+          <p className="text-xs text-on-surface-variant mt-1">{stats.totalAssets} tagged assets</p>
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-outline-variant/30 overflow-x-auto">
         <button
           onClick={() => setActiveTab('items')}
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'items'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">inventory_2</span>
@@ -633,7 +633,7 @@ export const InventoryManagementView: React.FC = () => {
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'requests'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">assignment</span>
@@ -645,7 +645,7 @@ export const InventoryManagementView: React.FC = () => {
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'grn'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">inventory</span>
@@ -657,7 +657,7 @@ export const InventoryManagementView: React.FC = () => {
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'invoices'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">request_quote</span>
@@ -669,7 +669,7 @@ export const InventoryManagementView: React.FC = () => {
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'movements'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">history</span>
@@ -681,7 +681,7 @@ export const InventoryManagementView: React.FC = () => {
           className={`px-4 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'assets'
               ? 'border-rose-700 text-rose-800'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-lg">chair</span>
@@ -693,20 +693,20 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 1: STORES CATALOG & STOCK LEVELS                     */}
       {/* ======================================================== */}
       {activeTab === 'items' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div className="flex flex-wrap items-center gap-3 flex-1">
               <input
                 type="text"
                 placeholder="Search items or suppliers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="border border-slate-200 rounded-xl px-4 py-2 text-sm w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="border border-outline-variant/30 rounded-xl px-4 py-2 text-sm w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="border border-outline-variant/30 rounded-xl px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
                 <option value="ALL">All Categories</option>
                 <option value="STATIONERY">Stationery</option>
@@ -725,7 +725,7 @@ export const InventoryManagementView: React.FC = () => {
                   setIssueForm({ ...issueForm, itemId: items[0]?.id || '' });
                   setIsIssueStockModalOpen(true);
                 }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="bg-surface-container-low hover:bg-surface-container text-on-surface-variant px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span className="material-symbols-outlined text-base">output</span>
                 Issue Stock
@@ -735,7 +735,7 @@ export const InventoryManagementView: React.FC = () => {
                   setAdjustForm({ ...adjustForm, itemId: items[0]?.id || '' });
                   setIsAdjustStockModalOpen(true);
                 }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="bg-surface-container-low hover:bg-surface-container text-on-surface-variant px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span className="material-symbols-outlined text-base">tune</span>
                 Stocktake Adjust
@@ -755,7 +755,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Item Name</th>
                   <th className="py-3 px-4">Category</th>
@@ -768,7 +768,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-slate-400">
@@ -779,14 +779,14 @@ export const InventoryManagementView: React.FC = () => {
                   filteredItems.map((item) => {
                     const isLow = item.quantityInStock <= item.reorderLevel;
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50/75 transition-colors">
-                        <td className="py-3 px-4 font-semibold text-slate-900">{item.itemName}</td>
+                      <tr key={item.id} className="hover:bg-surface/75 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-on-surface">{item.itemName}</td>
                         <td className="py-3 px-4">
-                          <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                          <span className="bg-surface-container-low text-on-surface-variant px-2.5 py-0.5 rounded-full text-xs font-medium">
                             {item.category}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-600">{item.unit}</td>
+                        <td className="py-3 px-4 text-on-surface-variant">{item.unit}</td>
                         <td className="py-3 px-4 font-bold">
                           <span
                             className={`px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -796,12 +796,12 @@ export const InventoryManagementView: React.FC = () => {
                             {item.quantityInStock}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-500">{item.reorderLevel}</td>
+                        <td className="py-3 px-4 text-on-surface-variant">{item.reorderLevel}</td>
                         <td className="py-3 px-4">KES {item.unitCost.toLocaleString()}</td>
                         <td className="py-3 px-4 font-semibold">
                           KES {(item.quantityInStock * item.unitCost).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-slate-600">{item.supplier || '—'}</td>
+                        <td className="py-3 px-4 text-on-surface-variant">{item.supplier || '—'}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => {
@@ -834,11 +834,11 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 2: PURCHASE REQUESTS & APPROVAL WORKFLOW             */}
       {/* ======================================================== */}
       {activeTab === 'requests' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Purchase Requests & Approvals</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base font-bold text-on-surface">Purchase Requests & Approvals</h2>
+              <p className="text-xs text-on-surface-variant">
                 Staff creates requisitions; authorized bursar/admin reviews and approves. Invariant: Creating or approving a request never alters inventory stock or available cash balance.
               </p>
             </div>
@@ -863,7 +863,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Request #</th>
                   <th className="py-3 px-4">Item</th>
@@ -875,7 +875,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {purchaseRequests.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center py-8 text-slate-400">
@@ -889,15 +889,15 @@ export const InventoryManagementView: React.FC = () => {
                     const canReceive = pr.status === 'APPROVED' || pr.status === 'PARTIALLY_DELIVERED';
 
                     return (
-                      <tr key={pr.id} className="hover:bg-slate-50/75 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{pr.requestNumber}</td>
+                      <tr key={pr.id} className="hover:bg-surface/75 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-on-surface">{pr.requestNumber}</td>
                         <td className="py-3 px-4 font-semibold">{pr.itemName}</td>
                         <td className="py-3 px-4">{pr.quantityRequested}</td>
                         <td className="py-3 px-4">KES {pr.totalEstimatedCost.toLocaleString()}</td>
-                        <td className="py-3 px-4 text-slate-600">
+                        <td className="py-3 px-4 text-on-surface-variant">
                           {pr.requestedByName}
                           {isSelf && (
-                            <span className="ml-1 text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">
+                            <span className="ml-1 text-[10px] bg-surface-container text-on-surface-variant px-1.5 py-0.5 rounded font-bold">
                               You
                             </span>
                           )}
@@ -930,7 +930,7 @@ export const InventoryManagementView: React.FC = () => {
                                   setSelectedPR(pr);
                                   setIsApprovePRModalOpen(true);
                                 }}
-                                className="text-xs bg-emerald-600 text-white hover:bg-emerald-700 font-semibold px-2.5 py-1 rounded-lg"
+                                className="text-xs bg-primary text-white hover:bg-primary-container font-semibold px-2.5 py-1 rounded-lg"
                               >
                                 Review & Approve
                               </button>
@@ -960,7 +960,7 @@ export const InventoryManagementView: React.FC = () => {
                                 });
                                 setIsReceiveGoodsModalOpen(true);
                               }}
-                              className="text-xs bg-blue-600 text-white hover:bg-blue-700 font-semibold px-2.5 py-1 rounded-lg"
+                              className="text-xs bg-primary text-white hover:bg-primary-container font-semibold px-2.5 py-1 rounded-lg"
                             >
                               Receive Goods (GRN)
                             </button>
@@ -980,11 +980,11 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 3: GOODS RECEIVED NOTES (GRN VERIFICATION)           */}
       {/* ======================================================== */}
       {activeTab === 'grn' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Goods Received Notes (GRN)</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base font-bold text-on-surface">Goods Received Notes (GRN)</h2>
+              <p className="text-xs text-on-surface-variant">
                 Official delivery inspection record. Stock on hand is incremented ONLY by actual accepted quantities.
               </p>
             </div>
@@ -1014,7 +1014,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">GRN #</th>
                   <th className="py-3 px-4">Item Name</th>
@@ -1027,7 +1027,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {grns.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-slate-400">
@@ -1036,15 +1036,15 @@ export const InventoryManagementView: React.FC = () => {
                   </tr>
                 ) : (
                   grns.map((g) => (
-                    <tr key={g.id} className="hover:bg-slate-50/75 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{g.grnNumber}</td>
+                    <tr key={g.id} className="hover:bg-surface/75 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-on-surface">{g.grnNumber}</td>
                       <td className="py-3 px-4 font-semibold">{g.itemName}</td>
                       <td className="py-3 px-4">{g.quantityOrdered}</td>
                       <td className="py-3 px-4 font-medium">{g.quantityDelivered}</td>
                       <td className="py-3 px-4 font-bold text-emerald-700">+{g.quantityAccepted}</td>
                       <td className="py-3 px-4 text-rose-600">{g.quantityRejected || 0}</td>
-                      <td className="py-3 px-4 text-slate-600">{g.receivedByName}</td>
-                      <td className="py-3 px-4 text-slate-500">{g.receivedDate}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{g.receivedByName}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{g.receivedDate}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -1071,11 +1071,11 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 4: SUPPLIER INVOICES & ACCOUNTS PAYABLE              */}
       {/* ======================================================== */}
       {activeTab === 'invoices' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Supplier Invoices & Accounts Payable</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base font-bold text-on-surface">Supplier Invoices & Accounts Payable</h2>
+              <p className="text-xs text-on-surface-variant">
                 Track supplier invoices. Disbursing payment generates an official expense voucher and deducts funds from the chosen school account.
               </p>
             </div>
@@ -1090,7 +1090,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Invoice #</th>
                   <th className="py-3 px-4">Supplier</th>
@@ -1103,7 +1103,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {invoices.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-slate-400">
@@ -1112,10 +1112,10 @@ export const InventoryManagementView: React.FC = () => {
                   </tr>
                 ) : (
                   invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-slate-50/75 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{inv.invoiceNumber}</td>
+                    <tr key={inv.id} className="hover:bg-surface/75 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-on-surface">{inv.invoiceNumber}</td>
                       <td className="py-3 px-4 font-semibold">{inv.supplierName}</td>
-                      <td className="py-3 px-4 text-slate-500">{inv.invoiceDate}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{inv.invoiceDate}</td>
                       <td className="py-3 px-4 font-bold">KES {inv.totalAmount.toLocaleString()}</td>
                       <td className="py-3 px-4 text-emerald-700 font-medium">KES {inv.amountPaid.toLocaleString()}</td>
                       <td className="py-3 px-4 font-bold text-rose-600">KES {inv.balance.toLocaleString()}</td>
@@ -1132,7 +1132,7 @@ export const InventoryManagementView: React.FC = () => {
                           {inv.paymentStatus}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-xs text-slate-600">{inv.voucherNumber || '—'}</td>
+                      <td className="py-3 px-4 font-mono text-xs text-on-surface-variant">{inv.voucherNumber || '—'}</td>
                       <td className="py-3 px-4 text-right space-x-2">
                         {inv.balance > 0 && (
                           <button
@@ -1148,7 +1148,7 @@ export const InventoryManagementView: React.FC = () => {
                               });
                               setIsPayInvoiceModalOpen(true);
                             }}
-                            className="text-xs bg-emerald-600 text-white hover:bg-emerald-700 font-semibold px-2.5 py-1 rounded-lg"
+                            className="text-xs bg-primary text-white hover:bg-primary-container font-semibold px-2.5 py-1 rounded-lg"
                           >
                             Disburse Payment
                           </button>
@@ -1179,11 +1179,11 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 5: STOCK MOVEMENTS & AUDIT LEDGER                    */}
       {/* ======================================================== */}
       {activeTab === 'movements' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Stock Movements & Audit Trail</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base font-bold text-on-surface">Stock Movements & Audit Trail</h2>
+              <p className="text-xs text-on-surface-variant">
                 Immutable chronological log of all stock movements: Goods receipts, teacher/kitchen requisitions, audit count adjustments, and write-offs.
               </p>
             </div>
@@ -1193,7 +1193,7 @@ export const InventoryManagementView: React.FC = () => {
                   setIssueForm({ ...issueForm, itemId: items[0]?.id || '' });
                   setIsIssueStockModalOpen(true);
                 }}
-                className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="bg-primary hover:bg-primary-container text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span className="material-symbols-outlined text-base">output</span>
                 Requisition Issue
@@ -1203,7 +1203,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Item Name</th>
@@ -1216,7 +1216,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4">Authorized By</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {movements.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-slate-400">
@@ -1225,16 +1225,16 @@ export const InventoryManagementView: React.FC = () => {
                   </tr>
                 ) : (
                   movements.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50/75 transition-colors">
-                      <td className="py-3 px-4 text-slate-500">{m.date}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{m.itemName}</td>
+                    <tr key={m.id} className="hover:bg-surface/75 transition-colors">
+                      <td className="py-3 px-4 text-on-surface-variant">{m.date}</td>
+                      <td className="py-3 px-4 font-semibold text-on-surface">{m.itemName}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                             m.movementType === 'GOODS_RECEIVED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : m.movementType === 'STOCK_ISSUE'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-primary-fixed text-on-primary-fixed'
                               : m.movementType === 'STOCK_ADJUSTMENT'
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-rose-100 text-rose-800'
@@ -1246,11 +1246,11 @@ export const InventoryManagementView: React.FC = () => {
                       <td className="py-3 px-4 font-bold">
                         {m.quantity > 0 && m.movementType === 'GOODS_RECEIVED' ? `+${m.quantity}` : m.quantity}
                       </td>
-                      <td className="py-3 px-4 text-slate-500">{m.balanceBefore}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{m.balanceBefore}</td>
                       <td className="py-3 px-4 font-semibold">{m.balanceAfter}</td>
-                      <td className="py-3 px-4 text-slate-700">{m.issuedTo || '—'}</td>
-                      <td className="py-3 px-4 text-slate-600 text-xs">{m.reason}</td>
-                      <td className="py-3 px-4 text-slate-600 text-xs">{m.authorizedByName}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{m.issuedTo || '—'}</td>
+                      <td className="py-3 px-4 text-on-surface-variant text-xs">{m.reason}</td>
+                      <td className="py-3 px-4 text-on-surface-variant text-xs">{m.authorizedByName}</td>
                     </tr>
                   ))
                 )}
@@ -1264,11 +1264,11 @@ export const InventoryManagementView: React.FC = () => {
       {/* TAB 6: FIXED ASSETS REGISTER                             */}
       {/* ======================================================== */}
       {activeTab === 'assets' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-sm overflow-hidden space-y-4">
+          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-outline-variant/30">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Fixed Asset Register</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base font-bold text-on-surface">Fixed Asset Register</h2>
+              <p className="text-xs text-on-surface-variant">
                 Permanent institutional assets, serial tags, physical location, and condition audit.
               </p>
             </div>
@@ -1283,7 +1283,7 @@ export const InventoryManagementView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant/30">
                 <tr>
                   <th className="py-3 px-4">Asset Tag</th>
                   <th className="py-3 px-4">Asset Name</th>
@@ -1295,7 +1295,7 @@ export const InventoryManagementView: React.FC = () => {
                   <th className="py-3 px-4">Custodian</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-100 text-on-surface">
                 {assets.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center py-8 text-slate-400">
@@ -1304,22 +1304,22 @@ export const InventoryManagementView: React.FC = () => {
                   </tr>
                 ) : (
                   assets.map((asset) => (
-                    <tr key={asset.id} className="hover:bg-slate-50/75 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{asset.assetTag}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{asset.assetName}</td>
+                    <tr key={asset.id} className="hover:bg-surface/75 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-on-surface">{asset.assetTag}</td>
+                      <td className="py-3 px-4 font-semibold text-on-surface">{asset.assetName}</td>
                       <td className="py-3 px-4">
-                        <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                        <span className="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-full text-xs font-medium">
                           {asset.category}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-700">{asset.location}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{asset.location}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                             asset.condition === 'EXCELLENT'
                               ? 'bg-emerald-100 text-emerald-800'
                               : asset.condition === 'GOOD'
-                              ? 'bg-blue-100 text-blue-800'
+                              ? 'bg-primary-fixed text-on-primary-fixed'
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
@@ -1327,8 +1327,8 @@ export const InventoryManagementView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 font-semibold">KES {asset.purchaseCost.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-slate-500">{asset.purchaseDate}</td>
-                      <td className="py-3 px-4 text-slate-600">{asset.assignedTo || 'Unassigned'}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{asset.purchaseDate}</td>
+                      <td className="py-3 px-4 text-on-surface-variant">{asset.assignedTo || 'Unassigned'}</td>
                     </tr>
                   ))
                 )}
@@ -1343,16 +1343,16 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isAddItemModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Add Stock Item to Stores Catalog</h3>
-              <button onClick={() => setIsAddItemModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Add Stock Item to Stores Catalog</h3>
+              <button onClick={() => setIsAddItemModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleAddItem} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Item Name *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Item Name *</label>
                 <input
                   type="text"
                   required
@@ -1365,11 +1365,11 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Category *</label>
                   <select
                     value={itemForm.category}
                     onChange={(e) => setItemForm({ ...itemForm, category: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="STATIONERY">Stationery</option>
                     <option value="TEXTBOOKS">Textbooks</option>
@@ -1381,7 +1381,7 @@ export const InventoryManagementView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Unit of Measure *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Unit of Measure *</label>
                   <input
                     type="text"
                     required
@@ -1395,7 +1395,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Initial Stock</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Initial Stock</label>
                   <input
                     type="number"
                     min="0"
@@ -1405,7 +1405,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Reorder Limit</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Reorder Limit</label>
                   <input
                     type="number"
                     min="1"
@@ -1415,7 +1415,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Unit Cost (KES)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Unit Cost (KES)</label>
                   <input
                     type="number"
                     min="0"
@@ -1427,7 +1427,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Preferred Supplier</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Preferred Supplier</label>
                 <input
                   type="text"
                   placeholder="e.g. Apex School Supplies Ltd"
@@ -1441,7 +1441,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddItemModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -1462,16 +1462,16 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isNewPRModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">New Inventory Purchase Request</h3>
-              <button onClick={() => setIsNewPRModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">New Inventory Purchase Request</h3>
+              <button onClick={() => setIsNewPRModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleCreatePurchaseRequest} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Select Catalog Item *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Catalog Item *</label>
                 <select
                   required
                   value={prForm.itemId}
@@ -1484,7 +1484,7 @@ export const InventoryManagementView: React.FC = () => {
                       supplierName: sel?.supplier || prForm.supplierName
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -1497,7 +1497,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity Requested *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Quantity Requested *</label>
                   <input
                     type="number"
                     min="1"
@@ -1508,7 +1508,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimated Unit Cost (KES) *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Estimated Unit Cost (KES) *</label>
                   <input
                     type="number"
                     min="1"
@@ -1520,15 +1520,15 @@ export const InventoryManagementView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex justify-between">
-                <span className="font-semibold text-slate-700">Total Estimated Cost:</span>
-                <span className="font-bold text-slate-900">
+              <div className="bg-surface p-3 rounded-xl border border-outline-variant/30 text-xs flex justify-between">
+                <span className="font-semibold text-on-surface-variant">Total Estimated Cost:</span>
+                <span className="font-bold text-on-surface">
                   KES {(prForm.quantityRequested * prForm.estimatedUnitCost).toLocaleString()}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Purpose / Reason *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Purpose / Reason *</label>
                 <textarea
                   required
                   rows={2}
@@ -1540,7 +1540,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Suggested Supplier</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Suggested Supplier</label>
                 <input
                   type="text"
                   placeholder="Supplier name"
@@ -1554,7 +1554,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsNewPRModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -1575,10 +1575,10 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isApprovePRModalOpen && selectedPR && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Approve Purchase Request</h3>
-              <button onClick={() => setIsApprovePRModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Approve Purchase Request</h3>
+              <button onClick={() => setIsApprovePRModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -1603,31 +1603,31 @@ export const InventoryManagementView: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleApprovePR} className="space-y-4">
-                <div className="bg-slate-50 p-3 rounded-xl border space-y-1 text-xs">
+                <div className="bg-surface p-3 rounded-xl border space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Order:</span>
+                    <span className="text-on-surface-variant">Order:</span>
                     <span className="font-mono font-bold">{selectedPR.requestNumber}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Item:</span>
+                    <span className="text-on-surface-variant">Item:</span>
                     <span className="font-semibold">{selectedPR.itemName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Requested Qty:</span>
+                    <span className="text-on-surface-variant">Requested Qty:</span>
                     <span className="font-bold">{selectedPR.quantityRequested}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Estimated Total:</span>
-                    <span className="font-bold text-slate-900">KES {selectedPR.totalEstimatedCost.toLocaleString()}</span>
+                    <span className="text-on-surface-variant">Estimated Total:</span>
+                    <span className="font-bold text-on-surface">KES {selectedPR.totalEstimatedCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Requester:</span>
-                    <span className="font-medium text-slate-700">{selectedPR.requestedByName}</span>
+                    <span className="text-on-surface-variant">Requester:</span>
+                    <span className="font-medium text-on-surface-variant">{selectedPR.requestedByName}</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Approval Notes (Optional)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Approval Notes (Optional)</label>
                   <textarea
                     rows={2}
                     placeholder="Approved for Term 1 CBC science lab replenishment..."
@@ -1641,13 +1641,13 @@ export const InventoryManagementView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsApprovePRModalOpen(false)}
-                    className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                    className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                   >
                     Confirm Approval
                   </button>
@@ -1663,19 +1663,19 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isRejectPRModalOpen && selectedPR && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Reject Purchase Request</h3>
-              <button onClick={() => setIsRejectPRModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Reject Purchase Request</h3>
+              <button onClick={() => setIsRejectPRModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleRejectPR} className="space-y-4">
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-on-surface-variant">
                 Are you sure you want to reject requisition <strong>{selectedPR.requestNumber}</strong> for {selectedPR.itemName}? Please provide an official justification.
               </p>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Rejection Reason *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Rejection Reason *</label>
                 <textarea
                   required
                   rows={3}
@@ -1690,7 +1690,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsRejectPRModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -1711,16 +1711,16 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isReceiveGoodsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Goods Received Note (GRN) Inspection</h3>
-              <button onClick={() => setIsReceiveGoodsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Goods Received Note (GRN) Inspection</h3>
+              <button onClick={() => setIsReceiveGoodsModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleReceiveGoods} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Approved Purchase Request *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Approved Purchase Request *</label>
                 <select
                   required
                   value={grnForm.purchaseRequestId}
@@ -1733,7 +1733,7 @@ export const InventoryManagementView: React.FC = () => {
                       quantityAccepted: pr ? pr.outstandingQuantity : grnForm.quantityAccepted
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Select Approved Order --</option>
                   {purchaseRequests
@@ -1748,7 +1748,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Delivered Qty *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Delivered Qty *</label>
                   <input
                     type="number"
                     min="1"
@@ -1766,7 +1766,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Accepted Qty *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Accepted Qty *</label>
                   <input
                     type="number"
                     min="0"
@@ -1780,11 +1780,11 @@ export const InventoryManagementView: React.FC = () => {
                         quantityRejected: Math.max(0, grnForm.quantityDelivered - acc)
                       });
                     }}
-                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-emerald-700"
+                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Rejected Qty</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Rejected Qty</label>
                   <input
                     type="number"
                     min="0"
@@ -1818,7 +1818,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Note Ref</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Delivery Note Ref</label>
                   <input
                     type="text"
                     placeholder="e.g. DN-9042"
@@ -1828,7 +1828,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Received Date *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Received Date *</label>
                   <input
                     type="date"
                     required
@@ -1847,7 +1847,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsReceiveGoodsModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -1868,17 +1868,17 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isRecordInvoiceModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Record Supplier Invoice</h3>
-              <button onClick={() => setIsRecordInvoiceModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Record Supplier Invoice</h3>
+              <button onClick={() => setIsRecordInvoiceModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleRecordInvoice} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Name *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Supplier Name *</label>
                   <input
                     type="text"
                     required
@@ -1889,7 +1889,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Number *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Invoice Number *</label>
                   <input
                     type="text"
                     required
@@ -1902,7 +1902,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Linked Purchase Request (Optional)</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Linked Purchase Request (Optional)</label>
                 <select
                   value={invoiceForm.purchaseRequestId}
                   onChange={(e) => {
@@ -1914,7 +1914,7 @@ export const InventoryManagementView: React.FC = () => {
                       supplierName: pr?.supplierName || invoiceForm.supplierName
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- No Direct Link / Independent Invoice --</option>
                   {purchaseRequests.map((p) => (
@@ -1927,7 +1927,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Invoice Date *</label>
                   <input
                     type="date"
                     required
@@ -1937,7 +1937,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Due Date</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Due Date</label>
                   <input
                     type="date"
                     value={invoiceForm.dueDate}
@@ -1949,7 +1949,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Total Amount (KES) *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Total Amount (KES) *</label>
                   <input
                     type="number"
                     min="1"
@@ -1960,7 +1960,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Amount (KES)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Tax Amount (KES)</label>
                   <input
                     type="number"
                     min="0"
@@ -1975,7 +1975,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsRecordInvoiceModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -1996,36 +1996,36 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isPayInvoiceModalOpen && selectedInvoice && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Disburse Supplier Payment</h3>
-              <button onClick={() => setIsPayInvoiceModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Disburse Supplier Payment</h3>
+              <button onClick={() => setIsPayInvoiceModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleDisbursePayment} className="space-y-4">
-              <div className="bg-slate-50 p-3 rounded-xl border space-y-1 text-xs">
+              <div className="bg-surface p-3 rounded-xl border space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Invoice:</span>
+                  <span className="text-on-surface-variant">Invoice:</span>
                   <span className="font-mono font-bold">{selectedInvoice.invoiceNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Supplier:</span>
+                  <span className="text-on-surface-variant">Supplier:</span>
                   <span className="font-semibold">{selectedInvoice.supplierName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Total Invoice:</span>
+                  <span className="text-on-surface-variant">Total Invoice:</span>
                   <span className="font-semibold">KES {selectedInvoice.totalAmount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Outstanding Balance:</span>
+                  <span className="text-on-surface-variant">Outstanding Balance:</span>
                   <span className="font-bold text-rose-600">KES {selectedInvoice.balance.toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Amount (KES) *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disbursement Amount (KES) *</label>
                   <input
                     type="number"
                     min="1"
@@ -2033,15 +2033,15 @@ export const InventoryManagementView: React.FC = () => {
                     required
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-emerald-700"
+                    className="w-full border rounded-xl px-3 py-2 text-sm font-bold text-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Funding Account *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Funding Account *</label>
                   <select
                     value={paymentForm.fundingAccount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, fundingAccount: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="BANK">School Bank Account</option>
                     <option value="MPESA">School M-Pesa Paybill / Till</option>
@@ -2053,11 +2053,11 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Payment Method *</label>
                   <select
                     value={paymentForm.paymentMethod}
                     onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="BANK">Bank Transfer / EFT</option>
                     <option value="MPESA">M-Pesa B2B / Till</option>
@@ -2066,7 +2066,7 @@ export const InventoryManagementView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Reference *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Transaction Reference *</label>
                   <input
                     type="text"
                     required
@@ -2086,13 +2086,13 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsPayInvoiceModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Process Payment & Post Voucher
                 </button>
@@ -2107,19 +2107,19 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isReversePaymentModalOpen && selectedInvoice && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Reverse Supplier Payment</h3>
-              <button onClick={() => setIsReversePaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Reverse Supplier Payment</h3>
+              <button onClick={() => setIsReversePaymentModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleReversePayment} className="space-y-4">
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-on-surface-variant">
                 This will reverse the paid amount of <strong>KES {selectedInvoice.amountPaid.toLocaleString()}</strong> for invoice <strong>{selectedInvoice.invoiceNumber}</strong>. The linked expense voucher will be cancelled and funds restored to the school ledger balance.
               </p>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Reversal Reason *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Reversal Reason *</label>
                 <textarea
                   required
                   rows={3}
@@ -2134,7 +2134,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsReversePaymentModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -2155,21 +2155,21 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isIssueStockModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Stock Requisition / Issue</h3>
-              <button onClick={() => setIsIssueStockModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Stock Requisition / Issue</h3>
+              <button onClick={() => setIsIssueStockModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleIssueStock} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Item to Issue *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Item to Issue *</label>
                 <select
                   required
                   value={issueForm.itemId}
                   onChange={(e) => setIssueForm({ ...issueForm, itemId: e.target.value })}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2182,7 +2182,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity to Issue *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Quantity to Issue *</label>
                   <input
                     type="number"
                     min="1"
@@ -2193,7 +2193,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Issued To / Recipient *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Issued To / Recipient *</label>
                   <input
                     type="text"
                     required
@@ -2206,7 +2206,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Purpose / Reason *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Purpose / Reason *</label>
                 <input
                   type="text"
                   required
@@ -2221,13 +2221,13 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsIssueStockModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-black text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Confirm Stock Issue
                 </button>
@@ -2242,16 +2242,16 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isAdjustStockModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Stocktake Count Adjustment</h3>
-              <button onClick={() => setIsAdjustStockModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Stocktake Count Adjustment</h3>
+              <button onClick={() => setIsAdjustStockModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleAdjustStock} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Item *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Item *</label>
                 <select
                   required
                   value={adjustForm.itemId}
@@ -2263,7 +2263,7 @@ export const InventoryManagementView: React.FC = () => {
                       newQuantity: sel ? sel.quantityInStock : adjustForm.newQuantity
                     });
                   }}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2275,7 +2275,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">New Physical Stock Count *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">New Physical Stock Count *</label>
                 <input
                   type="number"
                   min="0"
@@ -2287,7 +2287,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Adjustment Justification *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Adjustment Justification *</label>
                 <textarea
                   required
                   rows={2}
@@ -2302,13 +2302,13 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAdjustStockModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-sm"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-sm font-bold shadow-sm"
                 >
                   Update Stock Balance
                 </button>
@@ -2323,21 +2323,21 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isDisposeStockModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Stock Disposal / Write-Off</h3>
-              <button onClick={() => setIsDisposeStockModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Stock Disposal / Write-Off</h3>
+              <button onClick={() => setIsDisposeStockModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleDisposeStock} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Item to Write Off *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Item to Write Off *</label>
                 <select
                   required
                   value={disposeForm.itemId}
                   onChange={(e) => setDisposeForm({ ...disposeForm, itemId: e.target.value })}
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                 >
                   <option value="">-- Choose Item --</option>
                   {items.map((i) => (
@@ -2350,7 +2350,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Quantity *</label>
                   <input
                     type="number"
                     min="1"
@@ -2361,7 +2361,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disposal Order Reference</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disposal Order Reference</label>
                   <input
                     type="text"
                     placeholder="e.g. DISP-2026-01"
@@ -2373,7 +2373,7 @@ export const InventoryManagementView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Disposal Reason / Remarks *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Disposal Reason / Remarks *</label>
                 <textarea
                   required
                   rows={2}
@@ -2388,7 +2388,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsDisposeStockModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>
@@ -2409,17 +2409,17 @@ export const InventoryManagementView: React.FC = () => {
       {/* ======================================================== */}
       {isAddAssetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Tag & Register Institutional Fixed Asset</h3>
-              <button onClick={() => setIsAddAssetModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="text-lg font-bold text-on-surface">Tag & Register Institutional Fixed Asset</h3>
+              <button onClick={() => setIsAddAssetModalOpen(false)} className="text-slate-400 hover:text-on-surface-variant">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleAddAsset} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Asset Name *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Asset Name *</label>
                   <input
                     type="text"
                     required
@@ -2430,7 +2430,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Asset Tag (Barcode/Tag) *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Asset Tag (Barcode/Tag) *</label>
                   <input
                     type="text"
                     required
@@ -2444,11 +2444,11 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Category *</label>
                   <select
                     value={assetForm.category}
                     onChange={(e) => setAssetForm({ ...assetForm, category: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="FURNITURE_DESKS">Furniture & Desks</option>
                     <option value="COMPUTERS_IT">Computers & IT</option>
@@ -2458,7 +2458,7 @@ export const InventoryManagementView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Physical Location *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Physical Location *</label>
                   <input
                     type="text"
                     required
@@ -2472,7 +2472,7 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Cost (KES) *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Purchase Cost (KES) *</label>
                   <input
                     type="number"
                     min="0"
@@ -2483,7 +2483,7 @@ export const InventoryManagementView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Date *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Purchase Date *</label>
                   <input
                     type="date"
                     required
@@ -2496,11 +2496,11 @@ export const InventoryManagementView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Condition</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Condition</label>
                   <select
                     value={assetForm.condition}
                     onChange={(e) => setAssetForm({ ...assetForm, condition: e.target.value as any })}
-                    className="w-full border rounded-xl px-3 py-2 text-sm bg-white"
+                    className="w-full border rounded-xl px-3 py-2 text-sm bg-surface"
                   >
                     <option value="EXCELLENT">Excellent</option>
                     <option value="GOOD">Good</option>
@@ -2509,7 +2509,7 @@ export const InventoryManagementView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Custodian / Assigned Staff</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Custodian / Assigned Staff</label>
                   <input
                     type="text"
                     placeholder="e.g. IT Department / Head of Science"
@@ -2524,7 +2524,7 @@ export const InventoryManagementView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddAssetModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface"
                 >
                   Cancel
                 </button>

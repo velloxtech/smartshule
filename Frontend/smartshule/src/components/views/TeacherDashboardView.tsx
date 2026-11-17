@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { isPackagedClient } from '../../utils/runtime';
+import { LearnerProfileModal } from '../modals/LearnerProfileModal';
+import type { TeacherAuthorizedContext } from '../../services/api';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
@@ -8,6 +11,8 @@ import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
 import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
 import { TeacherSalaryAcknowledgementCard } from './TeacherSalaryAcknowledgementCard';
+import {teacherDashboardCohorts} from '../../utils/teacherDashboardCohorts';
+import {TeacherTodaySummary} from '../teacher/TeacherTodaySummary';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -25,11 +30,29 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   refreshTrigger = 0,
 }) => {
   const { user } = useAuth();
+  const web = !isPackagedClient();
+  const [authorized, setAuthorized] = useState<TeacherAuthorizedContext | null>(null);
+  const [assignmentRefresh, setAssignmentRefresh] = useState(0);
+  useEffect(() => {
+    if (!web) return;
+    const refresh = () => { if (document.visibilityState === 'visible') setAssignmentRefresh(n=>n+1); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const timer = window.setInterval(refresh, 60000);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(timer); };
+  }, [web]);
+  const [classError, setClassError] = useState('');
+  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const cohortOptions = teacherDashboardCohorts(authorized?.assignedClasses || []);
+  const selected = cohortOptions[0];
+  const canViewSelectedRoster = !web || selected?.isClassTeacher===true;
+
 
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [myStudents, setMyStudents] = useState<Student[]>([]);
   const [todayRegister, setTodayRegister] = useState<any>(null);
   const [mySlots, setMySlots] = useState<TimetableSlot[]>([]);
+  const [timetableUnavailable,setTimetableUnavailable]=useState(false);
   const [mySchemes, setMySchemes] = useState<SchemeOfWork[]>([]);
   const [myLessonPlans, setMyLessonPlans] = useState<LessonPlan[]>([]);
   const [myAssessmentsCount, setMyAssessmentsCount] = useState<number>(0);
@@ -65,8 +88,12 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function loadTeacherData() {
       setLoading(true);
+      setTimetableUnavailable(false);
+      setClassError('');
+      setMyStudents([]);
       try {
         // 1. Teacher Profile, Academic Context, Classes and School Info
         const [profileRes, ctxRes, classesRes, schoolRes] = await Promise.all([
@@ -75,6 +102,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           apiService.getClasses().catch(() => null),
           apiService.getSchool().catch(() => null),
         ]);
+        if(cancelled)return;
         const profile = profileRes?.data || null;
         setTeacherProfile(profile);
         const ctx = ctxRes?.data || null;
@@ -105,6 +133,23 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           }
         }
 
+        let assignedStreamId: string | undefined;
+        let assignedClassId: string | undefined;
+        let hasAssignment = true;
+        let canViewClassRoster = !web;
+        if (web) {
+          const contextRes = await apiService.getTeacherAuthorizedContext(ctx?.currentYear?.id, ctx?.currentTerm?.id);
+          if (cancelled) return;
+          const context = contextRes.data;
+          setAuthorized(context);
+          const choices = teacherDashboardCohorts(context.assignedClasses);
+          const chosen = choices[0];
+          hasAssignment = Boolean(chosen);
+          canViewClassRoster = chosen?.isClassTeacher===true;
+          assignedStreamId = chosen?.streamId || undefined;
+          assignedClassId = chosen?.classId;
+          setResolvedAssignedClass(chosen?.label || 'No active class assignment');
+        } else {
         // Determine assigned stream IDs from DB profile or classTeacherId assignment
         let assignedStreamIds: string[] = Array.isArray(profile?.assignedClassStreamIds)
           ? profile.assignedClassStreamIds
@@ -125,21 +170,23 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         }
         setResolvedAssignedClass(resolvedClassName);
 
-        const assignedStreamId = assignedStreamIds[0];
+        assignedStreamId = assignedStreamIds[0];
+        }
         const teacherId = profile?.id;
         const termId = ctx?.currentTerm?.id;
 
         // 2. Parallel data fetching
         const [stRes, regRes, ttRes, schRes, lpRes, formRes, sumRes] = await Promise.all([
-          apiService.getStudents({ streamId: assignedStreamId || undefined }).catch(() => null),
-          assignedStreamId ? apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null) : Promise.resolve(null),
-          teacherId ? apiService.getTeacherTimetable(teacherId, termId).catch(() => null) : Promise.resolve(null),
+          hasAssignment&&canViewClassRoster ? apiService.getStudents({ classroomId:assignedClassId, streamId:assignedStreamId, academicYearId:web?ctx?.currentYear?.id:undefined, termId:web?ctx?.currentTerm?.id:undefined }).catch(error=>{if(!cancelled)setClassError('Your assignments are loaded, but the class learner roster could not be loaded. '+(error.message||''));return null;}) : Promise.resolve(null),
+          canViewClassRoster&&assignedStreamId ? apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null) : Promise.resolve(null),
+          teacherId ? apiService.getTeacherTimetable(teacherId, termId,web?ctx?.currentYear?.id:undefined).catch(() => {if(!cancelled)setTimetableUnavailable(true);return null;}) : Promise.resolve(null),
           teacherId ? apiService.getSchemes({ teacherId }).catch(() => null) : Promise.resolve(null),
           teacherId ? apiService.getLessonPlans({ teacherId }).catch(() => null) : Promise.resolve(null),
           apiService.listFormatives().catch(() => null),
           apiService.listSummatives().catch(() => null),
         ]);
 
+        if (cancelled) return;
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped: Student[] = stRes.data.map((s: any) => ({
             id: s.id,
@@ -193,14 +240,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         const totalAssessments = (formRes?.data?.length || 0) + (sumRes?.data?.length || 0);
         setMyAssessmentsCount(totalAssessments);
       } catch (err) {
+        if (!cancelled) {
+          setClassError(err instanceof Error ? err.message : 'Could not load your assigned class.');
+          if (web) {setAuthorized(null);setResolvedAssignedClass('Assignments could not be loaded');}
+        }
         console.error('Error loading teacher dashboard data:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadTeacherData();
-  }, [todayDate, refreshTrigger]);
+    return () => { cancelled = true; };
+  }, [todayDate, refreshTrigger, web, assignmentRefresh]);
 
   const currentTeacherUser = teacherProfile?.user || user;
   const teacherName = currentTeacherUser ? `${currentTeacherUser.firstName} ${currentTeacherUser.lastName}` : 'Teacher';
@@ -356,6 +408,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {web&&<TeacherTodaySummary slots={mySlots} classes={authorized?.assignedClasses||[]} context={currentContext} loading={loading} error={classError} unavailable={timetableUnavailable} onNavigate={onNavigateTab}/>}
       {/* Teacher Welcome & Profile Banner */}
       <div className="bg-surface-container-lowest rounded-2xl p-5 sm:p-6 shadow-xs border border-outline-variant/30 flex flex-col lg:flex-row lg:items-start justify-between gap-5 sm:gap-6">
         <div className="flex-1 min-w-0">
@@ -363,7 +416,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <h1 className="font-headline-lg text-2xl font-bold text-on-surface tracking-tight">
               Welcome, Tr. {teacherName}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#7a1228]/10 text-[#7a1228]">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
               CBC Educator
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-data-mono font-semibold bg-surface-container text-on-surface-variant">
@@ -392,7 +445,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             {currentContext?.currentTerm?.name && (
               <>
                 <span>·</span>
-                <span className="inline-flex items-center gap-1 font-data-mono text-secondary font-semibold">
+                <span className="inline-flex items-center gap-1 font-data-mono text-success font-semibold">
                   {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
                 </span>
               </>
@@ -407,12 +460,12 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
             title="Edit your teacher profile, contact information, or learning areas"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#7a1228]">edit_note</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">edit_note</span>
             <span>Edit Profile</span>
           </button>
           <button
             onClick={() => onNavigateTab('attendance-register')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
             <span>Take Roll Call</span>
@@ -422,20 +475,20 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
             title="Log or view today's incidents in the Daily Occurrence Book"
           >
-            <span className="material-symbols-outlined text-[16px] text-amber-700">event_note</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">event_note</span>
             <span>Occurrence Book</span>
           </button>
           <button
             onClick={() => onNavigateTab('curriculum-tracker')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary text-xs font-semibold shadow-xs transition-all cursor-pointer"
             title="Track weekly syllabus progress & confirm coverage"
           >
-            <span className="material-symbols-outlined text-[16px] text-emerald-700">fact_check</span>
-            <span>Curriculum Tracker</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">fact_check</span>
+            <span>Syllabus Coverage Plan</span>
           </button>
           <button
             onClick={() => onOpenUploadMarks()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-secondary text-white hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">grade</span>
             <span>Upload Marks</span>
@@ -463,9 +516,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       </div>
 
       {/* 4 Core Teacher KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${canViewSelectedRoster?'lg:grid-cols-4':'lg:grid-cols-3'} gap-4`}>
         {/* 1. My Class Enrollment */}
-        <div
+        {canViewSelectedRoster&&<div
           onClick={() => onNavigateTab('students-guardians')}
           className="rounded-xl bg-surface-container-lowest p-5 flex flex-col justify-between shadow-xs border border-outline-variant/30 relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
         >
@@ -474,7 +527,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
               <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                 My Class Learners
               </span>
-              <span className="w-8 h-8 rounded-lg bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center">
+              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                 <span className="material-symbols-outlined text-[18px]">groups</span>
               </span>
             </div>
@@ -488,10 +541,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between text-xs">
             <span className="font-semibold text-primary">{boysCount} Boys</span>
             <span className="text-outline">·</span>
-            <span className="font-semibold text-secondary">{girlsCount} Girls</span>
+            <span className="font-semibold text-success">{girlsCount} Girls</span>
           </div>
-        </div>
-
+        </div>}
         {/* 2. Today's Roll Call Status */}
         <div
           onClick={() => onNavigateTab('attendance-register')}
@@ -503,7 +555,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                 Today's Roll Call
               </span>
               <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                hasRegisterToday ? 'bg-secondary-container text-on-secondary-container' : 'bg-amber-100 text-amber-800'
+                hasRegisterToday ? 'bg-success-container text-on-success-container' : 'bg-amber-100 text-amber-800'
               }`}>
                 <span className="material-symbols-outlined text-[18px]">
                   {hasRegisterToday ? 'checklist_rtl' : 'pending_actions'}
@@ -517,7 +569,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between text-xs">
-            <span className={`font-semibold ${hasRegisterToday ? 'text-secondary' : 'text-amber-700'}`}>
+            <span className={`font-semibold ${hasRegisterToday ? 'text-success' : 'text-amber-700'}`}>
               {hasRegisterToday ? `${presentCount}/${totalInClass} Recorded` : 'Click to Take Roll Call →'}
             </span>
           </div>
@@ -586,7 +638,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           onClick={() => onNavigateTab('attendance-register')}
           className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-lg bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center group-hover:bg-[#7a1228] group-hover:text-white transition-colors">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
           </div>
           <div>
@@ -597,9 +649,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
         <button
           onClick={() => onOpenUploadMarks()}
-          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-secondary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
+          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors">
+          <div className="w-9 h-9 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[20px]">add_chart</span>
           </div>
           <div>
@@ -610,13 +662,13 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
         <button
           onClick={() => onNavigateTab('curriculum-tracker')}
-          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-emerald-600 hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
+          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+          <div className="w-9 h-9 rounded-lg bg-primary-fixed text-primary flex items-center justify-center group-hover:bg-primary-container group-hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[20px]">fact_check</span>
           </div>
           <div>
-            <div className="font-bold text-xs text-on-surface">Curriculum Tracker</div>
+            <div className="font-bold text-xs text-on-surface">Syllabus Coverage Plan</div>
             <div className="text-[11px] text-on-surface-variant">Weekly syllabus progress</div>
           </div>
         </button>
@@ -655,16 +707,16 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <span className="material-symbols-outlined text-[20px]">calendar_view_week</span>
           </div>
           <div>
-            <div className="font-bold text-xs text-on-surface">Edit Timetable</div>
-            <div className="text-[11px] text-on-surface-variant">Manage periods & rooms</div>
+            <div className="font-bold text-xs text-on-surface">{web?'My Timetable':'Edit Timetable'}</div>
+            <div className="text-[11px] text-on-surface-variant">{web?'View my teaching and class schedules':'Manage periods & rooms'}</div>
           </div>
         </button>
 
         <button
           onClick={() => onNavigateTab('occurrence-records')}
-          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-[#7a1228] hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
+          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center group-hover:bg-[#7a1228] group-hover:text-white transition-colors">
+          <div className="w-9 h-9 rounded-lg bg-rose-50 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[20px]">event_note</span>
           </div>
           <div>
@@ -681,7 +733,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7a1228] text-[20px]">schedule</span>
+                <span className="material-symbols-outlined text-primary text-[20px]">schedule</span>
                 <h3 className="font-bold text-sm text-on-surface">My Teaching Schedule</h3>
               </div>
               <button
@@ -701,7 +753,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                     className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low text-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center font-data-mono font-bold">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-data-mono font-bold">
                         P{s.periodNumber}
                       </div>
                       <div>
@@ -722,7 +774,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                 <div className="py-8 text-center text-on-surface-variant text-xs space-y-1">
                   <span className="material-symbols-outlined text-3xl text-outline">event_busy</span>
                   <p className="font-semibold text-on-surface">No timetable periods scheduled</p>
-                  <p className="text-[11px]">Click "Edit Timetable" to assign learning area slots.</p>
+                  <p className="text-[11px]">{web?'Ask the administrator to check your timetable lesson assignments.':'Click "Edit Timetable" to assign learning area slots.'}</p>
                 </div>
               )}
             </div>
@@ -734,7 +786,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
               onClick={() => onNavigateTab('timetable')}
               className="font-bold text-primary hover:underline cursor-pointer"
             >
-              + Add / Edit Slot
+              {web?'Open my timetable':'+ Add / Edit Slot'}
             </button>
           </div>
         </div>
@@ -744,7 +796,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7a1228] text-[20px]">assignment</span>
+                <span className="material-symbols-outlined text-primary text-[20px]">assignment</span>
                 <h3 className="font-bold text-sm text-on-surface">My Curriculum Work Plans</h3>
               </div>
               <button
@@ -768,7 +820,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                         <span className="font-bold text-on-surface truncate pr-2">{scheme.title}</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           scheme.status === 'APPROVED'
-                            ? 'bg-secondary-container text-on-secondary-container'
+                            ? 'bg-success-container text-on-success-container'
                             : scheme.status === 'SUBMITTED'
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-surface-container text-outline'
@@ -822,7 +874,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             </button>
             <button
               onClick={() => onOpenNewLessonPlan()}
-              className="font-bold text-secondary hover:underline cursor-pointer"
+              className="font-bold text-primary hover:underline cursor-pointer"
             >
               + New Lesson Plan
             </button>
@@ -833,6 +885,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       {/* Teacher Salary Payment & Digital Acknowledgement Section */}
       <TeacherSalaryAcknowledgementCard />
 
+      {canViewSelectedRoster&&<><div id="teacher-class-roster" className="scroll-mt-24" />
       {/* Class Learners Table (Partial Details Only: No Fees, No Financial Invoices) */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container pb-3">
@@ -847,13 +900,13 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
             <button
               onClick={downloadRosterPDF}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] hover:bg-[#5e0d1e] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
               title="Download official Class Learner Roster as PDF"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
               <span>Download Roster (PDF)</span>
             </button>
-            <span className="px-3 py-1.5 rounded-lg bg-[#7a1228]/10 text-[#7a1228] text-xs font-bold">
+            <span className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold">
               {myStudents.length} Active Learners
             </span>
           </div>
@@ -877,25 +930,25 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                 {myStudents.map((st) => (
                   <tr key={st.id} className="hover:bg-surface-container-low/50">
                     <td className="py-3.5 px-4 font-bold text-on-surface flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#7a1228] text-white flex items-center justify-center font-bold text-[10px]">
+                      <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px]">
                         {st.name.split(' ').map((n) => n[0]).join('')}
                       </div>
                       <span>{st.name}</span>
                     </td>
                     <td className="py-3.5 px-4 font-data-mono text-outline">{st.admNo}</td>
-                    <td className="py-3.5 px-4 font-data-mono text-secondary font-semibold">{st.upi}</td>
+                    <td className="py-3.5 px-4 font-data-mono text-success font-semibold">{st.upi}</td>
                     <td className="py-3.5 px-4 font-semibold text-on-surface">{st.gender}</td>
                     <td className="py-3.5 px-4 text-on-surface">{st.guardianName}</td>
                     <td className="py-3.5 px-4 font-data-mono text-outline">{st.guardianPhone}</td>
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => onOpenUploadMarks(st)}
-                        className="px-2.5 py-1 rounded bg-[#7a1228] text-white font-bold text-xs hover:bg-[#5e0d1e] transition-colors cursor-pointer mr-1.5"
+                        className="px-2.5 py-1 rounded bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors cursor-pointer mr-1.5"
                       >
                         Grade
                       </button>
                       <button
-                        onClick={() => onNavigateTab('students-guardians')}
+                        onClick={() => web ? setProfileStudent(st) : onNavigateTab('students-guardians')}
                         className="px-2.5 py-1 rounded bg-surface-container text-primary font-semibold text-xs hover:bg-surface-container-high transition-colors cursor-pointer"
                       >
                         Profile
@@ -915,6 +968,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         )}
       </div>
 
+      </>}
+
+      {web && <LearnerProfileModal isOpen={Boolean(profileStudent)} student={profileStudent} onClose={()=>setProfileStudent(null)} onGradeStudent={onOpenUploadMarks} />}
       {/* Edit Profile Modal */}
       <EditTeacherProfileModal
         isOpen={isEditProfileOpen}

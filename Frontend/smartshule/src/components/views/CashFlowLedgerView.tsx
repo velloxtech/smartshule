@@ -192,7 +192,7 @@ export const CashFlowLedgerView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
           <button
             onClick={() => setIsIncomeModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
             <span>Record Money In</span>
@@ -280,7 +280,7 @@ export const CashFlowLedgerView: React.FC = () => {
                 KES {ledgerData ? ledgerData.totalMoneyIn.toLocaleString() : '---'}
               </h3>
             </div>
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[26px]">arrow_downward</span>
             </div>
           </div>
@@ -324,7 +324,7 @@ export const CashFlowLedgerView: React.FC = () => {
               </p>
               <h3
                 className={`text-2xl font-black mt-1 ${
-                  (ledgerData?.netCashFlow || 0) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+                  (ledgerData?.netCashFlow || 0) >= 0 ? 'text-primary dark:text-primary' : 'text-rose-700 dark:text-rose-400'
                 }`}
               >
                 {(ledgerData?.netCashFlow || 0) >= 0 ? '+' : ''}
@@ -334,7 +334,7 @@ export const CashFlowLedgerView: React.FC = () => {
             <div
               className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                 (ledgerData?.netCashFlow || 0) >= 0
-                  ? 'bg-emerald-500/10 text-emerald-600'
+                  ? 'bg-primary/10 text-primary'
                   : 'bg-rose-500/10 text-rose-600'
               }`}
             >
@@ -404,12 +404,12 @@ export const CashFlowLedgerView: React.FC = () => {
           <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
                   <span className="material-symbols-outlined text-[20px]">account_balance</span>
                 </div>
                 <span className="font-bold text-xs sm:text-sm text-on-surface">School Bank Accounts</span>
               </div>
-              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-semibold text-primary bg-primary-fixed dark:bg-primary-container/40 px-2 py-0.5 rounded-full">
                 Equity / KCB
               </span>
             </div>
@@ -426,7 +426,7 @@ export const CashFlowLedgerView: React.FC = () => {
           <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
                   <span className="material-symbols-outlined text-[20px]">phone_android</span>
                 </div>
                 <span className="font-bold text-xs sm:text-sm text-on-surface">M-Pesa Till & Paybill</span>
@@ -448,7 +448,7 @@ export const CashFlowLedgerView: React.FC = () => {
           <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
                   <span className="material-symbols-outlined text-[20px]">point_of_sale</span>
                 </div>
                 <span className="font-bold text-xs sm:text-sm text-on-surface">Petty Cash Drawer</span>
@@ -511,7 +511,7 @@ export const CashFlowLedgerView: React.FC = () => {
         <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-600 text-[22px]">donut_small</span>
+              <span className="material-symbols-outlined text-primary text-[22px]">donut_small</span>
               <h3 className="font-bold text-sm sm:text-base text-on-surface">
                 Income Sources (Fees & Non-Fee Inflows)
               </h3>
@@ -566,8 +566,8 @@ export const CashFlowLedgerView: React.FC = () => {
                 onClick={() => setActiveTab('INFLOW')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                   activeTab === 'INFLOW'
-                    ? 'bg-emerald-700 text-white shadow-xs'
-                    : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'text-primary dark:text-primary hover:bg-primary-fixed dark:hover:bg-primary-container/30'
                 }`}
               >
                 <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
@@ -754,7 +754,7 @@ export const CashFlowLedgerView: React.FC = () => {
                           {tx.status !== 'PAID' && (
                             <button
                               onClick={() => handleUpdateExpenseStatus(tx.id, 'PAID')}
-                              className="px-2 py-1 rounded-md text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
+                              className="px-2 py-1 rounded-md text-[10px] font-bold bg-primary hover:bg-primary-container text-white transition-colors cursor-pointer"
                               title="Mark as Paid"
                             >
                               Mark Paid

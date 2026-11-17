@@ -166,7 +166,7 @@ export class CurriculumTrackerController {
       const term = req.query.term as string;
       const academicYear = req.query.academicYear as string;
 
-      const summary = await this.trackerUseCases.getSummary(schoolId, term, academicYear);
+      const summary = await this.trackerUseCases.getSummary(schoolId, term, academicYear, (req as any).canAccessTeachingRecord);
       return res.status(200).json({
         success: true,
         data: summary

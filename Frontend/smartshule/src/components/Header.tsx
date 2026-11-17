@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenQuickAction?: (action: string) => void;
   onOpenAcademicTermsModal?: () => void;
   onOpenChangePasswordModal?: () => void;
+  onOpenBiometricModal?: () => void;
   onNavigateLanding?: () => void;
   onNavigateTab?: (tab: string) => void;
   academicContext?: AcademicContext | null;
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateTab,
   onOpenAcademicTermsModal,
   onOpenChangePasswordModal,
+  onOpenBiometricModal,
   academicContext,
   backendConnected = true,
 }) => {
@@ -114,10 +116,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-30 w-full h-16 bg-gradient-to-r from-[#7a0f26] via-[#85132d] to-[#6d0c20] text-white border-b border-[#a82442]/40 shadow-md shrink-0">
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3">
         {/* Mobile Toggle & Search Group */}
-        <div className="flex items-center gap-2 md:gap-3 flex-1 max-w-xl">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 max-w-xl">
           <button
             onClick={onToggleMobile}
-            className="lg:hidden p-2 rounded-xl text-white hover:bg-[#660000] transition-colors cursor-pointer"
+            className="lg:hidden p-2 rounded-xl text-white hover:bg-primary-container transition-colors cursor-pointer"
             aria-label="Open sidebar"
           >
             <span className="material-symbols-outlined text-[22px]">menu</span>
@@ -127,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative shrink-0" ref={termRef}>
             <button
               onClick={() => setTermDropdownOpen(!termDropdownOpen)}
-              className="flex items-center gap-2 bg-[#660000] hover:bg-[#550000] text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-white/20 shadow-xs"
+              className="flex items-center gap-2 bg-primary-container hover:bg-primary-container text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-white/20 shadow-xs"
               type="button"
               title="Academic Term Session"
             >
@@ -156,13 +158,13 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {termDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl z-50 border border-slate-200 text-slate-900 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-3 shadow-2xl z-50 border border-outline-variant/30 text-on-surface flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center justify-between px-2 py-1 border-b border-outline-variant/30">
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                     Academic Sessions
                   </span>
                   {currentTermObj && (
-                    <span className="text-[10px] text-slate-500 font-mono">
+                    <span className="text-[10px] text-on-surface-variant font-mono">
                       {currentTermObj.daysRemaining !== undefined ? `${currentTermObj.daysRemaining}d remaining` : ''}
                     </span>
                   )}
@@ -180,14 +182,14 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors flex items-center justify-between ${
                           isSelected
-                            ? 'bg-[#800000] text-white font-bold shadow-xs'
-                            : 'text-slate-800 hover:bg-slate-100'
+                            ? 'bg-primary text-white font-bold shadow-xs'
+                            : 'text-on-surface hover:bg-surface-container-low'
                         }`}
                       >
                         <div>
                           <div className="font-semibold leading-tight">{term.name}</div>
                           {term.startDate && term.endDate && (
-                            <div className={`text-[10px] ${isSelected ? 'text-rose-100' : 'text-slate-500'}`}>
+                            <div className={`text-[10px] ${isSelected ? 'text-rose-100' : 'text-on-surface-variant'}`}>
                               {new Date(term.startDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} –{' '}
                               {new Date(term.endDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
@@ -200,7 +202,7 @@ export const Header: React.FC<HeaderProps> = ({
                               term.status === 'ENDED'
                                 ? isSelected
                                   ? 'bg-rose-900 text-white'
-                                  : 'bg-slate-200 text-slate-600'
+                                  : 'bg-surface-container text-on-surface-variant'
                                 : term.status === 'ACTIVE'
                                 ? isSelected
                                   ? 'bg-emerald-600 text-white'
@@ -223,13 +225,13 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Manage Term Dates Button for Administrators */}
                 {canManageTerms && onOpenAcademicTermsModal && (
-                  <div className="pt-2 border-t border-slate-200">
+                  <div className="pt-2 border-t border-outline-variant/30">
                     <button
                       onClick={() => {
                         setTermDropdownOpen(false);
                         onOpenAcademicTermsModal();
                       }}
-                      className="w-full py-2 px-3 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2 px-3 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">edit_calendar</span>
                       <span>Manage Term Dates & Transitions</span>
@@ -242,14 +244,14 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Global Search with instant popover */}
           <div
-            className="relative flex-1 flex items-center bg-[#660000] rounded-xl px-3 border border-white/20 focus-within:border-white/40 focus-within:bg-[#550000] transition-all"
+            className="relative flex-1 min-w-0 hidden md:flex items-center bg-primary-container rounded-xl px-3 border border-white/20 focus-within:border-white/40 focus-within:bg-primary-container transition-all"
             ref={searchRef}
           >
             <span className="material-symbols-outlined text-white/70 text-[18px] mr-2 shrink-0">
               search
             </span>
             <input
-              className="w-full bg-transparent py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none"
+              className="w-full min-w-0 bg-transparent py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none"
               placeholder={isParent ? 'Search your child by name or Adm No...' : 'Search students, teachers, CBE strands...'}
               type="text"
               value={searchQuery}
@@ -270,20 +272,20 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Search Results Dropdown */}
             {showSearchResults && searchQuery.trim().length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 max-h-96 overflow-y-auto z-50 p-2">
-                <div className="text-[11px] font-bold text-slate-500 uppercase px-2 py-1">
+              <div className="absolute left-0 right-0 top-full mt-2 bg-surface-container-lowest text-on-surface rounded-2xl shadow-2xl border border-outline-variant/30 max-h-96 overflow-y-auto z-50 p-2">
+                <div className="text-[11px] font-bold text-on-surface-variant uppercase px-2 py-1">
                   Matching Results ({filteredStudents.length + filteredTeachers.length})
                 </div>
 
                 {filteredStudents.length === 0 && filteredTeachers.length === 0 && (
-                  <div className="p-4 text-center text-slate-500 text-xs">
+                  <div className="p-4 text-center text-on-surface-variant text-xs">
                     No students or teachers match "{searchQuery}"
                   </div>
                 )}
 
                 {filteredStudents.length > 0 && (
                   <div className="mb-2">
-                    <div className="px-2 py-1 text-xs font-bold text-[#800000]">Students</div>
+                    <div className="px-2 py-1 text-xs font-bold text-primary">Students</div>
                     {filteredStudents.map((s) => (
                       <div
                         key={s.id}
@@ -291,11 +293,11 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectStudent?.(s);
                           setShowSearchResults(false);
                         }}
-                        className="p-2 rounded-xl hover:bg-slate-100 cursor-pointer flex items-center justify-between"
+                        className="p-2 rounded-xl hover:bg-surface-container-low cursor-pointer flex items-center justify-between"
                       >
                         <div>
-                          <div className="text-xs font-bold text-slate-900">{s.name}</div>
-                          <div className="text-[11px] text-slate-500">
+                          <div className="text-xs font-bold text-on-surface">{s.name}</div>
+                          <div className="text-[11px] text-on-surface-variant">
                             Adm #{s.admNo} · {s.grade} {s.stream} · UPI: {s.upi}
                           </div>
                         </div>
@@ -309,19 +311,19 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {filteredTeachers.length > 0 && (
                   <div>
-                    <div className="px-2 py-1 text-xs font-bold text-[#800000]">Teachers</div>
+                    <div className="px-2 py-1 text-xs font-bold text-primary">Teachers</div>
                     {filteredTeachers.map((t) => (
                       <div
                         key={t.id}
-                        className="p-2 rounded-xl hover:bg-slate-100 cursor-pointer flex items-center justify-between"
+                        className="p-2 rounded-xl hover:bg-surface-container-low cursor-pointer flex items-center justify-between"
                       >
                         <div>
-                          <div className="text-xs font-bold text-slate-900">{t.name}</div>
-                          <div className="text-[11px] text-slate-500">
+                          <div className="text-xs font-bold text-on-surface">{t.name}</div>
+                          <div className="text-[11px] text-on-surface-variant">
                             {t.tscNumber} · {t.role}
                           </div>
                         </div>
-                        <span className="text-[11px] text-slate-600 font-medium">
+                        <span className="text-[11px] text-on-surface-variant font-medium">
                           {t.learningAreas.join(', ')}
                         </span>
                       </div>
@@ -334,10 +336,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right Actions: Dual-View Switcher, System Pulse, Alerts, Help, Profile */}
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex shrink-0 items-center gap-1 md:gap-3">
           {/* Dual-View Toggle for Staff/Teachers with Children in School */}
           {isStaffWithChildren && (
-            <div className="flex items-center p-0.5 rounded-xl bg-[#590000] border border-white/20 shadow-xs">
+            <div className="hidden xl:flex items-center p-0.5 rounded-xl bg-[#590000] border border-white/20 shadow-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -346,7 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeViewMode === 'STAFF'
-                    ? 'bg-white text-[#800000] shadow-xs font-bold'
+                    ? 'bg-white text-primary shadow-xs font-bold'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
                 title={user?.role === UserRole.TEACHER ? 'Teacher Workspace: Classes, lesson plans, schemes, records' : 'Staff Workspace'}
@@ -363,10 +365,10 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeViewMode === 'PARENT'
-                    ? 'bg-white text-[#800000] shadow-xs font-bold'
+                    ? 'bg-white text-primary shadow-xs font-bold'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
-                title="Parent View: Child attendance, e-diary, report cards, fees"
+                title="Parent View: Child attendance, Daily Homefun & Communication Diary (E-Diary), report cards, fees"
               >
                 <span className="material-symbols-outlined text-[16px]">family_restroom</span>
                 <span className="hidden sm:inline">Parent View</span>
@@ -375,7 +377,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                       activeViewMode === 'PARENT'
-                        ? 'bg-[#800000] text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-white/20 text-white'
                     }`}
                   >
@@ -387,7 +389,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Live system pulse key detail */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#660000] border border-white/10 text-xs">
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-primary-container border border-white/10 text-xs">
             <span
               className={`w-2 h-2 rounded-full ${
                 backendConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
@@ -405,7 +407,7 @@ export const Header: React.FC<HeaderProps> = ({
                 setShowNotifications(!showNotifications);
                 setNotificationsRead(true);
               }}
-              className="p-2 rounded-xl text-white hover:bg-[#660000] transition-colors relative cursor-pointer border border-white/10"
+              className="p-2 rounded-xl text-white hover:bg-primary-container transition-colors relative cursor-pointer border border-white/10"
               type="button"
               title="System Notifications"
             >
@@ -416,12 +418,12 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-900">Notifications & Alerts</span>
-                  <span className="text-[10px] font-bold text-[#800000] uppercase">Grace Seeds School</span>
+              <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-3 shadow-2xl border border-outline-variant/30 text-on-surface z-50 animate-in fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-outline-variant/30">
+                  <span className="text-xs font-bold text-on-surface">Notifications & Alerts</span>
+                  <span className="text-[10px] font-bold text-primary uppercase">Grace Seeds School</span>
                 </div>
-                <div className="py-4 text-center text-xs text-slate-500 flex flex-col items-center gap-1">
+                <div className="py-4 text-center text-xs text-on-surface-variant flex flex-col items-center gap-1">
                   <span className="material-symbols-outlined text-slate-400 text-[24px]">notifications_active</span>
                   <span>{currentTermObj?.name ? `${currentTermObj.name} in session` : 'No new unread alerts'}</span>
                 </div>
@@ -433,7 +435,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowHelp(!showHelp)}
-              className="p-2 rounded-xl text-white hover:bg-[#660000] transition-colors cursor-pointer border border-white/10"
+              className="p-2 rounded-xl text-white hover:bg-primary-container transition-colors cursor-pointer border border-white/10"
               type="button"
               title="CBE Guidelines & Rubrics"
             >
@@ -441,17 +443,17 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {showHelp && (
-              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-4 shadow-2xl border border-slate-200 text-slate-900 z-50">
-                <div className="flex items-center gap-1.5 font-bold text-xs text-[#800000] mb-2">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-4 shadow-2xl border border-outline-variant/30 text-on-surface z-50">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-primary mb-2">
                   <span className="material-symbols-outlined text-[18px]">info</span>
                   <span>KICD CBE Rating Guide</span>
                 </div>
-                <div className="text-xs text-slate-600 space-y-1.5">
+                <div className="text-xs text-on-surface-variant space-y-1.5">
                   <div>
                     <strong className="text-emerald-700">EE (Exceeding):</strong> Learner performs beyond required level independently.
                   </div>
                   <div>
-                    <strong className="text-[#800000]">ME (Meeting):</strong> Learner performs correctly at standard required level.
+                    <strong className="text-primary">ME (Meeting):</strong> Learner performs correctly at standard required level.
                   </div>
                   <div>
                     <strong className="text-amber-700">AE (Approaching):</strong> Learner occasionally requires guided prompts.
@@ -460,7 +462,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <strong className="text-rose-700">BE (Below):</strong> Learner requires individualized remediation.
                   </div>
                 </div>
-                <div className="mt-3 pt-2 border-t border-slate-200 text-[10px] text-slate-400">
+                <div className="mt-3 pt-2 border-t border-outline-variant/30 text-[10px] text-slate-400">
                   {user?.schoolName || 'Grace Seeds School'} · CBE Portal v2.0
                 </div>
               </div>
@@ -471,14 +473,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-[#660000] hover:bg-[#550000] transition-colors cursor-pointer border border-white/20 text-white"
+              className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-primary-container hover:bg-primary-container transition-colors cursor-pointer border border-white/20 text-white"
               title="User Account & Session"
               type="button"
             >
-              <div className="w-8 h-8 rounded-full bg-white text-[#800000] flex items-center justify-center shrink-0 shadow-xs font-bold text-xs border border-white">
+              <div className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shrink-0 shadow-xs font-bold text-xs border border-white">
                 {user ? `${user.firstName[0]}${user.lastName[0]}` : <span className="material-symbols-outlined text-[18px]">person</span>}
               </div>
-              <div className="hidden sm:flex flex-col text-left leading-tight">
+              <div className="hidden lg:flex flex-col text-left leading-tight">
                 <span className="font-bold text-xs text-white truncate max-w-[110px]">
                   {user?.fullName || 'Authorized'}
                 </span>
@@ -490,10 +492,10 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
-                <div className="p-2 border-b border-slate-200">
-                  <div className="font-bold text-sm text-slate-900">{user?.fullName || 'Current User'}</div>
-                  <div className="text-xs text-slate-500 font-mono truncate">{user?.email || 'admin@smartshule.ac.ke'}</div>
+              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-3 shadow-2xl border border-outline-variant/30 text-on-surface z-50 animate-in fade-in">
+                <div className="p-2 border-b border-outline-variant/30">
+                  <div className="font-bold text-sm text-on-surface">{user?.fullName || 'Current User'}</div>
+                  <div className="text-xs text-on-surface-variant font-mono truncate">{user?.email || 'Email not available'}</div>
                   <div className="mt-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getRoleBadgeStyle(user?.role).bg} ${getRoleBadgeStyle(user?.role).text} uppercase tracking-wider`}>
                       {getRoleDisplayName(user?.role)}
@@ -503,14 +505,14 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="py-2 space-y-1">
                   {isStaffWithChildren && (
-                    <div className="p-2 mb-2 rounded-xl bg-rose-50 border border-[#800000]/20">
-                      <div className="text-[11px] font-bold text-[#800000] flex items-center justify-between">
+                    <div className="p-2 mb-2 rounded-xl bg-rose-50 border border-primary/20">
+                      <div className="text-[11px] font-bold text-primary flex items-center justify-between">
                         <span>{user?.role === UserRole.TEACHER ? 'Teacher & Parent Role' : 'Staff Dual Role'}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-white text-[#800000] font-bold border border-[#800000]/20">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-surface-container-lowest text-primary font-bold border border-primary/20">
                           {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher Workspace' : 'Staff Workspace') : 'Parent View'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-600 mt-1">
+                      <p className="text-[10px] text-on-surface-variant mt-1">
                         Active role: {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher' : 'School Staff') : 'Parent / Guardian'}
                       </p>
                       <button
@@ -521,7 +523,7 @@ export const Header: React.FC<HeaderProps> = ({
                           setUserMenuOpen(false);
                           if (onNavigateTab) onNavigateTab('dashboard');
                         }}
-                        className="mt-2 w-full py-1.5 px-2 rounded-lg bg-[#800000] text-white text-xs font-bold hover:bg-[#660000] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="mt-2 w-full py-1.5 px-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[15px]">
                           {activeViewMode === 'STAFF' ? 'family_restroom' : 'badge'}
@@ -538,9 +540,9 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onNavigateTab('parent-profile');
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#800000]">manage_accounts</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">manage_accounts</span>
                       <span>My Profile & Children</span>
                     </button>
                   )}
@@ -551,9 +553,9 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onOpenAcademicTermsModal();
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#800000]">date_range</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">date_range</span>
                       <span>Academic Terms Schedule</span>
                     </button>
                   )}
@@ -564,10 +566,24 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onNavigateLanding();
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#800000]">public</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">public</span>
                       <span>View Public Landing Page</span>
+                    </button>
+                  )}
+
+                  
+                  {onOpenBiometricModal && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onOpenBiometricModal();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-primary">fingerprint</span>
+                      <span>Biometric & Passkey Devices</span>
                     </button>
                   )}
 
@@ -577,9 +593,9 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onOpenChangePasswordModal();
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-amber-700">lock_reset</span>
+                      <span className="material-symbols-outlined text-[16px] text-primary">lock_reset</span>
                       <span>Change My Password</span>
                     </button>
                   )}

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AnnouncementUseCases } from '../../../application/announcements/AnnouncementUseCases';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+import { UserRole } from '../../../core/domain/user/User';
 
 export const CreateAnnouncementSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
@@ -87,13 +88,36 @@ export class AnnouncementController {
   public listAnnouncements = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const schoolId = (req.query.schoolId as string) || req.user?.schoolId || 'school-1';
-      const audience = req.query.audience as string | undefined;
+      let audience = req.query.audience as string | undefined;
       const category = req.query.category as string | undefined;
       const priority = req.query.priority as string | undefined;
-      const status = req.query.status as string | undefined;
+      let status = req.query.status as string | undefined;
       const search = req.query.search as string | undefined;
       const gradeLevel = req.query.gradeLevel as string | undefined;
       const isPinned = req.query.isPinned !== undefined ? req.query.isPinned === 'true' : undefined;
+
+      const user = req.user;
+      const isAdminRole = user?.role && [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.SCHOOL_ADMIN,
+        UserRole.HEAD_TEACHER,
+        UserRole.DEPUTY_HEAD_TEACHER
+      ].includes(user.role as UserRole);
+
+      // Non-administrators can ONLY view published circulars intended for their audience
+      if (!isAdminRole) {
+        status = 'PUBLISHED';
+        if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
+          audience = 'PARENTS';
+        } else if (user?.role === UserRole.TEACHER) {
+          audience = 'TEACHERS';
+        } else if (user?.role === UserRole.STUDENT) {
+          audience = 'STUDENTS';
+        } else {
+          audience = 'ALL';
+        }
+      }
 
       const announcements = await this.useCases.listAnnouncements({
         schoolId,
@@ -126,6 +150,39 @@ export class AnnouncementController {
           success: false,
           message: 'Announcement not found'
         });
+      }
+
+      const user = req.user;
+      const isAdminRole = user?.role && [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.SCHOOL_ADMIN,
+        UserRole.HEAD_TEACHER,
+        UserRole.DEPUTY_HEAD_TEACHER
+      ].includes(user.role as UserRole);
+
+      if (!isAdminRole) {
+        if (announcement.status !== 'PUBLISHED') {
+          return res.status(404).json({
+            success: false,
+            message: 'Announcement not found'
+          });
+        }
+        const userAudience =
+          user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN
+            ? 'PARENTS'
+            : user?.role === UserRole.TEACHER
+            ? 'TEACHERS'
+            : user?.role === UserRole.STUDENT
+            ? 'STUDENTS'
+            : 'ALL';
+
+        if (announcement.targetAudience !== 'ALL' && announcement.targetAudience !== userAudience) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You do not have permission to view this notice'
+          });
+        }
       }
 
       return res.status(200).json({

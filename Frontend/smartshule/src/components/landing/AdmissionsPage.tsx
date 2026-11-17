@@ -9,6 +9,7 @@ export interface AdmissionsPageProps {
   onNavigateProgrammes: () => void
   onNavigateOnboarding?: () => void
   onNavigateApplySlot?: () => void
+  onNavigateFindUs?: () => void
 }
 
 export const ADMISSION_STEPS = [
@@ -76,13 +77,14 @@ export default function AdmissionsPage({
   onNavigateProgrammes,
   onNavigateOnboarding,
   onNavigateApplySlot,
+  onNavigateFindUs,
 }: AdmissionsPageProps) {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0)
   const [phoneCopied, setPhoneCopied] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-      <section className="relative bg-[#5a1226] text-white pt-12 pb-20 overflow-hidden">
+      <section className="relative bg-primary-container text-white pt-12 pb-20 overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <img src={logo} alt="Grace Seeds School" className="w-full h-full object-cover" />
         </div>
@@ -116,7 +118,7 @@ export default function AdmissionsPage({
                 <button
                   type="button"
                   onClick={onNavigateApplySlot}
-                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-3.5 rounded-full text-sm shadow-lg transition-transform hover:scale-105 cursor-pointer"
+                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-8 py-3.5 rounded-full text-sm shadow-lg transition-transform hover:scale-105 cursor-pointer"
                 >
                   Apply for Admission Slot →
                 </button>
@@ -134,8 +136,8 @@ export default function AdmissionsPage({
 
       <section className="py-20 max-w-7xl mx-auto px-6 lg:px-12">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Simple & Transparent</p>
-          <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight mb-4">
+          <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Simple & Transparent</p>
+          <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-primary-container leading-tight mb-4">
             Our 4-Step Enrolment Journey
           </h2>
           <p className="text-[#8a6470] text-base leading-relaxed">
@@ -147,24 +149,24 @@ export default function AdmissionsPage({
           {ADMISSION_STEPS.map((s) => (
             <div
               key={s.step}
-              className="bg-white border border-[#f0d8df] hover:border-[#7b1c35] p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 relative group flex flex-col justify-between"
+              className="bg-white border border-primary-fixed hover:border-primary p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 relative group flex flex-col justify-between"
             >
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center group-hover:bg-[#7b1c35] group-hover:text-white transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                     <s.icon className="w-6 h-6" />
                   </div>
-                  <span style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-[#7b1c35]/20 group-hover:text-[#7b1c35] transition-colors">
+                  <span style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-primary/20 group-hover:text-primary transition-colors">
                     {s.step}
                   </span>
                 </div>
-                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226] mb-3">
+                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container mb-3">
                   {s.title}
                 </h3>
                 <p className="text-[#8a6470] text-sm leading-relaxed">{s.desc}</p>
               </div>
               <div className="mt-6 pt-4 border-t border-[#f0d8df] flex flex-col gap-2">
-                <div className="text-xs font-bold text-[#7b1c35] group-hover:text-[#e8a92a] transition-colors">
+                <div className="text-xs font-bold text-primary group-hover:text-[#e8a92a] transition-colors">
                   Step {s.step} Guidance →
                 </div>
                 {s.step === '01' && onNavigateApplySlot && (
@@ -174,7 +176,7 @@ export default function AdmissionsPage({
                       e.stopPropagation();
                       onNavigateApplySlot();
                     }}
-                    className="text-left text-[11px] font-bold text-[#5a1226] hover:text-black bg-[#e8a92a] hover:bg-[#f5c84a] px-2.5 py-1 rounded-lg transition-colors cursor-pointer w-fit shadow-2xs"
+                    className="text-left text-[11px] font-bold text-primary-container hover:text-black bg-[#e8a92a] hover:bg-[#f5c84a] px-2.5 py-1 rounded-lg transition-colors cursor-pointer w-fit shadow-2xs"
                   >
                     Apply for Slot Online →
                   </button>
@@ -186,7 +188,7 @@ export default function AdmissionsPage({
                       e.stopPropagation();
                       onNavigateOnboarding();
                     }}
-                    className="text-left text-[11px] font-bold text-[#7b1c35] hover:text-[#5a1226] bg-[#f9eef1] hover:bg-[#f0d8df] px-2.5 py-1 rounded-lg transition-colors cursor-pointer w-fit"
+                    className="text-left text-[11px] font-bold text-primary hover:text-primary-container bg-primary-fixed hover:bg-primary-fixed px-2.5 py-1 rounded-lg transition-colors cursor-pointer w-fit"
                   >
                     Admitted? Onboard Learner →
                   </button>
@@ -200,8 +202,8 @@ export default function AdmissionsPage({
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Enrolment Documents</p>
-            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#5a1226] leading-tight mb-6">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Enrolment Documents</p>
+            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-primary-container leading-tight mb-6">
               Admission Requirements Checklist
             </h2>
             <p className="text-[#8a6470] text-sm leading-relaxed mb-8">
@@ -210,10 +212,10 @@ export default function AdmissionsPage({
 
             <div className="grid sm:grid-cols-2 gap-4">
               {REQUIREMENTS_DATA.map((req, i) => (
-                <div key={i} className="bg-[#fdfaf6] border border-[#f0d8df] p-4 rounded-xl">
+                <div key={i} className="bg-[#fdfaf6] border border-primary-fixed p-4 rounded-xl">
                   <div className="flex items-center gap-2 mb-1">
-                    <FileCheck className="w-4 h-4 text-[#7b1c35] shrink-0" />
-                    <h4 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-sm text-[#5a1226]">
+                    <FileCheck className="w-4 h-4 text-primary shrink-0" />
+                    <h4 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-sm text-primary-container">
                       {req.title}
                     </h4>
                   </div>
@@ -223,7 +225,7 @@ export default function AdmissionsPage({
             </div>
           </div>
 
-          <div className="bg-[#5a1226] text-white p-8 lg:p-12 rounded-3xl shadow-xl border border-white/10 relative overflow-hidden">
+          <div className="bg-primary-container text-white p-8 lg:p-12 rounded-3xl shadow-xl border border-white/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#e8a92a]/10 rounded-full blur-2xl pointer-events-none" />
             <img src={logo} alt="Grace Seeds Crest" className="w-16 h-16 mb-6" />
             <span className="text-[#f5c84a] text-xs font-bold uppercase tracking-widest block mb-2">Visiting Hours</span>
@@ -260,7 +262,7 @@ export default function AdmissionsPage({
                   contactEl.scrollIntoView({ behavior: 'smooth' })
                 }
               }}
-              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-6 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 w-full text-center shadow-lg hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
+              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-6 py-3.5 rounded-full text-xs sm:text-sm transition-all duration-200 w-full text-center shadow-lg hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
             >
               <Phone className="w-4 h-4" />
               <span>{phoneCopied ? 'Copied: 0745 436312' : 'Call Admissions: 0745 436312'}</span>
@@ -276,8 +278,8 @@ export default function AdmissionsPage({
       <section className="py-20 bg-[#fdfaf6]">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Admissions Helpdesk</p>
-            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#5a1226]">
+            <p className="text-primary text-xs font-bold tracking-widest uppercase mb-3">Admissions Helpdesk</p>
+            <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-primary-container">
               Admissions Frequently Asked Questions
             </h2>
           </div>
@@ -288,21 +290,21 @@ export default function AdmissionsPage({
               return (
                 <div
                   key={i}
-                  className="bg-white border border-[#f0d8df] rounded-2xl overflow-hidden transition-all shadow-sm"
+                  className="bg-white border border-primary-fixed rounded-2xl overflow-hidden transition-all shadow-sm"
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? null : i)}
-                    className="w-full text-left p-6 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#f9eef1]/50 transition-colors"
+                    className="w-full text-left p-6 flex justify-between items-center gap-4 cursor-pointer hover:bg-primary-fixed/50 transition-colors"
                   >
-                    <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-lg text-[#5a1226]">
+                    <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-lg text-primary-container">
                       {faq.q}
                     </span>
-                    <span className={`w-8 h-8 rounded-full bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center font-bold text-lg shrink-0 transition-transform ${isOpen ? 'rotate-180 bg-[#7b1c35] text-white' : ''}`}>
+                    <span className={`w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold text-lg shrink-0 transition-transform ${isOpen ? 'rotate-180 bg-primary text-white' : ''}`}>
                       ↓
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-6 pb-6 text-[#8a6470] text-sm leading-relaxed border-t border-[#f0d8df] pt-4 animate-fadeIn">
+                    <div className="px-6 pb-6 text-[#8a6470] text-sm leading-relaxed border-t border-primary-fixed pt-4 animate-fadeIn">
                       {faq.a}
                     </div>
                   )}
@@ -313,7 +315,7 @@ export default function AdmissionsPage({
         </div>
       </section>
 
-      <section id="admissions-contacts" className="py-16 bg-[#5a1226] text-white border-t border-white/10 scroll-mt-10">
+      <section id="admissions-contacts" className="py-16 bg-primary-container text-white border-t border-white/10 scroll-mt-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="text-center mb-10">
             <span className="text-[#f5c84a] text-xs font-bold uppercase tracking-widest block mb-2">Get In Touch</span>
@@ -333,6 +335,14 @@ export default function AdmissionsPage({
               <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">School Location</h4>
               <p className="text-white/80 text-sm">Kisumu, Kisian, KEMRI Road</p>
               <p className="text-white/50 text-xs mt-2">Visiting: Mon – Fri: 8:00 AM – 3:00 PM</p>
+              {onNavigateFindUs && (
+                <button
+                  onClick={onNavigateFindUs}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#f5c84a] hover:text-white underline cursor-pointer"
+                >
+                  <span>Interactive Map & Directions →</span>
+                </button>
+              )}
             </div>
 
             <div className="bg-white/10 p-6 rounded-2xl border border-white/15">

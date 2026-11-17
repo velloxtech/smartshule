@@ -466,6 +466,8 @@ describe('Marks Upload Portal Redesign & Subject Access Acceptance Tests (Scenar
   // SCENARIO 2: Subject-Teacher Scoping (Junior Secondary Model)
   // ==========================================
   test('Scenario 2: Subject teacher can access assigned subject, but is rejected for unassigned subjects', async () => {
+    // The Grade 7 subject duty uses a Grade 7 curriculum entry.
+    await container.academicRepository.saveLearningArea(LearningArea.create({ ...mathLA.toJSON(), gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL }, mathLA.id));
     const userCtxTch2 = { userId: 'user-tch-2', email: 'teacher2@school.com', role: UserRole.TEACHER, schoolId };
 
     // Teacher 2 records Math in Grade 7 West (Authorized)
@@ -502,6 +504,8 @@ describe('Marks Upload Portal Redesign & Subject Access Acceptance Tests (Scenar
   // SCENARIO 3: Dynamic Subject Scoping via getTeacherAuthorizedContext
   // ==========================================
   test('Scenario 3: Teacher authorized context returns strictly assigned classes and subjects dynamically', async () => {
+    // Subject duties must reference the curriculum for their assigned grade.
+    await container.academicRepository.saveLearningArea(LearningArea.create({ ...mathLA.toJSON(), gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL }, mathLA.id));
     const userCtxTch2 = { userId: 'user-tch-2', email: 'teacher2@school.com', role: UserRole.TEACHER, schoolId };
     const context = await container.academicUseCases.getTeacherAuthorizedContext(userCtxTch2, academicYearId);
 
@@ -528,6 +532,8 @@ describe('Marks Upload Portal Redesign & Subject Access Acceptance Tests (Scenar
   // SCENARIO 4: Save, Reopen, and Verify Marks
   // ==========================================
   test('Scenario 4: Teacher commits marks upload, reopens, and verifies values persist accurately', async () => {
+    // The Grade 7 subject duty uses a Grade 7 curriculum entry.
+    await container.academicRepository.saveLearningArea(LearningArea.create({ ...mathLA.toJSON(), gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL }, mathLA.id));
     const userCtx = { userId: 'user-tch-2', email: 'teacher2@school.com', role: UserRole.TEACHER, schoolId };
 
     const commitRes = await container.CBCUseCases.commitMarksUpload({
@@ -788,6 +794,7 @@ describe('Marks Upload Portal Redesign & Subject Access Acceptance Tests (Scenar
   // SCENARIO 10: Hybrid Teaching Model Support
   // ==========================================
   test('Scenario 10: Hybrid teacher can grade all subjects for assigned class and only assigned subject for secondary class', async () => {
+    await container.academicRepository.saveLearningArea(LearningArea.create({ ...mathLA.toJSON(), gradeLevel: CBCGradeLevel.GRADE_1 }, 'la-g1-math'));
     const userCtxHybrid = { userId: 'user-tch-hybrid', email: 'hybrid@school.com', role: UserRole.TEACHER, schoolId };
     const context = await container.academicUseCases.getTeacherAuthorizedContext(userCtxHybrid, academicYearId);
 
@@ -807,10 +814,10 @@ describe('Marks Upload Portal Redesign & Subject Access Acceptance Tests (Scenar
     const g1Math = await container.CBCUseCases.recordSummativeAssessment({
       studentId: stG1_1.id,
       teacherId: 'tch-hybrid',
-      learningAreaId: 'la-math',
+      learningAreaId: 'la-g1-math',
       termId,
       academicYearId,
-      strandScores: [{ strandId: 'la-math', rawScore: 88, maxScore: 100, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS }],
+      strandScores: [{ strandId: 'la-g1-math', rawScore: 88, maxScore: 100, performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS }],
       overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS,
       teacherRemarks: 'Strong foundations in counting',
       evaluationDate: '2026-03-20'

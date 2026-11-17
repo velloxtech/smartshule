@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { ReceiptViewModal } from '../modals/ReceiptViewModal';
 import { FeeStatementModal } from '../modals/FeeStatementModal';
 import { InvoiceDetailsModal } from '../modals/InvoiceDetailsModal';
+import { RequestTransactionReversalModal } from '../modals/RequestTransactionReversalModal';
+import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 
 export interface LearnerFeeCollectionDeskProps {
   students: Student[];
@@ -53,6 +55,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
   const [activeLedgerTab, setActiveLedgerTab] = useState<'history' | 'statement' | 'invoices'>('history');
 
   // Payment recording panel / modal state
+  const [isBulkInvoiceModalOpen, setIsBulkInvoiceModalOpen] = useState(false);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('MPESA');
@@ -87,6 +90,8 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<any | null>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [reversalModalTx, setReversalModalTx] = useState<any | null>(null);
+  const [isReversalModalOpen, setIsReversalModalOpen] = useState(false);
 
   // Photo upload state
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -139,6 +144,15 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
       setFeePositionData(null);
     } finally {
       setIsLoadingPosition(false);
+    }
+  };
+
+  // Reusable authoritative position loader
+  const loadPosition = async (studentId?: string, term?: string) => {
+    const sId = studentId || selectedStudent?.id;
+    const t = term || selectedTerm;
+    if (sId) {
+      await loadLearnerFeePosition(sId, t);
     }
   };
 
@@ -545,6 +559,16 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setIsBulkInvoiceModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Generate invoices in bulk for Whole School, ECDE, Primary, or Grade"
+            >
+              <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+              <span>Generate Invoices (Bulk)</span>
+            </button>
+
             {onNavigateToFullLedger && (
               <button
                 type="button"
@@ -641,7 +665,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                 setReceiptModalPaymentId(latestPayment.id);
                 setIsReceiptModalOpen(true);
               }}
-              className="px-3 py-1 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+              className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
               <span>Print Receipt</span>
@@ -659,7 +683,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
           <button
             type="button"
             onClick={() => setArrearsSuccessMessage(null)}
-            className="p-1 rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-100 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-primary hover:text-on-primary-fixed hover:bg-primary-fixed transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -785,20 +809,20 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
               <div
                 className={`p-4 rounded-xl border relative overflow-hidden ${
                   financials.outstandingBalance === 0
-                    ? 'bg-teal-500/10 border-teal-500/30'
+                    ? 'bg-primary/10 border-primary/30'
                     : 'bg-rose-500/10 border-rose-500/30'
                 }`}
               >
                 <div
                   className={`text-[11px] font-bold uppercase tracking-wider ${
-                    financials.outstandingBalance === 0 ? 'text-teal-900' : 'text-rose-900'
+                    financials.outstandingBalance === 0 ? 'text-on-primary-fixed' : 'text-rose-900'
                   }`}
                 >
                   Outstanding Balance
                 </div>
                 <div
                   className={`text-xl sm:text-2xl font-black font-mono mt-1 ${
-                    financials.outstandingBalance === 0 ? 'text-teal-950' : 'text-rose-950'
+                    financials.outstandingBalance === 0 ? 'text-on-primary-fixed' : 'text-rose-950'
                   }`}
                 >
                   KSh {financials.outstandingBalance.toLocaleString()}
@@ -806,7 +830,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                 <div className="flex items-center justify-between mt-0.5">
                   <span
                     className={`text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded ${
-                      financials.outstandingBalance === 0 ? 'bg-teal-700 text-white' : 'bg-rose-700 text-white'
+                      financials.outstandingBalance === 0 ? 'bg-primary text-white' : 'bg-rose-700 text-white'
                     }`}
                   >
                     {financials.statusLabel}
@@ -829,7 +853,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                 </span>
               </div>
               {financials.outstandingBalance === 0 && financials.overpaymentCredit > 0 && (
-                <div className="font-bold text-teal-800">
+                <div className="font-bold text-on-primary-fixed">
                   Prepayment Credit Available: KSh {financials.overpaymentCredit.toLocaleString()}
                 </div>
               )}
@@ -840,7 +864,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
               <button
                 type="button"
                 onClick={handleOpenRecordPayment}
-                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">add_circle</span>
                 <span>Record Payment</span>
@@ -849,7 +873,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
               <button
                 type="button"
                 onClick={handleOpenRecordArrears}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">history_edu</span>
                 <span>Record Arrears</span>
@@ -908,7 +932,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
             <div className="bg-surface-container-lowest rounded-2xl border-2 border-emerald-600/30 shadow-md p-4 sm:p-5 animate-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20 mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
                     <span className="material-symbols-outlined text-[20px]">payments</span>
                   </div>
                   <div>
@@ -945,7 +969,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       onClick={() => setPaymentMethod('MPESA')}
                       className={`p-3 rounded-xl border text-left font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                         paymentMethod === 'MPESA'
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          ? 'bg-primary text-white border-primary shadow-sm'
                           : 'bg-surface-container border-outline-variant/40 text-on-surface hover:bg-surface-container-high'
                       }`}
                     >
@@ -977,7 +1001,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       onClick={() => setPaymentMethod('CASH')}
                       className={`p-3 rounded-xl border text-left font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                         paymentMethod === 'CASH'
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                          ? 'bg-primary text-white border-primary shadow-sm'
                           : 'bg-surface-container border-outline-variant/40 text-on-surface hover:bg-surface-container-high'
                       }`}
                     >
@@ -1017,7 +1041,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       />
                     </div>
                     <p className="text-[11px] text-on-surface-variant mt-1.5 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[14px] text-emerald-600">payments</span>
+                      <span className="material-symbols-outlined text-[14px] text-primary">payments</span>
                       <span>Accept any partial payment or installment amount. No fixed requirement.</span>
                     </p>
                   </div>
@@ -1130,7 +1154,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                         value={transactionReference}
                         onChange={(e) => setTransactionReference(e.target.value.toUpperCase())}
                         placeholder="e.g. QHJ8921KL"
-                        className="w-full px-3 py-2 rounded-lg border border-emerald-300 font-mono text-xs uppercase font-bold text-emerald-950 bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-primary font-mono text-xs uppercase font-bold text-on-primary-fixed bg-surface"
                       />
                     </div>
                     <div>
@@ -1140,7 +1164,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                         value={mpesaPhoneNumber}
                         onChange={(e) => setMpesaPhoneNumber(e.target.value)}
                         placeholder="e.g. 0712345678"
-                        className="w-full px-3 py-2 rounded-lg border border-emerald-300 font-mono text-xs text-emerald-950 bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-primary font-mono text-xs text-on-primary-fixed bg-surface"
                       />
                     </div>
                   </div>
@@ -1153,7 +1177,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       <select
                         value={bankName}
                         onChange={(e) => setBankName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/40 text-xs font-semibold bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/40 text-xs font-semibold bg-surface"
                       >
                         {KENYAN_BANKS.map((b) => (
                           <option key={b} value={b}>
@@ -1172,7 +1196,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                         value={slipNumber}
                         onChange={(e) => setSlipNumber(e.target.value)}
                         placeholder="e.g. SLIP-8921"
-                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/40 font-mono text-xs text-on-surface bg-white"
+                        className="w-full px-3 py-2 rounded-lg border border-outline-variant/40 font-mono text-xs text-on-surface bg-surface"
                       />
                     </div>
                   </div>
@@ -1180,7 +1204,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
 
                 {paymentMethod === 'CASH' && (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-950 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-amber-700 text-[20px]">info</span>
+                    <span className="material-symbols-outlined text-primary text-[20px]">info</span>
                     <span>
                       Cash collected at counter. An official system receipt number (e.g.{' '}
                       <strong className="font-mono">REC-2026-XXXX</strong>) will be issued automatically with your cashier
@@ -1227,7 +1251,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       <button
                         type="submit"
                         disabled={isSubmittingPayment}
-                        className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
                       >
                         <span className="material-symbols-outlined text-[16px]">check_circle</span>
                         <span>{isSubmittingPayment ? 'Saving...' : 'Confirm & Save Payment'}</span>
@@ -1252,7 +1276,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                       <span>Review & Confirm Payment</span>
@@ -1268,7 +1292,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
             <div className="bg-surface-container-lowest rounded-2xl border-2 border-amber-500/40 shadow-md p-4 sm:p-5 animate-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20 mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
                     <span className="material-symbols-outlined text-[20px]">history_edu</span>
                   </div>
                   <div>
@@ -1300,7 +1324,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                   <div className="flex items-start gap-2.5">
                     <span className="material-symbols-outlined text-amber-600 text-[22px] shrink-0 mt-0.5">warning</span>
                     <div>
-                      <h4 className="font-bold text-xs text-amber-700">Potential Duplicate Arrears Detected</h4>
+                      <h4 className="font-bold text-xs text-primary">Potential Duplicate Arrears Detected</h4>
                       <p className="text-[11px] text-on-surface-variant mt-0.5">{duplicateWarning.message}</p>
                       {duplicateWarning.existingEntry && (
                         <div className="mt-2 p-2.5 rounded-lg bg-surface-container text-xs space-y-1 border border-outline-variant/30">
@@ -1338,7 +1362,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       type="button"
                       onClick={() => handleSubmitArrears(undefined, true)}
                       disabled={isSubmittingArrears}
-                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <span className="material-symbols-outlined text-[16px]">done_all</span>
                       <span>{isSubmittingArrears ? 'Saving...' : 'Confirm & Save Duplicate Anyway'}</span>
@@ -1399,7 +1423,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                         value={arrearsAmount}
                         onChange={(e) => setArrearsAmount(e.target.value)}
                         placeholder="e.g. 1000"
-                        className="w-full pl-12 pr-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                        className="w-full pl-12 pr-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
                     {/* Flexible Arrears Input */}
@@ -1416,7 +1440,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                     <select
                       value={arrearsAcademicYear}
                       onChange={(e) => setArrearsAcademicYear(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="year-2026">2026 (Current Academic Year)</option>
                       <option value="year-2025">2025 (Previous Academic Year)</option>
@@ -1433,7 +1457,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                     <select
                       value={arrearsTerm}
                       onChange={(e) => setArrearsTerm(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="term-2026-t1">Term 1</option>
                       <option value="term-2026-t2">Term 2</option>
@@ -1454,7 +1478,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                     value={arrearsReason}
                     onChange={(e) => setArrearsReason(e.target.value)}
                     placeholder="e.g. Outstanding fees from a previous term"
-                    className="w-full px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    className="w-full px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   {/* Quick reason suggestions */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -1485,7 +1509,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                     <select
                       value={arrearsSource}
                       onChange={(e) => setArrearsSource(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="Verified school records">Verified school records</option>
                       <option value="Previous school ledger">Previous school ledger</option>
@@ -1504,7 +1528,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       type="date"
                       value={arrearsDueDate}
                       onChange={(e) => setArrearsDueDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="w-full px-3 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
                 </div>
@@ -1520,7 +1544,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       value={arrearsReferenceNote}
                       onChange={(e) => setArrearsReferenceNote(e.target.value)}
                       placeholder="e.g. Physical file ref #842 or paper receipt #104"
-                      className="w-full px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                      className="w-full px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
 
@@ -1554,7 +1578,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                   <button
                     type="submit"
                     disabled={isSubmittingArrears}
-                    className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">save</span>
                     <span>{isSubmittingArrears ? 'Saving Arrears...' : 'Save Arrears Entry'}</span>
@@ -1649,7 +1673,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                                 {p.status}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-right space-x-1.5">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1661,6 +1685,29 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                                 <span className="material-symbols-outlined text-[13px]">print</span>
                                 <span>Receipt</span>
                               </button>
+                              {p.status !== 'REVERSED' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReversalModalTx({
+                                      id: p.id,
+                                      reference: p.receiptNumber || p.transactionReference,
+                                      receiptNumber: p.receiptNumber,
+                                      type: 'PAYMENT',
+                                      amount: p.amount,
+                                      date: p.paymentDate || new Date().toISOString().split('T')[0],
+                                      studentId: selectedStudent.id,
+                                      studentName: selectedStudent.name,
+                                      admissionNumber: selectedStudent.admissionNumber
+                                    });
+                                    setIsReversalModalOpen(true);
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed font-bold text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 border border-primary"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">rotate_left</span>
+                                  <span>Request Reversal</span>
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1685,6 +1732,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                           <th className="px-3 py-2 text-right">Debit / Billed (KES)</th>
                           <th className="px-3 py-2 text-right">Credit / Paid (KES)</th>
                           <th className="px-3 py-2 text-right">Running Balance (KES)</th>
+                          <th className="px-3 py-2 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/20 font-mono text-[11px]">
@@ -1709,6 +1757,33 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                             </td>
                             <td className="px-3 py-2 text-right font-extrabold text-on-surface">
                               {Number(item.runningBalance).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {item.receiptNumber ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReversalModalTx({
+                                      id: item.id || item.transactionId,
+                                      reference: item.receiptNumber || item.transactionReference,
+                                      receiptNumber: item.receiptNumber,
+                                      type: item.type === 'CREDIT_UTILIZATION' ? 'CREDIT_UTILIZATION' : 'PAYMENT',
+                                      amount: item.credit || item.debit || 0,
+                                      date: item.date || new Date().toISOString().split('T')[0],
+                                      studentId: selectedStudent.id,
+                                      studentName: selectedStudent.name,
+                                      admissionNumber: selectedStudent.admissionNumber
+                                    });
+                                    setIsReversalModalOpen(true);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed font-bold text-[10px] border border-primary cursor-pointer inline-flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">rotate_left</span>
+                                  <span>Reverse</span>
+                                </button>
+                              ) : (
+                                <span className="text-outline-variant text-[10px]">--</span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1763,6 +1838,31 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
           invoice={selectedInvoiceForModal}
         />
       )}
+
+      {reversalModalTx && (
+        <RequestTransactionReversalModal
+          isOpen={isReversalModalOpen}
+          onClose={() => {
+            setIsReversalModalOpen(false);
+            setReversalModalTx(null);
+          }}
+          onSuccess={() => {
+            if (onRefreshStudents) onRefreshStudents();
+            loadPosition();
+          }}
+          transaction={reversalModalTx}
+        />
+      )}
+
+      {/* Bulk Fee Invoice Generator Modal */}
+      <GenerateInvoicesModal
+        isOpen={isBulkInvoiceModalOpen}
+        onClose={() => setIsBulkInvoiceModalOpen(false)}
+        onInvoicesGenerated={async () => {
+          if (onRefreshStudents) await onRefreshStudents();
+          loadPosition();
+        }}
+      />
     </div>
   );
 };

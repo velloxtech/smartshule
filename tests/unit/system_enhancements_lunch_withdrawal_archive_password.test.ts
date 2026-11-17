@@ -7,6 +7,7 @@ import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
 import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { ClassRoom, Stream, EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { LunchEnrollment, LunchEnrollmentStatus } from '../../src/core/domain/finance/LunchEnrollment';
 
 describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archiving & Password Reset', () => {
   let app: Express;
@@ -225,6 +226,23 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
     );
     await container.studentRepository.save(singleChild);
 
+    // 6. Setup Daily Lunch Enrollment for HT Child
+    const htLunchEnrollment = LunchEnrollment.create(
+      {
+        schoolId,
+        studentId: HT_STUDENT_ID,
+        academicYearId,
+        planName: 'Standard Daily Lunch',
+        paymentFrequency: 'DAILY',
+        dailyRate: 150,
+        amount: 0,
+        status: LunchEnrollmentStatus.ACTIVE,
+        enrolledAt: new Date(),
+      },
+      'enr-ht-daily-01'
+    );
+    await container.lunchFeeRepository.save(htLunchEnrollment);
+
     // Obtain JWT Tokens
     const adminLogin = await request(app).post('/api/v1/auth/login').send({
       email: 'admin.enhancements@smartshule.ac.ke',
@@ -251,7 +269,7 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
   describe('Module 1: Lunch Program Daily Collection & Financial Accountability', () => {
     const studentId = HT_STUDENT_ID;
 
-    it('1.1 should record daily lunch collection and auto-enroll learner with DAILY frequency', async () => {
+    it('1.1 should record daily lunch collection for learner enrolled with DAILY frequency', async () => {
       const res = await request(app)
         .post('/api/v1/lunch/payments/daily')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -393,6 +411,19 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
     });
 
     it('1.8 should provide real-time lunch dashboard metrics', async () => {
+      const today = new Date().toISOString().split('T')[0];
+      await request(app)
+        .post('/api/v1/lunch/payments/daily')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          studentId,
+          amount: 150,
+          paymentDate: today,
+          paymentMethod: 'CASH',
+          transactionReference: `CASH-DASH-${Date.now()}`,
+          idempotencyKey: `idemp-dash-${Date.now()}`,
+        });
+
       const res = await request(app)
         .get('/api/v1/lunch/dashboard-metrics')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -681,6 +712,60 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
 
       expect(newLogin.status).toBe(200);
       expect(newLogin.body.data.user.mustChangePassword).toBe(false);
+    });
+
+    it('4.5 forgot password with OTP resets password and clears mustChangePassword even if an admin previously forced reset', async () => {
+      // Step A: Admin forces reset again on the user
+      const adminResetRes = await request(app)
+        .post(`/api/v1/users/${PARENT_USER_ID}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      expect(adminResetRes.status).toBe(200);
+      expect(adminResetRes.body.mustChangePassword).toBe(true);
+
+      const userAfterAdminReset = await container.userRepository.findById(PARENT_USER_ID);
+      expect(userAfterAdminReset!.mustChangePassword).toBe(true);
+
+      // Step B: User uses the Forgot Password route to request OTP
+      const forgotRes = await request(app)
+        .post('/api/v1/auth/forgot-password')
+        .send({
+          email: 'parent.multi@smartshule.ac.ke',
+        });
+
+      expect(forgotRes.status).toBe(200);
+      expect(forgotRes.body.success).toBe(true);
+      const otpCode = forgotRes.body.debugCode;
+      expect(otpCode).toBeDefined();
+
+      // Step C: User completes OTP verification & sets their own new password
+      const resetWithOtpRes = await request(app)
+        .post('/api/v1/auth/reset-password')
+        .send({
+          email: 'parent.multi@smartshule.ac.ke',
+          resetCode: otpCode,
+          newPassword: 'OtpChosenPassword@2026',
+        });
+
+      expect(resetWithOtpRes.status).toBe(200);
+      expect(resetWithOtpRes.body.success).toBe(true);
+
+      // Step D: Verify user entity in database has mustChangePassword=false
+      const userAfterOtpReset = await container.userRepository.findById(PARENT_USER_ID);
+      expect(userAfterOtpReset!.mustChangePassword).toBe(false);
+
+      // Step E: User logs in with the OTP-chosen password; mustChangePassword must be false
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'parent.multi@smartshule.ac.ke',
+          password: 'OtpChosenPassword@2026',
+        });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+      expect(loginRes.body.data.user.mustChangePassword).toBe(false);
     });
   });
 });

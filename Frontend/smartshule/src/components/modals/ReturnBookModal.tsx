@@ -73,23 +73,23 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+      <div className="bg-surface-container-lowest rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-outline-variant/30">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined">library_add_check</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Return Book (Check-In)</h2>
-              <p className="text-xs text-gray-500">Record item return, assess condition & overdue fines</p>
+              <h2 className="text-lg font-bold text-on-surface">Return Book (Check-In)</h2>
+              <p className="text-xs text-on-surface-variant">Record item return, assess condition & overdue fines</p>
             </div>
           </div>
           <button 
             onClick={onClose}
             type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors"
           >
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
@@ -105,11 +105,11 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
           )}
 
           {/* Loan Card Summary */}
-          <div className="mb-5 p-4 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
+          <div className="mb-5 p-4 rounded-xl bg-surface border border-outline-variant/80 space-y-2">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Title</span>
-                <h4 className="text-sm font-bold text-gray-900">{loan.bookTitle}</h4>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Title</span>
+                <h4 className="text-sm font-bold text-on-surface">{loan.bookTitle}</h4>
               </div>
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 isOverdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
@@ -117,9 +117,9 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                 {isOverdue ? `${overdueDays} Days Overdue` : 'Within Due Period'}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 pt-1 border-t border-gray-200/60">
-              <div>Borrower: <strong className="text-gray-800">{loan.borrowerName}</strong> ({loan.borrowerType})</div>
-              <div>Due Date: <strong className="text-gray-800 font-mono">{loan.dueDate}</strong></div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-on-surface-variant pt-1 border-t border-outline-variant/60">
+              <div>Borrower: <strong className="text-on-surface">{loan.borrowerName}</strong> ({loan.borrowerType})</div>
+              <div>Due Date: <strong className="text-on-surface font-mono">{loan.dueDate}</strong></div>
             </div>
           </div>
 
@@ -127,7 +127,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
             
             {/* Condition on Return */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Item Status / Condition on Return
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -136,8 +136,8 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                   onClick={() => setConditionStatus('RETURNED')}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1 ${
                     conditionStatus === 'RETURNED'
-                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">check_circle</span>
@@ -148,8 +148,8 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                   onClick={() => setConditionStatus('DAMAGED')}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1 ${
                     conditionStatus === 'DAMAGED'
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">warning</span>
@@ -161,7 +161,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all flex items-center justify-center gap-1 ${
                     conditionStatus === 'LOST'
                       ? 'bg-rose-700 text-white border-rose-700 shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      : 'bg-white text-on-surface-variant border-outline-variant/30 hover:bg-surface'
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">cancel</span>
@@ -171,7 +171,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Return Date
               </label>
               <input
@@ -179,7 +179,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                 required
                 value={returnDate}
                 onChange={e => setReturnDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none bg-white font-medium"
+                className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface font-medium"
               />
             </div>
 
@@ -193,22 +193,22 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
               </div>
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
-                  <span className="absolute left-3 top-2 text-xs font-bold text-gray-500">KES</span>
+                  <span className="absolute left-3 top-2 text-xs font-bold text-on-surface-variant">KES</span>
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={fineAmount}
                     onChange={e => setFineAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-full pl-12 pr-3 py-1.5 text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none bg-white"
+                    className="w-full pl-12 pr-3 py-1.5 text-xs font-bold border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-surface"
                   />
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700 select-none">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface-variant select-none">
                   <input
                     type="checkbox"
                     checked={finePaid}
                     onChange={e => setFinePaid(e.target.checked)}
-                    className="w-4 h-4 text-[#800000] rounded focus:ring-[#800000]"
+                    className="w-4 h-4 text-primary rounded focus:ring-primary"
                   />
                   <span>Paid in Full</span>
                 </label>
@@ -216,7 +216,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                 Check-in Remarks / Condition Notes
               </label>
               <textarea
@@ -224,7 +224,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
                 placeholder="e.g. Returned on time, clean copy, or minor torn page taped"
                 value={remarks}
                 onChange={e => setRemarks(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none resize-none"
+                className="w-full px-3 py-2 text-xs border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
               />
             </div>
 
@@ -232,12 +232,12 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50">
+        <div className="px-6 py-4 border-t border-outline-variant/30 flex items-center justify-end gap-3 bg-surface/50">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-xl transition-colors"
           >
             Cancel
           </button>
@@ -245,7 +245,7 @@ const ReturnBookModal: React.FC<ReturnBookModalProps> = ({
             type="submit"
             form="return-book-form"
             disabled={saving}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-container rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

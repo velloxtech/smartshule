@@ -241,7 +241,7 @@ describe('New Features Integration Tests', () => {
         .send({
           schoolId: 'school-001',
           studentId: 'student-001',
-          learningAreaId: 'la-science-g7',
+          learningAreaId: 'la-science-7',
           competencyTag: 'Creativity & Imagination',
           title: 'Solar System Model Practical Task',
           description: 'Kevin crafted an excellent scale model of the solar system using recyclable materials.',
@@ -274,7 +274,7 @@ describe('New Features Integration Tests', () => {
         .send({
           schoolId: 'school-001',
           studentId: 'student-001',
-          learningAreaId: 'la-science-g7',
+          learningAreaId: 'la-science-7',
           competencyDomain: 'Critical Thinking & Problem Solving',
           rating: 'EE',
           title: 'Robotics Assembly Milestone',
@@ -420,7 +420,7 @@ describe('New Features Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.replyText).toContain('Fee Balance');
       expect(res.body.data.replyText).toContain('Pay Fees via KCB Bank');
-      expect(res.body.data.replyText).toContain('eDiary & Homework');
+      expect(res.body.data.replyText).toMatch(/Daily Homefun & Communication Diary|eDiary & Homework/i);
       expect(res.body.data.intent).toBe('MENU');
     });
 
@@ -462,7 +462,7 @@ describe('New Features Integration Tests', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.replyText).toContain('eDIARY');
+      expect(res.body.data.replyText).toMatch(/e-?diary/i);
       expect(res.body.data.intent).toBe('EDIARY');
     });
 

@@ -1,3 +1,13 @@
+import {CurriculumProposalService} from '../application/planning/CurriculumProposalService';
+import { PlanningWorkflowService } from '../application/planning/PlanningWorkflowService';
+import { IBiometricCredentialRepository } from '../core/ports/repositories/IBiometricCredentialRepository';
+import { InMemoryBiometricCredentialRepository } from './database/in-memory/InMemoryBiometricCredentialRepository';
+import { WebAuthnUseCases } from '../application/auth/WebAuthnUseCases';
+import { WebAuthnService } from './services/WebAuthnService';
+import { TermAllocationService } from '../application/planning/TermAllocationService';
+import { TeacherAssignmentAccess } from '../application/shared/TeacherAssignmentAccess';
+import { CalendarPlanningService } from '../application/planning/CalendarPlanningService';
+import { PlanningRepository, MemoryPlanningRepository } from '../application/planning/PlanningRepository';
 import { IUserRepository } from '../core/ports/repositories/IUserRepository';
 import { IStudentRepository } from '../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../core/ports/repositories/ITeacherRepository';
@@ -60,6 +70,9 @@ import { InMemoryTeacherCorrectionRequestRepository } from './database/in-memory
 import { IFinancialApprovalRepository } from '../core/ports/repositories/IFinancialApprovalRepository';
 import { InMemoryFinancialApprovalRepository } from './database/in-memory/InMemoryRepositories';
 import { FinancialApprovalUseCases } from '../application/finance/FinancialApprovalUseCases';
+import { IParentConsentRepository } from '../core/ports/repositories/IParentConsentRepository';
+import { InMemoryParentConsentRepository } from './database/in-memory/InMemoryParentConsentRepository';
+import { ParentConsentUseCases } from '../application/consent/ParentConsentUseCases';
 
 import {
   InMemoryUserRepository,
@@ -107,6 +120,12 @@ import { Guardian, GuardianRelationship } from '../core/domain/user/Guardian';
 
 export class AppContainer {
   // Repositories
+  public assignmentAccess!: TeacherAssignmentAccess;
+  public termAllocations!: TermAllocationService;
+  public curriculumProposals!: CurriculumProposalService;
+  public planningWorkflow!: PlanningWorkflowService;
+  public calendarPlanning!: CalendarPlanningService;
+  public planningRepository: PlanningRepository;
   public userRepository: IUserRepository;
   public studentRepository: IStudentRepository;
   public deletedStudentRepository: IDeletedStudentRepository;
@@ -138,6 +157,8 @@ export class AppContainer {
   public signatureRepository: ISignatureRepository;
   public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
   public financialApprovalRepository: IFinancialApprovalRepository;
+  public parentConsentRepository: IParentConsentRepository;
+  public biometricCredentialRepository: IBiometricCredentialRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -152,6 +173,7 @@ export class AppContainer {
 
   // Use Cases
   public authUseCases!: AuthUseCases;
+  public webAuthnUseCases!: WebAuthnUseCases;
   public studentUseCases!: StudentUseCases;
   public teacherUseCases!: TeacherUseCases;
   public academicUseCases!: AcademicUseCases;
@@ -180,8 +202,10 @@ export class AppContainer {
   public studentSponsorshipUseCases!: StudentSponsorshipUseCases;
   public signatureUseCases!: SignatureUseCases;
   public financialApprovalUseCases!: FinancialApprovalUseCases;
+  public parentConsentUseCases!: ParentConsentUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
+    this.planningRepository = customRepositories?.planningRepository || new MemoryPlanningRepository();
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
     this.studentRepository = customRepositories?.studentRepository || new InMemoryStudentRepository();
     this.deletedStudentRepository = customRepositories?.deletedStudentRepository || new InMemoryDeletedStudentRepository();
@@ -226,10 +250,13 @@ export class AppContainer {
       customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
     this.signatureRepository =
       customRepositories?.signatureRepository || new InMemorySignatureRepository();
+    this.biometricCredentialRepository = customRepositories?.biometricCredentialRepository || new InMemoryBiometricCredentialRepository();
     this.teacherCorrectionRequestRepository =
       customRepositories?.teacherCorrectionRequestRepository || new InMemoryTeacherCorrectionRequestRepository();
     this.financialApprovalRepository =
       customRepositories?.financialApprovalRepository || new InMemoryFinancialApprovalRepository();
+    this.parentConsentRepository =
+      customRepositories?.parentConsentRepository || new InMemoryParentConsentRepository();
 
     this.initUseCases();
   }
@@ -249,6 +276,17 @@ export class AppContainer {
       this.studentRepository,
       this.systemLogRepository,
       this.teacherRepository
+    );
+    const webAuthnService = new WebAuthnService({
+      rpId: process.env.WEBAUTHN_RP_ID || 'localhost',
+      rpName: process.env.WEBAUTHN_RP_NAME || 'Grace Seeds School',
+      expectedOrigin: process.env.WEBAUTHN_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173'
+    });
+    this.webAuthnUseCases = new WebAuthnUseCases(
+      this.biometricCredentialRepository,
+      this.userRepository,
+      this.tokenService,
+      webAuthnService
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,
@@ -293,11 +331,19 @@ export class AppContainer {
       this.teacherRepository,
       this.feeRepository
     );
+    this.assignmentAccess = new TeacherAssignmentAccess(this.academicRepository,this.teacherRepository);
+    this.calendarPlanning = new CalendarPlanningService(this.planningRepository,this.academicRepository,this.timetableRepository,this.schemeOfWorkRepository,this.assignmentAccess);
     this.curriculumUseCases = new CurriculumPlanUseCases(
       this.schemeOfWorkRepository,
       this.lessonPlanRepository,
-      this.teacherRepository
+      this.teacherRepository,
+      this.assignmentAccess,
+      this.calendarPlanning
     );
+    this.termAllocations = new TermAllocationService(this);
+    this.planningWorkflow = new PlanningWorkflowService(this);
+    this.curriculumProposals = new CurriculumProposalService(this);
+    this.CBCUseCases.proposeChange = (a,k,p,id)=>this.curriculumProposals.propose(a,k,p,id);
     
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(
       this.recordOfWorkRepository,
@@ -307,7 +353,13 @@ export class AppContainer {
       this.userRepository,
       this.systemLogRepository
     ); 
-    this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
+    this.complaintUseCases = new ComplaintUseCases(
+      this.complaintRepository,
+      this.userRepository,
+      this.guardianRepository,
+      this.studentRepository,
+      this.notificationService
+    );
     this.libraryUseCases = new LibraryUseCases(
       this.libraryRepository,
       this.studentRepository,
@@ -459,6 +511,13 @@ export class AppContainer {
       this.feeRepository,
       this.notificationService,
       this.payrollRepository,
+      this.systemLogRepository
+    );
+    this.parentConsentUseCases = new ParentConsentUseCases(
+      this.parentConsentRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.userRepository,
       this.systemLogRepository
     );
   }

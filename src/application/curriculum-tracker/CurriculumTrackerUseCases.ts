@@ -96,6 +96,7 @@ export interface DailyLogQueryCriteria {
 
 export interface EnrichedDailyLog extends CurriculumTrackerDailyLog {
   trackerId: string;
+  schoolId: string; teacherId: string; classRoomId: string; streamId?: string; learningAreaId: string;
   subjectName: string;
   className: string;
   streamName?: string;
@@ -267,11 +268,7 @@ export class CurriculumTrackerUseCases {
     const teacherName = requestingUser?.fullName || tracker.teacherName;
     const teacherId = requestingUser?.userId || tracker.teacherId;
 
-    tracker.confirmWeekCovered(weekNumber, {
-      ...data,
-      confirmedByTeacherId: teacherId,
-      confirmedByTeacherName: teacherName
-    });
+    tracker.submitWeekForApproval(weekNumber, {lessonsTaught:data.lessonsTaught,teacherComment:data.comment,submittedByTeacherId:teacherId,submittedByTeacherName:teacherName});
 
     await this.trackerRepo.update(tracker);
     return tracker.toJSON();
@@ -320,14 +317,7 @@ export class CurriculumTrackerUseCases {
       throw new ForbiddenError('Only Head Teacher, Deputy, or School Administrators can approve curriculum coverage.');
     }
 
-    tracker.approveWeekCoverage(weekNumber, {
-      approvedByUserId: requestingUser.userId || 'admin-01',
-      approvedByName: requestingUser.fullName || 'Academic Supervisor',
-      remarks: data.remarks
-    });
-
-    await this.trackerRepo.update(tracker);
-    return tracker.toJSON();
+    throw new ValidationError('Confirmed coverage comes from approved records of work. Review the actual work records instead of approving a whole week manually.');
   }
 
   public async returnWeekCoverage(
@@ -422,8 +412,9 @@ export class CurriculumTrackerUseCases {
     return tracker.toJSON();
   }
 
-  public async getSummary(schoolId: string, term?: string, academicYear?: string) {
-    const trackers = await this.trackerRepo.findTrackers({ schoolId, term, academicYear });
+  public async getSummary(schoolId: string, term?: string, academicYear?: string, authorize?: (record:any)=>Promise<boolean>) {
+    let trackers = await this.trackerRepo.findTrackers({ schoolId, term, academicYear });
+    if(authorize){const permitted=[];for(const record of trackers)if(await authorize(record))permitted.push(record);trackers=permitted;}
 
     let totalWeeksAll = 0;
     let coveredWeeksAll = 0;
@@ -667,6 +658,7 @@ export class CurriculumTrackerUseCases {
         allLogs.push({
           ...log,
           trackerId: t.id,
+          schoolId:t.schoolId, teacherId:t.teacherId, classRoomId:t.classRoomId, streamId:t.streamId, learningAreaId:t.learningAreaId,
           subjectName: t.subjectName,
           className: t.className,
           streamName: t.streamName,

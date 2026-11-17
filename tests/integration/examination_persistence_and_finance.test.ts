@@ -1,8 +1,11 @@
+import { ClassRoom, LearningArea, EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { CBCGradeLevel } from '../../src/core/domain/user/Student';
 import request from 'supertest';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
+import { ClassTeacherAssignment } from '../../src/core/domain/academic/TeacherAssignment';
 
 describe('Examination Persistence, Deduplication & Private School Finance API', () => {
   let app: Express;
@@ -32,6 +35,17 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
     expect(teacherLogin.status).toBe(200);
     teacherToken = teacherLogin.body.data.accessToken;
 
+
+    await container.academicRepository.saveClass(ClassRoom.create({
+      name: 'Grade 3', gradeLevel: CBCGradeLevel.GRADE_3,
+      educationLevel: EducationLevel.LOWER_PRIMARY, schoolId: 'school-001'
+    }, 'class-001'));
+    for (const [id, code, name] of [['la-mat', 'MAT3', 'Mathematics'], ['la-eng', 'ENG3', 'English'], ['la-kis', 'KIS3', 'Kiswahili']]) {
+      await container.academicRepository.saveLearningArea(LearningArea.create({
+        code, name, schoolId: 'school-001', gradeLevel: CBCGradeLevel.GRADE_3,
+        educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false
+      }, id));
+    }
     // 3. Create a test student in Grade 3
     const studentRes = await request(app)
       .post('/api/v1/students')
@@ -43,6 +57,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
         dateOfBirth: '2016-04-12',
         gender: 'FEMALE',
         gradeLevel: 'GRADE_3',
+        classroomId: 'class-001',
         schoolId: 'school-001',
         academicYearId: 'year-2026',
         guardianName: 'Achieng Mother',
@@ -50,6 +65,23 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
       });
     expect(studentRes.status).toBe(201);
     testStudentId = studentRes.body.data.id;
+    const createdStudent = await container.studentRepository.findById(testStudentId);
+
+    const teacherProfile = await container.teacherRepository.findByUserId('usr-teacher-01');
+    if (teacherProfile) {
+      const assignment = ClassTeacherAssignment.create(
+        {
+          teacherId: teacherProfile.id,
+          classRoomId: createdStudent?.classroomId || 'class-001',
+          academicYearId: 'year-2026',
+          schoolId: 'school-001',
+          isActive: true,
+          effectiveFrom: '2026-01-05'
+        },
+        'cta-exam-01'
+      );
+      await container.academicRepository.saveClassTeacherAssignment(assignment);
+    }
   });
 
   describe('Examination Recording Lifecycle & Deduplication', () => {
@@ -58,7 +90,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
         assessments: [
           {
             studentId: testStudentId,
-            teacherId: 'tch-001',
+            teacherId: 'teacher-001',
             learningAreaId: 'la-mat', // Generic key that resolves to canonical Math for Grade 3
             termId: 'term-2026-t1',
             academicYearId: 'year-2026',
@@ -76,7 +108,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
           },
           {
             studentId: testStudentId,
-            teacherId: 'tch-001',
+            teacherId: 'teacher-001',
             learningAreaId: 'la-eng', // Generic key that resolves to canonical English for Grade 3
             termId: 'term-2026-t1',
             academicYearId: 'year-2026',
@@ -94,7 +126,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
           },
           {
             studentId: testStudentId,
-            teacherId: 'tch-001',
+            teacherId: 'teacher-001',
             learningAreaId: 'la-kis', // Kiswahili
             termId: 'term-2026-t1',
             academicYearId: 'year-2026',
@@ -140,11 +172,25 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
       expect(mathAssessment.learningAreaId).not.toBe(kisAssessment.learningAreaId);
     });
 
+    it('rejects a mixed-period batch before saving any marks', async () => {
+      const before = await container.CBCAssessmentRepository.findSummatives({ studentId: testStudentId });
+      const row = { studentId: testStudentId, teacherId: 'teacher-001', learningAreaId: 'la-mat',
+        academicYearId: 'year-2026', overallPerformanceLevel: 'EE',
+        strandScores: [{ strandId: 'la-mat', rawScore: 88, maxScore: 100, performanceLevel: 'EE' }] };
+      const response = await request(app).post('/api/v1/cbc/summative/batch')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({ assessments: [{ ...row, termId: 'term-2026-1' }, { ...row, termId: 'term-2026-2' }] });
+      expect(response.status).toBe(400);
+      expect(response.body.message).toContain('one academic year and term');
+      const after = await container.CBCAssessmentRepository.findSummatives({ studentId: testStudentId });
+      expect(after.map(record => record.toJSON())).toEqual(before.map(record => record.toJSON()));
+    });
+
     it('should edit existing marks in-place idempotently without creating duplicate records', async () => {
       // Update Math mark from 88 to 94
       const updatePayload = {
         studentId: testStudentId,
-        teacherId: 'tch-001',
+        teacherId: 'teacher-001',
         learningAreaId: 'la-mat',
         termId: 'term-2026-t1',
         academicYearId: 'year-2026',
@@ -190,7 +236,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
     it('should reject invalid marks exceeding maximum score or negative marks', async () => {
       const invalidOverMaxPayload = {
         studentId: testStudentId,
-        teacherId: 'tch-001',
+        teacherId: 'teacher-001',
         learningAreaId: 'la-mat',
         termId: 'term-2026-t1',
         academicYearId: 'year-2026',
@@ -216,7 +262,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
 
       const invalidNegativePayload = {
         studentId: testStudentId,
-        teacherId: 'tch-001',
+        teacherId: 'teacher-001',
         learningAreaId: 'la-mat',
         termId: 'term-2026-t1',
         academicYearId: 'year-2026',

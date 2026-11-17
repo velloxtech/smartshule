@@ -136,7 +136,7 @@ describe('System Logs & Audit Trail Integration Tests', () => {
       expect(admitLog.category).toBe('STUDENTS');
       expect(admitLog.level).toBe('AUDIT');
       expect(admitLog.status).toBe('SUCCESS');
-      expect(admitLog.details).toContain('ADM-AUDIT-001');
+      expect(admitLog.details).toContain('0001');
     });
 
     it('records a PAYMENT_RECORDED audit event when fee is paid', async () => {

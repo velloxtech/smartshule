@@ -8,12 +8,19 @@ export enum SchemeStatus {
 }
 
 export interface SchemeOfWorkEntry {
+  slotId?: string;
+  archivedAt?: string;
+  archivedReason?: string;
+  scheduledDate?: string;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
   id: string;
   weekNumber: number;
   lessonNumber: number;
   strandId?: string;
   strandTitle: string;
   subStrandId?: string;
+  combinedSubStrandIds?: string[];
   subStrandTitle: string;
   specificLearningOutcomes: string[];
   keyInquiryQuestions: string[];
@@ -23,7 +30,31 @@ export interface SchemeOfWorkEntry {
   reflection?: string;
 }
 
+export interface TermAllocation {
+  carriedFrom?: {schemeId:string;entryId:string}[];
+  subStrandId: string;
+  combinedSubStrandIds?: string[];
+  lessons: number;
+  slotIds?: string[];
+  specificLearningOutcomes?: string[]; keyInquiryQuestions?: string[]; learningExperiences?: string[]; learningResources?: string[]; assessmentMethods?: string[];
+}
+export interface PlanningChange {
+  at: string; actorId: string; action: 'DRAFT_SAVED'|'FINALIZED'|'REOPENED'|'WEEKLY_DRAFT_CREATED'|'WEEKLY_LESSON_SAVED'|'PACING_ADJUSTED'; reason?: string;
+  allocations: TermAllocation[]; scheduleFingerprint: string;
+}
+export interface SchemePlanningState {
+  revision: number; locked: boolean; allocations: TermAllocation[];
+  scheduleFingerprint: string; history: PlanningChange[];
+  weeklyPlanningStarted?: boolean;
+  submittedEntryIds?: string[];
+  approvedEntryIds?: string[];
+  coverageReviewStatus?: 'DRAFT'|'SUBMITTED'|'APPROVED'|'REJECTED';
+  coverageReviewRemarks?: string;
+  coverageReviewedByUserId?: string;
+  coverageReviewedAt?: string;
+}
 export interface SchemeOfWorkProps {
+  planningState?: SchemePlanningState;
   teacherId: string;
   learningAreaId: string;
   classRoomId: string;
@@ -44,6 +75,10 @@ export class SchemeOfWork extends Entity<SchemeOfWorkProps> {
     return new SchemeOfWork(props, id, createdAt, updatedAt);
   }
 
+  public get planningState(): SchemePlanningState | undefined { return this._props.planningState; }
+  public setPlanningState(state: SchemePlanningState, entries?: SchemeOfWorkEntry[]): void {
+    this._props.planningState=state; if(entries)this._props.entries=entries; this.touch();
+  }
   public get teacherId(): string {
     return this._props.teacherId;
   }
@@ -97,6 +132,7 @@ export class SchemeOfWork extends Entity<SchemeOfWorkProps> {
     }
   }
 
+  public draft(): void { this._props.status=SchemeStatus.DRAFT; this._props.submittedAt=undefined; this.touch(); }
   public submit(): void {
     this._props.status = SchemeStatus.SUBMITTED;
     this._props.submittedAt = new Date();
@@ -130,7 +166,8 @@ export class SchemeOfWork extends Entity<SchemeOfWorkProps> {
       termId: this.termId,
       title: this.title,
       entries: this.entries,
-      totalLessons: this.entries.length,
+      totalLessons: this.entries.filter(e=>!e.archivedAt).length,
+      planningState: this.planningState,
       status: this.status,
       submittedAt: this._props.submittedAt,
       reviewedByUserId: this._props.reviewedByUserId,

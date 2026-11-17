@@ -57,9 +57,10 @@ const normalizeStudent = (st: any): Student => {
 };
 
 export const VisualCBCView: React.FC = () => {
-  const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
-  const isTeacher = user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN;
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
+  const isTeacher = effectiveRole === UserRole.TEACHER || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN;
 
   const [activeTab, setActiveTab] = useState<'help_desk' | 'progress_gallery'>('help_desk');
   const [helpRequests, setHelpRequests] = useState<ParentHelpRequest[]>([]);
@@ -141,7 +142,7 @@ export const VisualCBCView: React.FC = () => {
 
       // If not guardian, load from database students endpoint
       if (!isGuardian && rawStudentList.length === 0) {
-        const stRes = await apiService.getStudents().catch(() => null);
+        const stRes = await apiService.getAssessmentRoster().catch(() => null);
         if (stRes?.data && Array.isArray(stRes.data)) {
           rawStudentList = stRes.data;
         }
@@ -210,7 +211,7 @@ export const VisualCBCView: React.FC = () => {
   const handleSubmitHelpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!helpImageBase64) {
-      alert('Please attach a photo of the homework question or page.');
+      alert('Please attach a photo of the homefun question or page.');
       return;
     }
 
@@ -226,7 +227,7 @@ export const VisualCBCView: React.FC = () => {
 
     try {
       const la = availableLearningAreas.find((l) => l.id === helpLearningArea) || availableLearningAreas[0];
-      const subjectName = la?.name || 'Integrated Homework';
+      const subjectName = la?.name || 'Integrated Homefun';
 
       const res = await apiService.uploadHelpRequest({
         schoolId: activeSchoolId,
@@ -366,7 +367,7 @@ export const VisualCBCView: React.FC = () => {
             Visual Learning Evidence & Photo Q&A Desk
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Parents snap photos to ask teachers homework questions, and teachers document hands-on CBE practical milestones
+            Parents snap photos to ask teachers homefun questions, and teachers document hands-on CBE practical milestones
           </p>
         </div>
 
@@ -379,7 +380,7 @@ export const VisualCBCView: React.FC = () => {
                 }
                 setIsAskModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl hover:shadow-md text-xs font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl hover:shadow-md text-xs font-bold transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
               <span>Ask Teacher with Photo</span>
@@ -394,7 +395,7 @@ export const VisualCBCView: React.FC = () => {
                 }
                 setIsUploadProgressOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-secondary text-white rounded-xl hover:bg-secondary/90 text-xs font-bold shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 text-xs font-bold shadow-md transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">photo_camera</span>
               <span>+ Record Student Progress Photo</span>
@@ -409,7 +410,7 @@ export const VisualCBCView: React.FC = () => {
           onClick={() => setActiveTab('help_desk')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'help_desk'
-              ? 'bg-[#7a1228] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -421,7 +422,7 @@ export const VisualCBCView: React.FC = () => {
           onClick={() => setActiveTab('progress_gallery')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'progress_gallery'
-              ? 'bg-[#7a1228] text-white shadow-xs'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -488,7 +489,7 @@ export const VisualCBCView: React.FC = () => {
               <h3 className="font-bold text-base text-on-surface">No Help Inquiries Found</h3>
               <p className="text-xs text-on-surface-variant">
                 {isGuardian
-                  ? 'Stuck on a homework question? Take a photo of the problem and submit it to get teacher guidance.'
+                  ? 'Stuck on a homefun question? Take a photo of the problem and submit it to get teacher guidance.'
                   : 'No inquiries matching your filter criteria at this time.'}
               </p>
             </div>
@@ -575,7 +576,7 @@ export const VisualCBCView: React.FC = () => {
                         <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-xs space-y-1">
                           <div className="flex items-center justify-between text-emerald-900 font-bold">
                             <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-sm text-emerald-600">school</span>
+                              <span className="material-symbols-outlined text-sm text-primary">school</span>
                               <span>
                                 Teacher Guidance {typeof req.teacherResponse === 'object' && req.teacherResponse.teacherName ? `(${req.teacherResponse.teacherName})` : ''}
                               </span>
@@ -952,7 +953,7 @@ export const VisualCBCView: React.FC = () => {
           <div className="bg-surface-container-lowest max-w-md w-full rounded-2xl shadow-xl border border-outline-variant/30 p-6 space-y-4 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-xl text-secondary">photo_camera</span>
+                <span className="material-symbols-outlined text-xl text-primary">photo_camera</span>
                 <h3 className="font-bold text-sm text-on-surface">Log CBC Visual Milestone</h3>
               </div>
               <button onClick={() => setIsUploadProgressOpen(false)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
@@ -1067,7 +1068,7 @@ export const VisualCBCView: React.FC = () => {
                   accept="image/*"
                   required
                   onChange={(e) => handleFileSelect(e, setProgressImageBase64, setProgressImagePreview, setProgressImageMime)}
-                  className="w-full text-xs text-on-surface file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-secondary file:text-white hover:file:bg-secondary/90 cursor-pointer"
+                  className="w-full text-xs text-on-surface file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
                 />
                 {progressImagePreview && (
                   <div className="mt-2 w-full h-36 rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container">
@@ -1110,7 +1111,7 @@ export const VisualCBCView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingProgress}
-                  className="flex-1 py-2.5 bg-secondary text-white rounded-xl font-bold shadow-md hover:bg-secondary/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-sm">cloud_upload</span>
                   <span>{isSubmittingProgress ? 'Uploading...' : 'Save Milestone'}</span>

@@ -1,5 +1,7 @@
 import {
   AuthResponse,
+  RegisteredWebAuthnCredential,
+  WebAuthnUserStatus,
   AuthUser,
   ManageableUser,
   ApiResponse,
@@ -59,6 +61,9 @@ import {
   SystemLogStats,
   ConcernRecord,
   ComplaintRecord,
+  LunchWeeklyCollectionReport,
+  LunchMonthlyCollectionReport,
+  LunchDashboardMetrics,
   LunchEnrollmentItem,
   LunchPaymentItem,
   LunchSummaryStats,
@@ -103,6 +108,9 @@ import {
   EndorseDailyLogDTO,
   CurriculumTrackerDailyLog,
   EnrichedDailyLog,
+  ParentConsentRequest,
+  ParentConsentResponse,
+  ParentConsentItem,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -118,6 +126,25 @@ function resolveApiBaseUrl(): string {
   // Remove trailing slashes
   url = url.replace(/\/+$/, '');
 
+  // Detect native Capacitor or WebView container environment
+  const isCapacitorNative = typeof window !== 'undefined' && Boolean(
+    (window as any).Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    (window.location.hostname === 'localhost' && window.location.protocol === 'https:' && !window.location.port)
+  );
+
+  // Detect Electron desktop environment (preload API, userAgent, or local file protocol)
+  const isElectron = typeof window !== 'undefined' && Boolean(
+    (window as any).electronAPI ||
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('Electron')) ||
+    window.location.protocol === 'file:'
+  );
+
+  // If running inside Capacitor mobile native app or Electron desktop app and no explicit external URL was provided
+  if ((isCapacitorNative || isElectron) && (!url || url === '/api/v1' || url.startsWith('/'))) {
+    return 'https://smartshule-vg15.onrender.com/api/v1';
+  }
+
   // If running on legacy Render static hosting and no explicit full URL is set, fallback to companion backend
   if (!url || url === '/api/v1') {
     if (typeof window !== 'undefined' && window.location.hostname === 'smartshule-1.onrender.com') {
@@ -130,6 +157,8 @@ function resolveApiBaseUrl(): string {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+
+export const getApiBaseUrl = (): string => API_BASE_URL;
 
 let authToken: string | null = localStorage.getItem('smartshule_token') || null;
 
@@ -191,35 +220,108 @@ const getHeaders = () => {
   return headers;
 };
 
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...getHeaders(),
-      ...(options.headers || {}),
-    },
-  });
+const inFlightRequests = new Map<string, Promise<any>>();
+const apiCache = new Map<string, { timestamp: number; data: any }>();
+const CACHE_TTL_MS = 30_000; // 30 seconds for static metadata
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    let detailsMsg = '';
-    if (errorData.error?.details) {
-      if (Array.isArray(errorData.error.details)) {
-        detailsMsg = errorData.error.details.map((d: any) => d.message || JSON.stringify(d)).join('; ');
-      } else if (typeof errorData.error.details === 'string') {
-        detailsMsg = errorData.error.details;
+export function clearApiCache(endpointPrefix?: string) {
+  if (!endpointPrefix) {
+    apiCache.clear();
+  } else {
+    for (const key of apiCache.keys()) {
+      if (key.includes(endpointPrefix)) {
+        apiCache.delete(key);
       }
     }
-    const message =
-      detailsMsg ||
-      errorData.error?.message ||
-      errorData.message ||
-      `API Error: ${res.status}`;
-    throw new Error(message);
+  }
+}
+
+async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method || 'GET').toUpperCase();
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+
+  // On any mutating request, clear relevant cache so user never sees stale data
+  if (method !== 'GET') {
+    clearApiCache();
   }
 
-  return res.json();
+  // Check cache for eligible GET metadata endpoints
+  const isCacheable = method === 'GET' && (
+    endpoint.includes('/academics/context') ||
+    endpoint.includes('/academics/classes') ||
+    endpoint.includes('/academics/streams') ||
+    endpoint.includes('/academics/learning-areas') ||
+    endpoint.includes('/schools')
+  );
+
+  if (isCacheable) {
+    const cached = apiCache.get(url);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return cached.data as T;
+    }
+  }
+
+  // In-flight deduplication: collapse simultaneous identical GET requests into 1 network call
+  if (method === 'GET') {
+    const activePromise = inFlightRequests.get(url);
+    if (activePromise) {
+      return activePromise as Promise<T>;
+    }
+  }
+
+  const fetchPromise = (async () => {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    const timer = window.setTimeout(abort, 45000);
+    if (options.signal?.aborted) abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    try {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...getHeaders(),
+          ...(options.headers || {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        let detailsMsg = '';
+        if (errorData.error?.details) {
+          if (Array.isArray(errorData.error.details)) {
+            detailsMsg = errorData.error.details.map((d: any) => d.message || JSON.stringify(d)).join('; ');
+          } else if (typeof errorData.error.details === 'string') {
+            detailsMsg = errorData.error.details;
+          }
+        }
+        const message =
+          detailsMsg ||
+          errorData.error?.message ||
+          errorData.message ||
+          `API Error: ${res.status}`;
+        throw new Error(message);
+      }
+
+      const json = await res.json();
+      if (isCacheable) {
+        apiCache.set(url, { timestamp: Date.now(), data: json });
+      }
+      return json;
+    } finally {
+      window.clearTimeout(timer);
+      options.signal?.removeEventListener('abort', abort);
+      if (method === 'GET') {
+        inFlightRequests.delete(url);
+      }
+    }
+  })();
+
+  if (method === 'GET') {
+    inFlightRequests.set(url, fetchPromise);
+  }
+
+  return fetchPromise;
 }
 
 export interface ClassTeacherAssignmentItem {
@@ -310,6 +412,9 @@ export interface MarksCommitResult {
 }
 
 export interface TeacherAuthorizedClass {
+  classTeacherByStream?: Record<string,boolean>;
+  wholeClass?: boolean;
+  subjectsByStream?: Record<string, TeacherAuthorizedSubject[]>;
   id: string;
   name: string;
   gradeLevel: string;
@@ -326,6 +431,7 @@ export interface TeacherAuthorizedSubject {
 export interface TeacherAuthorizedContext {
   isGlobalAdmin: boolean;
   teacherId?: string;
+  editableLearningAreaIds?: string[];
   teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' | 'GLOBAL_ADMIN';
   assignedClasses: TeacherAuthorizedClass[];
   authorizedSubjectsByClass: Record<string, TeacherAuthorizedSubject[]>;
@@ -417,6 +523,60 @@ const coreApiService = {
     const params = new URLSearchParams({ email, token });
     return apiFetch<ApiResponse<{ valid: boolean; email?: string; message?: string }>>(`/auth/verify-reset-token?${params.toString()}`);
   },
+
+  // 1c. WebAuthn Biometric & Passkey Endpoints
+  webAuthnGetRegistrationOptions: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/auth/webauthn/register/options', {
+      method: 'POST',
+    });
+  },
+
+  webAuthnVerifyRegistration: async (data: {
+    response: any;
+    deviceLabel?: string;
+    deviceType?: string;
+  }): Promise<ApiResponse<RegisteredWebAuthnCredential>> => {
+    return apiFetch<ApiResponse<RegisteredWebAuthnCredential>>('/auth/webauthn/register/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  webAuthnGetLoginOptions: async (identifier?: string): Promise<ApiResponse<{ options: any; hasUserCredentials: boolean }>> => {
+    return apiFetch<ApiResponse<{ options: any; hasUserCredentials: boolean }>>('/auth/webauthn/login/options', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    });
+  },
+
+  webAuthnVerifyLogin: async (response: any): Promise<ApiResponse<AuthResponse>> => {
+    const res = await apiFetch<ApiResponse<AuthResponse>>('/auth/webauthn/login/verify', {
+      method: 'POST',
+      body: JSON.stringify({ response }),
+    });
+    if (res.data?.accessToken) {
+      setAuthToken(res.data.accessToken);
+    }
+    return res;
+  },
+
+  webAuthnListCredentials: async (): Promise<ApiResponse<RegisteredWebAuthnCredential[]>> => {
+    return apiFetch<ApiResponse<RegisteredWebAuthnCredential[]>>('/auth/webauthn/credentials');
+  },
+
+  webAuthnDeleteCredential: async (credentialId: string): Promise<ApiResponse<{ message?: string }>> => {
+    return apiFetch<ApiResponse<{ message?: string }>>(`/auth/webauthn/credentials/${credentialId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  webAuthnCheckUserStatus: async (identifier: string): Promise<ApiResponse<WebAuthnUserStatus>> => {
+    return apiFetch<ApiResponse<WebAuthnUserStatus>>('/auth/webauthn/user-status', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    });
+  },
+
 
   // 1b. User Management & Access Control Endpoints
   getUsers: async (filters?: { role?: string; search?: string }): Promise<ApiResponse<ManageableUser[]>> => {
@@ -594,8 +754,8 @@ const coreApiService = {
     return apiFetch<ApiResponse<AcademicContext>>(`/academics/context${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
-  getClasses: async (schoolId?: string): Promise<ApiResponse<ClassRoom[]>> => {
-    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  getClasses: async (schoolId?: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<ClassRoom[]>> => {
+    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes?${new URLSearchParams({...schoolId?{schoolId}:{},...context})}`);
   },
 
   createClass: async (data: {
@@ -616,8 +776,8 @@ const coreApiService = {
     });
   },
 
-  getStreamsByClass: async (classRoomId: string): Promise<ApiResponse<StreamItem[]>> => {
-    return apiFetch<ApiResponse<StreamItem[]>>(`/academics/streams/by-class/${classRoomId}`);
+  getStreamsByClass: async (classRoomId: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<StreamItem[]>> => {
+    return apiFetch<ApiResponse<StreamItem[]>>(`/academics/streams/by-class/${classRoomId}?${new URLSearchParams(context as Record<string,string>)}`);
   },
 
   createStream: async (data: {
@@ -638,11 +798,20 @@ const coreApiService = {
     });
   },
 
-  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string }): Promise<ApiResponse<BackendLearningArea[]>> => {
+  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string; classroomId?: string; globalSubjectId?: string;academicYearId?:string;termId?:string }): Promise<ApiResponse<BackendLearningArea[]>> => {
     const q = new URLSearchParams();
     if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
     if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.classroomId) q.append('classroomId', params.classroomId);
+    if (params?.globalSubjectId) q.append('globalSubjectId', params.globalSubjectId);
+    if(params?.academicYearId)q.append('academicYearId',params.academicYearId);if(params?.termId)q.append('termId',params.termId);
     return apiFetch<ApiResponse<BackendLearningArea[]>>(`/academics/learning-areas?${q.toString()}`);
+  },
+
+  getGlobalSubjects: async (schoolId?: string): Promise<ApiResponse<any[]>> => {
+    const q = new URLSearchParams();
+    if (schoolId) q.append('schoolId', schoolId);
+    return apiFetch<ApiResponse<any[]>>(`/academics/global-subjects?${q.toString()}`);
   },
 
   createLearningArea: async (data: {
@@ -653,6 +822,7 @@ const coreApiService = {
     isElective?: boolean;
     schoolId: string;
     teacherId?: string;
+    globalSubjectId?: string;
   }): Promise<ApiResponse<BackendLearningArea>> => {
     return apiFetch<ApiResponse<BackendLearningArea>>('/academics/learning-areas', {
       method: 'POST',
@@ -741,12 +911,16 @@ const coreApiService = {
     });
   },
 
-  getTeacherAuthorizedContext: async (academicYearId?: string): Promise<ApiResponse<TeacherAuthorizedContext>> => {
-    const q = academicYearId ? `?academicYearId=${academicYearId}` : '';
-    return apiFetch<ApiResponse<TeacherAuthorizedContext>>(`/academics/teacher/authorized-context${q}`);
+  getTeacherAuthorizedContext: async (academicYearId?: string, termId?: string): Promise<ApiResponse<TeacherAuthorizedContext>> => {
+    const q = new URLSearchParams({...academicYearId?{academicYearId}:{},...termId?{termId}:{}});
+    return apiFetch<ApiResponse<TeacherAuthorizedContext>>(`/academics/teacher/authorized-context?${q}`);
   },
 
   // 3. Students & Guardians Endpoints
+  getAssessmentRoster: async(filters:Record<string,any>={}):Promise<ApiResponse<any[]>>=>{
+    const query=new URLSearchParams(Object.entries(filters).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]));
+    return apiFetch<ApiResponse<any[]>>(`/students/assessment-roster?${query}`);
+  },
   getStudents: async (filters?: {
     schoolId?: string;
     gradeLevel?: string;
@@ -765,6 +939,7 @@ const coreApiService = {
     if (filters?.classroomId) q.append('classroomId', filters.classroomId);
     if (filters?.streamId) q.append('streamId', filters.streamId);
     if (filters?.academicYearId) q.append('academicYearId', filters.academicYearId);
+    if (filters?.termId) q.append('termId', filters.termId);
     if (filters?.search) q.append('search', filters.search);
     if (filters?.limit) q.append('limit', String(filters.limit));
     if (filters?.offset) q.append('offset', String(filters.offset));
@@ -826,6 +1001,67 @@ const coreApiService = {
     return apiFetch<ApiResponse<any>>('/students/link-guardian', {
       method: 'POST',
       body: JSON.stringify({ studentId, guardianId }),
+    });
+  },
+
+  searchParents: async (query?: string, schoolId?: string): Promise<ApiResponse<any>> => {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (schoolId) params.append('schoolId', schoolId);
+    return apiFetch<ApiResponse<any>>(`/students/guardians/search?${params.toString()}`);
+  },
+
+  linkParentToLearners: async (data: {
+    parentUserId: string;
+    studentIds: string[];
+    relationship?: string;
+    isPrimary?: boolean;
+    canViewAcademics?: boolean;
+    canViewFinances?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/link-learners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  createAndLinkParent: async (data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    nationalId?: string;
+    relationship?: string;
+    studentId: string;
+    isPrimary?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/create-and-link', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  unlinkParentFromLearner: async (data: {
+    parentUserId: string;
+    studentId: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/unlink-learner', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getParentFamilyTree: async (parentUserId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/guardians/${parentUserId}/family-tree`);
+  },
+
+  resolveDuplicateParents: async (data: {
+    primaryUserId: string;
+    duplicateUserIds: string[];
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/resolve-duplicate', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 
@@ -1112,9 +1348,9 @@ const coreApiService = {
 
   getStrandsByLearningArea: async (
     learningAreaId: string,
-    gradeLevel?: string
+    gradeLevel?: string, context?:{academicYearId?:string;termId?:string}
   ): Promise<ApiResponse<BackendStrand[]>> => {
-    const q = gradeLevel ? `?gradeLevel=${gradeLevel}` : '';
+    const q = '?'+new URLSearchParams({...gradeLevel?{gradeLevel}:{},...context});
     return apiFetch<ApiResponse<BackendStrand[]>>(`/CBC/strands/by-learning-area/${learningAreaId}${q}`);
   },
 
@@ -1153,8 +1389,8 @@ const coreApiService = {
     });
   },
 
-  getSubStrandsByStrand: async (strandId: string): Promise<ApiResponse<BackendSubStrand[]>> => {
-    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/CBC/sub-strands/by-strand/${strandId}`);
+  getSubStrandsByStrand: async (strandId: string, context?:{academicYearId?:string;termId?:string}): Promise<ApiResponse<BackendSubStrand[]>> => {
+    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/CBC/sub-strands/by-strand/${strandId}?${new URLSearchParams(context as Record<string,string>)}`);
   },
 
   deleteSubStrand: async (id: string): Promise<ApiResponse<any>> => {
@@ -1366,24 +1602,25 @@ const coreApiService = {
     });
   },
 
-  addSchemeEntry: async (schemeId: string, entry: SchemeEntry): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/entries`, {
+  addSchemeEntry: async (schemeId: string, entry: SchemeEntry, context?:{academicYearId:string;termId:string}): Promise<ApiResponse<SchemeOfWork>> => {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/entries${context?'?'+new URLSearchParams(context):''}`, {
       method: 'POST',
       body: JSON.stringify(entry),
     });
   },
 
-  submitScheme: async (schemeId: string): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/submit`, {
+  submitScheme: async (schemeId: string, context?:{academicYearId:string;termId:string}): Promise<ApiResponse<SchemeOfWork>> => {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/submit${context?'?'+new URLSearchParams(context):''}`, {
       method: 'POST',
     });
   },
 
   reviewScheme: async (
     schemeId: string,
-    review: { approved: boolean; remarks: string }
+    review: { approved: boolean; remarks: string },
+    context?: { academicYearId: string; termId: string }
   ): Promise<ApiResponse<SchemeOfWork>> => {
-    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/review`, {
+    return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${schemeId}/review${context ? '?' + new URLSearchParams(context) : ''}`, {
       method: 'POST',
       body: JSON.stringify(review),
     });
@@ -1445,6 +1682,18 @@ const coreApiService = {
   submitLessonPlan: async (id: string): Promise<ApiResponse<LessonPlan>> => {
     return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}/submit`, {
       method: 'POST',
+    });
+  },
+
+  submitCoverageDraft: async (id: string, revision: number): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/schemes/${id}/allocations/submit`, {
+      method: 'POST', body: JSON.stringify({ revision }),
+    });
+  },
+
+  reviewCoverageDraft: async (id: string, data: { revision: number; approved: boolean; remarks: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/schemes/${id}/allocations/review`, {
+      method: 'POST', body: JSON.stringify(data),
     });
   },
 
@@ -1518,6 +1767,10 @@ const coreApiService = {
     });
   },
 
+  exemptPreviousWeekForNoInstruction: async (id:string,reason:string):Promise<ApiResponse<{weekNumber:number;status:'EXEMPTED';reason:string;trackerId:string}>> => {
+    return apiFetch(`/curriculum/records-of-work/${id}/exempt-previous-week`,{method:'POST',body:JSON.stringify({reason})});
+  },
+
   deleteRecordOfWork: async (id: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/curriculum/records-of-work/${id}`, {
       method: 'DELETE',
@@ -1558,16 +1811,21 @@ const coreApiService = {
     });
   },
 
-  getStreamTimetable: async (streamId?: string, termId?: string, classRoomId?: string): Promise<ApiResponse<TimetableData>> => {
+  getMyTimetableAccess: async (academicYearId:string,termId:string):Promise<ApiResponse<any>> => {
+    return apiFetch(`/timetables/access-options?${new URLSearchParams({academicYearId,termId})}`);
+  },
+
+  getStreamTimetable: async (streamId?: string, termId?: string, classRoomId?: string,academicYearId?:string): Promise<ApiResponse<TimetableData>> => {
     const params = new URLSearchParams();
     if (streamId) params.append('streamId', streamId);
     if (termId) params.append('termId', termId);
     if (classRoomId) params.append('classRoomId', classRoomId);
+    if (academicYearId) params.append('academicYearId',academicYearId);
     return apiFetch<ApiResponse<TimetableData>>(`/timetables/stream?${params.toString()}`);
   },
 
-  getTeacherTimetable: async (teacherId: string, termId: string): Promise<ApiResponse<any[]>> => {
-    return apiFetch<ApiResponse<any[]>>(`/timetables/teacher?teacherId=${teacherId}&termId=${termId}`);
+  getTeacherTimetable: async (teacherId: string, termId: string,academicYearId?:string): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>(`/timetables/teacher?teacherId=${teacherId}&termId=${termId}${academicYearId?'&academicYearId='+encodeURIComponent(academicYearId):''}`);
   },
 
   saveTimetableGrid: async (data: {
@@ -1717,16 +1975,55 @@ const coreApiService = {
   },
 
   generateInvoices: async (data: {
-    schoolId: string;
-    academicYearId: string;
-    termId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
     gradeLevel?: string;
     studentId?: string;
+    includePreviousBalance?: boolean;
+    dueDate?: string;
+    applyExistingCredits?: boolean;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/invoices/generate', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  previewBulkInvoices: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
+    targetGradeLevel?: string;
+    studentId?: string;
+    includePreviousBalance?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/bulk/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  executeBulkInvoices: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
+    targetGradeLevel?: string;
+    studentId?: string;
+    includePreviousBalance?: boolean;
+    dueDate?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/bulk/execute', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getBulkBillingHistory: async (schoolId?: string): Promise<ApiResponse<any>> => {
+    const query = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/bulk/history${query}`);
   },
 
   createIndividualInvoice: async (data: {
@@ -1962,6 +2259,116 @@ const coreApiService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  reconcileCredits: async (params?: { schoolId?: string; studentId?: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits', {
+      method: 'POST',
+      body: JSON.stringify(params || {}),
+    });
+  },
+
+  getCreditReconciliationStatus: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits/status');
+  },
+
+  retryFailedCreditReconciliations: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits/retry', {
+      method: 'POST',
+    });
+  },
+
+  previewCreditUtilization: async (data: { studentId: string; amountToApply?: number; schoolId?: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/credit-utilization/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  adminInitiateCreditUtilization: async (data: {
+    studentId: string;
+    amountToApply?: number;
+    targetInvoiceId?: string;
+    reason: string;
+    schoolId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/credit-utilization/initiate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getCreditUtilizationReceipt: async (receiptNumber: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts/${encodeURIComponent(receiptNumber)}`);
+  },
+
+  getAllCreditReceipts: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const query = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts${query}`);
+  },
+
+  reverseCreditUtilization: async (receiptNumber: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts/${encodeURIComponent(receiptNumber)}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  // Admin-Approved Transaction Reversal Workflow
+  requestTransactionReversal: async (data: {
+    transactionId?: string;
+    transactionReference?: string;
+    transactionType?: string;
+    studentId?: string;
+    reason: string;
+    explanation?: string;
+    supportingAttachmentUrl?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reversals/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  listTransactionReversals: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const query = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/reversals${query}`);
+  },
+
+  getTransactionReversalById: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}`);
+  },
+
+  getTransactionReversalPreview: async (idOrRef: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(idOrRef)}/preview`);
+  },
+
+  approveAndExecuteTransactionReversal: async (id: string, comment?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    });
+  },
+
+  rejectTransactionReversal: async (id: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  retryTransactionReversal: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/retry`, {
+      method: 'POST',
+    });
+  },
+
+  getReversalReceiptDocument: async (receiptNumber: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(receiptNumber)}/receipt`);
+  },
+
+  getStudentCreditReceipts: async (studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/students/${encodeURIComponent(studentId)}/credit-receipts`);
   },
 
   getFeeBannerConfig: async (schoolId?: string): Promise<ApiResponse<FeeBannerConfig>> => {
@@ -2628,7 +3035,7 @@ const coreApiService = {
     const link = document.createElement('a');
     link.href = downloadUrl;
     const today = new Date().toISOString().split('T')[0];
-    link.download = `smartshule_system_logs_${today}.csv`;
+    link.download = `Grace_Seeds_School_system_logs_${today}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -2636,54 +3043,93 @@ const coreApiService = {
   },
 
   // 15. Parent Concerns & Feedback Endpoints
-  getConcerns: async (): Promise<ApiResponse<ConcernRecord[]>> => {
+  getConcerns: async (params?: Record<string, any>): Promise<ApiResponse<ConcernRecord[]>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/concerns');
-      return res;
+      let url = '/concerns';
+      if (params) {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '' && v !== 'ALL') {
+            query.append(k, String(v));
+          }
+        });
+        const qs = query.toString();
+        if (qs) url += `?${qs}`;
+      }
+      return await apiFetch<ApiResponse<ConcernRecord[]>>(url);
     } catch {
       try {
-        const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/complaints');
-        return res;
+        let url = '/complaints';
+        if (params) {
+          const query = new URLSearchParams();
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '' && v !== 'ALL') {
+              query.append(k, String(v));
+            }
+          });
+          const qs = query.toString();
+          if (qs) url += `?${qs}`;
+        }
+        return await apiFetch<ApiResponse<ConcernRecord[]>>(url);
       } catch {
         const list = getStoredConcerns();
         return { success: true, data: list, count: list.length };
       }
     }
   },
-  getComplaints: async (): Promise<ApiResponse<ComplaintRecord[]>> => {
-    return apiService.getConcerns();
+  getComplaints: async (params?: Record<string, any>): Promise<ApiResponse<ComplaintRecord[]>> => {
+    return apiService.getConcerns(params);
+  },
+
+  getConcernById: async (id: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}`);
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}`);
+    }
   },
 
   createConcern: async (concernData: Partial<ConcernRecord>): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord>>('/concerns', {
+      return await apiFetch<ApiResponse<ConcernRecord>>('/concerns', {
         method: 'POST',
         body: JSON.stringify(concernData),
       });
-      return res;
     } catch {
       try {
-        const res = await apiFetch<ApiResponse<ConcernRecord>>('/complaints', {
+        return await apiFetch<ApiResponse<ConcernRecord>>('/complaints', {
           method: 'POST',
           body: JSON.stringify(concernData),
         });
-        return res;
       } catch {
         const list = getStoredConcerns();
         const newRecord: ConcernRecord = {
           id: `crn-${Date.now()}`,
+          referenceNumber: `CON-2026-${Math.floor(10000 + Math.random() * 90000)}`,
           parentUserId: concernData.parentUserId || 'parent-current',
           parentName: concernData.parentName || 'Parent / Guardian',
           parentPhone: concernData.parentPhone || '',
           parentEmail: concernData.parentEmail || '',
           studentName: concernData.studentName || '',
           gradeLevel: concernData.gradeLevel || '',
-          category: concernData.category || 'General',
+          category: concernData.category || 'General School Matters',
           subject: concernData.subject || 'No Subject',
           details: concernData.details || '',
-          priority: concernData.priority || 'Medium',
-          status: 'PENDING',
+          priority: concernData.priority || 'MEDIUM',
+          status: 'SUBMITTED',
           createdAt: new Date().toISOString(),
+          messages: [],
+          auditTrail: [
+            {
+              id: `audit-${Date.now()}`,
+              action: 'SUBMITTED',
+              performedByUserId: concernData.parentUserId || 'parent',
+              performedByName: concernData.parentName || 'Parent',
+              performedByRole: 'PARENT',
+              timestamp: new Date().toISOString(),
+              details: 'Concern submitted'
+            }
+          ]
         };
         const updated = [newRecord, ...list];
         saveStoredConcerns(updated);
@@ -2695,44 +3141,127 @@ const coreApiService = {
     return apiService.createConcern(complaintData);
   },
 
-  respondToConcern: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ConcernRecord>> => {
+  acknowledgeConcern: async (id: string, notes?: string): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/respond`, {
-        method: 'PUT',
-        body: JSON.stringify({ adminResponse: responseMessage, status }),
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/acknowledge`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
       });
-      return res;
     } catch {
-      try {
-        const res = await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/respond`, {
-          method: 'PUT',
-          body: JSON.stringify({ adminResponse: responseMessage, status }),
-        });
-        return res;
-      } catch {
-        const list = getStoredConcerns();
-        let updatedRecord: ConcernRecord | null = null;
-        const updated = list.map((item) => {
-          if (item.id === id) {
-            updatedRecord = {
-              ...item,
-              adminResponse: responseMessage,
-              status,
-              respondedBy: responderName || 'School Administration',
-              respondedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            return updatedRecord;
-          }
-          return item;
-        });
-        saveStoredConcerns(updated);
-        return { success: true, message: 'Response saved successfully', data: updatedRecord || ({} as ConcernRecord) };
-      }
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/acknowledge`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
     }
   },
+
+  assignConcern: async (id: string, assignedToUserId: string, reason?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedToUserId, reason }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedToUserId, reason }),
+      });
+    }
+  },
+
+  escalateConcern: async (id: string, reason: string, escalatedToUserId?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, escalatedToUserId }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, escalatedToUserId }),
+      });
+    }
+  },
+
+  sendConcernMessage: async (
+    id: string,
+    message: string,
+    visibility: 'PARENT_VISIBLE' | 'INTERNAL_ONLY' = 'PARENT_VISIBLE',
+    attachments?: any[],
+    awaitParentResponse?: boolean
+  ): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message, visibility, attachments, awaitParentResponse }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message, visibility, attachments, awaitParentResponse }),
+      });
+    }
+  },
+
+  resolveConcern: async (
+    id: string,
+    actionTaken: string,
+    resolutionDetails?: string
+  ): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ actionTaken, resolutionDetails, resolutionNotes: actionTaken }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ actionTaken, resolutionDetails, resolutionNotes: actionTaken }),
+      });
+    }
+  },
+
+  closeConcern: async (id: string, notes?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
+    }
+  },
+
+  reopenConcern: async (id: string, reason: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    }
+  },
+
+  getConcernStats: async (schoolId?: string): Promise<ApiResponse<any>> => {
+    try {
+      return await apiFetch<ApiResponse<any>>(`/concerns/stats/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
+    } catch {
+      return await apiFetch<ApiResponse<any>>(`/complaints/stats/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
+    }
+  },
+
+  respondToConcern: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ConcernRecord>> => {
+    return apiService.sendConcernMessage(id, responseMessage, 'PARENT_VISIBLE');
+  },
   respondToComplaint: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ComplaintRecord>> => {
-    return apiService.respondToConcern(id, responseMessage, status, responderName);
+    return apiService.sendConcernMessage(id, responseMessage, 'PARENT_VISIBLE');
   },
 
   deleteConcern: async (id: string): Promise<ApiResponse<boolean>> => {
@@ -2861,6 +3390,26 @@ const coreApiService = {
     recordedByStaffName?: string;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/lunch/payments/daily', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  recordMonthlyLunchPayment: async (data: {
+    studentId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    amount: number;
+    paymentMonth?: string;
+    paymentDate?: string;
+    paymentMethod?: string;
+    transactionReference?: string;
+    idempotencyKey?: string;
+    notes?: string;
+    recordedByStaffName?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/payments/monthly', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -3354,6 +3903,16 @@ export const libraryApi = {
   getSalaryAcknowledgementsReport: async (month?: string): Promise<ApiResponse<any>> => {
     const params = month ? `?month=${month}` : '';
     return apiFetch<ApiResponse<any>>(`/payroll/acknowledgements-report${params}`);
+  },
+
+  disputeSalary: async (
+    id: string,
+    reason: string
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/payroll/${id}/dispute`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
   },
 
   // Financial Approvals
@@ -3975,6 +4534,10 @@ export const signatureApi = {
     return apiFetch<ApiResponse<any>>('/signatures/me');
   },
 
+  getMySignatureProfile: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/me');
+  },
+
   saveMySignature: async (payload: {
     signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED';
     signatureData: string;
@@ -4179,11 +4742,69 @@ export const signatureApi = {
   },
 };
 
+export const parentConsentApi = {
+  getMyConsents: async (): Promise<ApiResponse<{ hasLinkedChildren: boolean; children: any[]; consents: ParentConsentItem[] }>> => {
+    return apiFetch<ApiResponse<{ hasLinkedChildren: boolean; children: any[]; consents: ParentConsentItem[] }>>('/parent-consents/my-consents');
+  },
+
+  submitConsent: async (data: {
+    consentRequestId: string;
+    studentId: string;
+    decision: 'CONSENTED' | 'DECLINED';
+    notes?: string;
+    parentName: string;
+    parentRelationship?: string;
+    parentNationalId?: string;
+    parentPhone?: string;
+    signatureType?: string;
+    signatureData?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/parent-consents/respond', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAdminRequests: async (): Promise<ApiResponse<ParentConsentRequest[]>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest[]>>('/parent-consents/admin/requests');
+  },
+
+  createConsentRequest: async (data: Partial<ParentConsentRequest>): Promise<ApiResponse<ParentConsentRequest>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest>>('/parent-consents/admin/requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateConsentRequest: async (id: string, data: Partial<ParentConsentRequest>): Promise<ApiResponse<ParentConsentRequest>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest>>(`/parent-consents/admin/requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getConsentResponses: async (id: string): Promise<ApiResponse<{ request: ParentConsentRequest; roster: any[]; summary: any }>> => {
+    return apiFetch<ApiResponse<any>>(`/parent-consents/admin/requests/${id}/responses`);
+  },
+};
+
 // Unified apiService containing core and extended domain endpoints
 export const apiService = {
+  schemePlanning: async (path:string,options:RequestInit={}):Promise<any> => apiFetch(`/curriculum/schemes/${path}`,options),
+  saveSlotReflection: async (id:string,reflection:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reflection?${new URLSearchParams(context)}`,{method:'PUT',body:JSON.stringify({reflection})}),
+  downloadWeeklyScheme: async (id:string,format:'pdf'|'doc',context:{academicYearId:string;termId:string}):Promise<void> => {
+    const response=await fetch(`${API_BASE_URL}/curriculum/schemes/${encodeURIComponent(id)}/weekly/export?${new URLSearchParams({...context,format})}`,{headers:{Authorization:`Bearer ${getStoredAuthToken()}`}});
+    if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||'Export access denied.');}
+    const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`Schemes_of_Work.${format==='doc'?'docx':format}`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  },
+  planning: async (path:string,options:RequestInit = {}):Promise<any> => apiFetch(`/curriculum/planning/${path}`,options),
+  rescheduleLessonPlan: async (id:string,context?:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reschedule${context?'?'+new URLSearchParams(context):''}`,{method:'POST',body:'{}'}),
+  archiveSchemeEntry: async (id:string,entryId:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/schemes/${id}/entries/${entryId}/archive?${new URLSearchParams(context)}`,{method:'POST',body:'{}'}),
+  updateSchemeEntry: async (id:string,entryId:string,data:any,context?:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/schemes/${id}/entries/${entryId}${context?'?'+new URLSearchParams(context):''}`,{method:'PUT',body:JSON.stringify(data)}),
   ...coreApiService,
   ...libraryApi,
   ...signatureApi,
+  ...parentConsentApi,
 };
 
 // Named exports for static binding & resilient importing
@@ -4293,6 +4914,14 @@ export const initiateSigningChallenge = signatureApi.initiateSigningChallenge;
 export const verifyAndSignDocument = signatureApi.verifyAndSignDocument;
 export const getDocumentSignatures = signatureApi.getDocumentSignatures;
 export const verifyDocumentIntegrity = signatureApi.verifyDocumentIntegrity;
+
+// Parent Consent named exports
+export const getMyConsents = parentConsentApi.getMyConsents;
+export const submitConsent = parentConsentApi.submitConsent;
+export const getAdminConsentRequests = parentConsentApi.getAdminRequests;
+export const createConsentRequest = parentConsentApi.createConsentRequest;
+export const updateConsentRequest = parentConsentApi.updateConsentRequest;
+export const getConsentResponses = parentConsentApi.getConsentResponses;
 
 export default apiService;
 

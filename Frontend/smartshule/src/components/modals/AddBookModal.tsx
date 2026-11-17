@@ -157,19 +157,19 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+      <div className="bg-surface-container-lowest rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-outline-variant/30">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+        <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-burgundy-50 text-[#800000] flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-burgundy-50 text-primary flex items-center justify-center font-bold">
               <span className="material-symbols-outlined">{bookToEdit ? 'edit_document' : 'menu_book'}</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-on-surface">
                 {bookToEdit ? 'Edit Library Title' : 'Add Book to Catalogue'}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-on-surface-variant">
                 {bookToEdit ? 'Update inventory details and copy counts' : 'Register a new textbook, reader, or library asset'}
               </p>
             </div>
@@ -177,7 +177,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
           <button 
             onClick={onClose}
             type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors"
           >
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
@@ -195,7 +195,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
           <form id="add-book-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Book Title <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -205,12 +205,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="e.g. Spotlight CBC Mathematics Learner's Book Grade 4"
                   value={formData.title}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Author / Editor <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -220,12 +220,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="e.g. Kenya Literature Bureau / J. Mwangi"
                   value={formData.author}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   ISBN / Barcode No.
                 </label>
                 <input
@@ -234,19 +234,19 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="e.g. 978-9966-10-123-4"
                   value={formData.isbn}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Category / Subject Area
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -255,14 +255,14 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Recommended Grade / Level
                 </label>
                 <select
                   name="gradeLevel"
                   value={formData.gradeLevel}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   {GRADE_LEVELS.map(gr => (
                     <option key={gr} value={gr}>{gr}</option>
@@ -271,7 +271,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Publisher
                 </label>
                 <input
@@ -280,12 +280,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="e.g. Longhorn, Oxford, KLB"
                   value={formData.publisher}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Publication Year
                 </label>
                 <input
@@ -295,13 +295,13 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   max="2035"
                   value={formData.publicationYear}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               {/* Copies Count */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Total Copies in Stock <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -311,12 +311,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   min="1"
                   value={formData.copiesTotal}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Available Copies on Shelf <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -327,12 +327,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   max={formData.copiesTotal}
                   value={formData.copiesAvailable}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Physical Shelf / Location
                 </label>
                 <input
@@ -341,19 +341,19 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="e.g. Shelf A-3, Cabinet 2"
                   value={formData.shelfLocation}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Physical Condition
                 </label>
                 <select
                   name="condition"
                   value={formData.condition}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors bg-white"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors bg-surface"
                 >
                   <option value="NEW">New / Mint</option>
                   <option value="GOOD">Good / Intact</option>
@@ -364,7 +364,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Description / Synopsis / Notes
                 </label>
                 <textarea
@@ -373,7 +373,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
                   placeholder="Optional brief description, volume edition, or notes on syllabus edition..."
                   value={formData.description}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none transition-colors resize-none"
+                  className="w-full px-4 py-2.5 text-sm border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors resize-none"
                 />
               </div>
             </div>
@@ -381,12 +381,12 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50">
+        <div className="px-6 py-4 border-t border-outline-variant/30 flex items-center justify-end gap-3 bg-surface/50">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-xl transition-colors"
           >
             Cancel
           </button>
@@ -394,7 +394,7 @@ const AddBookModal: React.FC<AddBookModalProps> = ({
             type="submit"
             form="add-book-form"
             disabled={saving}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-[#800000] hover:bg-[#660000] rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-container rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

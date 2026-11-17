@@ -350,7 +350,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">calendar_add_on</span>
@@ -389,7 +389,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                   setSelectedClassRoomId(e.target.value);
                   setSelectedStreamId('');
                 }}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-[#7a1228]"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary"
               >
                 {classesList.length === 0 ? (
                   <option value="">No classes configured</option>
@@ -414,7 +414,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               <select
                 value={selectedStreamId}
                 onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-[#7a1228]"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary"
               >
                 <option value="">Main Cohort (No Stream)</option>
                 {streamsList.map((st) => (
@@ -726,7 +726,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               className={`flex-1 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 text-xs ${
                 isClashBlocked
                   ? 'bg-gray-400 cursor-not-allowed opacity-75'
-                  : 'bg-[#7a1228] hover:bg-[#5e0d1e] cursor-pointer'
+                  : 'bg-primary hover:bg-primary-container cursor-pointer'
               } disabled:opacity-50`}
             >
               <span className="material-symbols-outlined text-[16px]">

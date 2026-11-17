@@ -322,7 +322,7 @@ export const DocumentSigningCenterView: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#800000] uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" />
             <span>Digital Signature &amp; Document Endorsement Centre</span>
           </div>
@@ -334,7 +334,7 @@ export const DocumentSigningCenterView: React.FC = () => {
 
         {/* Vault Profile Indicator */}
         <div className="flex items-center gap-3 bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/30">
-          <div className="w-9 h-9 rounded-full bg-[#800000]/10 text-[#800000] flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <FileSignature className="w-5 h-5" />
           </div>
           <div className="text-xs">
@@ -355,7 +355,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                   window.location.hash = '#signature-vault';
                   window.dispatchEvent(new CustomEvent('navigate-to-vault'));
                 }}
-                className="text-[#800000] font-semibold hover:underline inline-flex items-center gap-0.5"
+                className="text-primary font-semibold hover:underline inline-flex items-center gap-0.5"
               >
                 Manage Vault <ExternalLink className="w-3 h-3" />
               </a>
@@ -370,7 +370,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           onClick={() => setActiveTab('bulk')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'bulk'
-              ? 'border-[#800000] text-[#800000] bg-[#800000]/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
           }`}
         >
@@ -382,7 +382,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           onClick={() => setActiveTab('pending')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'pending'
-              ? 'border-[#800000] text-[#800000] bg-[#800000]/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
           }`}
         >
@@ -394,7 +394,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           onClick={() => setActiveTab('archive')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'archive'
-              ? 'border-[#800000] text-[#800000] bg-[#800000]/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
           }`}
         >
@@ -406,7 +406,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           onClick={() => setActiveTab('policies')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'policies'
-              ? 'border-[#800000] text-[#800000] bg-[#800000]/5'
+              ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
           }`}
         >
@@ -424,7 +424,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-                <Filter className="w-4 h-4 text-[#800000]" />
+                <Filter className="w-4 h-4 text-primary" />
                 <span>Configure Bulk Signing Scope</span>
               </h2>
               {currentPolicy && (
@@ -443,7 +443,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 <select
                   value={selectedDocType}
                   onChange={(e) => setSelectedDocType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-[#800000] text-xs font-semibold"
+                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary text-xs font-semibold"
                 >
                   <option value="REPORT_CARD">CBC Summative Learner Report Cards</option>
                   <option value="BROADSHEET">Academic Master Broadsheets</option>
@@ -461,7 +461,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 <select
                   value={selectedClassId}
                   onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-[#800000] text-xs font-semibold"
+                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary text-xs font-semibold"
                 >
                   {classes.map(c => (
                     <option key={c.id} value={c.id}>
@@ -479,7 +479,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 <select
                   value={selectedTermId}
                   onChange={(e) => setSelectedTermId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-[#800000] text-xs font-semibold"
+                  className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary text-xs font-semibold"
                 >
                   {terms.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -492,7 +492,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 <button
                   onClick={prepareBatchAction}
                   disabled={preparingBatch || !selectedClassId}
-                  className="w-full py-2 px-4 rounded-xl bg-[#800000] hover:bg-[#600000] text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2 px-4 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {preparingBatch ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
                   <span>{preparingBatch ? 'Scanning Eligibility...' : 'Scan & Prepare Batch'}</span>
@@ -532,19 +532,19 @@ export const DocumentSigningCenterView: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-200">
-                  <span className="text-[11px] font-semibold text-blue-800 block uppercase">Already Signed</span>
-                  <span className="text-2xl font-black text-blue-700 mt-1 block">
+                <div className="p-4 rounded-2xl bg-primary-fixed/50 border border-primary">
+                  <span className="text-[11px] font-semibold text-on-primary-fixed block uppercase">Already Signed</span>
+                  <span className="text-2xl font-black text-primary mt-1 block">
                     {batchItems.filter(i => i.status === 'SIGNED').length}
                   </span>
                 </div>
               </div>
 
               {/* Action Banner for OTP Signing */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#800000] to-[#500000] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-primary to-[#500000] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
                 <div>
                   <h3 className="text-sm font-bold flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-emerald-300" />
+                    <ShieldCheck className="w-5 h-5 text-primary-fixed-dim" />
                     <span>Authorize Electronic Signing Batch ({batchItems.filter(i => i.status === 'READY').length} Ready)</span>
                   </h3>
                   <p className="text-xs text-white/80 mt-0.5">
@@ -556,7 +556,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                   <button
                     onClick={handleInitiateBulkChallenge}
                     disabled={initiatingChallenge || batchItems.filter(i => i.status === 'READY').length === 0}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-[#800000] hover:bg-white/90 text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-primary hover:bg-white/90 text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {initiatingChallenge ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                     <span>Request 6-Digit Email OTP</span>
@@ -582,7 +582,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                     {executionResult.summary.failedCount > 0 && (
                       <button
                         onClick={handleRetryFailed}
-                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>Retry Failed Documents ({executionResult.summary.failedCount})</span>
@@ -638,7 +638,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                               </span>
                             )}
                             {item.status === 'SIGNED' && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-fixed text-on-primary-fixed border border-primary">
                                 <FileCheck2 className="w-3 h-3" /> Signed
                               </span>
                             )}
@@ -667,17 +667,17 @@ export const DocumentSigningCenterView: React.FC = () => {
       {/* ========================================================================= */}
       {activeTab === 'pending' && (
         <div className="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30 text-center space-y-4 max-w-2xl mx-auto my-6">
-          <div className="w-14 h-14 rounded-full bg-[#800000]/10 text-[#800000] flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
             <Clock className="w-7 h-7" />
           </div>
           <h3 className="text-base font-bold text-on-surface">Individual Document Signing Queue</h3>
           <p className="text-xs text-on-surface-variant max-w-md mx-auto">
-            To sign individual report cards, open <a href="#academics/report-cards" className="text-[#800000] font-bold hover:underline">Academics &gt; Report Cards</a> and click the <strong>&quot;Sign Report Card&quot;</strong> action in the toolbar. To sign multiple documents at once, switch to the <strong>Bulk Signing Operations</strong> tab.
+            To sign individual report cards, open <a href="#academics/report-cards" className="text-primary font-bold hover:underline">Academics &gt; Report Cards</a> and click the <strong>&quot;Sign Report Card&quot;</strong> action in the toolbar. To sign multiple documents at once, switch to the <strong>Bulk Signing Operations</strong> tab.
           </p>
           <div className="pt-2">
             <button
               onClick={() => setActiveTab('bulk')}
-              className="px-4 py-2 rounded-xl bg-[#800000] text-white text-xs font-bold hover:bg-[#600000] transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors cursor-pointer"
             >
               Go to Bulk Signing Operations
             </button>
@@ -698,7 +698,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 placeholder="Search by learner, signer, or reference..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs focus:border-[#800000]"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/40 text-xs focus:border-primary"
               />
             </div>
             <button
@@ -745,7 +745,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-2.5 px-4">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#800000]/10 text-[#800000]">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
                             {rec.signerRole}
                           </span>
                         </td>
@@ -788,13 +788,13 @@ export const DocumentSigningCenterView: React.FC = () => {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-[10px] font-mono uppercase text-[#800000] font-bold">
+                    <span className="text-[10px] font-mono uppercase text-primary font-bold">
                       {pol.documentType}
                     </span>
                     <h3 className="text-sm font-bold text-on-surface">{pol.title}</h3>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    pol.allowBulkSigning ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-700 border-gray-300'
+                    pol.allowBulkSigning ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-surface-container-low text-gray-700 border-gray-300'
                   }`}>
                     {pol.allowBulkSigning ? 'Bulk Signing Allowed' : 'Individual Only'}
                   </span>
@@ -845,7 +845,7 @@ export const DocumentSigningCenterView: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-2xl border border-outline-variant/30 space-y-4">
             <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#800000]/10 text-[#800000] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-bold text-on-surface">Bulk Signing Authorization</h3>
@@ -872,7 +872,7 @@ export const DocumentSigningCenterView: React.FC = () => {
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="123456"
-                className="w-full text-center tracking-widest text-xl font-mono font-bold py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-[#800000]"
+                className="w-full text-center tracking-widest text-xl font-mono font-bold py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary"
               />
             </div>
 
@@ -892,7 +892,7 @@ export const DocumentSigningCenterView: React.FC = () => {
               <button
                 onClick={handleExecuteBulkSigning}
                 disabled={executingBulk || otpCode.length !== 6}
-                className="w-1/2 py-2 rounded-xl bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="w-1/2 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {executingBulk ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileCheck2 className="w-4 h-4" />}
                 <span>{executingBulk ? 'Executing...' : 'Verify & Sign Batch'}</span>

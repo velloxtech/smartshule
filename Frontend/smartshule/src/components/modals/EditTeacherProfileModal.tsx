@@ -154,9 +154,9 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 my-auto text-slate-800">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto text-on-surface">
         {/* Header with Grace Seeds Burgundy stripe */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 relative shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 relative shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
@@ -201,13 +201,13 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
 
           {/* Section: Personal Info */}
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-100">
+            <div className="text-xs font-bold uppercase tracking-wider text-on-surface-variant pb-1 border-b border-outline-variant/30">
               Personal & Contact Information
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   First Name <span className="text-rose-600">*</span>
                 </label>
                 <input
@@ -216,11 +216,11 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="e.g. David"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   Last Name <span className="text-rose-600">*</span>
                 </label>
                 <input
@@ -229,26 +229,26 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="e.g. Kiprono"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   Official Email Address (Optional)
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. teacher@smartshule.ac.ke (Optional)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  placeholder="e.g. teacher@example.com (Optional)"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   Phone Number (M-Pesa / SMS)
                 </label>
                 <input
@@ -256,7 +256,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+2547XXXXXXXX"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
 
           {/* Section: Professional Credentials */}
           <div className="space-y-3 pt-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-100 flex items-center justify-between">
+            <div className="text-xs font-bold uppercase tracking-wider text-on-surface-variant pb-1 border-b border-outline-variant/30 flex items-center justify-between">
               <span>Professional Credentials</span>
               <span className="text-[10px] text-emerald-700 font-semibold lowercase">TSC is optional</span>
             </div>
@@ -272,7 +272,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                     TSC Number
                   </label>
                   <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
@@ -284,12 +284,12 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={tscNumber}
                   onChange={(e) => setTscNumber(e.target.value)}
                   placeholder="e.g. TSC/123456 (Leave blank if pending)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
-                <span className="text-[10px] text-slate-500">Teachers awaiting commission number can leave this blank</span>
+                <span className="text-[10px] text-on-surface-variant">Teachers awaiting commission number can leave this blank</span>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                   Employee Number
                 </label>
                 <input
@@ -297,19 +297,19 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   value={employeeNumber}
                   onChange={(e) => setEmployeeNumber(e.target.value)}
                   placeholder="e.g. 01"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
                 Highest Academic / Professional Qualification
               </label>
               <select
                 value={qualification}
                 onChange={(e) => setQualification(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-sm text-on-surface focus:outline-primary focus:bg-surface"
               >
                 <option value="Certificate in Early Childhood (ECDE)">Certificate in Early Childhood (ECDE)</option>
                 <option value="Diploma in Early Childhood (ECDE)">Diploma in Early Childhood (ECDE)</option>
@@ -331,15 +331,15 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
           {/* Section: Learning Areas / Specialization */}
           <div className="space-y-2.5 pt-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 CBC Learning Areas & Specializations
               </label>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px] text-on-surface-variant">
                 Select areas you teach
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-white border border-slate-200 rounded-xl">
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-surface-container-lowest border border-outline-variant/30 rounded-xl">
               {(dbLearningAreas.length > 0
                 ? Array.from<string>(new Set(dbLearningAreas.map((la) => la.name)))
                 : [
@@ -362,8 +362,8 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                     onClick={() => toggleSubject(subjName)}
                     className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 border cursor-pointer ${
                       isSelected
-                        ? 'bg-[#7a1228] text-white border-[#7a1228] shadow-xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'bg-surface text-on-surface-variant border-outline-variant/30 hover:bg-surface-container-low hover:border-outline-variant/30'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[13px]">
@@ -406,12 +406,12 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
                   if (e.key === 'Enter') handleAddCustomSubject(e);
                 }}
                 placeholder="Other area (e.g. French, Music)..."
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-[#7a1228]"
+                className="flex-1 bg-surface border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-primary"
               />
               <button
                 type="button"
                 onClick={handleAddCustomSubject}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs rounded-lg transition-colors cursor-pointer"
               >
                 Add
               </button>
@@ -419,19 +419,19 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-outline-variant/30 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+              className="px-4 py-2 border border-outline-variant/30 text-on-surface-variant text-xs font-semibold rounded-xl hover:bg-surface transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2 bg-[#7a1228] hover:bg-[#5e0d1e] text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 bg-primary hover:bg-primary-container text-white text-xs font-semibold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isLoading ? (
                 <>

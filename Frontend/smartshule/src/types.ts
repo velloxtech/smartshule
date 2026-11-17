@@ -14,7 +14,9 @@ export type TabType =
   | 'report-cards'
   | 'CBC-analytics'
   | 'schemes-lesson-plans'
+  | 'lesson-plans'
   | 'records-of-work'
+  | 'school-calendar-plan'
   | 'timetable'
   | 'attendance-register'
   | 'fee-structure'
@@ -46,10 +48,33 @@ export type TabType =
   | 'broadsheets'
   | 'occurrence-records'
   | 'curriculum-tracker'
+  | 'scheme-of-work-builder'
   | 'fee-deadline-banner'
   | 'sponsored-students'
   | 'digital-signature'
-  | 'teacher-profile';
+  | 'document-signing'
+  | 'teacher-profile'
+  // Admissions & Enrolment tabs
+  | 'admissions-dashboard'
+  | 'admit-learner'
+  | 'new-applications'
+  | 'application-review'
+  | 'admission-assessments'
+  | 'admission-decisions'
+  | 'admission-offers'
+  | 'admission-enrolment'
+  | 'admission-reports'
+  | 'admission-settings'
+  // Staff Management tabs
+  | 'staff-directory'
+  | 'onboard-staff'
+  | 'teaching-staff'
+  | 'non-teaching-staff'
+  | 'staff-verifications'
+  // Consents & Salary Acknowledgement
+  | 'parent-consent'
+  | 'consent-management'
+  | 'salary-acknowledgement';
 
 export interface FeeBannerConfig {
   id: string;
@@ -305,6 +330,8 @@ export interface Student {
   creditBalance?: number;
   totalDue?: number;
   arrearsDue?: number;
+  hasInvoices?: boolean;
+  isUnbilled?: boolean;
 }
 
 export interface ArchivedGuardianInfo {
@@ -760,6 +787,17 @@ export interface StreamItem {
   classTeacherId?: string;
 }
 
+export interface GlobalSubject {
+  id: string;
+  schoolId: string;
+  code: string;
+  name: string;
+  department?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface BackendLearningArea {
   id: string;
   name: string;
@@ -769,6 +807,10 @@ export interface BackendLearningArea {
   isElective: boolean;
   schoolId: string;
   teacherId?: string;
+  globalSubjectId?: string;
+  globalSubject?: GlobalSubject;
+  canonicalSubjectName?: string;
+  canonicalSubjectCode?: string;
 }
 
 
@@ -809,6 +851,8 @@ export interface BackendFormativeAssessment {
 }
 
 export interface BackendSummativeAssessment {
+  percentageScore?: number;
+  scoreIssue?: string;
   id: string;
   studentId: string;
   teacherId: string;
@@ -884,6 +928,7 @@ export interface CBCReportCardData {
 
 export interface SchemeEntry {
   id?: string;
+  archivedAt?: string;
   weekNumber: number;
   lessonNumber: number;
   strandId?: string;
@@ -914,6 +959,40 @@ export interface SchemeOfWork {
   reviewedAt?: string;
   reviewRemarks?: string;
   createdAt?: string;
+  planningState?: {
+    revision?: number;
+    coverageReviewStatus?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+    submittedEntryIds?: string[];
+    approvedEntryIds?: string[];
+    allocations?: Array<{ lessons: number }>;
+    locked?: boolean;
+  };
+}
+
+export interface LessonPlanSourceEntry {
+  strandTitle?: string;
+  subStrandTitle?: string;
+  strandId?: string;
+  subStrandId?: string;
+  specificLearningOutcomes?: string[];
+  keyInquiryQuestions?: string[];
+  learningResources?: string[];
+  learningExperiences?: string[];
+  assessmentMethods?: string[];
+  academicYearId?: string;
+  termId?: string;
+  schemeOfWorkEntryId: string;
+  classRoomId: string;
+  streamId?: string;
+  learningAreaId: string;
+  lessonDate: string;
+  lessonTime: string;
+  weekNumber: number;
+  lessonNumber: number;
+  className?: string;
+  streamName?: string;
+  learningAreaName?: string;
+  schemeTitle?: string;
 }
 
 export interface LessonPlanStep {
@@ -922,10 +1001,22 @@ export interface LessonPlanStep {
   durationMinutes: number;
   teacherActivities: string;
   learnerActivities: string;
+  learningPoints?: string;
+  resources?: string;
   assessmentCriterion?: string;
 }
 
 export interface LessonPlan {
+  otherLearningAreas?: string[];
+  communityServiceActivities?: string;
+  nonFormalActivity?: string;
+  assessmentRubric?: {criterion:string; exceeds:string; meets:string; approaching:string; below:string}[];
+
+  weekNumber?: number;
+  lessonNumber?: number;
+  lessonTime?: string;
+  pcis?: string[];
+
   id: string;
   teacherId: string;
   schemeOfWorkEntryId?: string;
@@ -942,11 +1033,13 @@ export interface LessonPlan {
   keyInquiryQuestions: string[];
   coreCompetenciesAddressed: string[];
   valuesAddressed: string[];
+  learningExperiences?: string[];
+  assessmentMethods?: string[];
   learningResources: string[];
   steps: LessonPlanStep[];
   extendedActivity?: string;
   teacherSelfReflection?: string;
-  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  status?: 'RECORDED' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
   submittedAt?: string;
   reviewedByUserId?: string;
   reviewedAt?: string;
@@ -956,7 +1049,7 @@ export interface LessonPlan {
 
 export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
 
-export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR';
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR' | 'NEEDS_REMEDIATION';
 
 export interface RecordOfWorkReflection {
   comprehensionLevel?: LearnerComprehension;
@@ -1045,6 +1138,9 @@ export interface DayDefinition {
 
 export interface TimetableSlot {
   id: string;
+  timetableId?: string;
+  classRoomId?: string;
+  streamId?: string;
   dayOfWeek: string;
   periodNumber: number;
   startTime: string;
@@ -1601,23 +1697,101 @@ export interface ParentHelpRequest {
   updatedAt: string;
 }
 
+export interface ConcernAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size?: number;
+}
+
+export interface ConcernMessage {
+  id: string;
+  senderUserId: string;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  visibility: 'PARENT_VISIBLE' | 'INTERNAL_ONLY';
+  attachments?: ConcernAttachment[];
+  createdAt: string;
+}
+
+export interface ConcernAuditEntry {
+  id: string;
+  action: string;
+  performedByUserId: string;
+  performedByName: string;
+  performedByRole: string;
+  timestamp: string;
+  details: string;
+  notes?: string;
+}
+
 export interface ConcernRecord {
   id: string;
   schoolId?: string;
-  parentUserId: string;
-  parentName: string;
-  parentPhone?: string;
-  parentEmail?: string;
-  studentName?: string;
-  gradeLevel?: string;
-  category: 'Academic' | 'Discipline' | 'Facilities' | 'Transport' | 'Fee & Finance' | 'General' | 'Other';
+  referenceNumber?: string;
+  title?: string;
   subject: string;
+  description?: string;
   details: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED';
+  category: string;
+  priority: string;
+  status: string;
+
+  parentUserId?: string;
+  parentName?: string;
+  complainantName?: string;
+  parentPhone?: string;
+  complainantPhone?: string;
+  parentEmail?: string;
+  complainantEmail?: string;
+  complainantRole?: string;
+
+  studentId?: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
+
+  assignedToUserId?: string;
+  assignedToName?: string;
+  assignedToRole?: string;
+  assignedAt?: string;
+  reassignmentReason?: string;
+
+  acknowledgedAt?: string;
+  acknowledgedByName?: string;
+
+  escalatedAt?: string;
+  escalatedToName?: string;
+  escalationReason?: string;
+
+  actionTaken?: string;
+  resolutionDetails?: string;
+  resolutionNotes?: string;
+  resolvedByName?: string;
+  resolvedByUserId?: string;
+  resolvedAt?: string;
+
+  closedAt?: string;
+  closedByName?: string;
+  closureNotes?: string;
+  reopenedAt?: string;
+  reopenedByName?: string;
+  reopeningReason?: string;
+
+  acknowledgementDeadline?: string;
+  resolutionDeadline?: string;
+  isOverdue?: boolean;
+
   adminResponse?: string;
   respondedBy?: string;
   respondedAt?: string;
+
+  messages?: ConcernMessage[];
+  auditTrail?: ConcernAuditEntry[];
+  attachments?: ConcernAttachment[];
+
   createdAt: string;
   updatedAt?: string;
 }
@@ -2125,8 +2299,95 @@ export interface PayrollRecord {
   reversedAt?: string;
   reversalReason?: string;
   notes?: string;
+  acknowledgedAt?: string;
+  acknowledgedByUserId?: string;
+  acknowledgementStatement?: string;
+  acknowledgementMethod?: string;
+  acknowledgementSignature?: string;
+  acknowledgementStatus?: 'UNACKNOWLEDGED' | 'AWAITING_ACKNOWLEDGEMENT' | 'ACKNOWLEDGED' | 'UNDER_REVIEW' | 'DISPUTED';
+  disputedAt?: string;
+  disputeReason?: string;
+  disputedByUserId?: string;
+  isPaid?: boolean;
+  canAcknowledge?: boolean;
+  canDispute?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ParentConsentRequest {
+  id: string;
+  schoolId: string;
+  title: string;
+  category: 'TRIP' | 'MEDICAL' | 'MEDIA' | 'SPORTS' | 'TRANSPORT' | 'GENERAL' | string;
+  description?: string;
+  termsAndConditions: string;
+  version: number;
+  targetType: 'WHOLE_SCHOOL' | 'GRADE' | 'STREAM' | 'INDIVIDUAL';
+  targetClassIds?: string[];
+  targetStudentIds?: string[];
+  isMandatory: boolean;
+  deadline?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+  createdByUserId?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt: string;
+  metrics?: {
+    totalEligible: number;
+    totalResponded: number;
+    consentedCount: number;
+    declinedCount: number;
+    pendingCount: number;
+    responseRatePercentage: number;
+  };
+}
+
+export interface ParentConsentResponse {
+  id: string;
+  schoolId: string;
+  consentRequestId: string;
+  consentVersion: number;
+  studentId: string;
+  parentUserId: string;
+  parentGuardianId?: string;
+  parentName: string;
+  parentRelationship?: string;
+  parentNationalId?: string;
+  parentPhone?: string;
+  decision: 'CONSENTED' | 'DECLINED';
+  notes?: string;
+  signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED' | 'SAVED_PROFILE';
+  signatureData?: string;
+  signatureHash?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  submittedAt: string;
+  previousResponseId?: string;
+  isLatest: boolean;
+}
+
+export interface ParentConsentItem {
+  consentRequestId: string;
+  title: string;
+  category: string;
+  description?: string;
+  termsAndConditions: string;
+  version: number;
+  targetType: string;
+  isMandatory: boolean;
+  deadline?: string;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    admissionNumber: string;
+    gradeLevel: string;
+    streamId?: string;
+  };
+  responseStatus: 'PENDING' | 'CONSENTED' | 'DECLINED' | 'OUTDATED_VERSION';
+  requiresResubmission: boolean;
+  latestResponse?: ParentConsentResponse | null;
 }
 
 export interface StaffLeave {
@@ -2631,9 +2892,8 @@ export interface OccurrenceDailySummary {
 // CURRICULUM PROGRESS TRACKER TYPES
 // ==========================================
 
-export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED' | 'EXEMPTED' | 'RESCHEDULED' | 'APPROVED' | 'SUBMITTED' | 'RETURNED';
 export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
-export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
 
 export interface DailyReflection {
   comprehensionLevel: LearnerComprehension;
@@ -2820,4 +3080,271 @@ export interface UpdateDailyLogDTO {
 
 export interface EndorseDailyLogDTO {
   remarks: string;
+}
+
+export interface FeeCreditUtilizationReceiptPayload {
+  receiptNumber: string;
+  receiptTitle?: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  transactionType: 'AUTOMATIC' | 'ADMIN-INITIATED';
+  transactionMode?: 'AUTOMATIC' | 'ADMINISTRATOR-INITIATED';
+  status: 'COMPLETED' | 'REVERSED';
+  academicYear: string;
+  academicTerm: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  parentName?: string;
+  originatingPaymentReferences?: string[];
+  previousTermArrearsBefore: number;
+  currentTermFeesBefore: number;
+  availableCreditBefore: number;
+  outstandingBalanceBefore?: number;
+  amountAppliedToArrears: number;
+  amountAppliedToCurrentFees: number;
+  totalCreditUtilized: number;
+  remainingOutstanding: number;
+  outstandingBalanceAfter?: number;
+  remainingCredit: number;
+  invoiceAllocations?: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    amountApplied: number;
+    remainingBalance: number;
+    category?: string;
+  }>;
+  isSystemGenerated: boolean;
+  triggerSource?: string;
+  initiatedByAdminName?: string;
+  initiatedByAdminId?: string;
+  mandatoryReason?: string;
+  statement: string;
+  schoolName: string;
+  schoolAddress: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  reversalReference?: string;
+  reversalDate?: string;
+  reversalReason?: string;
+  reversedByAdminName?: string;
+}
+
+export interface FeeCreditUtilizationReversalPayload {
+  reversalNumber: string;
+  originalReceiptNumber: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  status: 'REVERSED';
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  amountReversed: number;
+  creditRestored: number;
+  reason: string;
+  reversedByAdminId: string;
+  reversedByAdminName: string;
+  statement: string;
+  schoolName: string;
+  schoolLogoUrl?: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  originalReceipt?: FeeCreditUtilizationReceiptPayload;
+}
+
+export interface FeeCreditUtilizationPreview {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  availableCredit: number;
+  totalOutstanding: number;
+  previousTermArrears: number;
+  currentTermBilledFees: number;
+  maxApplicableAmount: number;
+  proposedAmount: number;
+  amountToArrears: number;
+  amountToCurrentFees: number;
+  projectedRemainingArrears: number;
+  projectedRemainingCurrentFees: number;
+  projectedRemainingOutstanding: number;
+  projectedRemainingCredit: number;
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    isArrears: boolean;
+    balanceBefore: number;
+    amountToApply: number;
+    balanceAfter: number;
+  }>;
+}
+
+export type TransactionReversalStatus =
+  | 'PENDING_ADMIN_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export type ReversibleTransactionType =
+  | 'PAYMENT'
+  | 'CREDIT_UTILIZATION'
+  | 'FEE_ALLOCATION'
+  | 'MANUAL_ARREAR'
+  | 'OTHER';
+
+export interface TransactionReversalAuditEntry {
+  action: 'REQUESTED' | 'REVIEWED' | 'APPROVED' | 'REJECTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'RETRIED';
+  performedByUserId: string;
+  performedByName: string;
+  performedByRole: string;
+  timestamp: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface DependentFinancialTransaction {
+  type: string;
+  reference: string;
+  description: string;
+  amount: number;
+  date?: string;
+  invoiceId?: string;
+  creditId?: string;
+  status: string;
+  impactOnReversal: string;
+}
+
+export interface FinancialImpactPreview {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel?: string;
+  transactionType: ReversibleTransactionType | string;
+  transactionReference: string;
+  originalReceiptNumber?: string;
+  originalAmount: number;
+  transactionDate: string;
+  currentOutstandingBalance: number;
+  currentArrears: number;
+  currentFeesThisTerm: number;
+  currentAvailableCredit: number;
+  currentCreditUtilized: number;
+  dependentTransactions: DependentFinancialTransaction[];
+  hasBlockingDependencies: boolean;
+  blockingReason?: string;
+  projectedOutstandingBalance: number;
+  projectedCreditBalance: number;
+  projectedArrears: number;
+  impactSummary: string;
+}
+
+export interface ReversalReceiptPayload {
+  reversalReceiptNumber: string;
+  requestReference: string;
+  originalTransactionReference: string;
+  originalReceiptNumber?: string;
+  transactionType: string;
+  schoolId: string;
+  schoolName: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  schoolLogoUrl?: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel?: string;
+  parentName?: string;
+  originalAmount: number;
+  amountReversed: number;
+  requestedByName: string;
+  requestedByRole: string;
+  requestDate: string;
+  bursarReason: string;
+  additionalExplanation?: string;
+  approvedByName: string;
+  approvedByRole: string;
+  approvalDate: string;
+  approvalComment?: string;
+  executionDate: string;
+  status: 'COMPLETED';
+  resultingBalances: {
+    outstandingBalance: number;
+    availableCredit: number;
+    arrears: number;
+  };
+  relatedAllocations?: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    amountReversed: number;
+    resultingBalance: number;
+  }>;
+  mandatoryNoticeStatement: string;
+}
+
+export interface TransactionReversalRequest {
+  id: string;
+  schoolId: string;
+  requestReference: string;
+  transactionType: ReversibleTransactionType;
+  transactionId: string;
+  transactionReference: string;
+  originalReceiptNumber?: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  originalAmount: number;
+  requestedReversalAmount: number;
+  transactionDate: string;
+  reason: string;
+  explanation?: string;
+  supportingAttachmentUrl?: string;
+  status: TransactionReversalStatus;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedByRole: string;
+  requestedAt: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  approvalComment?: string;
+  rejectionReason?: string;
+  reversalReceiptNumber?: string;
+  reversalReceiptPayload?: ReversalReceiptPayload;
+  financialImpactPreview?: FinancialImpactPreview;
+  errorMessage?: string;
+  auditTrail: TransactionReversalAuditEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+export interface RegisteredWebAuthnCredential {
+  id: string;
+  userId: string;
+  credentialId: string;
+  deviceLabel: string;
+  deviceType: 'windows_hello' | 'apple_biometrics' | 'android_biometrics' | 'fido2_key' | 'platform_generic';
+  transports: string[];
+  aaguid?: string;
+  backupEligible?: boolean;
+  backupState?: boolean;
+  createdAt: string;
+  lastUsedAt?: string | null;
+}
+
+export interface WebAuthnUserStatus {
+  hasCredentials: boolean;
+  credentialCount: number;
+  deviceLabels: string[];
+  deviceTypes: string[];
 }

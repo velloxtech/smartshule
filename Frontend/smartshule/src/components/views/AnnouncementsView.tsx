@@ -17,6 +17,7 @@ import {
   togglePinAnnouncement,
   acknowledgeAnnouncement,
   getStoredAuthToken,
+  getApiBaseUrl,
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { resolveGradeName } from '../../utils/formatters';
@@ -53,7 +54,7 @@ Grace Seeds School warmly announces the official reopening and reporting schedul
 3. School Uniform & Grooming: Please ensure full standard uniform, clean polished black leather shoes, and clean PE kit on scheduled sports days.
 4. Stationery & CBC Workbooks: Ensure all student exercise books, strand assessment portfolios, and creative learning materials are labelled clearly.
 5. School Transport: Morning bus pickup routes will commence at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.
-6. Term Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 before reporting.
+6. Term Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 522533 (Account: 8048859#<Child's Full Name & Grade>) before reporting.
 
 We look forward to an enriching, inspiring, and fruitful academic session with our learners.
 
@@ -72,8 +73,8 @@ Please be reminded regarding the settlement of the 2026 Annual Fee Schedule for 
 
 1. Simplified Annual Structure: All fees are scheduled as an all-inclusive annual fee covering tuition, learning materials, and ICT levies.
 2. Official Payment Channels:
-   • M-Pesa Paybill: 247247 | Account Number: <Child's Full Name & Grade> (not admission number)
-   • Bank Account: Equity Bank | Account Name: Grace Seeds School | Acc No: 0140293847291
+   • M-Pesa Paybill: 522533 | Account Number: 8048859#<Child's Full Name & Grade> (not admission number)
+   • Bank Account: KCB Bank | Account Name: Grace Seeds School | Acc No: 1234567890
 3. Clearance Deadline: Kindly ensure any outstanding arrears or term settlements are ratified before Monday next week.
 4. Download Structure: You may access and download your learner's full breakdown on the Fee Structure tab.
 
@@ -169,7 +170,9 @@ export const AnnouncementsView: React.FC = () => {
   const [formAudience, setFormAudience] = useState<AnnouncementAudience>('ALL');
   const [formGradeLevel, setFormGradeLevel] = useState<string>('GRADE_1');
   const [formIsPinned, setFormIsPinned] = useState(false);
+  const [formPublishDate, setFormPublishDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [formExpiryDate, setFormExpiryDate] = useState('');
+  const [formStatus, setFormStatus] = useState<'PUBLISHED' | 'DRAFT'>('PUBLISHED');
   const [formSendSms, setFormSendSms] = useState(false);
   const [formSendWhatsApp, setFormSendWhatsApp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -180,11 +183,10 @@ export const AnnouncementsView: React.FC = () => {
     if (!user) return false;
     const allowedRoles: UserRole[] = [
       UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
       UserRole.SCHOOL_ADMIN,
       UserRole.HEAD_TEACHER,
       UserRole.DEPUTY_HEAD_TEACHER,
-      UserRole.BURSAR,
-      UserRole.TEACHER,
     ];
     return allowedRoles.includes(user.role);
   }, [user]);
@@ -207,7 +209,7 @@ export const AnnouncementsView: React.FC = () => {
           localStorage.getItem('token') ||
           localStorage.getItem('authToken')
         : null);
-    const baseUrl = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+    const baseUrl = getApiBaseUrl();
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const res = await fetch(`${cleanBase}${cleanEndpoint}`, {
@@ -447,7 +449,9 @@ export const AnnouncementsView: React.FC = () => {
     setFormAudience('ALL');
     setFormGradeLevel('GRADE_1');
     setFormIsPinned(false);
+    setFormPublishDate(new Date().toISOString().split('T')[0]);
     setFormExpiryDate('');
+    setFormStatus('PUBLISHED');
     setFormSendSms(false);
     setFormSendWhatsApp(false);
     setFormError(null);
@@ -464,7 +468,9 @@ export const AnnouncementsView: React.FC = () => {
     setFormAudience(item.targetAudience);
     setFormGradeLevel(item.targetGradeLevel || 'GRADE_1');
     setFormIsPinned(item.isPinned);
+    setFormPublishDate(item.publishDate ? item.publishDate.slice(0, 10) : new Date().toISOString().split('T')[0]);
     setFormExpiryDate(item.expiryDate ? item.expiryDate.slice(0, 10) : '');
+    setFormStatus((item.status as any) === 'DRAFT' ? 'DRAFT' : 'PUBLISHED');
     setFormSendSms(!!item.sendSmsBroadcast);
     setFormSendWhatsApp(!!item.sendWhatsAppBroadcast);
     setFormError(null);
@@ -501,7 +507,9 @@ export const AnnouncementsView: React.FC = () => {
       targetAudience: formAudience,
       targetGradeLevel: formAudience === 'SPECIFIC_GRADE' ? formGradeLevel : undefined,
       isPinned: formIsPinned,
+      publishDate: formPublishDate ? new Date(formPublishDate).toISOString() : new Date().toISOString(),
       expiryDate: formExpiryDate ? new Date(formExpiryDate).toISOString() : undefined,
+      status: formStatus,
       sendSmsBroadcast: formSendSms,
       sendWhatsAppBroadcast: formSendWhatsApp,
       authorName: user?.name || 'School Administration',
@@ -573,7 +581,7 @@ export const AnnouncementsView: React.FC = () => {
     doc.text(motto, pageWidth / 2, curY, { align: 'center' });
     curY += 4.5;
 
-    const contactLine = `${school?.address || 'P.O. Box 4521-00100 Nairobi'} • Tel: ${school?.phone || '+254 712 345 678'} • Email: ${school?.email || 'info@graceseedsschool.sc.ke'}`;
+    const contactLine = `${school?.address || 'P.O Box 12-20123'} • Tel: ${school?.phone || '+254 712 345 678'} • Email: ${school?.email || 'info@graceseedsschool.sc.ke'}`;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
@@ -920,10 +928,10 @@ export const AnnouncementsView: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* 1. Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 rounded-2xl text-white shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-300 text-3xl">campaign</span>
+            <span className="material-symbols-outlined text-primary-fixed-dim text-3xl">campaign</span>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notice Board & Circulars</h1>
           </div>
           <p className="text-rose-100/90 text-sm max-w-2xl">
@@ -950,19 +958,20 @@ export const AnnouncementsView: React.FC = () => {
                   setFormSendSms(true);
                   setFormIsPinned(true);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#800000] hover:bg-[#660000] text-white border border-rose-400/30 rounded-xl text-sm font-semibold transition shadow-md cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white border border-rose-400/30 rounded-xl text-sm font-semibold transition shadow-md cursor-pointer"
                 title="Broadcast School Reopening Notice & Directives to Parents"
               >
-                <span className="material-symbols-outlined text-base text-amber-300">campaign</span>
+                <span className="material-symbols-outlined text-base text-primary-fixed-dim">campaign</span>
                 <span>📢 Reopening Notice</span>
               </button>
 
               <button
                 onClick={openCreateModal}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-container text-on-surface rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
+                title="Create a new official notice"
               >
-                <span className="material-symbols-outlined text-base">post_add</span>
-                <span>Post New Notice</span>
+                <span className="material-symbols-outlined text-base">add</span>
+                <span>+ Add Notice</span>
               </button>
             </>
           )}
@@ -981,47 +990,47 @@ export const AnnouncementsView: React.FC = () => {
 
       {/* 2. Key Notice Board Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">article</span>
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Active Circulars</p>
-            <h3 className="text-xl font-bold text-slate-800">{stats.total}</h3>
+            <p className="text-xs text-on-surface-variant font-medium">Active Circulars</p>
+            <h3 className="text-xl font-bold text-on-surface">{stats.total}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">priority_high</span>
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Urgent Directives</p>
+            <p className="text-xs text-on-surface-variant font-medium">Urgent Directives</p>
             <h3 className="text-xl font-bold text-red-600">{stats.urgentCount}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">push_pin</span>
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Pinned Notices</p>
-            <h3 className="text-xl font-bold text-amber-600">{stats.pinnedCount}</h3>
+            <p className="text-xs text-on-surface-variant font-medium">Pinned Notices</p>
+            <h3 className="text-xl font-bold text-primary">{stats.pinnedCount}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3">
+        <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-xl">
               {isParentOrStudent ? 'check_circle' : 'family_restroom'}
             </span>
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-on-surface-variant font-medium">
               {isParentOrStudent ? 'My Acknowledged' : 'Parent Notices'}
             </p>
-            <h3 className="text-xl font-bold text-emerald-600">
+            <h3 className="text-xl font-bold text-primary">
               {isParentOrStudent ? stats.userAckCount : stats.parentNotices}
             </h3>
           </div>
@@ -1030,7 +1039,7 @@ export const AnnouncementsView: React.FC = () => {
 
       {/* 3. Urgent / Pinned Spotlight Alert Banner */}
       {pinnedOrUrgent.length > 0 && (
-        <div className="bg-gradient-to-r from-red-50 via-amber-50 to-orange-50 border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
+        <div className="bg-gradient-to-r from-red-50 via-primary-fixed to-primary-fixed border-l-4 border-red-500 rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2 text-red-800 font-semibold text-sm">
             <span className="material-symbols-outlined text-red-600">notifications_active</span>
             <span>HIGH PRIORITY / PINNED NOTICES ({pinnedOrUrgent.length})</span>
@@ -1040,7 +1049,7 @@ export const AnnouncementsView: React.FC = () => {
               <div
                 key={`spotlight-${item.id}`}
                 onClick={() => setSelectedForMemo(item)}
-                className="bg-white p-3 rounded-lg border border-red-200 hover:border-red-300 transition cursor-pointer flex flex-col justify-between shadow-xs"
+                className="bg-surface-container-lowest p-3 rounded-lg border border-red-200 hover:border-red-300 transition cursor-pointer flex flex-col justify-between shadow-xs"
               >
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
@@ -1049,22 +1058,22 @@ export const AnnouncementsView: React.FC = () => {
                     >
                       {item.category}
                     </span>
-                    <span className="text-slate-500">
+                    <span className="text-on-surface-variant">
                       {new Date(item.publishDate).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
                       })}
                     </span>
                   </div>
-                  <h4 className="font-semibold text-slate-900 text-sm line-clamp-1">{item.title}</h4>
-                  <p className="text-slate-600 text-xs mt-1 line-clamp-2">{item.content}</p>
+                  <h4 className="font-semibold text-on-surface text-sm line-clamp-1">{item.title}</h4>
+                  <p className="text-on-surface-variant text-xs mt-1 line-clamp-2">{item.content}</p>
                 </div>
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs">
-                  <span className="text-slate-500 flex items-center gap-1">
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-outline-variant/30 text-xs">
+                  <span className="text-on-surface-variant flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">person</span>
                     {item.authorName}
                   </span>
-                  <span className="text-indigo-600 font-medium hover:underline flex items-center gap-0.5">
+                  <span className="text-primary font-medium hover:underline flex items-center gap-0.5">
                     Read Directive
                     <span className="material-symbols-outlined text-xs">arrow_forward</span>
                   </span>
@@ -1076,7 +1085,7 @@ export const AnnouncementsView: React.FC = () => {
       )}
 
       {/* 4. Filter & Search Controls */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3">
+      <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/80 shadow-sm space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search bar */}
           <div className="relative flex-1">
@@ -1088,12 +1097,12 @@ export const AnnouncementsView: React.FC = () => {
               placeholder="Search circular title, content, or author..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-on-surface-variant"
               >
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
@@ -1102,11 +1111,11 @@ export const AnnouncementsView: React.FC = () => {
 
           {/* Audience Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium shrink-0">Audience:</span>
+            <span className="text-xs text-on-surface-variant font-medium shrink-0">Audience:</span>
             <select
               value={selectedAudience}
               onChange={(e) => setSelectedAudience(e.target.value)}
-              className="text-xs py-2 px-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700"
+              className="text-xs py-2 px-2.5 bg-surface border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-on-surface-variant"
             >
               <option value="ALL">All Audiences</option>
               <option value="PARENTS">Parents Only</option>
@@ -1118,11 +1127,11 @@ export const AnnouncementsView: React.FC = () => {
 
           {/* Priority Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium shrink-0">Priority:</span>
+            <span className="text-xs text-on-surface-variant font-medium shrink-0">Priority:</span>
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value)}
-              className="text-xs py-2 px-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700"
+              className="text-xs py-2 px-2.5 bg-surface border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-on-surface-variant"
             >
               <option value="ALL">All Priorities</option>
               <option value="URGENT">Urgent Only</option>
@@ -1134,7 +1143,7 @@ export const AnnouncementsView: React.FC = () => {
         </div>
 
         {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs scrollbar-thin">
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-0.5 text-xs scrollbar-thin">
           {[
             { id: 'ALL', label: 'All Notices' },
             { id: 'GENERAL', label: 'General' },
@@ -1153,8 +1162,8 @@ export const AnnouncementsView: React.FC = () => {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition border ${
                   isActive
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-primary text-white border-primary shadow-xs'
+                    : 'bg-surface text-on-surface-variant border-outline-variant/30 hover:bg-surface-container-low'
                 }`}
               >
                 {cat.label}
@@ -1166,26 +1175,26 @@ export const AnnouncementsView: React.FC = () => {
 
       {/* 5. Announcements List / Grid */}
       {loading ? (
-        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
-          <span className="material-symbols-outlined text-4xl animate-spin text-indigo-600">
+        <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
+          <span className="material-symbols-outlined text-4xl animate-spin text-primary">
             progress_activity
           </span>
           <p className="mt-2 text-sm font-medium">Loading school notice board...</p>
         </div>
       ) : filteredAnnouncements.length === 0 ? (
-        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-          <span className="material-symbols-outlined text-5xl text-slate-300">mark_email_unread</span>
-          <h3 className="text-base font-semibold text-slate-700 mt-2">No announcements found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            There are no notices matching your current search or filter criteria.
+        <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant/30">
+          <span className="material-symbols-outlined text-5xl text-slate-300">campaign</span>
+          <h3 className="text-base font-semibold text-on-surface-variant mt-2">No notices available.</h3>
+          <p className="text-xs text-on-surface-variant max-w-sm mx-auto mt-1">
+            There are no official notices or circulars posted on the board yet.
           </p>
           {canManage && (
             <button
               onClick={openCreateModal}
-              className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-semibold shadow-sm transition"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              Post a Notice
+              + Add Notice
             </button>
           )}
         </div>
@@ -1199,12 +1208,12 @@ export const AnnouncementsView: React.FC = () => {
               <div
                 key={item.id}
                 onClick={() => setSelectedForMemo(item)}
-                className={`bg-white rounded-2xl border transition hover:shadow-md cursor-pointer flex flex-col justify-between relative overflow-hidden group ${
+                className={`bg-surface-container-lowest rounded-2xl border transition hover:shadow-md cursor-pointer flex flex-col justify-between relative overflow-hidden group ${
                   item.isPinned
                     ? 'border-amber-300 ring-1 ring-amber-200/70 shadow-xs'
                     : item.priority === 'URGENT'
                     ? 'border-red-300 ring-1 ring-red-200/70'
-                    : 'border-slate-200/90'
+                    : 'border-outline-variant/90'
                 }`}
               >
                 {/* Top Category Accent Line */}
@@ -1213,7 +1222,7 @@ export const AnnouncementsView: React.FC = () => {
                     item.category === 'FEES'
                       ? 'bg-emerald-500'
                       : item.category === 'ACADEMIC'
-                      ? 'bg-indigo-500'
+                      ? 'bg-primary'
                       : item.category === 'EMERGENCY'
                       ? 'bg-red-500'
                       : item.category === 'EVENT'
@@ -1249,7 +1258,7 @@ export const AnnouncementsView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       {item.isPinned && (
                         <span
-                          className="material-symbols-outlined text-amber-500 text-lg"
+                          className="material-symbols-outlined text-primary text-lg"
                           title="Pinned Notice"
                         >
                           push_pin
@@ -1261,8 +1270,8 @@ export const AnnouncementsView: React.FC = () => {
                           onClick={(e) => handleTogglePin(item.id, e)}
                           className={`p-1 rounded-md transition ${
                             item.isPinned
-                              ? 'text-amber-600 hover:bg-amber-50'
-                              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                              ? 'text-primary hover:bg-primary-fixed'
+                              : 'text-slate-400 hover:bg-surface-container-low hover:text-on-surface-variant'
                           }`}
                           title={item.isPinned ? 'Unpin Notice' : 'Pin to Top'}
                         >
@@ -1273,12 +1282,12 @@ export const AnnouncementsView: React.FC = () => {
                   </div>
 
                   {/* Title & Ref */}
-                  <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2 group-hover:text-indigo-600 transition">
+                  <h3 className="font-bold text-on-surface text-base leading-snug line-clamp-2 group-hover:text-primary transition">
                     {item.title}
                   </h3>
 
                   {/* Date & Audience Details */}
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
+                  <div className="flex items-center gap-2 text-xs text-on-surface-variant mt-2">
                     <span className="flex items-center gap-0.5">
                       <span className="material-symbols-outlined text-xs">calendar_today</span>
                       {new Date(item.publishDate).toLocaleDateString('en-GB', {
@@ -1288,21 +1297,21 @@ export const AnnouncementsView: React.FC = () => {
                       })}
                     </span>
                     <span>•</span>
-                    <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] text-slate-600 font-medium">
+                    <span className="bg-surface-container-low px-2 py-0.5 rounded text-[11px] text-on-surface-variant font-medium">
                       {getAudienceBadgeText(item.targetAudience, item.targetGradeLevel)}
                     </span>
                   </div>
 
                   {/* Body Preview */}
-                  <p className="text-slate-600 text-xs leading-relaxed mt-3 line-clamp-3">
+                  <p className="text-on-surface-variant text-xs leading-relaxed mt-3 line-clamp-3">
                     {item.content}
                   </p>
 
                   {/* Broadcast Badges */}
                   {(item.sendSmsBroadcast || item.sendWhatsAppBroadcast) && (
-                    <div className="flex items-center gap-2 mt-3 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-2 mt-3 text-[11px] text-on-surface-variant">
                       {item.sendSmsBroadcast && (
-                        <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2 py-0.5 rounded border border-sky-100">
+                        <span className="inline-flex items-center gap-1 bg-primary-fixed text-primary px-2 py-0.5 rounded border border-primary">
                           <span className="material-symbols-outlined text-xs">sms</span>
                           SMS Sent
                         </span>
@@ -1318,8 +1327,8 @@ export const AnnouncementsView: React.FC = () => {
                 </div>
 
                 {/* Card Footer */}
-                <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-500">
+                <div className="px-5 py-3 bg-surface/80 border-t border-outline-variant/30 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-on-surface-variant">
                     <span className="material-symbols-outlined text-sm text-slate-400">person</span>
                     <span className="truncate max-w-[120px] font-medium">{item.authorName}</span>
                   </div>
@@ -1332,8 +1341,8 @@ export const AnnouncementsView: React.FC = () => {
                         disabled={!!isAcknowledged}
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition ${
                           isAcknowledged
-                            ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                            ? 'bg-primary-fixed text-on-primary-fixed cursor-default'
+                            : 'bg-primary-fixed text-primary hover:bg-primary-fixed'
                         }`}
                         title={isAcknowledged ? 'You have read and acknowledged this notice' : 'Acknowledge notice receipt'}
                       >
@@ -1350,7 +1359,7 @@ export const AnnouncementsView: React.FC = () => {
                         e.stopPropagation();
                         downloadNoticePDF(item);
                       }}
-                      className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 rounded-md transition"
+                      className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container/70 rounded-md transition"
                       title="Download Official Memo PDF"
                     >
                       <span className="material-symbols-outlined text-base">download</span>
@@ -1361,14 +1370,14 @@ export const AnnouncementsView: React.FC = () => {
                       <>
                         <button
                           onClick={(e) => openEditModal(item, e)}
-                          className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-200/70 rounded-md transition"
+                          className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container/70 rounded-md transition"
                           title="Edit Circular"
                         >
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
                         <button
                           onClick={(e) => handleDelete(item.id, item.title, e)}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                          className="p-1.5 text-on-surface-variant hover:text-red-600 hover:bg-red-50 rounded-md transition"
                           title="Delete Notice"
                         >
                           <span className="material-symbols-outlined text-base">delete</span>
@@ -1388,7 +1397,7 @@ export const AnnouncementsView: React.FC = () => {
       {/* ========================================================================= */}
       {selectedForMemo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 my-8">
+          <div className="bg-surface-container-lowest w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-outline-variant/30 my-8">
             {/* Modal Header Bar */}
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1420,7 +1429,7 @@ export const AnnouncementsView: React.FC = () => {
             </div>
 
             {/* Letterhead Memorandum Sheet */}
-            <div className="p-8 sm:p-10 bg-slate-50/50 space-y-6 max-h-[75vh] overflow-y-auto">
+            <div className="p-8 sm:p-10 bg-surface/50 space-y-6 max-h-[75vh] overflow-y-auto">
               {/* Official Letterhead */}
               <div className="text-center space-y-1">
                 {school?.logoUrl && (
@@ -1433,14 +1442,14 @@ export const AnnouncementsView: React.FC = () => {
                     }}
                   />
                 )}
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-wide uppercase">
+                <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-wide uppercase">
                   {school?.name || 'GRACE SEEDS SCHOOL'}
                 </h2>
-                <p className="text-xs text-slate-600 italic">
+                <p className="text-xs text-on-surface-variant italic">
                   {school?.motto ? `"${school.motto}"` : '"Nurturing Excellence, Character & Integrity"'}
                 </p>
-                <p className="text-[11px] text-slate-500">
-                  {school?.address || 'P.O. Box 4521-00100 Nairobi'} • Tel: {school?.phone || '+254 712 345 678'} • Email:{' '}
+                <p className="text-[11px] text-on-surface-variant">
+                  {school?.address || 'P.O Box 12-20123'} • Tel: {school?.phone || '+254 712 345 678'} • Email:{' '}
                   {school?.email || 'info@graceseedsschool.sc.ke'}
                 </p>
 
@@ -1453,16 +1462,16 @@ export const AnnouncementsView: React.FC = () => {
 
               {/* Document Banner */}
               <div className="text-center">
-                <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 text-xs font-bold tracking-wider rounded uppercase">
+                <span className="inline-block px-3 py-1 bg-surface-container-low text-on-surface text-xs font-bold tracking-wider rounded uppercase">
                   Official School Memorandum
                 </span>
               </div>
 
               {/* Metadata Table */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs shadow-xs">
+              <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs shadow-xs">
                 <div>
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">Reference No:</span>
-                  <p className="font-mono font-medium text-slate-800">
+                  <p className="font-mono font-medium text-on-surface">
                     GSS/CIR/{new Date(selectedForMemo.publishDate).getFullYear()}/
                     {selectedForMemo.id.slice(-4).toUpperCase()}
                   </p>
@@ -1470,7 +1479,7 @@ export const AnnouncementsView: React.FC = () => {
 
                 <div>
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">Date of Issue:</span>
-                  <p className="font-medium text-slate-800">
+                  <p className="font-medium text-on-surface">
                     {new Date(selectedForMemo.publishDate).toLocaleDateString('en-GB', {
                       weekday: 'long',
                       day: 'numeric',
@@ -1482,7 +1491,7 @@ export const AnnouncementsView: React.FC = () => {
 
                 <div>
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">To (Target Audience):</span>
-                  <p className="font-medium text-slate-800">
+                  <p className="font-medium text-on-surface">
                     {getAudienceBadgeText(
                       selectedForMemo.targetAudience,
                       selectedForMemo.targetGradeLevel
@@ -1492,14 +1501,14 @@ export const AnnouncementsView: React.FC = () => {
 
                 <div>
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">From (Author):</span>
-                  <p className="font-medium text-slate-800">
+                  <p className="font-medium text-on-surface">
                     {selectedForMemo.authorName} ({selectedForMemo.authorRole})
                   </p>
                 </div>
 
                 <div>
                   <span className="text-slate-400 font-semibold uppercase text-[10px]">Category:</span>
-                  <p className="font-medium text-slate-800">{selectedForMemo.category}</p>
+                  <p className="font-medium text-on-surface">{selectedForMemo.category}</p>
                 </div>
 
                 <div>
@@ -1515,31 +1524,31 @@ export const AnnouncementsView: React.FC = () => {
               </div>
 
               {/* Subject Title */}
-              <div className="border-b-2 border-slate-300 pb-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 uppercase">
+              <div className="border-b-2 border-outline-variant/30 pb-2">
+                <h3 className="text-base sm:text-lg font-bold text-on-surface uppercase">
                   SUBJECT: {selectedForMemo.title}
                 </h3>
               </div>
 
               {/* Content Paragraphs */}
-              <div className="text-slate-800 text-sm leading-relaxed space-y-4 whitespace-pre-line font-sans">
+              <div className="text-on-surface text-sm leading-relaxed space-y-4 whitespace-pre-line font-sans">
                 {selectedForMemo.content}
               </div>
 
               {/* Official Seal / Signature Block */}
-              <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+              <div className="pt-8 border-t border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-500 italic">Yours in the Service of Education,</p>
+                  <p className="text-xs text-on-surface-variant italic">Yours in the Service of Education,</p>
                   <div className="pt-6 border-b border-slate-400 w-48" />
-                  <p className="font-bold text-slate-900 text-sm">{selectedForMemo.authorName}</p>
-                  <p className="text-xs text-slate-600">{selectedForMemo.authorRole}</p>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="font-bold text-on-surface text-sm">{selectedForMemo.authorName}</p>
+                  <p className="text-xs text-on-surface-variant">{selectedForMemo.authorRole}</p>
+                  <p className="text-xs text-on-surface-variant font-medium">
                     {school?.name || 'Grace Seeds School'}
                   </p>
                 </div>
 
                 {/* Stamp Seal Graphic */}
-                <div className="w-28 h-28 rounded-full border-2 border-indigo-700 border-dashed p-1 flex flex-col items-center justify-center text-center text-indigo-800 rotate-[-8deg] bg-indigo-50/40 select-none shadow-xs">
+                <div className="w-28 h-28 rounded-full border-2 border-primary border-dashed p-1 flex flex-col items-center justify-center text-center text-on-primary-fixed rotate-[-8deg] bg-primary-fixed/40 select-none shadow-xs">
                   <span className="text-[9px] font-bold uppercase tracking-tighter">
                     GRACE SEEDS SCHOOL
                   </span>
@@ -1547,7 +1556,7 @@ export const AnnouncementsView: React.FC = () => {
                   <span className="text-[8px] font-semibold tracking-widest text-emerald-700">
                     VERIFIED
                   </span>
-                  <span className="text-[8px] text-slate-500">
+                  <span className="text-[8px] text-on-surface-variant">
                     {new Date(selectedForMemo.publishDate).getFullYear()}
                   </span>
                 </div>
@@ -1555,7 +1564,7 @@ export const AnnouncementsView: React.FC = () => {
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <div className="bg-surface-container-low px-6 py-4 border-t border-outline-variant/30 flex items-center justify-between">
               {/* Acknowledgement Status / Button */}
               <div>
                 {isParentOrStudent && (
@@ -1572,8 +1581,8 @@ export const AnnouncementsView: React.FC = () => {
                       user?.id &&
                       selectedForMemo.acknowledgements &&
                       selectedForMemo.acknowledgements.includes(user.id)
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                        ? 'bg-primary-fixed text-on-primary-fixed'
+                        : 'bg-primary hover:bg-primary-container text-white shadow-sm'
                     }`}
                   >
                     <span className="material-symbols-outlined text-sm">
@@ -1591,7 +1600,7 @@ export const AnnouncementsView: React.FC = () => {
                   </button>
                 )}
                 {canManage && (
-                  <span className="text-xs text-slate-500 font-medium">
+                  <span className="text-xs text-on-surface-variant font-medium">
                     {selectedForMemo.acknowledgementCount || 0} user(s) acknowledged receipt
                   </span>
                 )}
@@ -1600,14 +1609,14 @@ export const AnnouncementsView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => downloadNoticePDF(selectedForMemo)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-outline-variant/30 hover:bg-surface text-on-surface-variant text-xs font-semibold rounded-xl transition shadow-xs"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>
                   Save PDF
                 </button>
                 <button
                   onClick={() => setSelectedForMemo(null)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-xl transition"
+                  className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold rounded-xl transition"
                 >
                   Close
                 </button>
@@ -1622,10 +1631,10 @@ export const AnnouncementsView: React.FC = () => {
       {/* ========================================================================= */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+          <div className="bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden my-8">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-400">post_add</span>
+                <span className="material-symbols-outlined text-primary">post_add</span>
                 <h3 className="font-semibold text-base">
                   {editingAnnouncement ? 'Edit Circular Notice' : 'Post New Notice or Circular'}
                 </h3>
@@ -1642,7 +1651,7 @@ export const AnnouncementsView: React.FC = () => {
               {/* Quick Template Picker (Only when creating new) */}
               {!editingAnnouncement && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                     Quick Templates (Click to Auto-fill):
                   </label>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
@@ -1651,7 +1660,7 @@ export const AnnouncementsView: React.FC = () => {
                         type="button"
                         key={i}
                         onClick={() => applyTemplate(tpl)}
-                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-medium whitespace-nowrap transition"
+                        className="px-2.5 py-1 bg-primary-fixed hover:bg-primary-fixed text-primary border border-primary rounded-lg text-xs font-medium whitespace-nowrap transition"
                       >
                         {tpl.title.slice(0, 26)}...
                       </button>
@@ -1670,7 +1679,7 @@ export const AnnouncementsView: React.FC = () => {
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                   Circular Title / Subject *
                 </label>
                 <input
@@ -1679,18 +1688,18 @@ export const AnnouncementsView: React.FC = () => {
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="e.g. 2026 Term 3 Opening Guidelines & Reporting Dates"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                 />
               </div>
 
               {/* Category & Priority Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Category</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as AnnouncementCategory)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="GENERAL">General Notice</option>
                     <option value="ACADEMIC">Academic & CBC</option>
@@ -1704,11 +1713,11 @@ export const AnnouncementsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Priority</label>
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as AnnouncementPriority)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="NORMAL">Normal Priority</option>
                     <option value="HIGH">High Priority</option>
@@ -1721,11 +1730,11 @@ export const AnnouncementsView: React.FC = () => {
               {/* Target Audience & Specific Grade Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Target Audience</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Target Audience</label>
                   <select
                     value={formAudience}
                     onChange={(e) => setFormAudience(e.target.value as AnnouncementAudience)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="ALL">All School Community</option>
                     <option value="PARENTS">Parents & Guardians</option>
@@ -1737,11 +1746,11 @@ export const AnnouncementsView: React.FC = () => {
 
                 {formAudience === 'SPECIFIC_GRADE' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Select Grade Level</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Grade Level</label>
                     <select
                       value={formGradeLevel}
                       onChange={(e) => setFormGradeLevel(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
                     >
                       {GRADE_LEVEL_OPTIONS.map((g) => (
                         <option key={g.value} value={g.value}>
@@ -1753,9 +1762,45 @@ export const AnnouncementsView: React.FC = () => {
                 )}
               </div>
 
+              {/* Publication Status & Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Publication Status *</label>
+                  <select
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value as 'PUBLISHED' | 'DRAFT')}
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="PUBLISHED">PUBLISHED (Live)</option>
+                    <option value="DRAFT">DRAFT (Admin Only)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Publication Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={formPublishDate}
+                    onChange={(e) => setFormPublishDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Expiry Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={formExpiryDate}
+                    onChange={(e) => setFormExpiryDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
               {/* Content Textarea */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                   Memorandum Body Content *
                 </label>
                 <textarea
@@ -1764,20 +1809,20 @@ export const AnnouncementsView: React.FC = () => {
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
                   placeholder="Enter the official text of the circular notice..."
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none font-sans leading-relaxed"
+                  className="w-full px-3 py-2 text-sm bg-surface border border-outline-variant/30 rounded-xl focus:bg-surface focus:ring-2 focus:ring-primary focus:outline-none font-sans leading-relaxed"
                 />
               </div>
 
               {/* Pin & Broadcast Toggles */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+              <div className="bg-surface p-4 rounded-xl border border-outline-variant/30 space-y-2.5">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formIsPinned}
                     onChange={(e) => setFormIsPinned(e.target.checked)}
-                    className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
-                  <span className="text-xs text-slate-700 font-medium">
+                  <span className="text-xs text-on-surface-variant font-medium">
                     Pin this notice to top of the school notice board
                   </span>
                 </label>
@@ -1787,9 +1832,9 @@ export const AnnouncementsView: React.FC = () => {
                     type="checkbox"
                     checked={formSendSms}
                     onChange={(e) => setFormSendSms(e.target.checked)}
-                    className="rounded text-sky-600 focus:ring-sky-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
-                  <span className="text-xs text-slate-700 font-medium">
+                  <span className="text-xs text-on-surface-variant font-medium">
                     Send Instant SMS Alert to Parent Contacts
                   </span>
                 </label>
@@ -1799,27 +1844,27 @@ export const AnnouncementsView: React.FC = () => {
                     type="checkbox"
                     checked={formSendWhatsApp}
                     onChange={(e) => setFormSendWhatsApp(e.target.checked)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    className="rounded text-primary focus:ring-primary h-4 w-4"
                   />
-                  <span className="text-xs text-slate-700 font-medium">
+                  <span className="text-xs text-on-surface-variant font-medium">
                     Broadcast to School WhatsApp Community Channel
                   </span>
                 </label>
               </div>
 
               {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-semibold text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded-xl transition shadow-md disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-on-surface bg-primary hover:bg-primary-container rounded-xl transition shadow-md disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>

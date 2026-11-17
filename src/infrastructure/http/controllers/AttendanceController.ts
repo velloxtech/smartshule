@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AttendanceUseCases } from '../../../application/attendance/AttendanceUseCases';
+import { AnalyticsUseCases } from '../../../application/analytics/AnalyticsUseCases';
 import { AttendanceStatus, AttendanceType } from '../../../core/domain/attendance/Attendance';
 import { UserRole } from '../../../core/domain/user/User';
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
@@ -27,13 +28,19 @@ export const MarkAttendanceSchema = z.object({
 export class AttendanceController {
   constructor(
     private readonly attendanceUseCases: AttendanceUseCases,
-    private readonly systemLogUseCases?: SystemLogUseCases
+    private readonly systemLogUseCases?: SystemLogUseCases,
+    private readonly analyticsUseCases?: AnalyticsUseCases
   ) {}
 
   public markAttendance = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
       const register = await this.attendanceUseCases.markAttendance(req.body, user);
+
+      // Invalidate analytics dashboard cache so dashboard updates immediately
+      try {
+        this.analyticsUseCases?.clearDashboardCache();
+      } catch {}
 
       this.systemLogUseCases?.log({
         schoolId: user?.schoolId || req.body.schoolId || 'school-001',
@@ -67,13 +74,6 @@ export class AttendanceController {
   public getDailyRegister = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied: Class roll-call registers are restricted to teachers and administrators.'
-        });
-      }
-
       const { streamId, date, type, classRoomId } = req.query;
       const register = await this.attendanceUseCases.getDailyRegister(
         (streamId as string) || '',
@@ -83,7 +83,10 @@ export class AttendanceController {
         user
       );
       return res.status(200).json({ success: true, data: register });
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'NotFoundError' || err.message?.includes('not found') || err.message?.includes('specified date')) {
+        return res.status(200).json({ success: true, data: null });
+      }
       next(err);
     }
   };
@@ -100,8 +103,9 @@ export class AttendanceController {
       const { schoolId, classRoomId, streamId, termId, academicYearId, startDate, endDate, type, date } = req.query;
       const effectiveStartDate = (startDate as string) || (date as string);
       const effectiveEndDate = (endDate as string) || (date as string);
+      const effectiveSchoolId = (schoolId as string) || (req as any).user?.schoolId || 'school-001';
       const report = await this.attendanceUseCases.getAttendanceReport({
-        schoolId: schoolId as string,
+        schoolId: effectiveSchoolId,
         classRoomId: classRoomId as string,
         streamId: streamId as string,
         termId: termId as string,

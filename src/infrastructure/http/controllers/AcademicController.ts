@@ -67,6 +67,14 @@ export const CreateStreamSchema = z.object({
   classTeacherId: z.string().optional()
 });
 
+export const CreateGlobalSubjectSchema = z.object({
+  name: z.string().min(1),
+  code: z.string().min(1),
+  schoolId: z.string().optional().default('school-001'),
+  department: z.string().optional(),
+  description: z.string().optional()
+});
+
 export const CreateLearningAreaSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
@@ -74,7 +82,8 @@ export const CreateLearningAreaSchema = z.object({
   educationLevel: z.nativeEnum(EducationLevel),
   isElective: z.boolean().default(false),
   schoolId: z.string().optional().default('school-001'),
-  teacherId: z.string().optional()
+  teacherId: z.string().optional(),
+  globalSubjectId: z.string().optional()
 });
 
 export const AssignClassTeacherSchema = z.object({
@@ -134,7 +143,8 @@ export class AcademicController {
 
   public listYears = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const years = await this.academicUseCases.listAcademicYears(req.query.schoolId as string);
+      const actor = (req as any).user;
+      const years = await this.academicUseCases.listAcademicYears(actor?.role === 'TEACHER' ? actor.schoolId : req.query.schoolId as string);
       return res.status(200).json({ success: true, data: years });
     } catch (err) {
       next(err);
@@ -209,7 +219,8 @@ export class AcademicController {
 
   public listAllTerms = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const terms = await this.academicUseCases.listAllTerms(req.query.schoolId as string);
+      const actor = (req as any).user;
+      const terms = await this.academicUseCases.listAllTerms(actor?.role === 'TEACHER' ? actor.schoolId : req.query.schoolId as string);
       return res.status(200).json({ success: true, data: terms });
     } catch (err) {
       next(err);
@@ -218,7 +229,7 @@ export class AcademicController {
 
   public updateTerm = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const term = await this.academicUseCases.updateAcademicTerm(req.params.id as string, req.body);
+      const term = await this.academicUseCases.updateAcademicTerm(req.params.id as string, req.body, (req as any).user);
       return res.status(200).json({ success: true, data: term });
     } catch (err) {
       next(err);
@@ -314,12 +325,33 @@ export class AcademicController {
     }
   };
 
+  public createGlobalSubject = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const subject = await this.academicUseCases.createGlobalSubject(req.body);
+      return res.status(201).json({ success: true, data: subject });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listGlobalSubjects = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId } = req.query;
+      const subjects = await this.academicUseCases.listGlobalSubjects(schoolId as string);
+      return res.status(200).json({ success: true, data: subjects });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public listLearningAreas = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { gradeLevel, schoolId } = req.query;
+      const { gradeLevel, schoolId, classroomId, globalSubjectId } = req.query;
       const areas = await this.academicUseCases.listLearningAreas({
         gradeLevel: gradeLevel as CBCGradeLevel,
-        schoolId: schoolId as string
+        schoolId: schoolId as string,
+        classroomId: classroomId as string,
+        globalSubjectId: globalSubjectId as string
       });
       return res.status(200).json({ success: true, data: areas });
     } catch (err) {
@@ -424,10 +456,11 @@ export class AcademicController {
 
   public getTeacherAuthorizedContext = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { academicYearId } = req.query;
+      const { academicYearId, termId } = req.query;
       const result = await this.academicUseCases.getTeacherAuthorizedContext(
         (req as any).user,
-        academicYearId as string | undefined
+        academicYearId as string | undefined,
+        termId as string | undefined
       );
       return res.status(200).json({ success: true, data: result });
     } catch (err) {

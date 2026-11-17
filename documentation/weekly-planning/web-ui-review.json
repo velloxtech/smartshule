@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Overview shows scheduled assignments and one grouped setup summary",
+    "Opening a plan enters a dedicated workspace with retained context",
+    "Unsaved allocation edits protected when leaving the workspace",
+    "Web draft and finalize controls retain existing validation and lock behavior",
+    "Weekly screen retains context and actual short/full-week navigation",
+    "Web layout has no page overflow at 1440",
+    "Web layout has no page overflow at 1920",
+    "Return to learning-area list preserves saved progress"
+  ],
+  "errors": [],
+  "failures": []
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Teacher, UserRole, ClassRoom, StreamItem, TeacherCorrectionRequest } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { isPackagedClient } from '../../utils/runtime';
 
 interface TeachersViewProps {
   teachers: Teacher[];
@@ -11,6 +12,8 @@ interface TeachersViewProps {
   onAssignTeacher?: (teacherId: string, assignedClass: string) => void;
   onNavigateTab?: (tabId: string) => void;
   onTeacherUpdated?: (updatedTeacher: Teacher) => void;
+  initialCategory?: 'ALL' | 'TEACHING' | 'NON_TEACHING';
+  initialTab?: 'roster' | 'corrections';
 }
 
 const CBC_STANDARD_CLASSES = [
@@ -36,6 +39,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onAssignTeacher,
   onNavigateTab,
   onTeacherUpdated,
+  initialCategory,
+  initialTab,
 }) => {
   const { user } = useAuth();
   const canOnboard = Boolean(
@@ -48,7 +53,16 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     ].includes(user.role)
   );
 
-  const [activeTab, setActiveTab] = useState<'roster' | 'corrections'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'corrections'>(initialTab || 'roster');
+  const [staffCategory, setStaffCategory] = useState<'ALL' | 'TEACHING' | 'NON_TEACHING'>(initialCategory || 'ALL');
+
+  useEffect(() => {
+    if (initialCategory) setStaffCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
   const [search, setSearch] = useState('');
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
@@ -319,6 +333,20 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         targetStreamName = found ? found.name : 'Stream';
       }
 
+      if (!isPackagedClient()) {
+        const context = await apiService.getCurrentContext(user?.schoolId);
+        const year = context.data?.currentYear;
+        if (!year?.id) throw new Error('Set the current academic year before assigning a teacher.');
+        const result = await apiService.assignClassTeacher({
+          schoolId: user?.schoolId || selectedTeacher.schoolId || '',
+          academicYearId: year.id,
+          classRoomId: activeClassId,
+          streamId: targetStreamId,
+          teacherId: selectedTeacher.id,
+          effectiveFrom: new Date().toISOString().split('T')[0],
+        });
+        if (!result.success || !result.data?.id) throw new Error('The class assignment was not saved. Please try again.');
+      } else {
       await apiService.assignStreamToTeacher(selectedTeacher.id, targetStreamId);
       try {
         await apiService.assignClassTeacher({
@@ -331,6 +359,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         });
       } catch {
         // formal assignment fallback sync
+      }
+
       }
 
       const assignedLabel = `${activeClassName} - ${targetStreamName}`;
@@ -534,7 +564,18 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     }
   };
 
+  const isTeachingStaff = (t: Teacher) => {
+    const r = (t as any).role || (t as any).user?.role || 'TEACHER';
+    const role = isPackagedClient() ? r : String(r).toUpperCase().replace(/\s+/g, '_');
+    return ['TEACHER', 'TEACHER_/_EDUCATOR', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(role);
+  };
+
+  const teachingCount = teachers.filter(isTeachingStaff).length;
+  const nonTeachingCount = teachers.filter((t) => !isTeachingStaff(t)).length;
+
   const filteredTeachers = teachers.filter((t) => {
+    if (staffCategory === 'TEACHING' && !isTeachingStaff(t)) return false;
+    if (staffCategory === 'NON_TEACHING' && isTeachingStaff(t)) return false;
     const s = search.toLowerCase();
     return (
       t.name.toLowerCase().includes(s) ||
@@ -542,6 +583,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       (t.phone || '').toLowerCase().includes(s) ||
       (t.tscNumber || '').toLowerCase().includes(s) ||
       (t.employeeNumber || '').toLowerCase().includes(s) ||
+      ((t as any).department || '').toLowerCase().includes(s) ||
       t.learningAreas.some((la) => la.toLowerCase().includes(s))
     );
   });
@@ -558,7 +600,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
             <span>/</span>
             <span>Academics</span>
@@ -567,15 +609,15 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           </div>
           <div className="flex items-center gap-2 mt-1">
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
-              Faculty & Biometric Clock-in Registry
+              Faculty & Staff Management Registry
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
               <span className="material-symbols-outlined text-[14px]">verified</span>
               <span>Article 237 (TSC) & Chapter 6 Compliant</span>
             </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            TSC registered educators, stream allocations, profile records verification, and correction approvals.
+            Teaching faculty and non-teaching operational personnel, stream allocations, profile records verification, and correction approvals.
           </p>
         </div>
 
@@ -598,12 +640,12 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Onboard Teacher</span>
+              <span>Onboard Staff Member</span>
             </button>
           )}
 
-          <span className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-secondary"></span>
+          <span className="px-3 py-1.5 rounded-lg bg-success-container text-on-success-container text-xs font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-success"></span>
             {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked In
           </span>
         </div>
@@ -631,32 +673,56 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       )}
 
       {/* Tab Switcher: Faculty Roster vs Correction Requests */}
-      <div className="flex items-center justify-between border-b border-outline-variant/30 pb-1">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-outline-variant/30 pb-1 gap-2">
+        <div className="flex flex-wrap items-center gap-1 min-w-0 max-w-full">
           <button
-            onClick={() => setActiveTab('roster')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
-              activeTab === 'roster'
+            onClick={() => { setActiveTab('roster'); setStaffCategory('ALL'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'ALL'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">groups</span>
-            <span>Faculty Roster ({teachers.length})</span>
+            <span className="material-symbols-outlined text-[17px]">groups</span>
+            <span>All Staff ({teachers.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('roster'); setStaffCategory('TEACHING'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'TEACHING'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">school</span>
+            <span>Teaching Faculty ({teachingCount})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('roster'); setStaffCategory('NON_TEACHING'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'NON_TEACHING'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">badge</span>
+            <span>Non-Teaching Staff ({nonTeachingCount})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('corrections')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
               activeTab === 'corrections'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">rule</span>
-            <span>Profile Correction Requests</span>
+            <span className="material-symbols-outlined text-[17px]">rule</span>
+            <span>Correction Requests</span>
             {pendingRequestsCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
                 {pendingRequestsCount} Pending
               </span>
             )}
@@ -712,7 +778,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                         </div>
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            isClockedIn ? 'bg-secondary text-white' : 'bg-surface-container text-outline'
+                            isClockedIn ? 'bg-success text-white' : 'bg-surface-container text-outline'
                           }`}
                         >
                           {t.status}
@@ -735,7 +801,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                         </div>
                         <div className="flex justify-between">
                           <span className="text-on-surface-variant">Specialization:</span>
-                          <span className="font-semibold text-secondary truncate max-w-[170px]">
+                          <span className="font-semibold text-success truncate max-w-[170px]">
                             {t.learningAreas.join(', ')}
                           </span>
                         </div>
@@ -765,10 +831,10 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
                         <button
                           onClick={() => handleOpenDirectEdit(t)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary text-xs font-bold transition-all cursor-pointer shadow-2xs"
                           title={`Edit and correct details for ${t.name}`}
                         >
-                          <span className="material-symbols-outlined text-[15px] text-amber-700">edit</span>
+                          <span className="material-symbols-outlined text-[15px] text-primary">edit</span>
                           <span>Edit</span>
                         </button>
 
@@ -927,7 +993,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleOpenReviewModal(req, 'APPROVE')}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition-colors shadow-xs cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors shadow-xs cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[15px]">check</span>
                         <span>Approve</span>
@@ -1016,7 +1082,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   type="submit"
                   disabled={submittingReview}
                   className={`px-4 py-2 rounded-lg text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5 ${
-                    reviewAction === 'APPROVE' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
+                    reviewAction === 'APPROVE' ? 'bg-primary hover:bg-primary-container' : 'bg-rose-700 hover:bg-rose-800'
                   }`}
                 >
                   {submittingReview && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
@@ -1291,7 +1357,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
                   {/* Section 2: Biodata & Demographics */}
                   <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
-                    <h4 className="font-bold text-xs text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">person</span>
                       <span>Personal Demographics & Identification</span>
                     </h4>
@@ -1516,9 +1582,10 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             </div>
 
             <form onSubmit={handleAssignClassAndStream} className="p-4 sm:p-5 space-y-4 overflow-y-auto text-xs">
+              <p className="text-on-surface-variant">A teacher can lead one class and stream per academic year. Assigning another transfers their class-teacher duty and preserves the previous assignment history.</p>
               {assignSuccess && (
-                <div className="p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg flex items-center gap-2">
-                  <span className="material-symbols-outlined text-teal-700 text-[18px]">check_circle</span>
+                <div className="p-3 bg-primary-fixed border border-primary text-on-primary-fixed rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
                   <span>{assignSuccess}</span>
                 </div>
               )}
@@ -1575,7 +1642,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     value={customStreamName}
                     onChange={(e) => setCustomStreamName(e.target.value)}
                     placeholder="e.g. East, Blue, St. Peter"
-                    className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
+                    className="w-full bg-surface border border-primary rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     autoFocus
                   />
                 </div>
@@ -1591,9 +1658,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
                 >
                   <option value="CLASS_TEACHER">Class Teacher (Lead Educator & Roll Call)</option>
-                  <option value="SUBJECT_TEACHER">Subject Teacher (CBC Learning Area)</option>
-                  <option value="ASSISTANT_TEACHER">Assistant Class Teacher</option>
+                  {isPackagedClient() && <><option value="SUBJECT_TEACHER">Subject Teacher (CBC Learning Area)</option><option value="ASSISTANT_TEACHER">Assistant Class Teacher</option></>}
                 </select>
+                {!isPackagedClient() && <p className="mt-2 text-on-surface-variant">This assigns a class teacher. {onNavigateTab ? <button type="button" className="font-semibold text-primary underline" onClick={() => { setIsAssignOpen(false); onNavigateTab('learning-areas'); }}>Assign a subject teacher under Subjects &amp; Learning Areas.</button> : 'Assign subject teachers under Subjects & Learning Areas.'}</p>}
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">

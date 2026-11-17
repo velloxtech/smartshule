@@ -1,3 +1,7 @@
+import { IBiometricCredentialRepository } from '../../core/ports/repositories/IBiometricCredentialRepository';
+import { InMemoryBiometricCredentialRepository } from './in-memory/InMemoryBiometricCredentialRepository';
+import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiometricCredentialRepository';
+import { PlanningRepository, PostgresPlanningRepository } from '../../application/planning/PlanningRepository';
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
@@ -110,8 +114,12 @@ import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositori
 import { InMemoryTeacherCorrectionRequestRepository } from './in-memory/InMemoryTeacherCorrectionRequestRepository';
 import { PostgresTeacherCorrectionRequestRepository } from './postgres/PostgresTeacherCorrectionRequestRepository';
 import { PostgresEDiaryRepository } from './postgres/PostgresEDiaryRepository';
+import { IParentConsentRepository } from '../../core/ports/repositories/IParentConsentRepository';
+import { InMemoryParentConsentRepository } from './in-memory/InMemoryParentConsentRepository';
+import { PostgresParentConsentRepository } from './postgres/PostgresParentConsentRepository';
 
 export interface RepositoryBundle {
+  planningRepository?: PlanningRepository;
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
   deletedStudentRepository?: IDeletedStudentRepository;
@@ -141,6 +149,8 @@ export interface RepositoryBundle {
   inventoryRepository?: IInventoryRepository;
   signatureRepository?: ISignatureRepository;
   financialApprovalRepository?: IFinancialApprovalRepository;
+  parentConsentRepository?: IParentConsentRepository;
+  biometricCredentialRepository?: IBiometricCredentialRepository;
 }
 
 export class DatabaseFactory {
@@ -192,8 +202,10 @@ export class DatabaseFactory {
         connectionString,
         ssl: requiresSsl ? { rejectUnauthorized: false } : false,
         connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 10000,
-        max: 15,
+        idleTimeoutMillis: 30000,
+        max: 20,
+        statement_timeout: 15000,
+        query_timeout: 15000,
         keepAlive: true,
       });
 
@@ -255,6 +267,7 @@ export class DatabaseFactory {
         academicRepository: new PostgresAcademicRepository(pool),
         CBCAssessmentRepository: new PostgresCBCAssessmentRepository(pool),
         schemeOfWorkRepository: new PostgresSchemeOfWorkRepository(pool),
+        planningRepository: new PostgresPlanningRepository(pool),
         lessonPlanRepository: new PostgresLessonPlanRepository(pool),
         timetableRepository: new PostgresTimetableRepository(pool),
         attendanceRepository: new PostgresAttendanceRepository(pool),
@@ -275,6 +288,8 @@ export class DatabaseFactory {
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
         financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
         ediaryRepository: new PostgresEDiaryRepository(pool),
+        parentConsentRepository: new PostgresParentConsentRepository(pool),
+        biometricCredentialRepository: new PostgresBiometricCredentialRepository(pool),
       };
     }
 
@@ -310,6 +325,7 @@ export class DatabaseFactory {
       inventoryRepository: new InMemoryInventoryRepository(),
       signatureRepository: new InMemorySignatureRepository(),
       financialApprovalRepository: new InMemoryFinancialApprovalRepository(),
+      parentConsentRepository: new InMemoryParentConsentRepository(),
     };
   }
 }

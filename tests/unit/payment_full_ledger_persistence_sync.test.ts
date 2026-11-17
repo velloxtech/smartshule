@@ -39,6 +39,12 @@ describe('Payment Full Ledger Persistence & Synchronization Unit Tests', () => {
     schoolId
   };
 
+  const adminUser = {
+    userId: 'usr-admin-1',
+    role: UserRole.ADMIN,
+    schoolId
+  };
+
   beforeEach(async () => {
     feeRepo = new InMemoryFeeRepository();
     studentRepo = new InMemoryStudentRepository();
@@ -453,7 +459,7 @@ describe('Payment Full Ledger Persistence & Synchronization Unit Tests', () => {
     const revRes = await feeUseCases.reversePayment(
       payRes.payment.id,
       'Erroneous duplicate entry recorded by cashier',
-      bursarUser as any
+      adminUser as any
     );
     expect(revRes.success).toBe(true);
 

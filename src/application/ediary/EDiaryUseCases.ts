@@ -78,6 +78,13 @@ export class EDiaryUseCases {
       throw new ValidationError('School ID is required for eDiary entry');
     }
 
+    // A stream identifies its classroom; storing the stream ID as a class ID makes
+    // the saved entry fail the same assignment checks that authorized its creation.
+    if (!dto.classRoomId && dto.streamId && this.academicRepository) {
+      const stream = await this.academicRepository.findStreamById(dto.streamId);
+      if (stream) dto = { ...dto, classRoomId: stream.classRoomId };
+    }
+
     // 1. Normalize homework tasks
     let normalizedTasks: EDiaryHomeworkTask[] = [];
     if (Array.isArray(dto.homeworkTasks)) {
@@ -93,7 +100,7 @@ export class EDiaryUseCases {
     if (normalizedTasks.length === 0 && dto.homework && dto.homework.trim()) {
       normalizedTasks = [
         {
-          learningArea: 'General Homework',
+          learningArea: 'General Homefun',
           description: dto.homework.trim(),
           dueDate: dto.date
         }
@@ -105,7 +112,7 @@ export class EDiaryUseCases {
     const hasHomework = Boolean(dto.homework && dto.homework.trim());
 
     if (!hasTasks && !hasRemarks && !hasHomework) {
-      throw new ValidationError('At least one homework task or teacher remark is required to record an eDiary entry');
+      throw new ValidationError('At least one homefun activity or teacher remark is required to record an eDiary entry');
     }
 
     // 2. Synthesize homework summary text (for WhatsApp & backward compatibility)
@@ -143,7 +150,7 @@ export class EDiaryUseCases {
     const title = (
       dto.title && dto.title.trim()
         ? dto.title.trim()
-        : `Daily Homework & Class Activities (${dto.date})`
+        : `Daily Homefun & Communication Diary (${dto.date})`
     );
 
     // 5. Resolve Teacher Name if not provided
@@ -521,11 +528,15 @@ export class EDiaryUseCases {
 
     await this.ediaryRepository.update(entry);
 
+    const entryJson = entry.toJSON();
     return {
       success: true,
       message: 'eDiary entry acknowledged successfully',
-      data: entry.toJSON(),
-      entry: entry.toJSON()
+      data: {
+        ...entryJson,
+        entry: entryJson
+      },
+      entry: entryJson
     };
   }
 

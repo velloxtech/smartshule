@@ -55,6 +55,17 @@ export const RecordDailyLunchPaymentSchema = z.object({
   notes: z.string().optional()
 });
 
+export const RecordMonthlyLunchPaymentSchema = z.object({
+  studentId: z.string().min(1, 'Student ID is required'),
+  amount: z.number().positive('Payment amount must be greater than zero'),
+  paymentMonth: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  transactionReference: z.string().optional(),
+  paymentDate: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+  notes: z.string().optional()
+});
+
 export const ReverseLunchPaymentSchema = z.object({
   reason: z.string().min(1, 'Reversal reason is required')
 });
@@ -308,6 +319,46 @@ export class LunchFeeController {
         actorEmail: req.user?.email,
         actorRole: req.user?.role,
         details: `Daily payment of KES ${validated.amount} recorded for student ${validated.studentId} (Receipt: ${result.receiptNumber})`,
+        schoolId: req.user?.schoolId || 'school-001',
+        metadata: { studentId: validated.studentId, amount: validated.amount, receipt: result.receiptNumber }
+      }).catch(() => {});
+
+      const statusCode = result.isDuplicateReplay ? 200 : 201;
+      return res.status(statusCode).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public recordMonthlyPayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const validated = RecordMonthlyLunchPaymentSchema.parse(req.body);
+      const result = await this.lunchFeeUseCases.recordMonthlyPayment(
+        {
+          studentId: validated.studentId,
+          amount: validated.amount,
+          paymentMonth: validated.paymentMonth,
+          paymentMethod: validated.paymentMethod || 'MPESA',
+          transactionReference: validated.transactionReference,
+          paymentDate: validated.paymentDate,
+          idempotencyKey: validated.idempotencyKey,
+          notes: validated.notes
+        },
+        req.user
+      );
+
+      this.systemLogUseCases?.log({
+        level: 'INFO',
+        category: 'FINANCE',
+        action: 'LUNCH_MONTHLY_PAYMENT_RECORDED',
+        actorUserId: req.user?.userId,
+        actorEmail: req.user?.email,
+        actorRole: req.user?.role,
+        details: `Monthly payment of KES ${validated.amount} recorded for student ${validated.studentId} (Receipt: ${result.receiptNumber})`,
         schoolId: req.user?.schoolId || 'school-001',
         metadata: { studentId: validated.studentId, amount: validated.amount, receipt: result.receiptNumber }
       }).catch(() => {});

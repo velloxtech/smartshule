@@ -1,0 +1,117 @@
+name: SmartShule Desktop Multi-Platform Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish release draft to GitHub'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-desktop:
+    name: Build Desktop App (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            artifact_name: smartshule-linux-x64
+          - os: windows-latest
+            platform: windows
+            artifact_name: smartshule-windows-x64
+          - os: macos-latest
+            platform: macos
+            artifact_name: smartshule-macos-universal
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: Frontend/smartshule/package-lock.json
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools icnsutils graphicsmagick
+
+      - name: Install Frontend and Desktop Dependencies
+        run: |
+          cd Frontend/smartshule
+          npm ci
+
+      - name: Build Vite React Production Bundle
+        run: |
+          cd Frontend/smartshule
+          npm run build
+
+      - name: Package Desktop Binary (${{ matrix.platform }})
+        env:
+          # Windows Code Signing (Optional)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+          # macOS Code Signing & Notarization (Optional)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+          # Prevent keychain popup prompts on CI machines
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        shell: bash
+        run: |
+          cd Frontend/smartshule
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            if [ -n "${{ secrets.CSC_LINK }}" ]; then
+              echo "Using supplied Developer ID certificate for macOS signing..."
+              npx electron-builder --mac --config electron-builder.json -c.mac.hardenedRuntime=true -c.mac.entitlements=electron/entitlements.mac.plist -c.mac.entitlementsInherit=electron/entitlements.mac.plist
+            else
+              echo "No macOS Developer ID secret provided. Packaging unsigned DMG and ZIP distributions..."
+              npx electron-builder --mac --config electron-builder.json -c.mac.identity=null
+            fi
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            npx electron-builder --win --config electron-builder.json
+          else
+            npx electron-builder --linux --config electron-builder.json
+          fi
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: Frontend/smartshule/release/*.*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish Release Assets (Tags or Workflow Dispatch)
+        if: (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Frontend/smartshule/release/*.AppImage
+            Frontend/smartshule/release/*.deb
+            Frontend/smartshule/release/*.exe
+            Frontend/smartshule/release/*.dmg
+            Frontend/smartshule/release/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

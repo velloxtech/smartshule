@@ -1,0 +1,102 @@
+{
+  "checks": [
+    {
+      "name": "Phone sidebar → assigned class/stream → learning area",
+      "width": 390
+    },
+    {
+      "name": "46/47 draft saved, one slot remaining",
+      "width": 390
+    },
+    {
+      "name": "48/47 draft saved, one lesson excess",
+      "width": 390
+    },
+    {
+      "name": "Combine two sub-strands into 47 shared slots without double-counting",
+      "width": 390
+    },
+    {
+      "name": "47/47 exact subset plan finalized and allocations frozen",
+      "width": 390
+    },
+    {
+      "name": "Shortened Week 1: Thursday 6 and Friday 7 only",
+      "width": 390
+    },
+    {
+      "name": "Next: full Week 2 has Lessons 1–5",
+      "width": 390
+    },
+    {
+      "name": "Lesson saved while term plan locked; planned only",
+      "width": 390
+    },
+    {
+      "name": "Reflection complete independently of taught",
+      "width": 390
+    },
+    {
+      "name": "Linked taught record updates taught status independently",
+      "width": 390
+    },
+    {
+      "name": "Lesson preview uses six-column metadata and shared print layout",
+      "width": 390
+    },
+    {
+      "name": "PDF export from phone controls",
+      "width": 390
+    },
+    {
+      "name": "Doc export from phone controls",
+      "width": 390
+    },
+    {
+      "name": "Explicit owner reopen requires reason and restores allocation editing",
+      "width": 390
+    },
+    {
+      "name": "Calendar change recalculates capacity while keeping saved plan locked",
+      "width": 390
+    },
+    {
+      "name": "Completed lesson and taught/reflection links survive a calendar cancellation",
+      "width": 390
+    },
+    {
+      "name": "Grade 2 teacher denied Grade 3 PDF and Doc exports",
+      "width": 390
+    },
+    {
+      "name": "Reopen reason and actor recorded in history",
+      "width": 390
+    },
+    {
+      "name": "Allocation layout at 390",
+      "width": 390
+    },
+    {
+      "name": "Allocation layout at 768",
+      "width": 768
+    },
+    {
+      "name": "Allocation layout at 1440",
+      "width": 1440
+    }
+  ],
+  "errors": [],
+  "failures": [],
+  "exports": [
+    {
+      "format": "PDF",
+      "path": "/tmp/smartshule-weekly-downloads-1794575164404/Schemes_of_Work.pdf",
+      "bytes": 49196
+    },
+    {
+      "format": "Doc",
+      "path": "/tmp/smartshule-weekly-downloads-1794575164404/Schemes_of_Work.docx",
+      "bytes": 2476
+    }
+  ]
+}

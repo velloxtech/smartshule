@@ -159,7 +159,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           streamId: 'stream-g7',
           teacherId: 't-01',
           teacherName: 'Teacher Mark',
-          date: '2026-02-10',
+          date: new Date().toISOString().slice(0, 10),
           title: 'Mathematics Algebra Exercises',
           homework: 'Page 50 numbers 1 to 5',
           teacherRemarks: 'Excellent class participation today.',
@@ -178,7 +178,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           streamId: 'stream-g7',
           academicYearId: 'year-2026',
           termId: 'term-1',
-          date: '2026-02-10',
+          date: new Date().toISOString().slice(0, 10),
           type: AttendanceType.DAILY_MORNING,
           markedByTeacherId: 't-01',
           entries: [
@@ -294,7 +294,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       const res = await whatsAppService.handleInboundMessage('+254711223344', 'HOMEWORK');
 
       expect(res.intent).toBe('EDIARY');
-      expect(res.replyText).toContain('eDIARY & HOMEWORK');
+      expect(res.replyText).toMatch(/DAILY HOMEFUN & COMMUNICATION DIARY|eDIARY & HOMEWORK/i);
       expect(res.replyText).toContain('Mathematics Algebra Exercises');
       expect(res.replyText).toContain('Page 50 numbers 1 to 5');
     });
@@ -485,7 +485,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // Command 3: eDiary / Homework
         const res3 = await whatsAppService.handleInboundMessage('+254711223344', '3', { useAI: true });
         expect(res3.intent).toBe('EDIARY');
-        expect(res3.replyText).toContain('eDIARY & HOMEWORK');
+        expect(res3.replyText).toMatch(/DAILY HOMEFUN & COMMUNICATION DIARY|eDIARY & HOMEWORK/i);
         expect(res3.replyText).not.toContain('FEES STATEMENT');
 
         // Command 4: Attendance

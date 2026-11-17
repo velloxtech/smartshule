@@ -6,6 +6,7 @@ import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guard
 import { School } from '../../src/core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../src/core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../src/core/domain/academic/TeacherAssignment';
 import {
   Strand,
   SubStrand,
@@ -17,7 +18,7 @@ import {
   CoreValue
 } from '../../src/core/domain/cbc/CbcAssessment';
 import { SchemeOfWork, SchemeStatus } from '../../src/core/domain/curriculum-plan/SchemeOfWork';
-import { LessonPlan } from '../../src/core/domain/curriculum-plan/LessonPlan';
+import { LessonPlan, LessonPlanStatus } from '../../src/core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../src/core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceStatus, AttendanceType } from '../../src/core/domain/attendance/Attendance';
 import {
@@ -295,6 +296,7 @@ export async function setupTestFixtures(container: AppContainer) {
       dateOfBirth: '2013-05-14',
       gender: StudentGender.MALE,
       gradeLevel: CBCGradeLevel.GRADE_7,
+      classroomId: classId,
       streamId,
       schoolId,
       academicYearId,
@@ -331,6 +333,18 @@ export async function setupTestFixtures(container: AppContainer) {
     'la-math-7'
   );
   await container.academicRepository.saveLearningArea(learningAreaMath);
+
+  // Teacher access is backed by effective-dated duties, not legacy profile caches.
+  await container.academicRepository.saveClassTeacherAssignment(ClassTeacherAssignment.create({
+    schoolId, academicYearId, classRoomId: classId, streamId,
+    teacherId: teacher1.id, effectiveFrom: '2026-01-05', isActive: true
+  }, 'fixture-class-teacher-science'));
+  for (const [teacherId, learningAreaId] of [[teacher1.id, learningAreaScience.id], [teacher2.id, learningAreaMath.id]]) {
+    await container.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({
+      schoolId, academicYearId, classRoomId: classId, streamId,
+      teacherId, learningAreaId, role: 'SUBJECT_TEACHER', effectiveFrom: '2026-01-05', isActive: true
+    }, `fixture-subject-${teacherId}`));
+  }
 
   // 9. CBC Strands & Sub-strands
   const strandId1 = 'strand-scie-01';
@@ -572,6 +586,18 @@ export async function setupTestFixtures(container: AppContainer) {
     'timetable-g7-east-term3'
   );
   await container.timetableRepository.save(timetableTerm3);
+
+  const currentEntry = { ...scheme.entries[0], id: 'scheme-current-entry',
+    slotId: '2026-09-21:p1', weekNumber: 4, lessonNumber: 1,
+    scheduledDate: '2026-09-21', scheduledStartTime: '08:00', scheduledEndTime: '08:45' };
+  await container.schemeOfWorkRepository.save(SchemeOfWork.create({
+    ...scheme.props, termId: term3.id, entries: [currentEntry]
+  }, 'scheme-current'));
+  await container.lessonPlanRepository.save(LessonPlan.create({
+    ...lessonPlan.props, schemeOfWorkEntryId: currentEntry.id,
+    lessonDate: currentEntry.scheduledDate, lessonTime: '08:00-08:45',
+    weekNumber: 4, lessonNumber: 1, status: LessonPlanStatus.APPROVED
+  }, 'lesson-plan-current'));
 
   // 15. Attendance Register Sample
   const attendanceRegister = AttendanceRegister.create(
@@ -903,6 +929,32 @@ export async function setupTestFixtures(container: AppContainer) {
   }
 }
 
+export async function fixtureLessonPlanPayload(container: AppContainer) {
+  const actor = { userId: 'usr-admin-01', role: UserRole.SUPER_ADMIN, schoolId: 'school-001' };
+  const scope = { academicYearId: 'year-2026', termId: 'term-2026-3' };
+  if (!await container.calendarPlanning.calendar(actor, scope)) {
+    const term = (await container.academicRepository.findTermById(scope.termId))!;
+    await container.calendarPlanning.saveCalendar(actor, scope, {
+      startDate: term.startDate, endDate: term.endDate, teachingDays: [1, 2, 3, 4, 5], exceptions: [], published: true
+    }, 0);
+  }
+
+  const plan = (await container.lessonPlanRepository.findById('lesson-plan-current'))!.toJSON();
+  const source=(await container.schemeOfWorkRepository.findAll()).flatMap(s=>s.entries).find(e=>e.id===plan.schemeOfWorkEntryId);
+  return { ...plan, specificLearningOutcomes:source?.specificLearningOutcomes||plan.specificLearningOutcomes, teacherId: 'usr-teacher-01', academicYearId: 'year-2026', termId: 'term-2026-3' };
+}
+
+export async function fixtureRecordPayload(container: AppContainer) {
+  const plan = await fixtureLessonPlanPayload(container);
+  return {
+    teacherId: plan.teacherId, classRoomId: plan.classRoomId, streamId: plan.streamId,
+    learningAreaId: plan.learningAreaId, academicYearId: plan.academicYearId, termId: plan.termId,
+    lessonDate: plan.lessonDate, weekNumber: plan.weekNumber, lessonPeriod: '1',
+    strand: plan.strand, subStrand: plan.subStrand, lessonTopic: plan.subStrand,
+    planningLink: { lessonPlanId: 'lesson-plan-current', schemeId: 'scheme-current', schemeEntryId: 'scheme-current-entry', slotId: '2026-09-21:p1' }
+  };
+}
+
 export async function setupTestRoleAccounts(container: AppContainer) {
   const defaultAccounts = [
     {
@@ -999,12 +1051,27 @@ export async function setupTestRoleAccounts(container: AppContainer) {
           role: acc.role,
           phone: acc.phone,
           status: UserStatus.ACTIVE,
-          schoolId: (acc as any).schoolId,
+          schoolId: (acc as any).schoolId || 'school-001',
           mustChangePassword: false
         },
         acc.id
       );
       await container.userRepository.save(user);
+
+      if (acc.role === UserRole.TEACHER) {
+        const existingTeacher = await container.teacherRepository.findByUserId(acc.id).catch(() => null);
+        if (!existingTeacher) {
+          const teacherProfile = Teacher.create({
+            userId: acc.id,
+            employeeNumber: 'EMP-TEACHER-01',
+            tscNumber: 'TSC/999888',
+            specialization: ['Mathematics', 'English', 'Kiswahili', 'All'],
+            assignedClassStreamIds: ['stream-001', 'all'],
+            qualification: 'B.Ed'
+          }, 'teacher-test-01');
+          await container.teacherRepository.save(teacherProfile);
+        }
+      }
     }
   }
 }

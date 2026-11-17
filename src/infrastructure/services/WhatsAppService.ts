@@ -116,7 +116,7 @@ export class WhatsAppService {
     let motto = 'The future Begins Here';
     let phone = '0745436312';
     let email = 'schoolgraceseeds@gmail.com';
-    let address = 'KEMRI Street, Kisian, Kisumu, Kenya';
+    let address = 'P.O Box 12-20123';
     let centerCode = '';
 
     if (this.academicRepository) {
@@ -265,7 +265,7 @@ export class WhatsAppService {
     ) {
       return await this.handleFeesCommand(senderPhone, firstName, senderName, students, targetStudents);
     } else if (
-      // COMMAND 3: EDIARY / DIARY / HOMEWORK / ASSIGNMENT / TASKS
+      // COMMAND 3: EDIARY / DIARY / HOMEFUN / HOMEWORK / ASSIGNMENT / TASKS
       commandUpper === '3' ||
       commandUpper.startsWith('3 ') ||
       commandUpper.startsWith('3.') ||
@@ -274,9 +274,11 @@ export class WhatsAppService {
       commandUpper.startsWith('EDIARY ') ||
       commandUpper === 'DIARY' ||
       commandUpper.startsWith('DIARY ') ||
+      commandUpper === 'HOMEFUN' ||
+      commandUpper.startsWith('HOMEFUN ') ||
       commandUpper === 'HOMEWORK' ||
       commandUpper.startsWith('HOMEWORK ') ||
-      /\b(EDIARY|E-DIARY|DIARY|HOMEWORK|ASSIGNMENT|ASSIGNMENTS|TASKS?)\b/i.test(commandUpper)
+      /\b(EDIARY|E-DIARY|DIARY|HOMEFUN|HOMEWORK|ASSIGNMENT|ASSIGNMENTS|TASKS?)\b/i.test(commandUpper)
     ) {
       return await this.handleEDiaryCommand(senderPhone, firstName, senderName, primaryStudent);
     } else if (
@@ -426,7 +428,7 @@ export class WhatsAppService {
       `Please reply with a number or command name:\n\n` +
       `*1* or *BALANCE* - Fee Balance & Statements\n` +
       `*2* or *PAY* - Pay Fees via KCB Bank / M-Pesa\n` +
-      `*3* or *EDIARY* - Today's eDiary & Homework\n` +
+      `*3* or *EDIARY* - Today's Daily Homefun & Communication Diary (E-Diary)\n` +
       `*4* or *ATTENDANCE* - Daily Attendance & Roll-Call\n` +
       `*5* or *RESULTS* - CBC Competency Report & Grades\n` +
       `*6* or *TIMETABLE* - Daily Timetable & Schedule\n` +
@@ -623,23 +625,23 @@ export class WhatsAppService {
         senderName,
         matchedStudent: student.fullName,
         replyText:
-          `*eDIARY · ${student.fullName}*\n\n` +
-          `No pending homework or teacher remarks recorded for today. The learner is all caught up!`,
+          `*DAILY HOMEFUN & COMMUNICATION DIARY (E-DIARY) · ${student.fullName}*\n\n` +
+          `No pending homefun or teacher remarks recorded for today. The learner is all caught up!`,
         intent: 'EDIARY',
       };
     }
 
     const latest = entries[0];
     const reply =
-      `*eDIARY & HOMEWORK · ${school.name}*\n` +
+      `*DAILY HOMEFUN & COMMUNICATION DIARY (E-DIARY) · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `*Learner:* ${student.fullName} (${student.gradeLevel})\n` +
       `*Date:* ${latest.date}\n` +
       `*Topic:* ${latest.title}\n\n` +
-      `*Homework / Assignment:*\n${latest.homework}\n\n` +
+      `*Homefun Activities / Instructions:*\n${latest.homework}\n\n` +
       `*Teacher Remarks:*\n${latest.teacherRemarks || 'Active participation in class today.'}\n\n` +
       `*Requirements for Tomorrow:*\n${latest.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
-      `_You can digitally acknowledge this entry in the SmartShule Parent Portal._`;
+      `_You can digitally acknowledge this entry in the Grace Seeds School Parent Portal._`;
 
     return {
       to: senderPhone,
@@ -662,18 +664,22 @@ export class WhatsAppService {
 
     let total = 0;
     let present = 0;
-    let todayStatus = 'PRESENT';
+    let todayStatus = 'Not Yet Recorded';
+    const todayIso = new Date().toISOString().split('T')[0];
 
     for (const r of registers) {
+      const regDate = typeof r.date === 'string' ? r.date.split('T')[0] : ((r.date as any) instanceof Date ? (r.date as any).toISOString().split('T')[0] : String(r.date));
       const entry = (r.entries as any[])?.find(e => e.studentId === primary.id);
       if (entry) {
         total++;
         if (entry.status === 'PRESENT') present++;
-        todayStatus = entry.status;
+        if (regDate === todayIso) {
+          todayStatus = entry.status;
+        }
       }
     }
 
-    const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
     const reply =
       `*LIVE ATTENDANCE REPORT*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
@@ -746,7 +752,7 @@ export class WhatsAppService {
     const teacherRemarks =
       reportCard?.classTeacherRemarks ||
       formatives[0]?.teacherRemarks ||
-      'Competency assessments recorded in the SmartShule portal.';
+      'Competency assessments recorded in the Grace Seeds School portal.';
 
     const formativeHighlights = formatives.length > 0
       ? `• ${formatives.slice(0, 3).map(f => `${f.specificOutcomeTested || 'Continuous Assessment'}: ${f.performanceLevel}`).join('\n• ')}\n\n`
@@ -812,7 +818,7 @@ export class WhatsAppService {
       `*Grade Level:* ${student.gradeLevel}\n` +
       `*Schedule for:* *${todayDay}*\n\n` +
       `${slotsText}\n\n` +
-      `_For full weekly timetable schedules, please visit the SmartShule Parent Portal._`;
+      `_For full weekly timetable schedules, please visit the Grace Seeds School Parent Portal._`;
 
     return {
       to: senderPhone,
@@ -936,7 +942,7 @@ export class WhatsAppService {
       `*PARENT HELP DESK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName},\n\n` +
-      `You can ask homework questions or upload textbook/problem photos directly to teachers using the *SmartShule Visual Help Desk* on your Parent Portal.\n\n` +
+      `You can ask homefun questions or upload textbook/problem photos directly to teachers using the *Grace Seeds School Visual Help Desk* on your Parent Portal.\n\n` +
       `Alternatively, reply to this message starting with *ASK:* followed by your question, and our educator will reply shortly.`;
 
     return {
@@ -1033,7 +1039,7 @@ export class WhatsAppService {
       if (!student) {
         return {
           found: false,
-          error: `No registered student or guardian was found matching your command in the database. SmartShule strictly restricts WhatsApp messaging to verified persons registered in the database.`,
+          error: `No registered student or guardian was found matching your command in the database. Grace Seeds School strictly restricts WhatsApp messaging to verified persons registered in the database.`,
         };
       }
     } else {
@@ -1181,9 +1187,9 @@ export class WhatsAppService {
       // ignore
     }
 
-    // 4. eDiary / Homework Summary
+    // 4. Daily Homefun & Communication Diary (E-Diary) Summary
     const ediarySummary = {
-      recentHomework: 'No pending homework recorded.',
+      recentHomework: 'No pending homefun recorded.',
       teacherRemarks: 'No teacher remarks recorded.',
       requirementsTomorrow: 'None specified.',
     };
@@ -1278,7 +1284,7 @@ export class WhatsAppService {
     if (cmdUpper.includes('FEE') || cmdUpper.includes('BAL') || cmdUpper.includes('PAY') || cmdUpper.includes('ARREARS')) intent = 'FEES';
     else if (cmdUpper.includes('ATTEND') || cmdUpper.includes('ABSENT')) intent = 'ATTENDANCE';
     else if (cmdUpper.includes('CBC') || cmdUpper.includes('RESULT') || cmdUpper.includes('GRADE')) intent = 'CBC';
-    else if (cmdUpper.includes('HOMEWORK') || cmdUpper.includes('EDIARY') || cmdUpper.includes('DIARY')) intent = 'EDIARY';
+    else if (cmdUpper.includes('HOMEFUN') || cmdUpper.includes('HOMEWORK') || cmdUpper.includes('EDIARY') || cmdUpper.includes('DIARY')) intent = 'EDIARY';
 
     return {
       matchedPerson: {

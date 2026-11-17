@@ -2,290 +2,369 @@ import React, { useState } from 'react'
 import {
   MapPin,
   Navigation,
-  Compass,
   Phone,
   Mail,
   Clock,
-  ArrowLeft,
-  Share2,
+  Copy,
+  Check,
   ExternalLink,
-  ShieldCheck,
-  CheckCircle2,
+  MessageCircle,
+  Building,
   Car,
   Bus,
-  Footprints,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
+import SchoolLocationMap from '../common/SchoolLocationMap'
 import {
   SCHOOL_LOCATION_CONFIG,
   getGoogleMapsDirectionsUrl,
-  getGoogleMapsSearchUrl
 } from '../../config/schoolLocation'
-import SchoolInteractiveMap from './SchoolInteractiveMap'
 
+const logo = '/logo.jpg'
 
 export interface FindUsPageProps {
   onNavigateHome: () => void
+  onNavigateAdmissions?: () => void
   onNavigateApplySlot?: () => void
+  customCoordinates?: { lat: number; lng: number }
+  customAddress?: string
 }
 
-export const FindUsPage: React.FC<FindUsPageProps> = ({
+export default function FindUsPage({
   onNavigateHome,
-  onNavigateApplySlot,
-}) => {
+  customCoordinates,
+  customAddress,
+}: FindUsPageProps) {
   const [copied, setCopied] = useState(false)
-  const [activeTransport, setActiveTransport] = useState<'driving' | 'transit' | 'walking'>('driving')
 
-  const {
-    schoolName,
-    physicalAddress,
-    coordinates,
-    isVerifiedCoordinates,
-    contact
-  } = SCHOOL_LOCATION_CONFIG
+  const activeLat = customCoordinates?.lat ?? SCHOOL_LOCATION_CONFIG.latitude
+  const activeLng = customCoordinates?.lng ?? SCHOOL_LOCATION_CONFIG.longitude
+  const displayAddress = customAddress || SCHOOL_LOCATION_CONFIG.physicalAddress
+  const schoolName = SCHOOL_LOCATION_CONFIG.schoolName
 
-  const directionsUrl = getGoogleMapsDirectionsUrl()
-  const searchUrl = getGoogleMapsSearchUrl()
+  // Official Google Maps directions URL with encoded parameters
+  const directionsUrl = getGoogleMapsDirectionsUrl(
+    activeLat,
+    activeLng,
+    SCHOOL_LOCATION_CONFIG.travelMode
+  )
 
-  const handleOpenDirections = () => {
-    window.open(directionsUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  const handleOpenSearch = () => {
-    window.open(searchUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  const handleShareLocation = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `${schoolName} Location`,
-        text: `Visit ${schoolName} at: ${physicalAddress}`,
-        url: directionsUrl,
-      }).catch(() => {})
-    } else {
-      navigator.clipboard.writeText(`${schoolName}\n${physicalAddress}\nGoogle Maps Directions: ${directionsUrl}`)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 3000)
-    }
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(displayAddress)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2200)
   }
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-      {/* Header Banner */}
-      <section className="bg-gradient-to-r from-[#5a1226] via-[#7b1c35] to-[#800000] text-white py-14 px-6 lg:px-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#e8a92a]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="max-w-6xl mx-auto relative z-10">
-          <button
-            onClick={onNavigateHome}
-            className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-5 text-sm font-semibold transition-colors cursor-pointer group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Home
-          </button>
-
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-[#f5c84a] text-xs font-bold uppercase tracking-wider mb-3">
-            <Compass className="w-3.5 h-3.5" />
-            Campus Directions &amp; Live Location
+      {/* Top Navigation & Title Bar */}
+      <div className="max-w-6xl mx-auto px-6 lg:px-12 pt-6 sm:pt-8 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#eedad7]/70">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onNavigateHome}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-container hover:text-primary bg-white border border-[#eedad7] hover:border-primary px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-xs"
+            >
+              ← Back to Home
+            </button>
+            <span className="text-gray-300">/</span>
+            <h1
+              style={{ fontFamily: 'Fraunces, serif' }}
+              className="text-xl sm:text-2xl font-bold text-primary-container"
+            >
+              Find Our School
+            </h1>
           </div>
 
-          <h1 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3">
-            Find Our School
-          </h1>
-          <p className="text-white/85 text-base max-w-2xl leading-relaxed">
-            Welcome to {schoolName}. Explore our interactive campus map, find turn-by-turn driving directions from your location, and plan your school visit.
-          </p>
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-start sm:self-auto inline-flex items-center gap-2 bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all hover:scale-105 cursor-pointer"
+          >
+            <Navigation className="w-4 h-4 fill-current" />
+            <span>Get Directions</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+          </a>
         </div>
-      </section>
+      </div>
 
-      {/* Main Content */}
-      <section className="max-w-6xl mx-auto px-6 lg:px-12 py-10">
-        <div className="grid lg:grid-cols-3 gap-8 items-start">
-          
-          {/* Left Column: Location Card & Transport Details */}
-          <div className="space-y-6">
-            <div className="bg-white border border-[#7b1c35]/15 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-[#5a1226] flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-[#800000]" />
-                  Campus Location
-                </h2>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Pin
+      {/* Main Content Layout - Symmetrically Aligned Cards */}
+      <main className="max-w-6xl mx-auto px-6 lg:px-12 pt-2 pb-16 space-y-8">
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* Card 1: Interactive Live Location Map Card (7 cols) */}
+          <section className="lg:col-span-7 bg-white rounded-3xl border border-[#eedad7] shadow-lg overflow-hidden flex flex-col h-full">
+            {/* Header Bar */}
+            <div className="bg-primary text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-bold tracking-wider uppercase">
+                  Live School Location Pin
                 </span>
               </div>
-              
-              <div className="space-y-4 text-sm text-[#40000e]">
-                <div>
-                  <p className="font-bold text-[#1f0a10] text-base">{schoolName}</p>
-                  <p className="text-[#8a6470] mt-1 font-medium leading-snug">{physicalAddress}</p>
-                  <p className="text-[11px] font-mono text-slate-500 mt-1.5">
-                    GPS: {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)}
-                  </p>
+              <span className="text-white/70 text-xs font-medium">
+                OpenStreetMap Interactive
+              </span>
+            </div>
+
+            {/* Interactive Map Surface */}
+            <div className="relative flex-1 min-h-[380px] sm:min-h-[460px] w-full bg-[#f0eee9]">
+              <SchoolLocationMap
+                latitude={activeLat}
+                longitude={activeLng}
+                zoomLevel={SCHOOL_LOCATION_CONFIG.mapZoomLevel}
+                schoolName={schoolName}
+                address={displayAddress}
+                height="100%"
+                className="w-full h-full"
+                directionsUrl={directionsUrl}
+              />
+            </div>
+
+            {/* Footer Bar */}
+            <div className="px-6 py-3.5 bg-[#faf5f1] border-t border-[#eedad7] flex flex-wrap items-center justify-between gap-3 text-xs text-gray-600 shrink-0">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary shrink-0" />
+                <span className="font-semibold text-gray-800">GPS Coordinates:</span>
+                <span className="font-mono text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">
+                  {activeLat.toFixed(5)}, {activeLng.toFixed(5)}
+                </span>
+              </div>
+
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-primary hover:text-primary-container font-bold hover:underline"
+              >
+                <span>Navigate on Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </section>
+
+          {/* Card 2: School Information & Direct Contacts Card (5 cols) */}
+          <section className="lg:col-span-5 bg-white rounded-3xl border border-[#eedad7] shadow-lg overflow-hidden flex flex-col h-full">
+            {/* Header Bar */}
+            <div className="bg-primary text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#f5c84a]" />
+                <span className="text-xs font-bold tracking-wider uppercase">
+                  Campus Details & Contacts
+                </span>
+              </div>
+              <span className="text-[#f5c84a] text-xs font-bold bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
+                Visitor Welcome
+              </span>
+            </div>
+
+            {/* Card Body */}
+            <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+              <div>
+                {/* School Branding */}
+                <div className="flex items-center gap-3.5 pb-5 mb-5 border-b border-[#eedad7]">
+                  <img
+                    src={logo}
+                    alt={schoolName}
+                    className="w-14 h-14 rounded-2xl object-contain bg-white p-1 border border-gray-200 shadow-sm shrink-0"
+                  />
+                  <div>
+                    <h2
+                      style={{ fontFamily: 'Fraunces, serif' }}
+                      className="text-xl font-bold text-primary-container leading-tight"
+                    >
+                      {schoolName}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <Building className="w-3.5 h-3.5 text-[#e8a92a]" />
+                      <span>Main Campus & Admissions Desk</span>
+                    </p>
+                  </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 space-y-2.5">
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-[#800000] shrink-0" />
-                    <span className="text-xs sm:text-sm">{contact.phonePrimary} / {contact.phoneSecondary}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-[#800000] shrink-0" />
-                    <span className="text-xs sm:text-sm">{contact.email}</span>
-                  </div>
+                {/* Key Details Rows */}
+                <div className="space-y-4 text-xs">
+                  {/* Physical Address */}
                   <div className="flex items-start gap-3">
-                    <Clock className="w-4 h-4 text-[#800000] shrink-0 mt-0.5" />
-                    <span className="text-xs text-slate-600">
-                      Mon – Fri: {contact.workingHoursWeekday}<br />
-                      Sat: {contact.workingHoursSaturday}
-                    </span>
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-xs">Physical Address</p>
+                      <p className="text-gray-700 text-xs mt-0.5 leading-relaxed font-medium">
+                        {displayAddress}
+                      </p>
+                      <p className="text-gray-500 text-[11px] mt-0.5">
+                        {SCHOOL_LOCATION_CONFIG.landmark}
+                      </p>
+                      <button
+                        onClick={handleCopyAddress}
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-primary font-bold">Address Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Physical Address</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Visiting Hours */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-xs">Office & Visiting Hours</p>
+                      <p className="text-gray-700 text-xs mt-0.5 leading-relaxed">
+                        {SCHOOL_LOCATION_CONFIG.visitingHours}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-xs">Telephone Inquiries</p>
+                      <a
+                        href={`tel:${SCHOOL_LOCATION_CONFIG.phoneClean}`}
+                        className="text-primary font-bold text-sm hover:underline mt-0.5 block"
+                      >
+                        {SCHOOL_LOCATION_CONFIG.phone}
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary-container/10 text-primary-container flex items-center justify-center shrink-0 mt-0.5">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-xs">Official Email Desk</p>
+                      <a
+                        href={`mailto:${SCHOOL_LOCATION_CONFIG.email}`}
+                        className="text-gray-700 hover:text-primary hover:underline break-all mt-0.5 block"
+                      >
+                        {SCHOOL_LOCATION_CONFIG.email}
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons: Get Directions & Share */}
-              <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col gap-2.5">
-                <button
-                  onClick={handleOpenDirections}
-                  className="w-full bg-[#800000] hover:bg-[#660000] text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md hover:scale-[1.02] cursor-pointer"
-                  title="Calculate directions in Google Maps from your current location"
+              {/* Action Buttons */}
+              <div className="pt-6 mt-6 border-t border-[#eedad7] space-y-2.5">
+                {/* Prominent Google Maps Button */}
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-white font-bold text-xs sm:text-sm py-3.5 px-4 rounded-2xl shadow-md transition-all cursor-pointer group"
                 >
-                  <Navigation className="w-4 h-4" />
-                  <span>Get Directions</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                </button>
+                  <Navigation className="w-4 h-4 text-[#f5c84a] group-hover:scale-110 transition-transform" />
+                  <span>Get Directions (Google Maps)</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </a>
 
-                <button
-                  onClick={handleOpenSearch}
-                  className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold py-2 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                {/* WhatsApp Route Assistance */}
+                <a
+                  href={`https://wa.me/254745436312?text=Hello%20Grace%20Seeds%20School,%20I%20am%20inquiring%20about%20directions%20to%20your%20campus.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-container text-white font-bold text-xs py-2.5 px-4 rounded-2xl shadow transition-all cursor-pointer"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#800000]" />
-                  <span>Search in Google Maps</span>
-                </button>
-
-                <button
-                  onClick={handleShareLocation}
-                  className="w-full bg-white hover:bg-rose-50 text-[#800000] border border-[#800000]/30 font-semibold py-2 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>{copied ? 'Location Copied to Clipboard!' : 'Share Campus Location'}</span>
-                </button>
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Chat on WhatsApp for Route Help</span>
+                </a>
               </div>
             </div>
-
-            {/* Transport Options */}
-            <div className="bg-white border border-[#7b1c35]/15 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-[#5a1226] mb-3">Directions &amp; Transport</h3>
-              <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4">
-                <button
-                  onClick={() => setActiveTransport('driving')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTransport === 'driving' ? 'bg-[#800000] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Car className="w-3.5 h-3.5" /> Driving
-                </button>
-                <button
-                  onClick={() => setActiveTransport('transit')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTransport === 'transit' ? 'bg-[#800000] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Bus className="w-3.5 h-3.5" /> School Bus
-                </button>
-                <button
-                  onClick={() => setActiveTransport('walking')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTransport === 'walking' ? 'bg-[#800000] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Footprints className="w-3.5 h-3.5" /> Walking
-                </button>
-              </div>
-
-              {activeTransport === 'driving' && (
-                <p className="text-xs text-[#8a6470] leading-relaxed">
-                  Located along KEMRI Road in Kisian, easily reachable from the Kisumu-Busia Highway. Dedicated secure drop-off and visitor parking available inside the school gates.
-                </p>
-              )}
-              {activeTransport === 'transit' && (
-                <p className="text-xs text-[#8a6470] leading-relaxed">
-                  Grace Seeds School operates fully monitored school bus routes across surrounding Kisian, Kisumu West, and nearby estates with trained chaperones.
-                </p>
-              )}
-              {activeTransport === 'walking' && (
-                <p className="text-xs text-[#8a6470] leading-relaxed">
-                  Dedicated pedestrian walkways and zebra crossings supervised during morning arrival (7:00 – 8:00 AM) and evening dismissal (3:30 – 4:30 PM).
-                </p>
-              )}
-            </div>
-
-            {/* Admission Tour CTA */}
-            {onNavigateApplySlot && (
-              <div className="bg-gradient-to-br from-[#800000] to-[#5a1226] text-white rounded-2xl p-6 shadow-md">
-                <h4 className="font-bold text-base mb-1">Planning a School Tour?</h4>
-                <p className="text-white/80 text-xs mb-4">
-                  Book a slot with our admissions office to tour classrooms, labs, sports fields, and meet our teachers.
-                </p>
-                <button
-                  onClick={onNavigateApplySlot}
-                  className="w-full bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold py-2.5 px-4 rounded-xl text-xs transition-transform hover:scale-105 cursor-pointer shadow"
-                >
-                  Book Admission Tour
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Interactive Leaflet Map */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white border border-[#7b1c35]/15 rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Interactive School Map
-                  </span>
-                </div>
-                <button
-                  onClick={handleOpenDirections}
-                  className="text-xs text-[#800000] hover:text-[#660000] font-bold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  Get Directions in Google Maps
-                </button>
-              </div>
-
-              {/* Map Container */}
-              <div className="p-3">
-                <SchoolInteractiveMap height="460px" />
-
-              </div>
-
-              {/* Highlights below map */}
-              <div className="p-4 bg-white border-t border-slate-100 grid sm:grid-cols-3 gap-4 text-center">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <ShieldCheck className="w-5 h-5 text-[#800000] mx-auto mb-1" />
-                  <p className="text-xs font-bold text-slate-800">Secure Gated Campus</p>
-                  <p className="text-[11px] text-slate-500">24/7 Security &amp; CCTV</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
-                  <p className="text-xs font-bold text-slate-800">Visitor Parking</p>
-                  <p className="text-[11px] text-slate-500">Free On-site Parking</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <Navigation className="w-5 h-5 text-[#e8a92a] mx-auto mb-1" />
-                  <p className="text-xs font-bold text-slate-800">Easy Highway Access</p>
-                  <p className="text-[11px] text-slate-500">Kisian / KEMRI Road</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          </section>
         </div>
-      </section>
+
+        {/* Travel & Arrival Guide (3 Symmetrical Summary Tiles) */}
+        <section className="bg-white rounded-3xl border border-[#eedad7] p-6 sm:p-8 shadow-sm">
+          <h3
+            style={{ fontFamily: 'Fraunces, serif' }}
+            className="text-lg sm:text-xl font-bold text-primary-container mb-4 flex items-center gap-2"
+          >
+            <span>Getting to Grace Seeds School</span>
+          </h3>
+
+          <div className="grid sm:grid-cols-3 gap-5">
+            {/* Tile 1: Driving */}
+            <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
+                <Car className="w-4 h-4 text-[#f5c84a]" />
+              </div>
+              <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">
+                Driving from Kisumu CBD
+              </h4>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                Take Kisumu-Busia Highway (A104/B1) past Otonglo to Kisian Junction (~12 km). Turn onto KEMRI Road; school is 800m ahead.
+              </p>
+            </div>
+
+            {/* Tile 2: Public Transport */}
+            <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
+                <Bus className="w-4 h-4 text-[#f5c84a]" />
+              </div>
+              <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">
+                Public Matatu / Boda-boda
+              </h4>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                Board any Kisian/Maseno matatu from Kisumu town. Alight at Kisian Stage (KEMRI Junction), followed by a 1-min ride or 5-min walk.
+              </p>
+            </div>
+
+            {/* Tile 3: Security & Visitor Parking */}
+            <div className="bg-[#faf6f0] p-4.5 rounded-2xl border border-[#eedad7]/60">
+              <div className="w-9 h-9 rounded-xl bg-primary-container text-white flex items-center justify-center mb-3">
+                <ShieldCheck className="w-4 h-4 text-[#f5c84a]" />
+              </div>
+              <h4 className="font-bold text-gray-900 text-xs sm:text-sm mb-1">
+                Gate Check-in & Free Parking
+              </h4>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                Ample secured visitor parking is available on campus. Security sign-in with National ID or driver’s license is required at the gate.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-[#3d0c1a] py-6 text-center text-white/50 text-xs border-t border-white/10">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© {new Date().getFullYear()} {schoolName}. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onNavigateHome}
+              className="hover:text-[#f5c84a] transition-colors cursor-pointer"
+            >
+              Home
+            </button>
+            <span>•</span>
+            <span className="text-white/80">{displayAddress}</span>
+            <span>•</span>
+            <a href={`tel:${SCHOOL_LOCATION_CONFIG.phoneClean}`} className="hover:text-[#f5c84a]">
+              {SCHOOL_LOCATION_CONFIG.phone}
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
-
-export default FindUsPage

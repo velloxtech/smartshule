@@ -126,7 +126,7 @@ export class ClinicController {
   public getStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.user?.schoolId;
-      const stats = await this.clinicUseCases.getClinicStats(schoolId);
+      const stats = await this.clinicUseCases.getClinicStats(schoolId, (req as any).canAccessTeachingRecord);
       return res.status(200).json({
         success: true,
         data: stats

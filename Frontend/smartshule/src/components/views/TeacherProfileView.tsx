@@ -317,7 +317,7 @@ export const TeacherProfileView: React.FC = () => {
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : alert.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-900'
-              : 'bg-blue-50 border-blue-200 text-blue-900'
+              : 'bg-primary-fixed border-primary text-on-primary-fixed'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -334,7 +334,7 @@ export const TeacherProfileView: React.FC = () => {
 
       {/* Profile Overview Card */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center gap-5 min-w-0">
           <div className="relative group">
             {profile?.profilePhotoUrl ? (
               <img
@@ -361,7 +361,7 @@ export const TeacherProfileView: React.FC = () => {
               <h2 className="text-lg font-bold text-on-surface">
                 {profile?.user?.fullName || user?.fullName || 'Educator Profile'}
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#7a1228]/10 text-[#7a1228]">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
                 {profile?.user?.role || 'TEACHER'}
               </span>
             </div>
@@ -395,7 +395,7 @@ export const TeacherProfileView: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-1">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-1">
         <button
           onClick={() => setActiveTab('profile')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
@@ -419,7 +419,7 @@ export const TeacherProfileView: React.FC = () => {
           <span className="material-symbols-outlined text-[18px]">rule</span>
           <span>My Correction Requests</span>
           {pendingCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500 text-white">
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-primary text-white">
               {pendingCount}
             </span>
           )}
@@ -511,7 +511,7 @@ export const TeacherProfileView: React.FC = () => {
               <div>
                 <span className="block text-on-surface-variant text-[11px]">Email Address</span>
                 <span className="font-semibold text-on-surface">{profile?.user?.email || 'Not recorded'}</span>
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-teal-700 font-bold mt-0.5">
+                <span className="inline-flex items-center gap-0.5 text-[10px] text-primary font-bold mt-0.5">
                   <span className="material-symbols-outlined text-[12px]">verified</span>
                   <span>Verified Auth Email</span>
                 </span>
@@ -556,7 +556,7 @@ export const TeacherProfileView: React.FC = () => {
                 {profile?.specialization && profile.specialization.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {profile.specialization.map((spec, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-secondary-container text-on-secondary-container text-[11px] font-semibold">
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-success-container text-on-success-container text-[11px] font-semibold">
                         {spec}
                       </span>
                     ))}
@@ -575,7 +575,7 @@ export const TeacherProfileView: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">work</span>
                 <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface">Section D: Employment Information</h3>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-gray-700">
                 School Admin Managed
               </span>
             </div>
@@ -614,7 +614,7 @@ export const TeacherProfileView: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">calendar_month</span>
                 <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface">Section E: Teaching & Class Stream Assignments</h3>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-gray-700">
                 Head Teacher Allocated
               </span>
             </div>
@@ -654,7 +654,7 @@ export const TeacherProfileView: React.FC = () => {
                                 Active
                               </span>
                             ) : (
-                              <span className="bg-slate-200 text-slate-700 text-[9px] font-medium px-1.5 py-0.2 rounded-full">
+                              <span className="bg-surface-container text-slate-700 text-[9px] font-medium px-1.5 py-0.2 rounded-full">
                                 Past
                               </span>
                             )}
@@ -690,7 +690,7 @@ export const TeacherProfileView: React.FC = () => {
                             </span>
                             <span
                               className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
-                                sa.role === 'SUBJECT_LEAD' ? 'bg-[#800000] text-white' : 'bg-slate-200 text-slate-800'
+                                sa.role === 'SUBJECT_LEAD' ? 'bg-primary text-white' : 'bg-surface-container text-slate-800'
                               }`}
                             >
                               {sa.role === 'SUBJECT_LEAD' ? 'Subject Lead' : 'Educator'}
@@ -720,7 +720,7 @@ export const TeacherProfileView: React.FC = () => {
                             {slot.dayOfWeek} • Period {slot.periodNumber} ({slot.startTime} - {slot.endTime})
                           </span>
                         </div>
-                        <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[10px] font-medium">
+                        <span className="px-1.5 py-0.5 rounded bg-surface-container-low text-gray-700 text-[10px] font-medium">
                           {slot.roomName || 'Classroom'}
                         </span>
                       </div>
@@ -929,7 +929,7 @@ export const TeacherProfileView: React.FC = () => {
             <ul className="list-disc list-inside text-on-surface-variant space-y-1 text-[11px]">
               <li>Use a password with a mix of letters, numbers, and symbols.</li>
               <li>Your verified email ({profile?.user?.email || 'N/A'}) receives OTP verification codes for sensitive actions.</li>
-              <li>SmartShule staff will never request your password or OTP code.</li>
+              <li>Grace Seeds School staff will never request your password or OTP code.</li>
             </ul>
           </div>
         </div>

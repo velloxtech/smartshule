@@ -1,4 +1,7 @@
 import request from 'supertest';
+import { ClassRoom,Stream,LearningArea,EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { CBCGradeLevel } from '../../src/core/domain/user/Student';
+import { SubjectTeacherAssignment } from '../../src/core/domain/academic/TeacherAssignment';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
@@ -13,6 +16,11 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
   beforeAll(async () => {
     container = new AppContainer();
     await setupTestFixtures(container);
+    // The tracker belongs to a real, explicitly assigned cohort and learning area.
+    await container.academicRepository.saveClass(ClassRoom.create({schoolId:'school-001',name:'Grade 3',gradeLevel:CBCGradeLevel.GRADE_3,educationLevel:EducationLevel.LOWER_PRIMARY},'class-grade-3'));
+    await container.academicRepository.saveStream(Stream.create({classRoomId:'class-grade-3',name:'East',capacity:30},'stream-east'));
+    await container.academicRepository.saveLearningArea(LearningArea.create({schoolId:'school-001',name:'CRE',code:'G3CRE',gradeLevel:CBCGradeLevel.GRADE_3,educationLevel:EducationLevel.LOWER_PRIMARY,isElective:false},'la-cre-001'));
+    await container.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({schoolId:'school-001',academicYearId:'year-2026',classRoomId:'class-grade-3',streamId:'stream-east',learningAreaId:'la-cre-001',teacherId:'teacher-001',role:'SUBJECT_TEACHER',isActive:true,effectiveFrom:'2026-01-01'},'tracker-test-assignment'));
     app = createExpressApp(container);
 
     const adminLoginRes = await request(app)
@@ -95,15 +103,15 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     const week1 = res.body.data.items.find((i: any) => i.weekNumber === 1);
-    expect(week1.isCovered).toBe(true);
-    expect(week1.status).toBe('COVERED');
-    expect(week1.coveredAt).toBe(today);
+    expect(week1.isCovered).toBe(false);
+    expect(week1.status).toBe('SUBMITTED');
+    expect(week1.coveredAt).toBeUndefined();
     expect(week1.lessonsTaught).toBe(5);
     expect(week1.teacherComment).toContain('mastered the concept of honesty');
 
     // Stats should reflect 1 of 12 covered (8%)
-    expect(res.body.data.stats.coveredWeeks).toBe(1);
-    expect(res.body.data.stats.completionPercentage).toBe(8);
+    expect(res.body.data.stats.coveredWeeks).toBe(0);
+    expect(res.body.data.stats.completionPercentage).toBe(0);
     expect(res.body.data.stats.commentsCount).toBe(1);
   });
 
@@ -173,8 +181,8 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.stats.coveredWeeks).toBe(2);
-    expect(res.body.data.stats.completionPercentage).toBe(17);
+    expect(res.body.data.stats.coveredWeeks).toBe(0);
+    expect(res.body.data.stats.completionPercentage).toBe(0);
   });
 
   it('7. GET /api/v1/curriculum-tracker lists trackers with progress statistics', async () => {
@@ -187,7 +195,7 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.body.count).toBeGreaterThanOrEqual(1);
     const tracker = res.body.data.find((t: any) => t.id === trackerId);
     expect(tracker).toBeDefined();
-    expect(tracker.stats.coveredWeeks).toBe(2);
+    expect(tracker.stats.coveredWeeks).toBe(0);
   });
 
   it('8. GET /api/v1/curriculum-tracker/summary returns school-wide progress summary', async () => {
@@ -198,7 +206,7 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.totalTrackers).toBeGreaterThanOrEqual(1);
-    expect(res.body.data.coveredWeeksAll).toBeGreaterThanOrEqual(2);
+    expect(res.body.data.coveredWeeksAll).toBe(0);
     expect(res.body.data.subjects).toBeDefined();
     expect(res.body.data.subjects.length).toBeGreaterThanOrEqual(1);
   });

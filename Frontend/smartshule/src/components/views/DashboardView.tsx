@@ -44,7 +44,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const quickActionRef = useRef<HTMLDivElement>(null);
 
-  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string>(todayIso);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,13 +64,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadDashboardStats = useCallback(async (yearId?: string, termId?: string) => {
+  const loadDashboardStats = useCallback(async (yearId?: string, termId?: string, targetDate?: string) => {
+    const effectiveDate = targetDate || selectedAttendanceDate || todayIso;
     setIsLoading(true);
     try {
       const [res, cRes, attRes] = await Promise.all([
-        apiService.getDashboardAnalytics({ yearId, termId }).catch(() => null),
+        apiService.getDashboardAnalytics({ yearId, termId, date: effectiveDate }).catch(() => null),
         apiService.getClasses().catch(() => null),
-        apiService.getAttendanceReport({ date: todayIso }).catch(() => null),
+        apiService.getAttendanceReport({ date: effectiveDate }).catch(() => null),
       ]);
 
       if (res?.success && res.data) {
@@ -83,8 +92,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       if (Array.isArray(rawRegisters)) {
         rawRegisters.forEach((reg: any) => {
-          // Strictly protect today's status: ignore historical registers for past dates
-          if (reg.date && reg.date !== todayIso) return;
+          const rDate = typeof reg.date === 'string' ? reg.date.split('T')[0] : (reg.date instanceof Date ? reg.date.toISOString().split('T')[0] : '');
+          if (rDate && rDate !== effectiveDate) return;
           if (reg.entries && Array.isArray(reg.entries)) {
             reg.entries.forEach((e: any) => {
               if (e.studentId) {
@@ -100,22 +109,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [todayIso]);
+  }, [selectedAttendanceDate, todayIso]);
 
   useEffect(() => {
-    loadDashboardStats();
-  }, [loadDashboardStats]);
+    loadDashboardStats(selectedYearId, selectedTermId, selectedAttendanceDate);
+  }, [loadDashboardStats, selectedYearId, selectedTermId, selectedAttendanceDate]);
 
   useEffect(() => {
-    const handleAttendanceSync = () => {
-      loadDashboardStats(selectedYearId, selectedTermId);
+    const handleAttendanceSync = (event?: any) => {
+      const syncDate = event?.detail?.date || selectedAttendanceDate;
+      loadDashboardStats(selectedYearId, selectedTermId, syncDate);
     };
 
     window.addEventListener('smartshule:attendance-updated', handleAttendanceSync);
     return () => {
       window.removeEventListener('smartshule:attendance-updated', handleAttendanceSync);
     };
-  }, [loadDashboardStats, selectedYearId, selectedTermId]);
+  }, [loadDashboardStats, selectedYearId, selectedTermId, selectedAttendanceDate]);
 
   const handleYearChange = (yearId: string) => {
     setSelectedYearId(yearId);
@@ -168,22 +178,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const unverifiedPaymentsAmount = summaryData?.finance?.unverifiedPaymentsAmount || 0;
 
   // Attendance
-  const hasRegisterDataToday = Object.keys(todayRegisterMap).length > 0;
+  const hasRegisterDataToday = useMemo(() => {
+    return Object.keys(todayRegisterMap).length > 0 || Boolean(summaryData?.attendanceSummary?.hasData);
+  }, [todayRegisterMap, summaryData]);
+
   const totalPresentToday = useMemo(() => {
-    return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT' || st === 'LATE').length;
-  }, [todayRegisterMap]);
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT').length;
+    }
+    return summaryData?.attendanceSummary?.present ?? 0;
+  }, [todayRegisterMap, summaryData]);
 
   const absentStudentsCount = useMemo(() => {
-    return Object.values(todayRegisterMap).filter((st) => st === 'ABSENT').length;
-  }, [todayRegisterMap]);
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'ABSENT').length;
+    }
+    return summaryData?.attendanceSummary?.absent ?? 0;
+  }, [todayRegisterMap, summaryData]);
+
+  const lateStudentsCount = useMemo(() => {
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'LATE').length;
+    }
+    return summaryData?.attendanceSummary?.late ?? 0;
+  }, [todayRegisterMap, summaryData]);
+
+  const excusedStudentsCount = useMemo(() => {
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'EXCUSED' || (st as any) === 'SICK').length;
+    }
+    return summaryData?.attendanceSummary?.excused ?? 0;
+  }, [todayRegisterMap, summaryData]);
 
   const avgAttendancePct = useMemo(() => {
+    if (!hasRegisterDataToday) return 0;
+    const totalMarked = Object.keys(todayRegisterMap).length;
+    if (totalMarked > 0) {
+      return Math.round(((totalPresentToday + lateStudentsCount) / totalMarked) * 100);
+    }
     if (summaryData?.attendanceSummary?.presentPercentage !== null && summaryData?.attendanceSummary?.presentPercentage !== undefined) {
       return summaryData.attendanceSummary.presentPercentage;
     }
-    if (!students || students.length === 0 || !hasRegisterDataToday) return 0;
-    return Math.round((totalPresentToday / students.length) * 100);
-  }, [summaryData, students, totalPresentToday, hasRegisterDataToday]);
+    return 0;
+  }, [hasRegisterDataToday, todayRegisterMap, totalPresentToday, lateStudentsCount, summaryData]);
 
   // CBC Assessments
   const CBCProf = summaryData?.CBCProficiency;
@@ -271,36 +308,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Attendance by Grade Level
   const dynamicAttendanceGradeData = useMemo(() => {
     if (!students || students.length === 0) return [];
-    const map: Record<string, { present: number; total: number; late: number; absent: number; excused: number }> = {};
+    const map: Record<string, { present: number; total: number; marked: number; late: number; absent: number; excused: number }> = {};
 
     students.forEach((s) => {
       const g = s.grade || 'Grade 7';
-      if (!map[g]) map[g] = { present: 0, total: 0, late: 0, absent: 0, excused: 0 };
+      if (!map[g]) map[g] = { present: 0, total: 0, marked: 0, late: 0, absent: 0, excused: 0 };
       map[g].total += 1;
 
       const statusToday = todayRegisterMap[s.id];
-      if (statusToday === 'PRESENT') {
-        map[g].present += 1;
-      } else if (statusToday === 'LATE') {
-        map[g].present += 1;
-        map[g].late += 1;
-      } else if (statusToday === 'ABSENT') {
-        map[g].absent += 1;
-      } else if (statusToday === 'EXCUSED') {
-        map[g].excused += 1;
+      if (statusToday) {
+        map[g].marked += 1;
+        if (statusToday === 'PRESENT') {
+          map[g].present += 1;
+        } else if (statusToday === 'LATE') {
+          map[g].late += 1;
+        } else if (statusToday === 'ABSENT') {
+          map[g].absent += 1;
+        } else if (statusToday === 'EXCUSED' || (statusToday as any) === 'SICK') {
+          map[g].excused += 1;
+        }
       }
     });
 
-    return Object.entries(map).map(([grade, d]) => ({
-      grade,
-      present: d.present,
-      total: d.total,
-      pct: d.total > 0 ? (d.present / d.total) * 100 : 0,
-      late: d.late,
-      absent: d.absent,
-      excused: d.excused,
-    }));
+    return Object.entries(map).map(([grade, d]) => {
+      const isMarked = d.marked > 0;
+      const pct = isMarked ? Math.round((d.present / d.marked) * 100) : 0;
+      return {
+        grade,
+        present: d.present,
+        total: d.total,
+        marked: d.marked,
+        isMarked,
+        pct,
+        late: d.late,
+        absent: d.absent,
+        excused: d.excused,
+      };
+    });
   }, [students, todayRegisterMap]);
+
+  const hasAnyGradeAttendanceLoggedToday = useMemo(() => {
+    return dynamicAttendanceGradeData.some(d => d.isMarked);
+  }, [dynamicAttendanceGradeData]);
 
   // Fee Defaulters by Grade
   const dynamicFeeDefaultersByGrade = useMemo(() => {
@@ -372,7 +421,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {academicPeriodLabel}
               </span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#800000]/10 text-[#800000] border border-[#800000]/20 text-xs font-semibold italic">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold italic">
               <span className="material-symbols-outlined text-[14px]">school</span>
               <span>&quot;The Future Begins Here&quot;</span>
             </div>
@@ -446,7 +495,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {onOpenUploadMarks && (
             <button
               onClick={onOpenUploadMarks}
-              className="inline-flex items-center gap-xs px-md py-sm rounded-lg bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-label-md text-label-md font-bold transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-xs px-md py-sm rounded-lg bg-primary hover:bg-primary-container text-white font-label-md text-label-md font-bold transition-all shadow-xs cursor-pointer"
               type="button"
               title="Upload and record learner assessment marks"
             >
@@ -477,7 +526,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     }}
                     className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md font-semibold cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[#7a1228] text-[20px]">upload_file</span>
+                    <span className="material-symbols-outlined text-primary text-[20px]">upload_file</span>
                     <span>Upload Assessment Marks</span>
                   </button>
                 )}
@@ -498,7 +547,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }}
                   className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md"
                 >
-                  <span className="material-symbols-outlined text-secondary text-[20px]">payments</span>
+                  <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
                   <span>Record Fee Payment</span>
                 </button>
                 <button
@@ -508,7 +557,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }}
                   className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md"
                 >
-                  <span className="material-symbols-outlined text-emerald-700 text-[20px]">how_to_reg</span>
+                  <span className="material-symbols-outlined text-primary text-[20px]">how_to_reg</span>
                   <span>Daily Roll Call Register</span>
                 </button>
                 <button
@@ -518,7 +567,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }}
                   className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md"
                 >
-                  <span className="material-symbols-outlined text-[#7a1228] text-[20px]">draw</span>
+                  <span className="material-symbols-outlined text-primary text-[20px]">draw</span>
                   <span>Digital Signature Vault</span>
                 </button>
                 <button
@@ -539,10 +588,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 2. Director Pending Approvals & Operational Action Hub */}
       {pendingApprovals.totalActionable > 0 && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50/40 to-rose-100/30 border border-amber-200/80 shadow-xs">
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-fixed via-rose-50/40 to-rose-100/30 border border-primary/80 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-amber-200/60">
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold">
+              <span className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
                 <span className="material-symbols-outlined text-[20px]">priority_high</span>
               </span>
               <div>
@@ -563,14 +612,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Signature Queue */}
             <div
               onClick={() => onNavigateTab('digital-signature')}
-              className="p-3 rounded-xl bg-white border border-amber-200 hover:border-[#7a1228]/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
+              className="p-3 rounded-xl bg-surface-container-lowest border border-amber-200 hover:border-primary/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[#7a1228] text-base">draw</span>
+                  <span className="material-symbols-outlined text-primary text-base">draw</span>
                   Document Signing
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingSignaturesCount > 0 ? 'bg-rose-50 text-[#7a1228]' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingSignaturesCount > 0 ? 'bg-rose-50 text-primary' : 'bg-surface-container-low text-slate-600'}`}>
                   {pendingApprovals.pendingSignaturesCount} Batches
                 </span>
               </div>
@@ -579,7 +628,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ? `${pendingApprovals.pendingSignaturesCount} document signing batch(es) awaiting Director OTP verification`
                   : 'All document batches verified & up to date'}
               </p>
-              <div className="flex items-center justify-between text-xs font-bold text-[#7a1228] pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between text-xs font-bold text-primary pt-1 border-t border-slate-100">
                 <span>Open Signing Centre</span>
                 <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </div>
@@ -588,14 +637,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Teacher Correction Requests */}
             <div
               onClick={() => onNavigateTab('teachers-staff')}
-              className="p-3 rounded-xl bg-white border border-amber-200 hover:border-purple-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
+              className="p-3 rounded-xl bg-surface-container-lowest border border-amber-200 hover:border-primary hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-purple-700 text-base">badge</span>
+                  <span className="material-symbols-outlined text-primary text-base">badge</span>
                   Teacher Corrections
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingCorrectionRequestsCount > 0 ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingCorrectionRequestsCount > 0 ? 'bg-purple-100 text-purple-800' : 'bg-surface-container-low text-slate-600'}`}>
                   {pendingApprovals.pendingCorrectionRequestsCount} Pending
                 </span>
               </div>
@@ -604,7 +653,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ? `${pendingApprovals.pendingCorrectionRequestsCount} faculty member(s) submitted profile corrections for approval`
                   : 'No pending faculty profile corrections'}
               </p>
-              <div className="flex items-center justify-between text-xs font-bold text-purple-700 pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between text-xs font-bold text-primary pt-1 border-t border-slate-100">
                 <span>Review Requests</span>
                 <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </div>
@@ -613,14 +662,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Unverified Forwarded Payments */}
             <div
               onClick={() => onNavigateTab('forwarded-payments')}
-              className="p-3 rounded-xl bg-white border border-amber-200 hover:border-emerald-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
+              className="p-3 rounded-xl bg-surface-container-lowest border border-amber-200 hover:border-emerald-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-emerald-700 text-base">receipt_long</span>
+                  <span className="material-symbols-outlined text-primary text-base">receipt_long</span>
                   Forwarded Payments
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${unverifiedPaymentsCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${unverifiedPaymentsCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-container-low text-slate-600'}`}>
                   {unverifiedPaymentsCount} Notices
                 </span>
               </div>
@@ -662,7 +711,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant font-medium">
-            <span className="text-sky-700 font-bold">{boysCount} Boys</span>
+            <span className="text-primary font-bold">{boysCount} Boys</span>
             <span>·</span>
             <span className="text-pink-700 font-bold">{girlsCount} Girls</span>
           </div>
@@ -671,13 +720,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 2. Faculty & Staff */}
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-[#7a1228]/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-primary/40"
         >
           <div className="flex items-center justify-between">
             <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
               Staff & Faculty
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-rose-50 text-[#7a1228] font-semibold text-[10px]">
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-rose-50 text-primary font-semibold text-[10px]">
               Team
             </span>
           </div>
@@ -690,7 +739,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
-            <span className="text-[10px] text-[#7a1228] font-bold">{totalTeachersCount} Teachers</span>
+            <span className="text-[10px] text-primary font-bold">{totalTeachersCount} Teachers</span>
             <span>·</span>
             <span className="text-[10px] text-slate-800 font-bold">{totalNonTeachingStaffCount} Ops</span>
           </div>
@@ -699,33 +748,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 3. Daily Attendance % */}
         <div
           onClick={() => onNavigateTab('attendance-register')}
-          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-secondary/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-success/40"
         >
           <div className="flex items-center justify-between">
             <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
-              Roll Call Today
+              {selectedAttendanceDate === todayIso ? 'Roll Call Today' : `Attendance (${selectedAttendanceDate})`}
             </span>
-            <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded ${hasRegisterDataToday ? 'bg-secondary-container text-on-secondary-container' : 'bg-slate-100 text-slate-600'}`}>
-              {hasRegisterDataToday ? 'Live' : 'Pending'}
+            <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded ${hasRegisterDataToday ? 'bg-success-container text-on-success-container' : 'bg-surface-container-low text-slate-600'}`}>
+              {hasRegisterDataToday ? 'Recorded' : 'Pending'}
             </span>
           </div>
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="font-display font-bold text-xl lg:text-2xl text-secondary font-data-mono">
-                {hasRegisterDataToday ? `${avgAttendancePct}%` : '--'}
+              <span className="font-display font-bold text-xl lg:text-2xl text-success font-data-mono">
+                {hasRegisterDataToday ? `${avgAttendancePct}%` : '--%'}
               </span>
               <span className="text-[11px] text-on-surface-variant">
-                {hasRegisterDataToday ? 'present' : 'unmarked'}
+                {hasRegisterDataToday ? 'attendance' : 'not recorded'}
               </span>
             </div>
           </div>
-          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
-            <span className="text-[10px] text-secondary font-bold font-data-mono">
-              {totalPresentToday} Present
-            </span>
-            <span className="text-[10px] text-error font-bold font-data-mono">
-              {absentStudentsCount} Absent
-            </span>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant flex-wrap gap-1">
+            {hasRegisterDataToday ? (
+              <>
+                <span className="text-[10px] text-success font-bold font-data-mono">
+                  {totalPresentToday} Present
+                </span>
+                {lateStudentsCount > 0 && (
+                  <span className="text-[10px] text-amber-700 font-bold font-data-mono">
+                    · {lateStudentsCount} Late
+                  </span>
+                )}
+                {excusedStudentsCount > 0 && (
+                  <span className="text-[10px] text-primary font-bold font-data-mono">
+                    · {excusedStudentsCount} Excused
+                  </span>
+                )}
+                <span className="text-[10px] text-error font-bold font-data-mono">
+                  {absentStudentsCount} Absent
+                </span>
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-500 italic">
+                Attendance not yet recorded
+              </span>
+            )}
           </div>
         </div>
 
@@ -817,7 +884,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="my-2 space-y-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[#7a1228] text-base">meeting_room</span>
+            <span className="material-symbols-outlined text-primary text-base">meeting_room</span>
             Active Cohorts & Class Enrolment Distribution
           </span>
           <span className="text-[11px] text-slate-500 font-medium">
@@ -830,13 +897,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div
               key={c.id}
               onClick={() => onNavigateTab('classes-streams')}
-              className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-[#7a1228]/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-2"
+              className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-2"
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-xs text-slate-900 truncate" title={c.name}>
                   {c.name}
                 </span>
-                <span className="w-6 h-6 rounded-md bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center font-bold text-[10px]">
+                <span className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px]">
                   {c.name.split(' ').map((n: string) => n[0]).join('')}
                 </span>
               </div>
@@ -847,13 +914,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-[10px] text-slate-400 font-normal ml-1">Pupils</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5">
-                  <span className="text-sky-700 font-bold">{c.boys}B</span>
+                  <span className="text-primary font-bold">{c.boys}B</span>
                   <span>·</span>
                   <span className="text-pink-700 font-bold">{c.girls}G</span>
                 </div>
               </div>
 
-              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+              <div className="w-full bg-surface-container-low rounded-full h-1 overflow-hidden">
                 <div
                   className="bg-[#7a1228] h-1 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(100, Math.round((c.total / 40) * 100))}%` }}
@@ -887,13 +954,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <p className="font-label-md text-label-md text-on-surface-variant mt-0.5">
-                Real-time teacher-logged roll calls for today ({todayIso})
+                Real-time teacher-logged roll calls for {selectedAttendanceDate === todayIso ? `today (${todayIso})` : selectedAttendanceDate}
               </p>
             </div>
-            <div className="flex items-center gap-xs self-start sm:self-auto">
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <input
+                type="date"
+                value={selectedAttendanceDate}
+                onChange={(e) => setSelectedAttendanceDate(e.target.value)}
+                className="px-2.5 py-1 text-xs font-semibold bg-surface-container-low border border-outline-variant/50 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Select attendance date"
+              />
               <button
                 onClick={() => onNavigateTab('attendance-register')}
-                className="px-sm py-xs rounded-lg bg-[#7a1228] text-white font-label-md text-label-md hover:bg-[#5e0d1e] transition-colors cursor-pointer"
+                className="px-sm py-xs rounded-lg bg-primary text-white font-label-md text-label-md hover:bg-primary-container transition-colors cursor-pointer"
                 type="button"
               >
                 Open Roll Call Register
@@ -903,40 +977,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Attendance Rows */}
           <div className="flex flex-col gap-sm">
-            {dynamicAttendanceGradeData.length === 0 ? (
+            {!hasAnyGradeAttendanceLoggedToday ? (
               <div className="py-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">
-                No class attendance records logged today yet. Teachers mark roll call via the portal.
+                Attendance not yet recorded for {selectedAttendanceDate === todayIso ? 'today' : selectedAttendanceDate}. Teachers mark roll call via the portal.
               </div>
             ) : (
               dynamicAttendanceGradeData.map((item) => (
                 <div key={item.grade} className="flex items-center gap-md">
-                  <div className="w-20 shrink-0 flex flex-col">
+                  <div className="w-24 shrink-0 flex flex-col">
                     <span className="font-body-md text-body-md font-semibold text-on-surface">
                       {item.grade}
                     </span>
                     <span className="font-label-md text-label-md text-on-surface-variant">
-                      {item.present} / {item.total}
+                      {item.isMarked ? `${item.present} / ${item.marked}` : `0 / ${item.total}`}
                     </span>
                   </div>
                   <div className="flex-1 flex flex-col gap-xs">
                     <div className="w-full h-3 rounded-full bg-surface-container-high overflow-hidden flex">
-                      <div className="bg-secondary h-full transition-all duration-300" style={{ width: `${item.pct}%` }}></div>
-                      <div className="bg-error h-full transition-all duration-300" style={{ width: `${100 - item.pct}%` }}></div>
+                      {item.isMarked ? (
+                        <>
+                          <div className="bg-success h-full transition-all duration-300" style={{ width: `${item.pct}%` }}></div>
+                          <div className="bg-error h-full transition-all duration-300" style={{ width: `${100 - item.pct}%` }}></div>
+                        </>
+                      ) : (
+                        <div className="bg-surface-container h-full w-full" title="Roll call pending"></div>
+                      )}
                     </div>
                   </div>
                   <div className="w-16 text-right shrink-0">
-                    <span className="font-data-mono text-data-mono font-semibold text-secondary">
-                      {item.pct.toFixed(1)}%
+                    <span className={`font-data-mono text-data-mono font-semibold ${item.isMarked ? 'text-success' : 'text-slate-400'}`}>
+                      {item.isMarked ? `${item.pct.toFixed(1)}%` : 'Pending'}
                     </span>
                   </div>
                   <span
                     className={`px-xs py-0.5 rounded font-label-md text-label-md shrink-0 ${
-                      item.late > 0
+                      !item.isMarked
+                        ? 'bg-surface-container-low text-slate-500'
+                        : item.late > 0
                         ? 'bg-amber-100 text-amber-900 font-medium'
-                        : 'bg-surface-container text-on-surface-variant'
+                        : 'bg-emerald-50 text-emerald-800 font-medium'
                     }`}
                   >
-                    {item.late} late
+                    {!item.isMarked ? 'Pending' : item.late > 0 ? `${item.late} Late` : 'On Time'}
                   </span>
                 </div>
               ))
@@ -946,7 +1028,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Attendance Footer Stats */}
           <div className="mt-md pt-sm bg-surface-container-low p-sm rounded-lg flex flex-wrap items-center justify-between gap-xs">
             <div className="flex items-center gap-xs text-on-surface-variant font-label-md text-label-md">
-              <span className="w-3 h-3 rounded bg-secondary"></span> Present ({avgAttendancePct}% avg)
+              <span className="w-3 h-3 rounded bg-success"></span> Present ({avgAttendancePct}% avg)
               <span className="w-3 h-3 rounded bg-error ml-sm"></span> Absent ({students.length > 0 ? Math.max(0, 100 - avgAttendancePct) : 0}%)
             </div>
             <span className="font-label-md text-label-md text-on-surface">
@@ -965,7 +1047,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   CBE Assessment Rubrics
                 </h2>
               </div>
-              <span className="font-label-md text-label-md text-secondary font-medium">
+              <span className="font-label-md text-label-md text-success font-medium">
                 {academicPeriodLabel}
               </span>
             </div>
@@ -990,7 +1072,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {totalAssessments > 0 && (
                     <>
                       <circle
-                        className="text-secondary"
+                        className="text-success"
                         cx="50"
                         cy="50"
                         fill="transparent"
@@ -1012,7 +1094,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         strokeWidth="12"
                       ></circle>
                       <circle
-                        className="text-tertiary-container"
+                        className="text-amber-700"
                         cx="50"
                         cy="50"
                         fill="transparent"
@@ -1049,12 +1131,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex-1 flex flex-col gap-xs w-full">
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
                   <div className="flex items-center gap-xs">
-                    <span className="w-3 h-3 rounded bg-secondary"></span>
+                    <span className="w-3 h-3 rounded bg-success"></span>
                     <span className="font-body-md text-body-md text-on-surface font-medium">
                       Exceeding (EE)
                     </span>
                   </div>
-                  <span className="font-data-mono text-data-mono font-bold text-secondary">
+                  <span className="font-data-mono text-data-mono font-bold text-success">
                     {eePct}%
                   </span>
                 </div>
@@ -1071,12 +1153,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
                   <div className="flex items-center gap-xs">
-                    <span className="w-3 h-3 rounded bg-tertiary-container"></span>
+                    <span className="w-3 h-3 rounded bg-amber-700"></span>
                     <span className="font-body-md text-body-md text-on-surface font-medium">
                       Approaching (AE)
                     </span>
                   </div>
-                  <span className="font-data-mono text-data-mono font-bold text-tertiary-container">
+                  <span className="font-data-mono text-data-mono font-bold text-amber-800">
                     {aePct}%
                   </span>
                 </div>
@@ -1152,7 +1234,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-xs">
                 <button
                   onClick={() => onNavigateTab('invoices-mpesa')}
-                  className="px-sm py-xs rounded-lg bg-emerald-700 text-white font-label-md text-label-md hover:bg-emerald-800 transition-colors cursor-pointer"
+                  className="px-sm py-xs rounded-lg bg-primary text-white font-label-md text-label-md hover:bg-primary-container transition-colors cursor-pointer"
                   type="button"
                 >
                   View Finance Ledger
@@ -1175,28 +1257,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-primary-fixed/70 border border-primary">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-primary-fixed flex items-center gap-1">
                   <span className="material-symbols-outlined text-base">account_balance</span>
                   Bank Settlements
                 </span>
-                <div className="text-lg font-black font-data-mono text-blue-950 mt-1">
+                <div className="text-lg font-black font-data-mono text-on-primary-fixed mt-1">
                   KES {paymentMethods.bank.toLocaleString()}
                 </div>
-                <span className="text-[10px] text-blue-700">
+                <span className="text-[10px] text-primary">
                   {currentTotalFee > 0 ? Math.round((paymentMethods.bank / currentTotalFee) * 100) : 0}% of collections
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800 flex items-center gap-1">
+              <div className="p-3 rounded-xl bg-primary-fixed/70 border border-primary">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-primary-fixed flex items-center gap-1">
                   <span className="material-symbols-outlined text-base">point_of_sale</span>
                   Cash & Other Inflows
                 </span>
-                <div className="text-lg font-black font-data-mono text-purple-950 mt-1">
+                <div className="text-lg font-black font-data-mono text-on-primary-fixed mt-1">
                   KES {(paymentMethods.cash + paymentMethods.other).toLocaleString()}
                 </div>
-                <span className="text-[10px] text-purple-700">
+                <span className="text-[10px] text-primary">
                   Direct receipts & deposits
                 </span>
               </div>
@@ -1258,7 +1340,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </span>
                     <div className="w-full bg-surface-container h-1.5 rounded-full mt-xs overflow-hidden">
                       <div
-                        className={fd.barPct > 25 ? 'bg-error h-full' : 'bg-tertiary-container h-full'}
+                        className={fd.barPct > 25 ? 'bg-error h-full' : 'bg-warning-container h-full'}
                         style={{ width: `${fd.barPct}%` }}
                       ></div>
                     </div>
@@ -1280,8 +1362,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
               </span>
             </div>
             <p className="font-label-md text-label-md text-on-surface-variant mb-md">
@@ -1343,7 +1425,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="mt-sm p-md rounded-xl bg-primary text-on-primary shadow-xs flex flex-col md:flex-row items-center justify-between gap-md">
         <div className="flex items-center gap-md">
           <div className="w-12 h-12 rounded-lg bg-on-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-secondary-fixed text-[28px]">
+            <span className="material-symbols-outlined text-success-fixed text-[28px]">
               verified
             </span>
           </div>

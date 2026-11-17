@@ -40,14 +40,14 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
   return (
     <div className="space-y-6 pb-12">
       {/* Admissions Top Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950 via-blue-900 to-sky-900 p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-maroon-light p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 text-white border border-white/30">
                 Registrar & Admissions Desk
               </span>
-              <span className="flex items-center gap-1 text-xs text-sky-200 font-medium">
+              <span className="flex items-center gap-1 text-xs text-on-primary font-medium">
                 <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
                 Intake Portal Live
               </span>
@@ -55,7 +55,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               Learner Admissions & Staff Onboarding Command
             </h1>
-            <p className="mt-1 text-sm text-sky-100 max-w-xl">
+            <p className="mt-1 text-sm text-on-primary max-w-xl">
               Processing student enrollments, guardian records verification, classroom stream allocations, and teacher onboarding.
             </p>
           </div>
@@ -70,14 +70,14 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
             </button>
             <button
               onClick={onOpenAdmitModal}
-              className="px-4 py-2.5 rounded-xl bg-white text-blue-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white text-on-primary-fixed font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">person_add</span>
               <span>Admit New Learner</span>
             </button>
             <button
               onClick={onOpenOnboardTeacher}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">badge</span>
               <span>Onboard Teacher</span>
@@ -88,23 +88,23 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
 
       {/* Intake & Demographics Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Total Enrolled Learners</span>
-            <span className="material-symbols-outlined text-blue-700 text-[20px]">school</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">school</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{totalLearners}</div>
-            <div className="text-[11px] text-blue-700 font-semibold mt-1">
+            <div className="text-[11px] text-primary font-semibold mt-1">
               Active across Playgroup through Grade 9
             </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Gender Ratio</span>
-            <span className="material-symbols-outlined text-purple-700 text-[20px]">wc</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">wc</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">
@@ -116,10 +116,10 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Guardian Verification</span>
-            <span className="material-symbols-outlined text-emerald-600 text-[20px]">contact_phone</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">contact_phone</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-emerald-700">{verifiedGuardians}</div>
@@ -129,10 +129,10 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-xs font-bold uppercase tracking-wider">Teaching Staff Roster</span>
-            <span className="material-symbols-outlined text-indigo-600 text-[20px]">badge</span>
+            <span className="material-symbols-outlined text-primary text-[20px]">badge</span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{teachers.length}</div>
@@ -144,7 +144,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
       </div>
 
       {/* Recent Admissions Directory */}
-      <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">
+      <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <h2 className="text-base font-bold text-on-surface">Recent Student Admissions</h2>
@@ -161,7 +161,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search student or guardian..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-outline-variant/50 text-xs focus:outline-none focus:border-blue-600"
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-outline-variant/50 text-xs focus:outline-none focus:border-primary"
             />
           </div>
         </div>
@@ -188,7 +188,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
               <tbody className="divide-y divide-outline-variant/20">
                 {filteredStudents.slice(0, 8).map((student) => (
                   <tr key={student.id} className="hover:bg-surface-container-lowest transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-blue-800">
+                    <td className="py-3 px-4 font-mono font-bold text-on-primary-fixed">
                       {student.admissionNumber}
                     </td>
                     <td className="py-3 px-4 font-semibold text-on-surface">
@@ -196,7 +196,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
                     </td>
                     <td className="py-3 px-4 text-on-surface-variant">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        student.gender === 'MALE' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'
+                        student.gender === 'MALE' ? 'bg-primary-fixed text-primary' : 'bg-pink-50 text-pink-700'
                       }`}>
                         {student.gender}
                       </span>
@@ -225,9 +225,9 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div
           onClick={() => onNavigateTab('students-guardians')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-blue-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">badge</span>
           </div>
           <div>
@@ -240,9 +240,9 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-blue-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">person_pin</span>
           </div>
           <div>
@@ -255,9 +255,9 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
 
         <div
           onClick={() => onNavigateTab('classes-streams')}
-          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-blue-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+          className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[26px]">meeting_room</span>
           </div>
           <div>

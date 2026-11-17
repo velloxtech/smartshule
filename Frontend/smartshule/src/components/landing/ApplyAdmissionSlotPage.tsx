@@ -212,7 +212,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
       {/* Main Header Banner */}
-      <section className="relative bg-[#7b1c35] text-white py-12 lg:py-16 px-6 lg:px-12 overflow-hidden shadow-lg">
+      <section className="relative bg-primary text-white py-12 lg:py-16 px-6 lg:px-12 overflow-hidden shadow-lg">
         <div className="absolute inset-0 opacity-15 pointer-events-none">
           <img src={logo} alt="Grace Seeds School" className="w-full h-full object-cover" />
         </div>
@@ -258,7 +258,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 <button
                   type="button"
                   onClick={onNavigateOnboarding}
-                  className="text-[11px] font-bold text-[#5a1226] bg-[#e8a92a] hover:bg-[#f5c84a] px-3.5 py-1.5 rounded-full shadow transition-all cursor-pointer"
+                  className="text-[11px] font-bold text-primary-container bg-[#e8a92a] hover:bg-[#f5c84a] px-3.5 py-1.5 rounded-full shadow transition-all cursor-pointer"
                 >
                   Admitted? Onboard Learner →
                 </button>
@@ -311,7 +311,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               onClick={() => setActiveTab('apply')}
               className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'apply'
-                  ? 'bg-[#e8a92a] text-[#5a1226] shadow-md'
+                  ? 'bg-[#e8a92a] text-primary-container shadow-md'
                   : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
               }`}
             >
@@ -323,7 +323,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               onClick={() => setActiveTab('track')}
               className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'track'
-                  ? 'bg-[#e8a92a] text-[#5a1226] shadow-md'
+                  ? 'bg-[#e8a92a] text-primary-container shadow-md'
                   : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
               }`}
             >
@@ -339,14 +339,14 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
         {activeTab === 'apply' ? (
           submittedRecord ? (
             /* Application Success Screen */
-            <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-xl border border-[#f0d8df] text-center animate-fadeIn">
+            <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-xl border border-primary-fixed text-center animate-fadeIn">
               <div className="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <span className="text-xs font-bold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mb-3">
                 Application Received & Queued
               </span>
-              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl font-bold text-[#5a1226] mb-3">
+              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl font-bold text-primary-container mb-3">
                 Admission Slot Reserved Successfully!
               </h2>
               <p className="text-[#8a6470] text-sm max-w-xl mx-auto mb-8">
@@ -358,17 +358,17 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               </p>
 
               {/* Tracking Reference Highlight Box */}
-              <div className="bg-[#f9eef1] border-2 border-dashed border-[#7b1c35]/40 rounded-2xl p-6 max-w-lg mx-auto mb-8 text-center">
-                <p className="text-xs font-bold text-[#7b1c35] uppercase tracking-wider mb-1">
+              <div className="bg-primary-fixed border-2 border-dashed border-primary/40 rounded-2xl p-6 max-w-lg mx-auto mb-8 text-center">
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">
                   Your Official Slot Tracking Code
                 </p>
-                <p className="text-2xl sm:text-3xl font-mono font-extrabold text-[#5a1226] tracking-wider mb-3">
+                <p className="text-2xl sm:text-3xl font-mono font-extrabold text-primary-container tracking-wider mb-3">
                   {submittedRecord.trackingCode}
                 </p>
                 <button
                   type="button"
                   onClick={() => handleCopyCode(submittedRecord.trackingCode)}
-                  className="inline-flex items-center gap-1.5 bg-[#7b1c35] hover:bg-[#5a1226] text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-container text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer shadow-sm"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>{copiedTracking ? 'Copied to Clipboard!' : 'Copy Tracking Reference'}</span>
@@ -379,25 +379,25 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               </div>
 
               {/* What Happens Next Section */}
-              <div className="bg-[#fdfaf6] border border-[#f0d8df] rounded-2xl p-6 max-w-2xl mx-auto text-left mb-8 space-y-4">
-                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-base text-[#5a1226]">
+              <div className="bg-[#fdfaf6] border border-primary-fixed rounded-2xl p-6 max-w-2xl mx-auto text-left mb-8 space-y-4">
+                <h3 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-base text-primary-container">
                   What Happens Next?
                 </h3>
                 <div className="grid sm:grid-cols-3 gap-4 text-xs">
-                  <div className="bg-white p-3.5 rounded-xl border border-[#f0d8df]">
-                    <div className="font-bold text-[#7b1c35] mb-1">1. Review Callback</div>
+                  <div className="bg-white p-3.5 rounded-xl border border-primary-fixed">
+                    <div className="font-bold text-primary mb-1">1. Review Callback</div>
                     <p className="text-[#8a6470]">
                       Admissions will contact you at <strong>{submittedRecord.parentPhone}</strong> within 24 hours.
                     </p>
                   </div>
-                  <div className="bg-white p-3.5 rounded-xl border border-[#f0d8df]">
-                    <div className="font-bold text-[#7b1c35] mb-1">2. School Tour</div>
+                  <div className="bg-white p-3.5 rounded-xl border border-primary-fixed">
+                    <div className="font-bold text-primary mb-1">2. School Tour</div>
                     <p className="text-[#8a6470]">
                       Visit our school facilities and attend a child-friendly readiness interaction.
                     </p>
                   </div>
-                  <div className="bg-white p-3.5 rounded-xl border border-[#f0d8df]">
-                    <div className="font-bold text-[#7b1c35] mb-1">3. Official Letter</div>
+                  <div className="bg-white p-3.5 rounded-xl border border-primary-fixed">
+                    <div className="font-bold text-primary mb-1">3. Official Letter</div>
                     <p className="text-[#8a6470]">
                       Receive your formal admission package and pure numeric admission number.
                     </p>
@@ -407,9 +407,9 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 {/* Important Fee Guidance Box */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-950 mt-4">
                   <div className="flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-amber-900 mb-0.5">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-on-primary-fixed mb-0.5">
                         School Fee & Commitment Payment Instruction
                       </h4>
                       <p className="text-xs text-amber-800 leading-relaxed">
@@ -429,7 +429,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSwitchToTrackWithCode(submittedRecord.trackingCode)}
-                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-6 py-3 rounded-full text-xs transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5"
+                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-primary-container font-bold px-6 py-3 rounded-full text-xs transition-all shadow-md cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <Search className="w-3.5 h-3.5" />
                   <span>View in Application Tracker</span>
@@ -437,7 +437,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="bg-white border border-[#f0d8df] hover:border-[#7b1c35] text-[#5a1226] font-bold px-6 py-3 rounded-full text-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  className="bg-white border border-primary-fixed hover:border-primary text-primary-container font-bold px-6 py-3 rounded-full text-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Application Slip</span>
@@ -445,7 +445,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold px-6 py-3 rounded-full text-xs transition-all cursor-pointer"
+                  className="bg-primary hover:bg-primary-container text-white font-bold px-6 py-3 rounded-full text-xs transition-all cursor-pointer"
                 >
                   + Submit Another Learner Slot
                 </button>
@@ -456,7 +456,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
             <form onSubmit={handleSubmit} className="space-y-8 animate-fadeIn">
               {/* Important Fee Guidance Banner at Top of Form */}
               <div className="bg-amber-50 border border-amber-300/80 rounded-2xl p-5 text-amber-950 shadow-xs flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs leading-relaxed">
                   <p className="font-bold text-amber-900 mb-1 uppercase tracking-wider">
                     Official Fee Payment Reference Policy
@@ -470,13 +470,13 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               </div>
 
               {/* CARD 1: Academic Level & Preferred Intake */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#f0d8df] shadow-sm">
-                <div className="flex items-center gap-3 border-b border-[#f0d8df] pb-4 mb-6">
-                  <span className="w-8 h-8 rounded-full bg-[#7b1c35] text-white font-bold text-xs flex items-center justify-center">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-primary-fixed shadow-sm">
+                <div className="flex items-center gap-3 border-b border-primary-fixed pb-4 mb-6">
+                  <span className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center">
                     1
                   </span>
                   <div>
-                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226]">
+                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container">
                       Academic Placement & School Services
                     </h2>
                     <p className="text-xs text-[#8a6470]">
@@ -487,13 +487,13 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1.5">
                       Target Grade / CBC Level *
                     </label>
                     <select
                       value={targetGrade}
                       onChange={(e) => setTargetGrade(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm font-semibold text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm font-semibold text-[#1f0a10] focus:outline-none focus:border-primary"
                     >
                       {GRADE_LEVELS.map((g) => (
                         <option key={g.value} value={g.value}>
@@ -507,13 +507,13 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1.5">
                       Preferred Entry Term *
                     </label>
                     <select
                       value={entryTerm}
                       onChange={(e) => setEntryTerm(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm font-semibold text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm font-semibold text-[#1f0a10] focus:outline-none focus:border-primary"
                     >
                       {INTAKE_TERMS.map((term) => (
                         <option key={term} value={term}>
@@ -529,13 +529,13 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               </div>
 
               {/* CARD 2: Prospective Learner Details */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#f0d8df] shadow-sm">
-                <div className="flex items-center gap-3 border-b border-[#f0d8df] pb-4 mb-6">
-                  <span className="w-8 h-8 rounded-full bg-[#7b1c35] text-white font-bold text-xs flex items-center justify-center">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-primary-fixed shadow-sm">
+                <div className="flex items-center gap-3 border-b border-primary-fixed pb-4 mb-6">
+                  <span className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center">
                     2
                   </span>
                   <div>
-                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226]">
+                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container">
                       Prospective Learner Details
                     </h2>
                     <p className="text-xs text-[#8a6470]">
@@ -546,7 +546,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
 
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       First Name *
                     </label>
                     <input
@@ -555,12 +555,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Liam"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Middle Name
                     </label>
                     <input
@@ -568,12 +568,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Kiprono"
                       value={middleName}
                       onChange={(e) => setMiddleName(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Last / Family Name *
                     </label>
                     <input
@@ -582,18 +582,18 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Cheruiyot"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Gender *
                     </label>
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value as 'Boy' | 'Girl')}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     >
                       <option value="Boy">Boy</option>
                       <option value="Girl">Girl</option>
@@ -601,7 +601,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Date of Birth *
                     </label>
                     <input
@@ -609,12 +609,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       required
                       value={dob}
                       onChange={(e) => setDob(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       NEMIS UPI / Assessment No
                     </label>
                     <input
@@ -622,12 +622,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="Optional for transfer pupils"
                       value={nemisUpi}
                       onChange={(e) => setNemisUpi(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div className="sm:col-span-3">
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Previous Kindergarten / School Attended
                     </label>
                     <input
@@ -635,14 +635,14 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Little Angels Daycare, Kisumu (Leave blank if first-time schooling)"
                       value={previousSchool}
                       onChange={(e) => setPreviousSchool(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   {/* Medical & Dietary Notes */}
                   <div className="sm:col-span-3 grid sm:grid-cols-2 gap-4 pt-2">
                     <div>
-                      <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                         Allergies or Medical Disclosures
                       </label>
                       <input
@@ -650,11 +650,11 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                         placeholder="e.g. Mild peanut allergy, asthma, or None"
                         value={medicalNotes}
                         onChange={(e) => setMedicalNotes(e.target.value)}
-                        className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-[#7b1c35]"
+                        className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                         Dietary Preferences / Restrictions
                       </label>
                       <input
@@ -662,14 +662,14 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                         placeholder="e.g. Vegetarian, Halal, Nut-free, or None"
                         value={dietaryRequirements}
                         onChange={(e) => setDietaryRequirements(e.target.value)}
-                        className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-[#7b1c35]"
+                        className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary"
                       />
                     </div>
                   </div>
 
                   {/* Co-Curricular Club Interests */}
                   <div className="sm:col-span-3 pt-3">
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-2">
                       Co-Curricular & Club Interests (Select all that apply)
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -682,8 +682,8 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                             onClick={() => toggleClub(club)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               selected
-                                ? 'bg-[#7b1c35] text-white border-[#7b1c35]'
-                                : 'bg-[#fdfaf6] text-[#5a1226] border-[#f0d8df] hover:border-[#7b1c35]'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-[#fdfaf6] text-primary-container border-primary-fixed hover:border-primary'
                             }`}
                           >
                             {selected ? <Check className="w-3 h-3" /> : <span>+</span>}
@@ -697,13 +697,13 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               </div>
 
               {/* CARD 3: Parent / Primary Guardian Details */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#f0d8df] shadow-sm">
-                <div className="flex items-center gap-3 border-b border-[#f0d8df] pb-4 mb-6">
-                  <span className="w-8 h-8 rounded-full bg-[#7b1c35] text-white font-bold text-xs flex items-center justify-center">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-primary-fixed shadow-sm">
+                <div className="flex items-center gap-3 border-b border-primary-fixed pb-4 mb-6">
+                  <span className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center">
                     3
                   </span>
                   <div>
-                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226]">
+                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container">
                       Parent / Guardian Information
                     </h2>
                     <p className="text-xs text-[#8a6470]">
@@ -714,7 +714,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
 
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Parent / Guardian Full Name *
                     </label>
                     <input
@@ -723,18 +723,18 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Mercy Chebet Cheruiyot"
                       value={parentName}
                       onChange={(e) => setParentName(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Relationship *
                     </label>
                     <select
                       value={parentRelationship}
                       onChange={(e) => setParentRelationship(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     >
                       <option value="Mother">Mother</option>
                       <option value="Father">Father</option>
@@ -744,7 +744,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Primary Phone Number *
                     </label>
                     <input
@@ -753,12 +753,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="07XX XXX XXX or 01XX XXX XXX"
                       value={parentPhone}
                       onChange={(e) => setParentPhone(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Email Address *
                     </label>
                     <input
@@ -767,12 +767,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="parent@example.com"
                       value={parentEmail}
                       onChange={(e) => setParentEmail(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       National ID / Passport No
                     </label>
                     <input
@@ -780,12 +780,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. 28471932"
                       value={parentNationalId}
                       onChange={(e) => setParentNationalId(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Residential Area / Estate *
                     </label>
                     <input
@@ -794,12 +794,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="e.g. Kisian, Otonglo, Milimani, or Kisumu West"
                       value={residentialAddress}
                       onChange={(e) => setResidentialAddress(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#5a1226] uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-primary-container uppercase tracking-wider mb-1">
                       Secondary Emergency Phone
                     </label>
                     <input
@@ -807,20 +807,20 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                       placeholder="Alternative contact number"
                       value={emergencyPhone}
                       onChange={(e) => setEmergencyPhone(e.target.value)}
-                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
+                      className="w-full bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
                 </div>
               </div>
 
               {/* CARD 4: Declaration & Submit */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#f0d8df] shadow-sm space-y-5">
-                <div className="flex items-center gap-3 border-b border-[#f0d8df] pb-4">
-                  <span className="w-8 h-8 rounded-full bg-[#7b1c35] text-white font-bold text-xs flex items-center justify-center">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-primary-fixed shadow-sm space-y-5">
+                <div className="flex items-center gap-3 border-b border-primary-fixed pb-4">
+                  <span className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center">
                     4
                   </span>
                   <div>
-                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226]">
+                    <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container">
                       Declaration & Application Submission
                     </h2>
                     <p className="text-xs text-[#8a6470]">
@@ -829,16 +829,16 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-[#f9eef1] border border-[#f0d8df] rounded-2xl p-4">
+                <div className="bg-primary-fixed border border-primary-fixed rounded-2xl p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       required
                       checked={declarationAccepted}
                       onChange={(e) => setDeclarationAccepted(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded text-[#7b1c35] focus:ring-[#7b1c35]"
+                      className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary"
                     />
-                    <span className="text-xs text-[#5a1226] leading-relaxed">
+                    <span className="text-xs text-primary-container leading-relaxed">
                       I declare that the information provided herein is truthful and complete to the best of my knowledge. I hereby apply for an admission learning slot for my child at <strong>Grace Seeds School</strong> for Academic Year 2027 and agree to follow school policies and guidelines upon placement.
                     </span>
                   </label>
@@ -846,14 +846,14 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                   <p className="text-[11px] text-[#8a6470] flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-[#7b1c35] shrink-0" />
+                    <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>All submissions are encrypted and processed securely by Grace Seeds School Admissions Directorate.</span>
                   </p>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto bg-[#7b1c35] hover:bg-[#5a1226] disabled:opacity-50 text-white font-bold px-8 py-4 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto bg-primary hover:bg-primary-container disabled:opacity-50 text-white font-bold px-8 py-4 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>{isSubmitting ? 'Submitting Application...' : 'Submit Admission Slot Application →'}</span>
                   </button>
@@ -865,10 +865,10 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
           /* Track Application Tab */
           <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#f0d8df] shadow-lg animate-fadeIn">
             <div className="text-center max-w-xl mx-auto mb-8">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#7b1c35] bg-[#f9eef1] px-3 py-1 rounded-full border border-[#f0d8df] mb-2 inline-block">
+              <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary-fixed px-3 py-1 rounded-full border border-primary-fixed mb-2 inline-block">
                 Application Status Portal
               </span>
-              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl sm:text-3xl font-bold text-[#5a1226]">
+              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl sm:text-3xl font-bold text-primary-container">
                 Track Your Slot Application
               </h2>
               <p className="text-xs sm:text-sm text-[#8a6470] mt-1">
@@ -883,11 +883,11 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                 placeholder={`e.g. TRK-${nextCalYear}-123456 or 0722345678`}
                 value={trackingQuery}
                 onChange={(e) => setTrackingQuery(e.target.value)}
-                className="flex-1 bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#7b1c35]"
+                className="flex-1 bg-[#fdfaf6] border border-primary-fixed rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
               />
               <button
                 type="submit"
-                className="bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold px-6 py-3 rounded-xl text-sm shadow transition-colors cursor-pointer"
+                className="bg-primary hover:bg-primary-container text-white font-bold px-6 py-3 rounded-xl text-sm shadow transition-colors cursor-pointer"
               >
                 Search Application
               </button>
@@ -896,12 +896,12 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
             {trackSearched && (
               trackedRecord ? (
                 <div className="bg-[#fdfaf6] border border-[#f0d8df] rounded-2xl p-6 max-w-2xl mx-auto animate-fadeIn">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f0d8df] pb-4 mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary-fixed pb-4 mb-4">
                     <div>
-                      <p className="text-[11px] font-bold text-[#7b1c35] uppercase tracking-wider">
+                      <p className="text-[11px] font-bold text-primary uppercase tracking-wider">
                         Tracking Reference: {trackedRecord.trackingCode}
                       </p>
-                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226]">
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-primary-container">
                         {trackedRecord.firstName} {trackedRecord.lastName}
                       </h3>
                       <p className="text-xs text-[#8a6470]">
@@ -933,17 +933,17 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                   <div className="grid sm:grid-cols-2 gap-4 text-xs mb-6">
                     <div>
                       <span className="text-[#8a6470] block">Parent / Guardian:</span>
-                      <span className="font-bold text-[#5a1226]">
+                      <span className="font-bold text-primary-container">
                         {trackedRecord.parentName} ({trackedRecord.parentRelationship})
                       </span>
                     </div>
                     <div>
                       <span className="text-[#8a6470] block">Phone Contact:</span>
-                      <span className="font-bold text-[#5a1226]">{trackedRecord.parentPhone}</span>
+                      <span className="font-bold text-primary-container">{trackedRecord.parentPhone}</span>
                     </div>
                     <div>
                       <span className="text-[#8a6470] block">Date Submitted:</span>
-                      <span className="font-bold text-[#5a1226]">
+                      <span className="font-bold text-primary-container">
                         {new Date(trackedRecord.submittedAt).toLocaleDateString('en-GB', {
                           day: 'numeric',
                           month: 'short',
@@ -968,7 +968,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                           <button
                             type="button"
                             onClick={onNavigateOnboarding}
-                            className="mt-2.5 inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+                            className="mt-2.5 inline-flex items-center gap-1.5 bg-primary hover:bg-primary-container text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
                           >
                             <span>Proceed to Complete Learner KYC Dossier →</span>
                           </button>
@@ -986,7 +986,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                             Step 02: Appointment Scheduled
                           </span>
                         </div>
-                        <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-amber-950 mb-1">
+                        <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-on-primary-fixed mb-1">
                           {trackedRecord.scheduledStep.stepTitle}
                         </h4>
                         <div className="grid sm:grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-amber-300/60 font-medium">
@@ -1016,7 +1016,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
                           )}
                         </div>
                         <p className="text-[11px] text-amber-900 mt-3 italic flex items-center gap-1 font-medium">
-                          <span className="material-symbols-outlined text-[15px] text-amber-800">mail</span>
+                          <span className="material-symbols-outlined text-[15px] text-on-primary-fixed">mail</span>
                           <span>An appointment confirmation email has been dispatched to {trackedRecord.parentEmail}.</span>
                         </p>
                       </div>
@@ -1056,14 +1056,14 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
       </main>
 
       {/* Footer Info Section */}
-      <footer className="bg-[#5a1226] text-white border-t border-white/10 py-12 px-6">
+      <footer className="bg-primary-container text-white border-t border-white/10 py-12 px-6">
         <div className="max-w-7xl mx-auto grid sm:grid-cols-3 gap-6 text-xs text-white/80">
           <div>
             <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-[#f5c84a] mb-2">
               Grace Seeds School
             </h4>
             <p>Kisumu, Kisian, KEMRI Road</p>
-            <p className="mt-1">P.O. Box Private Bag, Kisumu, Kenya</p>
+            <p className="mt-1">P.O Box 12-20123</p>
           </div>
           <div>
             <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-[#f5c84a] mb-2">

@@ -13,17 +13,17 @@ WORKDIR /app/Frontend/smartshule
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 
 # Configure npm network resilience to prevent ECONNRESET and transient network drops
-RUN npm config set fetch-retries 5 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-timeout 300000 && \
-    npm config set maxsockets 5
+RUN npm config set fetch-retries 3 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set fetch-timeout 60000 && \
+    npm config set maxsockets 15
 
 # Copy frontend dependency manifests
 COPY Frontend/smartshule/package*.json ./
 
 # Install all frontend dependencies
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # Copy frontend source code and configuration
 COPY Frontend/smartshule/ ./
@@ -49,17 +49,17 @@ ENV NODE_OPTIONS="--max-old-space-size=1536"
 COPY --from=frontend-builder /app/Frontend/smartshule/dist ./Frontend/smartshule/dist
 
 # Configure npm network resilience to prevent ECONNRESET and transient network drops
-RUN npm config set fetch-retries 5 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-timeout 300000 && \
-    npm config set maxsockets 5
+RUN npm config set fetch-retries 3 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set fetch-timeout 60000 && \
+    npm config set maxsockets 15
 
 # Copy root backend dependency manifests
 COPY package*.json ./
 
 # Install backend dependencies (including devDependencies required for tsc)
-RUN npm ci
+RUN npm ci --ignore-scripts --no-audit --no-fund
 
 # Copy backend TypeScript source code and configuration
 COPY tsconfig.json ./

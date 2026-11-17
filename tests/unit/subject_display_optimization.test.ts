@@ -4,7 +4,7 @@ import { IAcademicRepository } from '../../src/core/ports/repositories/IAcademic
 import { IStudentRepository } from '../../src/core/ports/repositories/IStudentRepository';
 import { ICBCAssessmentRepository } from '../../src/core/ports/repositories/ICbcAssessmentRepository';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
-import { PerformanceLevel, CBCReportCard } from '../../src/core/domain/cbc/CbcAssessment';
+import { PerformanceLevel, CBCReportCard, SummativeAssessment } from '../../src/core/domain/cbc/CbcAssessment';
 
 describe('Subject Display Optimization & Deduplication Unit Tests', () => {
   let academicRepo: jest.Mocked<IAcademicRepository>;
@@ -97,16 +97,16 @@ describe('Subject Display Optimization & Deduplication Unit Tests', () => {
 
     // Summative assessments: English and Science have marks, Math has marks under la-g4-math-1, French has NO marks
     const mockAssessments: any[] = [
-      { studentId: 's-001', learningAreaId: 'la-g4-math-1', overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS, strandScores: [{ rawScore: 92 }] },
-      { studentId: 's-001', learningAreaId: 'la-g4-eng', overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS, strandScores: [{ rawScore: 88 }] },
-      { studentId: 's-001', learningAreaId: 'la-g4-sci', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ rawScore: 75 }] },
-      { studentId: 's-002', learningAreaId: 'la-g4-math-1', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ rawScore: 78 }] },
-      { studentId: 's-002', learningAreaId: 'la-g4-eng', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ rawScore: 70 }] },
-      { studentId: 's-002', learningAreaId: 'la-g4-sci', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ rawScore: 72 }] },
+      { studentId: 's-001', learningAreaId: 'la-g4-math-1', overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 92 }] },
+      { studentId: 's-001', learningAreaId: 'la-g4-eng', overallPerformanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 88 }] },
+      { studentId: 's-001', learningAreaId: 'la-g4-sci', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 75 }] },
+      { studentId: 's-002', learningAreaId: 'la-g4-math-1', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 78 }] },
+      { studentId: 's-002', learningAreaId: 'la-g4-eng', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 70 }] },
+      { studentId: 's-002', learningAreaId: 'la-g4-sci', overallPerformanceLevel: PerformanceLevel.MEETING_EXPECTATIONS, strandScores: [{ maxScore: 100, rawScore: 72 }] },
     ];
 
     CBCRepo = {
-      findSummatives: jest.fn().mockResolvedValue(mockAssessments),
+      findSummatives: jest.fn().mockImplementation((query: any = {}) => Promise.resolve(mockAssessments.map((record, index) => SummativeAssessment.create({ ...record, teacherId: 'teacher', termId: 'term-3', academicYearId: 'year-2026', evaluationDate: '2026-10-01', teacherRemarks: '' }, `summative-${index}`)).filter(row => !query.studentId || row.studentId === query.studentId))),
       findFormatives: jest.fn().mockResolvedValue([]),
       findReportCardsByTerm: jest.fn().mockResolvedValue([]),
       findReportCard: jest.fn().mockResolvedValue(null),

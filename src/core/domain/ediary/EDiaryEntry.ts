@@ -28,10 +28,10 @@ export interface EDiaryEntryProps {
   date: string; // YYYY-MM-DD
   title: string;
   homework: string;
-  homeworkTasks: EDiaryHomeworkTask[];
+  homeworkTasks?: EDiaryHomeworkTask[];
   teacherRemarks?: string;
   requirementsTomorrow?: string;
-  tomorrowRequirements: string[];
+  tomorrowRequirements?: string[];
   acknowledgements: EDiaryAcknowledgement[];
   status?: 'DRAFT' | 'PUBLISHED';
 }
@@ -57,7 +57,7 @@ export class EDiaryEntry extends Entity<EDiaryEntryProps> {
       tomorrowRequirements = requirementsTomorrow.split(',').map(s => s.trim()).filter(Boolean);
     }
 
-    const title = props.title || `Daily Homework & Class Activities (${props.date})`;
+    const title = props.title || `Daily Homefun & Communication Diary (${props.date})`;
     const status = props.status || 'PUBLISHED';
     const acknowledgements = Array.isArray(props.acknowledgements) ? props.acknowledgements : [];
 
@@ -123,7 +123,7 @@ export class EDiaryEntry extends Entity<EDiaryEntryProps> {
   }
 
   public get homeworkTasks(): EDiaryHomeworkTask[] {
-    return this._props.homeworkTasks;
+    return this._props.homeworkTasks || [];
   }
 
   public get teacherRemarks(): string | undefined {
@@ -135,7 +135,7 @@ export class EDiaryEntry extends Entity<EDiaryEntryProps> {
   }
 
   public get tomorrowRequirements(): string[] {
-    return this._props.tomorrowRequirements;
+    return this._props.tomorrowRequirements || [];
   }
 
   public get acknowledgements(): EDiaryAcknowledgement[] {

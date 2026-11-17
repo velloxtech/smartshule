@@ -3,6 +3,8 @@ import { CoreCompetency, CoreValue } from '../cbc/CbcAssessment';
 
 export enum LessonPlanStatus {
   DRAFT = 'DRAFT',
+  /** Legacy status retained for previously saved lesson records. */
+  RECORDED = 'RECORDED',
   SUBMITTED = 'SUBMITTED',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED'
@@ -14,10 +16,22 @@ export interface LessonDevelopmentStep {
   durationMinutes: number;
   teacherActivities: string;
   learnerActivities: string;
+  learningPoints?: string;
+  resources?: string;
   assessmentCriterion?: string;
 }
 
 export interface LessonPlanProps {
+  otherLearningAreas?: string[];
+  communityServiceActivities?: string;
+  nonFormalActivity?: string;
+  assessmentRubric?: {criterion:string; exceeds:string; meets:string; approaching:string; below:string}[];
+
+  weekNumber?: number;
+  lessonNumber?: number;
+  lessonTime?: string;
+  pcis?: string[];
+
   teacherId: string;
   schemeOfWorkEntryId?: string;
   learningAreaId: string;
@@ -33,6 +47,8 @@ export interface LessonPlanProps {
   keyInquiryQuestions: string[];
   coreCompetenciesAddressed: CoreCompetency[];
   valuesAddressed: CoreValue[];
+  learningExperiences?: string[];
+  assessmentMethods?: string[];
   learningResources: string[];
   steps: LessonDevelopmentStep[];
   extendedActivity?: string;
@@ -148,6 +164,17 @@ export class LessonPlan extends Entity<LessonPlanProps> {
       learningAreaId: this.learningAreaId,
       classRoomId: this.classRoomId,
       streamId: this.streamId,
+      weekNumber: this._props.weekNumber,
+      lessonNumber: this._props.lessonNumber,
+      lessonTime: this._props.lessonTime,
+      pcis: this._props.pcis,
+      otherLearningAreas: this._props.otherLearningAreas,
+      communityServiceActivities: this._props.communityServiceActivities,
+      nonFormalActivity: this._props.nonFormalActivity,
+      assessmentRubric: this._props.assessmentRubric,
+
+      rollBoys: this._props.rollBoys,
+      rollGirls: this._props.rollGirls,
       lessonDate: this.lessonDate,
       durationMinutes: this.durationMinutes,
       roll: {
@@ -161,6 +188,8 @@ export class LessonPlan extends Entity<LessonPlanProps> {
       keyInquiryQuestions: this._props.keyInquiryQuestions,
       coreCompetenciesAddressed: this._props.coreCompetenciesAddressed,
       valuesAddressed: this._props.valuesAddressed,
+      learningExperiences: this._props.learningExperiences,
+      assessmentMethods: this._props.assessmentMethods,
       learningResources: this._props.learningResources,
       steps: this.steps,
       extendedActivity: this._props.extendedActivity,

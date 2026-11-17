@@ -1,5 +1,5 @@
 /**
- * SmartShule CBC Management System - Grace Seeds School
+ * Grace Seeds School CBC Management System - Grace Seeds School
  * Premium Global Email Design System & Template Engine
  */
 
@@ -26,7 +26,7 @@ export interface RenderedEmail {
 export class EmailTemplateEngine {
   private static readonly SCHOOL_NAME = 'Grace Seeds School';
   private static readonly SCHOOL_TAGLINE = '"The future Begins Here"';
-  private static readonly SCHOOL_LOCATION = 'KEMRI Street, Kisian, Kisumu County, Kenya';
+  private static readonly SCHOOL_LOCATION = 'P.O Box 12-20123';
   private static readonly SCHOOL_PHONE = '0745436312';
   private static readonly SCHOOL_EMAIL = 'schoolgraceseeds@gmail.com';
 
@@ -144,7 +144,7 @@ export class EmailTemplateEngine {
                 Email: <a href="mailto:${this.SCHOOL_EMAIL}" style="color: #7a1228; text-decoration: none; font-weight: 600;">${this.SCHOOL_EMAIL}</a>
               </div>
               <div style="margin-top: 16px; font-size: 11px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 12px;">
-                This is an automated system notification from SmartShule CBC Management System. Please do not reply directly to this email unless directed.
+                This is an automated system notification from Grace Seeds School CBC Management System. Please do not reply directly to this email unless directed.
               </div>
             </td>
           </tr>
@@ -311,7 +311,7 @@ Tel: ${this.SCHOOL_PHONE} | Email: ${this.SCHOOL_EMAIL}
     const contentHtml = `
       <p style="margin: 0 0 16px;">Dear <strong>${recipientEscaped}</strong>,</p>
       <p style="margin: 0 0 16px;">
-        Welcome to <strong>${this.SCHOOL_NAME}</strong>. An official user account has been registered for you with the role of <strong>${roleEscaped}</strong> on the SmartShule CBE Management Platform.
+        Welcome to <strong>${this.SCHOOL_NAME}</strong>. An official user account has been registered for you with the role of <strong>${roleEscaped}</strong> on the Grace Seeds School CBE Management Platform.
       </p>
       ${tempPassHtml}
       <p style="margin: 16px 0;">
@@ -330,12 +330,12 @@ Tel: ${this.SCHOOL_PHONE} | Email: ${this.SCHOOL_EMAIL}
     });
 
     const text = `
-${this.SCHOOL_NAME} - Welcome to SmartShule CBE Portal
+${this.SCHOOL_NAME} - Welcome to Grace Seeds School CBE Portal
 ${this.SCHOOL_TAGLINE}
 
 Dear ${options.recipientName || 'Member'},
 
-Welcome to ${this.SCHOOL_NAME}. Your user account (${options.role}) is now active on the SmartShule CBE Portal.
+Welcome to ${this.SCHOOL_NAME}. Your user account (${options.role}) is now active on the Grace Seeds School CBE Portal.
 
 ${options.temporaryPassword ? `Temporary Password: ${options.temporaryPassword}\nYou will be asked to change it upon first login.\n` : ''}
 Sign In URL:
@@ -594,10 +594,10 @@ ${options.requesterName} has submitted a document requiring your review and appr
 ${options.deadline ? `- Deadline: ${options.deadline}\n` : ''}
 ${options.notes ? `- Notes: ${options.notes}\n` : ''}
 
-Review and approve securely in SmartShule:
+Review and approve securely in Grace Seeds School:
 ${options.reviewUrl}
 
-Note: You must log in with your authorized SmartShule credentials to review and sign.
+Note: You must log in with your authorized Grace Seeds School credentials to review and sign.
     `.trim();
 
     return { subject, html, text };
@@ -737,7 +737,7 @@ Tel: ${this.SCHOOL_PHONE} | Email: ${this.SCHOOL_EMAIL}
       </div>
 
       <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 4px; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #9a3412;">
-        <strong>Security Notice:</strong> Do not share this authorization code with anyone. SmartShule staff will never ask for your code. If you did not initiate this document signing action, please contact school administration immediately.
+        <strong>Security Notice:</strong> Do not share this authorization code with anyone. Grace Seeds School staff will never ask for your code. If you did not initiate this document signing action, please contact school administration immediately.
       </div>
     `;
 

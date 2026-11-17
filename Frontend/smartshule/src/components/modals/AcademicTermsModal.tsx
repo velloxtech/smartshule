@@ -1,3 +1,4 @@
+import { TermClosingDateEditor } from '../common/TermClosingDateEditor';
 import React, { useState, useEffect } from 'react';
 import { AcademicTerm, AcademicYear, AcademicContext, UserRole, isTermInitializationAuthorized } from '../../types';
 import { apiService } from '../../services/api';
@@ -79,7 +80,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
     '2. School Uniform & Grooming: Full official standard uniform, clean black polished leather shoes, and PE sports kit on scheduled activity days.\n' +
     '3. CBC Materials & Stationery: Ensure all CBC strand workbooks, exercise books, and stationery items are clearly labelled with the learner\'s full name.\n' +
     '4. Transport & Bus Routes: Morning school buses will commence routes at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.\n' +
-    '5. Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 prior to the first day of school.'
+    '5. Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 522533 (Account: 8048859#<Child\'s Full Name & Grade>) prior to the first day of school.'
   );
   const [notifySendSms, setNotifySendSms] = useState<boolean>(true);
   const [notifyBroadcasting, setNotifyBroadcasting] = useState<boolean>(false);
@@ -503,14 +504,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
   if (!isOpen) return null;
 
-  const currentTerm = academicContext?.currentTerm || terms.find((t) => t.isCurrent);
+  const currentTerm = terms.find(t => t.id === academicContext?.currentTerm?.id) || academicContext?.currentTerm || terms.find(t => t.isCurrent);
   const notice = academicContext?.termNotice;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="w-full max-w-4xl rounded-2xl bg-[#F8F5F5] shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="w-full max-w-4xl rounded-2xl bg-[#F8F5F5] shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header: Pure Maroon */}
-        <div className="bg-[#800000] text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-md">
+        <div className="bg-primary text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-md">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white border border-white/20">
               <span className="material-symbols-outlined text-[24px]">event_available</span>
@@ -550,19 +551,20 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               </div>
               <button
                 onClick={() => setFeedback(null)}
-                className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                className="text-on-surface-variant hover:text-on-surface-variant cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             </div>
           )}
 
+          {currentTerm && isAuthorizedToManage && <TermClosingDateEditor term={currentTerm} onUpdated={async () => { await loadYearsAndTerms(); onTermUpdated(); }} />}
           {/* Current Active Term Overview Banner */}
           {currentTerm && (
-            <div className="rounded-xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="rounded-xl p-5 border border-outline-variant/30 bg-surface-container-lowest shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                     Active Term Status
                   </span>
                   <span
@@ -595,7 +597,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   <button
                     onClick={handleTransitionTerm}
                     disabled={transitioning}
-                    className="px-4 py-2 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-4 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[16px]">fast_forward</span>
                     <span>{transitioning ? 'Advancing Term...' : 'Conclude & Advance to Next Term'}</span>
@@ -604,20 +606,20 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-slate-100">
-                  <span className="text-[11px] text-slate-500 block">Session Name</span>
-                  <span className="font-bold text-slate-900">{currentTerm.name}</span>
+                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-outline-variant/30">
+                  <span className="text-[11px] text-on-surface-variant block">Session Name</span>
+                  <span className="font-bold text-on-surface">{currentTerm.name}</span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-slate-100">
-                  <span className="text-[11px] text-slate-500 block">Session Dates</span>
-                  <span className="font-semibold text-slate-800">
+                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-outline-variant/30">
+                  <span className="text-[11px] text-on-surface-variant block">Session Dates</span>
+                  <span className="font-semibold text-on-surface">
                     {currentTerm.startDate ? new Date(currentTerm.startDate).toLocaleDateString('en-GB') : '—'} –{' '}
                     {currentTerm.endDate ? new Date(currentTerm.endDate).toLocaleDateString('en-GB') : '—'}
                   </span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-slate-100">
-                  <span className="text-[11px] text-slate-500 block">Timeline Progress</span>
-                  <span className="font-bold text-[#800000]">
+                <div className="p-3 rounded-lg bg-[#F8F5F5] border border-outline-variant/30">
+                  <span className="text-[11px] text-on-surface-variant block">Timeline Progress</span>
+                  <span className="font-bold text-primary">
                     {currentTerm.daysRemaining !== undefined && currentTerm.daysRemaining > 0
                       ? `${currentTerm.daysRemaining} days remaining (Wk ${currentTerm.currentWeek || 1}/${currentTerm.totalWeeks || 9})`
                       : 'Session completed'}
@@ -628,13 +630,13 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               {/* Progress Bar */}
               {currentTerm.totalWeeks && currentTerm.currentWeek && (
                 <div className="mt-3">
-                  <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+                  <div className="flex justify-between text-[11px] text-on-surface-variant mb-1">
                     <span>Term Start ({currentTerm.startDate?.split('T')[0]})</span>
                     <span>Term Closing ({currentTerm.endDate?.split('T')[0]})</span>
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-[#800000] h-full rounded-full transition-all duration-500"
+                      className="bg-primary h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${Math.min(
                           100,
@@ -656,16 +658,16 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
           )}
 
           {/* Academic Year Filter & Action Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-xs">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px] text-[#800000]">calendar_today</span>
+              <label className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-primary">calendar_today</span>
                 <span>Academic Year:</span>
               </label>
               <select
                 value={selectedYearId}
                 onChange={(e) => setSelectedYearId(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                className="px-3 py-1.5 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-semibold text-on-surface"
               >
                 <option value="ALL">All Academic Years</option>
                 {years.map((y) => (
@@ -692,7 +694,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     setInitStep('CONFIG');
                     setShowInitModal(true);
                   }}
-                  className="px-4 py-2 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ring-2 ring-[#800000]/20 hover:ring-[#800000]/40"
+                  className="px-4 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/40"
                   title="Initialize a new academic term (Restricted to Super Admin, Admin, and Headteacher)"
                 >
                   <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -704,7 +706,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     setShowCreateYearForm(true);
                     setShowCreateTermForm(false);
                   }}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold rounded-lg border border-outline-variant/30 transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">add_circle</span>
                   <span>+ New Academic Year</span>
@@ -712,7 +714,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
                 <button
                   onClick={() => openReopenNotificationModal()}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   title="Broadcast official school reopening date and directives to all parents"
                 >
                   <span className="material-symbols-outlined text-[16px]">campaign</span>
@@ -720,7 +722,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-2 text-xs text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/30">
                 <span className="material-symbols-outlined text-[16px] text-slate-400">lock</span>
                 <span>Term initialization is restricted to Super Admin, Admin, and Headteacher.</span>
               </div>
@@ -734,14 +736,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               className="p-4 rounded-xl border border-rose-300 bg-rose-50/60 shadow-xs space-y-3 animate-in fade-in"
             >
               <div className="flex items-center justify-between border-b border-rose-200 pb-2">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
                   <span>Create New Academic Year</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setShowCreateYearForm(false)}
-                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                  className="text-on-surface-variant hover:text-on-surface-variant cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
@@ -749,47 +751,47 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Name (e.g. 2026)</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Year Name (e.g. 2026)</label>
                   <input
                     type="text"
                     required
                     value={newYear.name}
                     onChange={(e) => setNewYear({ ...newYear, name: e.target.value })}
                     placeholder="2026"
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Opening Date</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Year Opening Date</label>
                   <input
                     type="date"
                     required
                     value={newYear.startDate}
                     onChange={(e) => setNewYear({ ...newYear, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Closing Date</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Year Closing Date</label>
                   <input
                     type="date"
                     required
                     value={newYear.endDate}
                     onChange={(e) => setNewYear({ ...newYear, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant cursor-pointer">
                   <input
                     type="checkbox"
                     checked={newYear.isCurrent}
                     onChange={(e) => setNewYear({ ...newYear, isCurrent: e.target.checked })}
-                    className="rounded text-[#800000] focus:ring-[#800000]"
+                    className="rounded text-primary focus:ring-primary"
                   />
                   <span>Set as Current Active Academic Year</span>
                 </label>
@@ -798,14 +800,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   <button
                     type="button"
                     onClick={() => setShowCreateYearForm(false)}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container/60 rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={creatingYear}
-                    className="px-4 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    className="px-4 py-1.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[16px]">save</span>
                     <span>{creatingYear ? 'Saving Year...' : 'Save Academic Year'}</span>
@@ -822,14 +824,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               className="p-4 rounded-xl border border-rose-300 bg-rose-50/60 shadow-xs space-y-3 animate-in fade-in"
             >
               <div className="flex items-center justify-between border-b border-rose-200 pb-2">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[18px]">add_task</span>
                   <span>Create New Academic Term</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setShowCreateTermForm(false)}
-                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                  className="text-on-surface-variant hover:text-on-surface-variant cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
@@ -837,12 +839,12 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Academic Year</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Academic Year</label>
                   <select
                     required
                     value={newTerm.academicYearId}
                     onChange={(e) => setNewTerm({ ...newTerm, academicYearId: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="" disabled>
                       -- Select Academic Year --
@@ -856,7 +858,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Number</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Term Number</label>
                   <select
                     value={newTerm.termNumber}
                     onChange={(e) =>
@@ -866,7 +868,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         name: `Term ${e.target.value}`,
                       })
                     }
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value={1}>Term 1</option>
                     <option value={2}>Term 2</option>
@@ -875,46 +877,46 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Display Name</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Term Display Name</label>
                   <input
                     type="text"
                     required
                     value={newTerm.name}
                     onChange={(e) => setNewTerm({ ...newTerm, name: e.target.value })}
                     placeholder="Term 1 - 2026"
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Opening Date</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Term Opening Date</label>
                   <input
                     type="date"
                     required
                     value={newTerm.startDate}
                     onChange={(e) => setNewTerm({ ...newTerm, startDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Closing Date</label>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">Term Closing Date</label>
                   <input
                     type="date"
                     required
                     value={newTerm.endDate}
                     onChange={(e) => setNewTerm({ ...newTerm, endDate: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    className="w-full px-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div className="flex items-end pb-1.5">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant cursor-pointer">
                     <input
                       type="checkbox"
                       checked={newTerm.isCurrent}
                       onChange={(e) => setNewTerm({ ...newTerm, isCurrent: e.target.checked })}
-                      className="rounded text-[#800000] focus:ring-[#800000]"
+                      className="rounded text-primary focus:ring-primary"
                     />
                     <span>Set as Active Term</span>
                   </label>
@@ -925,14 +927,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 <button
                   type="button"
                   onClick={() => setShowCreateTermForm(false)}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:bg-surface-container/60 rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingTerm}
-                  className="px-4 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-1.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">save</span>
                   <span>{creatingTerm ? 'Creating Term...' : 'Create Academic Term'}</span>
@@ -944,24 +946,24 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
           {/* Configured Academic Terms List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px] text-[#800000]">date_range</span>
+              <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-primary">date_range</span>
                 <span>Configured Academic Terms</span>
               </h3>
-              <span className="text-xs text-slate-500">Updates sync school registers & fee structures</span>
+              <span className="text-xs text-on-surface-variant">Updates sync school registers & fee structures</span>
             </div>
 
             {loading ? (
-              <div className="py-12 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
-                <span className="material-symbols-outlined text-[28px] animate-spin text-[#800000]">progress_activity</span>
+              <div className="py-12 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                <span className="material-symbols-outlined text-[28px] animate-spin text-primary">progress_activity</span>
                 <span>Loading term configurations...</span>
               </div>
             ) : terms.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-500 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center gap-3">
+              <div className="py-12 text-center text-xs text-on-surface-variant bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-6 flex flex-col items-center gap-3">
                 <span className="material-symbols-outlined text-[36px] text-slate-300">event_busy</span>
                 <div>
-                  <p className="font-semibold text-slate-700 text-sm">No terms configured yet</p>
-                  <p className="text-slate-500">Create an academic year or add terms above to get started.</p>
+                  <p className="font-semibold text-on-surface-variant text-sm">No terms configured yet</p>
+                  <p className="text-on-surface-variant">Create an academic year or add terms above to get started.</p>
                 </div>
                 {canManageTerms && (
                   <button
@@ -972,7 +974,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         setShowCreateTermForm(true);
                       }
                     }}
-                    className="px-4 py-2 bg-[#800000] text-white font-bold rounded-xl text-xs hover:bg-[#660000] transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-primary text-white font-bold rounded-xl text-xs hover:bg-primary-container transition-colors cursor-pointer"
                   >
                     + Create First Term
                   </button>
@@ -994,10 +996,10 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   return (
                     <div
                       key={term.id}
-                      className={`p-4 rounded-xl border bg-white shadow-xs transition-all ${
+                      className={`p-4 rounded-xl border bg-surface-container-lowest shadow-xs transition-all ${
                         isCurrent
-                          ? 'border-[#800000] ring-1 ring-[#800000]/20'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-primary ring-1 ring-primary/20'
+                          : 'border-outline-variant/30 hover:border-outline-variant/30'
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -1007,16 +1009,16 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             value={edit.name}
                             onChange={(e) => handleDateChange(term.id, 'name', e.target.value)}
                             disabled={!canManageTerms}
-                            className="font-bold text-sm text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-[#800000] focus:outline-none px-1"
+                            className="font-bold text-sm text-on-surface bg-transparent border-b border-dashed border-outline-variant/30 focus:border-primary focus:outline-none px-1"
                             placeholder="Term Name"
                           />
                           {termYear && (
-                            <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                            <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-low px-2 py-0.5 rounded-md">
                               Year {termYear.name}
                             </span>
                           )}
                           {isCurrent && (
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#800000] text-white uppercase tracking-wider">
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary text-white uppercase tracking-wider">
                               CURRENT ACTIVE
                             </span>
                           )}
@@ -1026,7 +1028,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           <span
                             className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
                               term.status === 'ENDED'
-                                ? 'bg-slate-100 text-slate-600'
+                                ? 'bg-surface-container-low text-on-surface-variant'
                                 : term.status === 'ACTIVE'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-blue-100 text-blue-800'
@@ -1038,7 +1040,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             <button
                               onClick={() => handleActivateTerm(term.id)}
                               disabled={isSaving}
-                              className="px-2.5 py-1 text-xs font-semibold text-[#800000] hover:bg-rose-50 rounded-lg border border-[#800000]/30 transition-colors cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold text-primary hover:bg-rose-50 rounded-lg border border-primary/30 transition-colors cursor-pointer"
                             >
                               Set as Active
                             </button>
@@ -1046,7 +1048,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           {canManageTerms && (
                             <button
                               onClick={() => openReopenNotificationModal(term.id)}
-                              className="px-2.5 py-1 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold text-on-primary-fixed bg-primary-fixed hover:bg-primary-fixed rounded-lg border border-primary transition-colors flex items-center gap-1 cursor-pointer"
                               title="Broadcast reopening notice & directives to parents for this term"
                             >
                               <span className="material-symbols-outlined text-[14px]">campaign</span>
@@ -1058,14 +1060,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
                             Term Number
                           </label>
                           <select
                             value={edit.termNumber}
                             onChange={(e) => handleDateChange(term.id, 'termNumber', Number(e.target.value))}
                             disabled={!canManageTerms}
-                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value={1}>Term 1</option>
                             <option value={2}>Term 2</option>
@@ -1074,7 +1076,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
                             Opening / Start Date
                           </label>
                           <input
@@ -1082,12 +1084,12 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             value={edit.startDate}
                             onChange={(e) => handleDateChange(term.id, 'startDate', e.target.value)}
                             disabled={!canManageTerms}
-                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
                             Closing / End Date
                           </label>
                           <input
@@ -1095,7 +1097,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             value={edit.endDate}
                             onChange={(e) => handleDateChange(term.id, 'endDate', e.target.value)}
                             disabled={!canManageTerms}
-                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                           />
                         </div>
 
@@ -1104,7 +1106,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             <button
                               onClick={() => handleSaveTermDates(term.id)}
                               disabled={isSaving}
-                              className="w-full sm:w-auto px-4 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              className="w-full sm:w-auto px-4 py-1.5 bg-primary hover:bg-black text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined text-[15px]">save</span>
                               <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -1123,9 +1125,9 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
         {/* Reopening Notification Modal for School Admin */}
         {showNotifyModal && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30">
               {/* Modal Header */}
-              <div className="bg-[#800000] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+              <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white border border-white/20 shrink-0">
                     <span className="material-symbols-outlined text-[24px]">campaign</span>
@@ -1149,7 +1151,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 {/* Academic Term Selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-on-surface-variant mb-1">
                       Academic Term
                     </label>
                     <select
@@ -1162,7 +1164,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           setNotifyOpeningDate(sel.startDate.split('T')[0]);
                         }
                       }}
-                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                     >
                       {terms.map((t) => {
                         const y = years.find((yr) => yr.id === t.academicYearId);
@@ -1176,7 +1178,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-on-surface-variant mb-1">
                       Learner Reporting Time
                     </label>
                     <input
@@ -1185,14 +1187,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                       value={notifyReportingTime}
                       onChange={(e) => setNotifyReportingTime(e.target.value)}
                       placeholder="7:45 AM"
-                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
 
                 {/* Reopening Date */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">
                     Official School Reopening / Reporting Date
                   </label>
                   <input
@@ -1200,14 +1202,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     required
                     value={notifyOpeningDate}
                     onChange={(e) => setNotifyOpeningDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-bold text-[#800000]"
+                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-bold text-primary"
                   />
                   {notifyOpeningDate && (
-                    <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-emerald-700">event</span>
+                    <p className="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-primary">event</span>
                       <span>
                         Reopening on:{' '}
-                        <strong className="text-slate-800">
+                        <strong className="text-on-surface">
                           {new Date(notifyOpeningDate).toLocaleDateString('en-GB', {
                             weekday: 'long',
                             day: 'numeric',
@@ -1222,14 +1224,14 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
                 {/* Directives & Reminders */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">
                     Reporting Directives &amp; Guidelines for Parents
                   </label>
                   <textarea
                     rows={4}
                     value={notifyCustomNotes}
                     onChange={(e) => setNotifyCustomNotes(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-mono leading-relaxed"
+                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary font-mono leading-relaxed"
                     placeholder="Enter directives for uniform, books, bus routes, fees..."
                   />
                 </div>
@@ -1239,39 +1241,39 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 block">
                     Distribution Channels:
                   </span>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface-variant">
                     <input
                       type="checkbox"
                       checked={true}
                       disabled
-                      className="rounded text-[#800000] focus:ring-[#800000] h-4 w-4"
+                      className="rounded text-primary focus:ring-primary h-4 w-4"
                     />
                     <span>Publish Official High-Priority Notice to Parent Portal Board (Pinned)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-on-surface-variant">
                     <input
                       type="checkbox"
                       checked={notifySendSms}
                       onChange={(e) => setNotifySendSms(e.target.checked)}
-                      className="rounded text-[#800000] focus:ring-[#800000] h-4 w-4"
+                      className="rounded text-primary focus:ring-primary h-4 w-4"
                     />
                     <span className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[15px] text-[#800000]">sms</span>
+                      <span className="material-symbols-outlined text-[15px] text-primary">sms</span>
                       <span>Dispatch Instant SMS Alert to Registered Parent Contact Numbers</span>
                     </span>
                   </label>
                 </div>
 
                 {/* Live Preview Box */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                <div className="p-3 bg-surface border border-outline-variant/30 rounded-xl space-y-1 text-xs">
+                  <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
                     Live Announcement Preview:
                   </span>
-                  <div className="font-bold text-[#800000] text-xs">
+                  <div className="font-bold text-primary text-xs">
                     📢 Official School Reopening Notice -{' '}
                     {(terms.find((t) => t.id === notifyingTermId) || terms[0])?.name || 'Term'}
                   </div>
-                  <div className="text-[11px] text-slate-600 line-clamp-3">
+                  <div className="text-[11px] text-on-surface-variant line-clamp-3">
                     Dear Parents and Guardians, Grace Seeds School will officially reopen on{' '}
                     {notifyOpeningDate
                       ? new Date(notifyOpeningDate).toLocaleDateString('en-GB', {
@@ -1286,18 +1288,18 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30">
                   <button
                     type="button"
                     onClick={() => setShowNotifyModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={notifyBroadcasting || !notifyOpeningDate}
-                    className="px-5 py-2 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-[16px]">
                       {notifyBroadcasting ? 'progress_activity' : 'send'}
@@ -1315,9 +1317,9 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
         {/* Dedicated Initialize New Term Modal with Confirmation Step and Post-Success Details */}
         {showInitModal && (
           <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
-            <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="w-full max-w-xl rounded-2xl bg-surface-container-lowest shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh]">
               {/* Header */}
-              <div className="bg-[#800000] text-white px-5 py-3.5 flex items-center justify-between shadow-xs">
+              <div className="bg-primary text-white px-5 py-3.5 flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[22px]">verified_user</span>
                   <div>
@@ -1345,7 +1347,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               {initStep === 'CONFIG' && (
                 <form onSubmit={handleProceedToConfirmInit} className="p-5 overflow-y-auto space-y-4">
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
-                    <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0">shield</span>
+                    <span className="material-symbols-outlined text-[20px] text-primary shrink-0">shield</span>
                     <div>
                       <span className="font-bold block text-amber-950">Safe Session Initialization & Historical Preservation:</span>
                       <span>
@@ -1356,7 +1358,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-on-surface-variant mb-1">
                         Academic Year <span className="text-rose-600">*</span>
                       </label>
                       <select
@@ -1371,7 +1373,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             name: foundY ? `Term ${initForm.termNumber} - ${foundY.name}` : `Term ${initForm.termNumber}`,
                           });
                         }}
-                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                       >
                         <option value="" disabled>-- Select Academic Year --</option>
                         {years.map((y) => (
@@ -1383,7 +1385,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-on-surface-variant mb-1">
                         Term Number <span className="text-rose-600">*</span>
                       </label>
                       <select
@@ -1397,7 +1399,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                             name: foundY ? `Term ${num} - ${foundY.name}` : `Term ${num}`,
                           });
                         }}
-                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                       >
                         <option value={1}>Term 1</option>
                         <option value={2}>Term 2</option>
@@ -1406,7 +1408,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-on-surface-variant mb-1">
                         Term Display Name <span className="text-rose-600">*</span>
                       </label>
                       <input
@@ -1415,12 +1417,12 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         value={initForm.name}
                         onChange={(e) => setInitForm({ ...initForm, name: e.target.value })}
                         placeholder="Term 1 - 2026"
-                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-on-surface-variant mb-1">
                         Term Start Date <span className="text-rose-600">*</span>
                       </label>
                       <input
@@ -1428,12 +1430,12 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         required
                         value={initForm.startDate}
                         onChange={(e) => setInitForm({ ...initForm, startDate: e.target.value })}
-                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-on-surface-variant mb-1">
                         Term Closing Date <span className="text-rose-600">*</span>
                       </label>
                       <input
@@ -1441,34 +1443,34 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         required
                         value={initForm.endDate}
                         onChange={(e) => setInitForm({ ...initForm, endDate: e.target.value })}
-                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-outline-variant/30 rounded-xl focus:ring-1 focus:ring-primary font-semibold text-on-surface"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                  <div className="pt-2 border-t border-outline-variant/30">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-on-surface cursor-pointer">
                       <input
                         type="checkbox"
                         checked={initForm.isCurrent}
                         onChange={(e) => setInitForm({ ...initForm, isCurrent: e.target.checked })}
-                        className="rounded text-[#800000] focus:ring-[#800000]"
+                        className="rounded text-primary focus:ring-primary"
                       />
                       <span>Set as Current Active Session for Grace Seeds School</span>
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-outline-variant/30">
                     <button
                       type="button"
                       onClick={() => setShowInitModal(false)}
-                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                      className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-5 py-2 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>Proceed to Confirmation</span>
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -1480,33 +1482,33 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               {/* Step 2: Confirmation Step */}
               {initStep === 'CONFIRM' && (
                 <div className="p-5 space-y-4">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                  <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[18px]">verified</span>
                       <span>Review Term Initialization Details</span>
                     </h4>
 
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <span className="text-slate-500 block">Academic Year:</span>
-                        <span className="font-bold text-slate-900">
+                        <span className="text-on-surface-variant block">Academic Year:</span>
+                        <span className="font-bold text-on-surface">
                           {years.find((y) => y.id === initForm.academicYearId)?.name || 'Selected Year'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500 block">Session Name:</span>
-                        <span className="font-bold text-slate-900">{initForm.name} (Term {initForm.termNumber})</span>
+                        <span className="text-on-surface-variant block">Session Name:</span>
+                        <span className="font-bold text-on-surface">{initForm.name} (Term {initForm.termNumber})</span>
                       </div>
                       <div>
-                        <span className="text-slate-500 block">Start Date:</span>
-                        <span className="font-semibold text-slate-800">{initForm.startDate}</span>
+                        <span className="text-on-surface-variant block">Start Date:</span>
+                        <span className="font-semibold text-on-surface">{initForm.startDate}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500 block">Closing Date:</span>
-                        <span className="font-semibold text-slate-800">{initForm.endDate}</span>
+                        <span className="text-on-surface-variant block">Closing Date:</span>
+                        <span className="font-semibold text-on-surface">{initForm.endDate}</span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-slate-500 block">Active Term Status:</span>
+                        <span className="text-on-surface-variant block">Active Term Status:</span>
                         <span className="font-bold text-emerald-700">
                           {initForm.isCurrent ? 'Will become current active session' : 'Will be created as upcoming'}
                         </span>
@@ -1521,12 +1523,12 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                  <div className="flex items-center justify-between pt-2 border-t border-outline-variant/30">
                     <button
                       type="button"
                       onClick={() => setInitStep('CONFIG')}
                       disabled={initializingTerm}
-                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                      className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer"
                     >
                       Back to Edit
                     </button>
@@ -1534,7 +1536,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                       type="button"
                       onClick={handleConfirmInitializeTerm}
                       disabled={initializingTerm}
-                      className="px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[16px]">
                         {initializingTerm ? 'progress_activity' : 'check_circle'}
@@ -1553,35 +1555,35 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   </div>
 
                   <div>
-                    <h4 className="text-base font-bold text-slate-900">Academic Term Initialized Successfully!</h4>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <h4 className="text-base font-bold text-on-surface">Academic Term Initialized Successfully!</h4>
+                    <p className="text-xs text-on-surface-variant mt-1">
                       The new academic term is now live for Grace Seeds School with full historical preservation.
                     </p>
                   </div>
 
                   {initializedTermData && (
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2">
-                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                        <span className="text-slate-500 font-semibold">Term Name:</span>
-                        <span className="font-bold text-slate-900">{initializedTermData.name}</span>
+                    <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 text-left text-xs space-y-2">
+                      <div className="flex justify-between border-b border-outline-variant/30 pb-1.5">
+                        <span className="text-on-surface-variant font-semibold">Term Name:</span>
+                        <span className="font-bold text-on-surface">{initializedTermData.name}</span>
                       </div>
-                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                        <span className="text-slate-500 font-semibold">Term Number:</span>
-                        <span className="font-bold text-slate-900">Term {initializedTermData.termNumber}</span>
+                      <div className="flex justify-between border-b border-outline-variant/30 pb-1.5">
+                        <span className="text-on-surface-variant font-semibold">Term Number:</span>
+                        <span className="font-bold text-on-surface">Term {initializedTermData.termNumber}</span>
                       </div>
-                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                        <span className="text-slate-500 font-semibold">Term ID:</span>
-                        <span className="font-mono text-slate-700">{initializedTermData.id}</span>
+                      <div className="flex justify-between border-b border-outline-variant/30 pb-1.5">
+                        <span className="text-on-surface-variant font-semibold">Term ID:</span>
+                        <span className="font-mono text-on-surface-variant">{initializedTermData.id}</span>
                       </div>
-                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                        <span className="text-slate-500 font-semibold">Duration:</span>
-                        <span className="font-semibold text-slate-800">
+                      <div className="flex justify-between border-b border-outline-variant/30 pb-1.5">
+                        <span className="text-on-surface-variant font-semibold">Duration:</span>
+                        <span className="font-semibold text-on-surface">
                           {initializedTermData.startDate ? initializedTermData.startDate.split('T')[0] : '—'} to{' '}
                           {initializedTermData.endDate ? initializedTermData.endDate.split('T')[0] : '—'}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500 font-semibold">Active Session Status:</span>
+                        <span className="text-on-surface-variant font-semibold">Active Session Status:</span>
                         <span className="font-bold text-emerald-700">
                           {initializedTermData.isCurrent ? 'ACTIVE / CURRENT SESSION' : 'UPCOMING'}
                         </span>
@@ -1596,7 +1598,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                         setShowInitModal(false);
                         setInitStep('CONFIG');
                       }}
-                      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                      className="px-5 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface font-bold rounded-xl text-xs transition-colors cursor-pointer"
                     >
                       Done
                     </button>
@@ -1609,7 +1611,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                           openReopenNotificationModal(initializedTermData.id);
                         }
                       }}
-                      className="px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-5 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">campaign</span>
                       <span>📢 Broadcast School Reopening Notice</span>
@@ -1622,7 +1624,7 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
         )}
 
         {/* Footer: Pure Maroon */}
-        <div className="bg-[#800000] text-white px-6 py-3 flex items-center justify-between shrink-0 text-xs border-t border-[#660000]">
+        <div className="bg-primary text-white px-6 py-3 flex items-center justify-between shrink-0 text-xs border-t border-primary-container">
           <div className="flex items-center gap-2 text-rose-200">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>Academic Term Calendar Bridge Active</span>

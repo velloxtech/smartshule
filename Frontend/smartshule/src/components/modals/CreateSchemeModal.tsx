@@ -51,6 +51,22 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const availableLearningAreas = React.useMemo(() => {
+    if (!selectedClassRoomId) return learningAreas;
+    const selectedClass = classes.find(c => c.id === selectedClassRoomId);
+    if (!selectedClass?.gradeLevel) return learningAreas;
+    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, selectedClass.gradeLevel));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, selectedClassRoomId, classes]);
+
+  useEffect(() => {
+    if (availableLearningAreas.length > 0) {
+      if (!availableLearningAreas.some(la => la.id === selectedLearningAreaId)) {
+        setSelectedLearningAreaId(availableLearningAreas[0].id);
+      }
+    }
+  }, [availableLearningAreas, selectedLearningAreaId]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -267,7 +283,7 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
         code: `STR-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
         title: finalStrandTitle.trim(),
       }).then(res => {
-        if (res.success && res.data && finalSubStrandTitle) {
+        if (res.success && res.data && !(res.data as any).proposalId && finalSubStrandTitle) {
           apiService.createSubStrand({
             strandId: res.data.id,
             code: `${res.data.code}.1`,
@@ -321,7 +337,7 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-[24px]">edit_calendar</span>
@@ -371,7 +387,7 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Global Subject *</label>
               <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {learningAreas.map((la) => <option key={la.id} value={la.id}>{la.name}</option>)}
+                {availableLearningAreas.map((la) => <option key={la.id} value={la.id}>{la.name}</option>)}
               </select>
             </div>
           </div>
@@ -521,7 +537,7 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
 
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20 mt-4">
             <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer transition-colors">Cancel</button>
-            <button type="submit" disabled={isLoading} className="px-6 py-2.5 bg-[#7a1228] text-white text-sm font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+            <button type="submit" disabled={isLoading} className="px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-container shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
               <span className="material-symbols-outlined text-[18px]">save</span>
               <span>{isLoading ? 'Creating Scheme...' : 'Save Scheme of Work'}</span>
             </button>

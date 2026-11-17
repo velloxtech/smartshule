@@ -1,0 +1,152 @@
+{
+  "baselineCommit": "e06bd59f745e98dfb87cbfdb54eb44ceef49fda0",
+  "startedAt": "2026-11-16T20:17:42.642Z",
+  "completedAt": "2026-11-16T20:17:53.440Z",
+  "success": true,
+  "committed": true,
+  "postCommitVerified": true,
+  "migrationSha256": "3feeccb857273891fa52e9775b680f2ffeedecd8fd2a2c5a7f6759246c96cc87",
+  "backupSha256": "a4fb6516ac8159e5c08a0ad9bdcae3c8cb390baf41bb588a3af8b197ecdb6b5c",
+  "moved": {
+    "schemes": 2,
+    "invoices": 2
+  },
+  "allPublicTablesVerified": 72,
+  "assignmentsUnchanged": true,
+  "localChecks": {
+    "rollback": true,
+    "idempotence": true,
+    "unknownReferenceAbort": true
+  },
+  "postVerification": {
+    "at": "2026-11-16T20:18:29.028Z",
+    "readOnly": true,
+    "terms": [
+      {
+        "id": "18393731-164c-4bac-adaa-045c1ad0df0e",
+        "academic_year_id": "b4089a4c-32aa-4659-ab17-0e8906de2881",
+        "term_number": 1,
+        "name": "Term 1 - 2027",
+        "start_date": "2027-01-05",
+        "end_date": "2027-04-02",
+        "is_current": true
+      },
+      {
+        "id": "term-2026-1",
+        "academic_year_id": "year-2026",
+        "term_number": 1,
+        "name": "Term 1",
+        "start_date": "2026-01-05",
+        "end_date": "2026-04-02",
+        "is_current": false
+      },
+      {
+        "id": "term-2026-2",
+        "academic_year_id": "year-2026",
+        "term_number": 2,
+        "name": "Term 2",
+        "start_date": "2027-05-03",
+        "end_date": "2027-07-30",
+        "is_current": false
+      },
+      {
+        "id": "term-2026-3",
+        "academic_year_id": "year-2026",
+        "term_number": 3,
+        "name": "Term 3",
+        "start_date": "2026-08-24",
+        "end_date": "2026-12-31",
+        "is_current": false
+      }
+    ],
+    "years": [
+      {
+        "id": "b4089a4c-32aa-4659-ab17-0e8906de2881",
+        "name": "2027",
+        "is_current": false
+      },
+      {
+        "id": "bef79bfb-0925-4ccd-a8fe-558049764895",
+        "name": "2027",
+        "is_current": true
+      },
+      {
+        "id": "year-2026",
+        "name": "2026",
+        "is_current": false
+      }
+    ],
+    "duplicateGroups": [],
+    "liveReferences": [
+      {
+        "kind": "schemes",
+        "remaining": 0
+      },
+      {
+        "kind": "invoices",
+        "remaining": 0
+      }
+    ],
+    "index": [
+      {
+        "indexname": "uq_academic_terms_year_number",
+        "indexdef": "CREATE UNIQUE INDEX uq_academic_terms_year_number ON public.academic_terms USING btree (academic_year_id, term_number)"
+      }
+    ],
+    "history": [
+      {
+        "removed_id": "term-2026-t1",
+        "canonical_id": "term-2026-1",
+        "merged_at": "2026-11-16T20:17:44.406Z"
+      },
+      {
+        "removed_id": "term-2026-t2",
+        "canonical_id": "term-2026-2",
+        "merged_at": "2026-11-16T20:17:44.406Z"
+      },
+      {
+        "removed_id": "term-2026-t3",
+        "canonical_id": "term-2026-3",
+        "merged_at": "2026-11-16T20:17:44.406Z"
+      }
+    ],
+    "privateHistoryAccess": [
+      {
+        "role": "anon",
+        "schema_access": false,
+        "table_access": false
+      },
+      {
+        "role": "authenticated",
+        "schema_access": false,
+        "table_access": false
+      }
+    ],
+    "counts": [
+      {
+        "table_name": "class_teacher_assignments",
+        "rows": 10
+      },
+      {
+        "table_name": "subject_teacher_assignments",
+        "rows": 44
+      },
+      {
+        "table_name": "schemes_of_work",
+        "rows": 6
+      },
+      {
+        "table_name": "student_invoices",
+        "rows": 163
+      },
+      {
+        "table_name": "summative_assessments",
+        "rows": 1930
+      },
+      {
+        "table_name": "payments",
+        "rows": 4
+      }
+    ]
+  }
+}

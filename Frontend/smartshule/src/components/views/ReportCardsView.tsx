@@ -12,7 +12,7 @@ interface ReportCardsViewProps {
   selectedStudent?: Student;
 }
 
-export const LOWER_PRIMARY_CBC_SUBJECTS = [
+const LOWER_PRIMARY_CBC_SUBJECTS = [
   { name: 'English Language Activities', code: 'ENG', short: 'English' },
   { name: 'English Reading Activities', code: 'REA', short: 'Reading' },
   { name: 'Mathematical Activities', code: 'MAT', short: 'Math' },
@@ -23,7 +23,7 @@ export const LOWER_PRIMARY_CBC_SUBJECTS = [
   { name: 'Creative Arts Activities', code: 'CREA', short: 'Creative Arts' },
 ];
 
-export const STANDARD_12_CBC_SUBJECTS = [
+const STANDARD_12_CBC_SUBJECTS = [
   { name: 'Mathematics', code: 'MAT', short: 'Math' },
   { name: 'English Language', code: 'ENG', short: 'English' },
   { name: 'Kiswahili Language', code: 'KIS', short: 'Kiswahili' },
@@ -102,6 +102,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [selectedId, setSelectedId] = useState<string>(
     initialStudent ? initialStudent.id : (propStudents && propStudents.length > 0 ? propStudents[0].id : '')
   );
+  const [loadingStudents, setLoadingStudents] = useState<boolean>(!initialStudent && (!propStudents || propStudents.length === 0));
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [reportCardData, setReportCardData] = useState<CBCReportCardData | null>(null);
   const [broadsheetData, setBroadsheetData] = useState<BroadsheetResult | null>(null);
@@ -138,6 +139,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   useEffect(() => {
     if (isParent) {
       setCheckingClearance(true);
+      setLoadingStudents(true);
       apiService.getGuardianPortalData().then((res) => {
         if (res?.data?.children && Array.isArray(res.data.children) && res.data.children.length > 0) {
           setGuardianPortalData(res.data);
@@ -156,17 +158,24 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           setStudents(mapped);
           if (!selectedId) setSelectedId(mapped[0].id);
         }
-      }).catch(() => {}).finally(() => setCheckingClearance(false));
+      }).catch(() => {}).finally(() => {
+        setCheckingClearance(false);
+        setLoadingStudents(false);
+      });
     } else if (propStudents && propStudents.length > 0) {
       setStudents(propStudents);
       if (!selectedId) setSelectedId(propStudents[0].id);
+      setLoadingStudents(false);
     } else {
+      setLoadingStudents(true);
       apiService.getStudents().then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
           setStudents(res.data);
           if (!selectedId) setSelectedId(res.data[0].id);
         }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => {
+        setLoadingStudents(false);
+      });
     }
   }, [propStudents, isParent]);
 
@@ -501,7 +510,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const schoolName = schoolInfo?.name || 'Grace Seeds School';
   const schoolMotto = schoolInfo?.motto || 'The future begins here';
-  const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+  const schoolAddress = schoolInfo?.address || 'P.O Box 12-20123';
   const schoolPhone = schoolInfo?.phone || '0745436312';
   const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
 
@@ -541,7 +550,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         rawList = rawEvals.map((ev: any, index: number) => {
           const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : null;
           const score = rawScore !== null
-            ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore)
+            ? rawScore
             : null;
 
           const gp = getGradeAndPoints(score !== null ? score : 0, ev.levelLabel || ev.performanceLevel);
@@ -748,17 +757,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     return nextTermOpening.formatted || 'Tuesday, 5 January 2027';
   }, [nextTermOpening.formatted]);
 
-  const classTeacherRemarksText = reportCardData?.classTeacherRemarks || `${student.name} demonstrates commendable diligence, discipline, and active engagement in continuous learning outcomes.`;
+  const classTeacherRemarksText = reportCardData?.classTeacherRemarks || `${student?.name || 'Learner'} demonstrates commendable diligence, discipline, and active engagement in continuous learning outcomes.`;
   const headTeacherRemarksText = reportCardData?.headTeacherRemarks || 'Commendable performance throughout the term. Shows steady growth in core competencies and moral values.';
 
   const reportTitleBarText = `SUMMATIVE ASSESMENT REPORT TERM ${activeTermNumber || 3} ${currentYear?.name || currentYear?.year || 2026}`;
 
   const buildReportCardPrintHTML = (termName: string, yearName: string) => {
+    if (!student) return '';
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Grace Seeds School - Summative Assessment Report - ${student.name}</title>
+  <title>Grace Seeds School - Summative Assessment Report - ${student?.name || 'Learner'}</title>
   <style>
     @page {
       size: A4 portrait;
@@ -1027,9 +1037,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
       <div class="student-info-box">
         <div class="bio-row ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'has-house' : 'no-house'}">
-          <div><span class="label">Student Name:</span> <span class="val">${student.name}</span></div>
-          <div><span class="label">ADM NO.:</span> <span class="val">${student.admNo}</span></div>
-          <div><span class="label">GRADE:</span> <span class="val">${student.grade}${student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span></div>
+          <div><span class="label">Student Name:</span> <span class="val">${student?.name || 'N/A'}</span></div>
+          <div><span class="label">ADM NO.:</span> <span class="val">${student?.admNo || 'N/A'}</span></div>
+          <div><span class="label">GRADE:</span> <span class="val">${student?.grade || 'N/A'}${student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span></div>
           ${isBoardingSchool && studentHouse && studentHouse !== '-' ? `<div><span class="label">HSE:</span> <span class="val">${studentHouse}</span></div>` : ''}
         </div>
 
@@ -1266,19 +1276,19 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.text('Student Name:', 17, curY + 4.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(student.name, 36, curY + 4.5);
+    doc.text(student?.name || '', 36, curY + 4.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
     doc.text('ADM NO.:', 92, curY + 4.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(student.admNo, 108, curY + 4.5);
+    doc.text(student?.admNo || '', 108, curY + 4.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
     doc.text('GRADE:', 136, curY + 4.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(`${student.grade}${student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}`, 149, curY + 4.5);
+    doc.text(`${student?.grade || ''}${student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}`, 149, curY + 4.5);
 
     if (isBoardingSchool && studentHouse && studentHouse !== '-') {
       doc.setFont('helvetica', 'bold');
@@ -1501,19 +1511,27 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setTextColor(100, 116, 139);
     doc.text('Official Summative Assessment Report', 196, footerY + 6, { align: 'right' });
 
-    doc.save(`Grace_Seeds_School_Report_Card_${student.admNo}_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    doc.save(`Grace_Seeds_School_Report_Card_${student?.admNo || 'learner'}_${(student?.name || 'learner').replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
   if (isParent && checkingClearance) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-[#800000] font-body">Verifying fee clearance status with Grace Seeds School...</p>
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-primary font-body">Verifying fee clearance status with Grace Seeds School...</p>
       </div>
     );
   }
 
   if (!student) {
+    if (loadingStudents) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-semibold text-primary font-body">Loading learner dossiers from Grace Seeds School registry...</p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6 pb-12">
         <div>
@@ -1522,14 +1540,14 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <span>/</span>
             <span>Academics &amp; CBC</span>
             <span>/</span>
-            <span className="text-[#800000] font-semibold">Report Cards</span>
+            <span className="text-primary font-semibold">Report Cards</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Official CBC Learner Summative Performance Dossier
           </h1>
         </div>
         <div className="bg-surface-container-lowest rounded-2xl p-12 text-center border border-dashed border-outline-variant max-w-2xl mx-auto my-12">
-          <div className="w-16 h-16 rounded-full bg-[#800000]/10 text-[#800000] flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-outlined text-3xl">assignment</span>
           </div>
           <h3 className="text-lg font-bold text-on-surface mb-2">No Learners Available</h3>
@@ -1558,7 +1576,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           <div>
-            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-primary text-white uppercase tracking-wider">
               Fee Clearance Required
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-on-surface mt-2.5">
@@ -1579,8 +1597,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                     onClick={() => setSelectedId(c.id)}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       (student?.id === c.id)
-                        ? 'bg-[#7a1228] text-white shadow-xs'
-                        : 'bg-white text-amber-950 hover:bg-amber-200/50'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'bg-white text-on-primary-fixed hover:bg-primary-fixed-dim/50'
                     }`}
                   >
                     {c.name}
@@ -1601,7 +1619,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </div>
             <div className="flex justify-between text-xs font-bold pt-2 border-t border-amber-200">
               <span className="text-amber-950">Outstanding Balance:</span>
-              <span className="font-data-mono text-base text-[#7a1228] font-black">
+              <span className="font-data-mono text-base text-primary font-black">
                 KES {balance.toLocaleString()}
               </span>
             </div>
@@ -1612,7 +1630,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">chat</span>
               <span>Request Clearance from Head Teacher</span>
@@ -1622,7 +1640,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               href={`https://wa.me/254745436312?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">support_agent</span>
               <span>Request Clearance from Director</span>
@@ -1705,7 +1723,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <span>/</span>
               <span>Academics &amp; Assessment</span>
               <span>/</span>
-              <span className="text-[#800000] font-semibold">Report Cards</span>
+              <span className="text-primary font-semibold">Report Cards</span>
             </div>
             <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
               Summative Assessment Report
@@ -1718,7 +1736,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-lg bg-[#800000] text-white text-xs font-bold hover:bg-[#600000] transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Download or print report card with centered school logo"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
@@ -1737,7 +1755,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             {canUserSign && (
               <button
                 onClick={() => setIsSigningModalOpen(true)}
-                className="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-2 rounded-lg bg-primary hover:bg-primary-container text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
                 title="Electronically sign this report card using your verified digital signature"
               >
                 <span className="material-symbols-outlined text-[16px]">draw</span>
@@ -1758,7 +1776,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search learner by name or admission number (e.g. 0355)..."
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg pl-9 pr-8 py-2 text-xs font-medium text-on-surface placeholder:text-gray-400 focus:outline-[#800000] focus:border-[#800000] transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg pl-9 pr-8 py-2 text-xs font-medium text-on-surface placeholder:text-gray-400 focus:outline-primary focus:border-primary transition-all"
             />
             {searchTerm && (
               <button
@@ -1771,12 +1789,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Learner:</span>
             <select
               value={selectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="bg-surface-container-low border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs max-w-[260px] truncate"
+              className="bg-surface-container-low border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs max-w-full sm:max-w-[260px] min-w-0 truncate"
             >
               {filteredStudents.length === 0 ? (
                 <option value="">No learners match &ldquo;{searchTerm}&rdquo;</option>
@@ -1790,7 +1808,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Term:</span>
             <select
               value={selectedTermId || currentTerm?.id || ''}
@@ -1823,7 +1841,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               onClick={() => setEvaluationPeriod('END_OF_TERM')}
               className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 isEndTerm
-                  ? 'bg-[#800000] text-white shadow-2xs'
+                  ? 'bg-primary text-white shadow-2xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -1834,7 +1852,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               onClick={() => setEvaluationPeriod('MID_TERM')}
               className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 !isEndTerm
-                  ? 'bg-[#800000] text-white shadow-2xs'
+                  ? 'bg-primary text-white shadow-2xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -1857,7 +1875,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       </div>
 
       {/* Official Report Card Printable Document */}
-      <div className="printable-report-card bg-white text-gray-900 rounded-2xl shadow-xl border border-outline-variant/30 p-6 sm:p-8 print:p-0 max-w-5xl mx-auto flex flex-col justify-between print:max-w-none print:w-full print:m-0 print:border-none print:shadow-none print:rounded-none min-h-[920px] print:min-h-0 print:h-[284mm]">
+      <div className="printable-report-card bg-surface-container-lowest text-gray-900 rounded-2xl shadow-xl border border-outline-variant/30 p-6 sm:p-8 print:p-0 max-w-5xl mx-auto flex flex-col justify-between print:max-w-none print:w-full print:m-0 print:border-none print:shadow-none print:rounded-none min-h-[920px] print:min-h-0 print:h-[284mm]">
         <div>
           {/* Header */}
           <div className="flex items-center gap-4 pb-2.5 border-b border-gray-300">
@@ -1885,7 +1903,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <div className="text-xs print:text-[8pt] text-gray-600 mt-0.5">
                 Tel: <strong>{schoolPhone}</strong> | Email: <strong>{schoolEmail}</strong> | Web: www.graceseedsschool.sc.ke
               </div>
-              <div className="text-xs print:text-[8pt] italic text-[#800000] font-semibold mt-0.5">
+              <div className="text-xs print:text-[8pt] italic text-primary font-semibold mt-0.5">
                 &quot;{schoolMotto}&quot;
               </div>
             </div>
@@ -1898,18 +1916,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
           {/* Student Bio & Summary Box */}
           <div className="border border-gray-400 rounded-sm mb-3 text-xs print:text-[8pt] divide-y divide-gray-300">
-            <div className={`grid grid-cols-2 ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 px-3 py-1.5 bg-gray-50/60 print:bg-transparent`}>
+            <div className={`grid grid-cols-2 ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 px-3 py-1.5 bg-surface/60 print:bg-transparent`}>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Student Name:</span>
-                <span className="font-bold text-gray-900">{student.name}</span>
+                <span className="font-bold text-gray-900">{student?.name || ''}</span>
               </div>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">ADM NO.:</span>
-                <span className="font-mono font-bold text-gray-900">{student.admNo}</span>
+                <span className="font-mono font-bold text-gray-900">{student?.admNo || ''}</span>
               </div>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">GRADE:</span>
-                <span className="font-bold text-gray-900">{student.grade}{student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span>
+                <span className="font-bold text-gray-900">{student?.grade || ''}{student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span>
               </div>
               {isBoardingSchool && studentHouse && studentHouse !== '-' && (
                 <div>
@@ -1920,21 +1938,21 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </div>
 
             {/* Row 2: Real student position and total stream candidates */}
-            <div className="grid grid-cols-2 gap-2 px-3 py-1.5 border-t border-dashed border-gray-400 bg-white">
+            <div className="grid grid-cols-2 gap-2 px-3 py-1.5 border-t border-dashed border-gray-400 bg-surface-container-lowest">
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Class Position:</span>
                 <span className="font-bold text-gray-900">{classPositionText}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt]">MEAN GRADE:</span>
-                <span className="px-2 py-0.5 rounded font-black text-[#800000] text-sm print:text-[10pt] bg-rose-50 border border-rose-200">
+                <span className="px-2 py-0.5 rounded font-black text-primary text-sm print:text-[10pt] bg-rose-50 border border-rose-200">
                   {meanGrade}
                 </span>
               </div>
             </div>
 
             {/* Row 3: Total Marks, Mean Mark, Total Points, Mean Points */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-1.5 bg-gray-50/60 print:bg-transparent">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-1.5 bg-surface/60 print:bg-transparent">
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Total Marks:</span>
                 <span className="font-mono font-bold text-gray-900">{totalSubjectMarks}</span>
@@ -1955,9 +1973,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           {/* Subjects Table */}
-          <div className="border border-gray-400 rounded-sm overflow-hidden mb-3">
+          <div className="border border-gray-400 rounded-sm overflow-x-auto print:overflow-visible min-w-0 max-w-full mb-3">
             <table className="subjects-table-el w-full text-left text-xs print:text-[7.5pt] border-collapse">
-              <thead className="bg-slate-100 border-b border-gray-400 text-gray-800 uppercase text-[11px] print:text-[7pt] font-black">
+              <thead className="bg-surface-container-low border-b border-gray-400 text-gray-800 uppercase text-[11px] print:text-[7pt] font-black">
                 <tr>
                   <th className="py-1.5 px-2 text-center w-8 border border-gray-300">Code</th>
                   <th className="py-1.5 px-2.5 border border-gray-300">SUBJECT</th>
@@ -1973,8 +1991,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {evaluatedSubjectsList.map((s, idx) => (
-                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                    <td className="py-1 px-1 text-center font-bold text-indigo-900 border border-gray-300 font-mono text-[10px] print:text-[7pt]">
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface/50'}>
+                    <td className="py-1 px-1 text-center font-bold text-on-primary-fixed border border-gray-300 font-mono text-[10px] print:text-[7pt]">
                       {s.code}
                     </td>
                     <td className="py-1 px-2.5 font-bold text-gray-900 border border-gray-300">
@@ -1987,7 +2005,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                     <td className="py-1 px-1 text-center font-mono text-gray-700 border border-gray-300">
                       {s.avg}
                     </td>
-                    <td className="py-1 px-1 text-center font-bold text-[#800000] border border-gray-300">
+                    <td className="py-1 px-1 text-center font-bold text-primary border border-gray-300">
                       {s.grade}
                     </td>
                     <td className="py-1 px-1 text-center font-mono font-bold text-gray-800 border border-gray-300">
@@ -2005,19 +2023,19 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-100 font-bold border-t-2 border-gray-400 text-gray-900 text-xs print:text-[7.5pt]">
+              <tfoot className="bg-surface-container-low font-bold border-t-2 border-gray-400 text-gray-900 text-xs print:text-[7.5pt]">
                 <tr>
                   <td colSpan={2} className="py-1.5 px-2.5 uppercase font-black border border-gray-300">
                     TOTAL
                   </td>
-                  <td className="py-1.5 px-1 text-center font-mono font-black text-[#800000] border border-gray-300">
+                  <td className="py-1.5 px-1 text-center font-mono font-black text-primary border border-gray-300">
                     {totalSubjectMarks}
                   </td>
                   <td className="border border-gray-300"></td>
                   <td className="py-1.5 px-1 text-center font-mono font-bold border border-gray-300">
                     {meanSubjectMark}%
                   </td>
-                  <td className="py-1.5 px-1 text-center font-black text-[#800000] border border-gray-300">
+                  <td className="py-1.5 px-1 text-center font-black text-primary border border-gray-300">
                     {meanGrade}
                   </td>
                   <td className="py-1.5 px-1 text-center font-mono font-bold border border-gray-300">
@@ -2098,7 +2116,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
 
           <div className="flex justify-between items-center pt-1 text-[11px] print:text-[7pt]">
-            <div className="font-black text-[#800000] tracking-wider">
+            <div className="font-black text-primary tracking-wider">
               {schoolMotto.toUpperCase()}
             </div>
             <div className="italic text-gray-500">
@@ -2116,7 +2134,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           documentId={reportCardDocId}
           documentType="REPORT_CARD"
           documentVersion="1.0"
-          documentTitle={`Summative Report Card: ${student.name} (${student.admNo})`}
+          documentTitle={`Summative Report Card: ${student?.name || ''} (${student?.admNo || ''})`}
           documentContent={canonicalDocContent}
           onSignatureComplete={() => {
             loadSignatures(reportCardDocId);

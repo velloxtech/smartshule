@@ -136,7 +136,7 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.data.admissionNumber).toBe('ADM-2026-099');
+      expect(res.body.data.admissionNumber).toBe('0099');
     });
   });
 

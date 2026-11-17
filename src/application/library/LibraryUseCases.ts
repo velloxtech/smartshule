@@ -318,7 +318,11 @@ export class LibraryUseCases {
   // STATS
   // ==========================================
 
-  async getStats(schoolId?: string): Promise<LibraryStats> {
-    return await this.libraryRepo.getStats(schoolId);
+  async getStats(schoolId?: string, authorize?: (record:any)=>Promise<boolean>): Promise<LibraryStats> {
+    const stats=await this.libraryRepo.getStats(schoolId);
+    if(!authorize)return stats;
+    const loans=await this.libraryRepo.findLoans({schoolId});const permitted=[];
+    for(const loan of loans)if(await authorize(loan))permitted.push(loan);
+    return {...stats,issuedCopies:permitted.filter(l=>l.status==='ISSUED'||l.status==='OVERDUE').length,overdueCount:permitted.filter(l=>l.status==='OVERDUE').length,lostDamagedCount:permitted.filter(l=>l.status==='LOST'||l.status==='DAMAGED').length};
   }
 }

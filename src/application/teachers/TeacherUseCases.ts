@@ -12,6 +12,7 @@ import { TeacherCorrectionRequest, CorrectionRequestStatus } from '../../core/do
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
+import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 
 export interface RegisterTeacherDTO {
   email?: string;
@@ -315,6 +316,9 @@ export class TeacherUseCases {
             if (!classRoom || classRoom.schoolId !== targetSchoolId) {
               throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
             }
+            if (!await this.academicRepository.findCurrentYear(targetSchoolId)) {
+              throw new ValidationError('Set the current academic year before assigning a teacher.');
+            }
           }
           singleAssignedStream = [streamId];
         }
@@ -346,6 +350,9 @@ export class TeacherUseCases {
       );
 
       await this.teacherRepository.save(teacher);
+      if (singleAssignedStream.length) {
+        await this.assignStream({ teacherId: teacher.id, streamId: singleAssignedStream[0] });
+      }
 
       if (this.systemLogRepository) {
         const actionName = targetRole === UserRole.HEAD_TEACHER ? 'HEAD_TEACHER_REGISTERED_FROM_PARENT' : 'TEACHER_REGISTERED_FROM_PARENT';
@@ -456,6 +463,9 @@ export class TeacherUseCases {
           if (!classRoom || classRoom.schoolId !== targetSchoolId) {
             throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
           }
+          if (!await this.academicRepository.findCurrentYear(targetSchoolId)) {
+            throw new ValidationError('Set the current academic year before assigning a teacher.');
+          }
         }
         singleAssignedStream = [streamId];
       }
@@ -519,6 +529,12 @@ export class TeacherUseCases {
         }
         throw err;
       }
+    }
+
+    // Persist the canonical duty on the server; a client-side follow-up request
+    // may fail or never run, and profile arrays alone do not authorize a teacher.
+    if (singleAssignedStream.length) {
+      await this.assignStream({ teacherId: teacher.id, streamId: singleAssignedStream[0] });
     }
 
     if (this.systemLogRepository) {
@@ -712,62 +728,43 @@ export class TeacherUseCases {
     const teacher = await this.teacherRepository.findById(dto.teacherId);
     if (!teacher) throw new NotFoundError('Teacher', dto.teacherId);
 
-    teacher.assignStream(dto.streamId);
-    await this.teacherRepository.update(teacher);
-
     if (this.academicRepository) {
       const stream = await this.academicRepository.findStreamById(dto.streamId);
-      if (stream) {
-        stream.setClassTeacher(dto.teacherId);
-        await this.academicRepository.updateStream(stream);
-
-        // Synchronize formal class_teacher_assignments record
-        try {
-          const classRoom = await this.academicRepository.findClassById(stream.classRoomId);
-          const teacherUser = await this.userRepository.findById(teacher.userId);
-          const schoolId = teacherUser?.schoolId || classRoom?.schoolId || 'school-001';
-          const currentYear = await this.academicRepository.findCurrentYear(schoolId);
-          const academicYearId = currentYear ? currentYear.id : 'year-2026';
-          const effectiveFrom = new Date().toISOString().split('T')[0];
-
-          // Deactivate any other teacher's active assignment for this specific stream
-          const activeStreamAssignments = await this.academicRepository.findClassTeacherAssignments({
-            schoolId,
-            academicYearId,
-            classRoomId: stream.classRoomId,
-            streamId: stream.id,
-            isActive: true
-          });
-
-          for (const old of activeStreamAssignments) {
-            if (old.teacherId !== dto.teacherId) {
-              old.deactivate(effectiveFrom);
-              await this.academicRepository.saveClassTeacherAssignment(old);
-            }
-          }
-
-          const alreadyActive = activeStreamAssignments.some(a => a.teacherId === dto.teacherId && a.isActive);
-          if (!alreadyActive) {
-            const assignment = ClassTeacherAssignment.create(
-              {
-                schoolId,
-                academicYearId,
-                classRoomId: stream.classRoomId,
-                streamId: stream.id,
-                teacherId: dto.teacherId,
-                effectiveFrom,
-                isActive: true
-              },
-              IdGenerator.generate()
-            );
-            await this.academicRepository.saveClassTeacherAssignment(assignment);
-          }
-        } catch (err: any) {
-          console.warn('[TeacherUseCases] Non-fatal class_teacher_assignments sync error:', err?.message || err);
+      if (!stream) throw new NotFoundError('Stream', dto.streamId);
+      const classroom = await this.academicRepository.findClassById(stream.classRoomId);
+      if (!classroom) throw new NotFoundError('Classroom', stream.classRoomId);
+      const year = await this.academicRepository.findCurrentYear(classroom.schoolId);
+      if (!year) throw new ValidationError('Set the current academic year before assigning a teacher.');
+      const target = {
+        schoolId: classroom.schoolId, academicYearId: year.id,
+        teacherId: teacher.id, classRoomId: classroom.id, streamId: stream.id,
+        effectiveFrom: new Date().toISOString().split('T')[0]
+      };
+      await releasePreviousClassTeacherDuty(this.academicRepository, target, this.teacherRepository);
+      const active = await this.academicRepository.findClassTeacherAssignments({
+        schoolId: target.schoolId, academicYearId: year.id,
+        classRoomId: classroom.id, streamId: stream.id, isActive: true
+      });
+      for (const old of active) {
+        if (old.teacherId === teacher.id) continue;
+        old.deactivate(target.effectiveFrom);
+        await this.academicRepository.saveClassTeacherAssignment(old);
+        const previousTeacher = await this.teacherRepository.findById(old.teacherId);
+        if (previousTeacher) {
+          previousTeacher.removeStream(stream.id);
+          await this.teacherRepository.update(previousTeacher);
         }
       }
+      if (!active.some(a => a.teacherId === teacher.id)) {
+        await this.academicRepository.saveClassTeacherAssignment(
+          ClassTeacherAssignment.create({ ...target, isActive: true }, IdGenerator.generate())
+        );
+      }
+      stream.setClassTeacher(teacher.id);
+      await this.academicRepository.updateStream(stream);
     }
-
+    teacher.assignStream(dto.streamId);
+    await this.teacherRepository.update(teacher);
     return teacher.toJSON();
   }
 
@@ -1594,6 +1591,10 @@ export class TeacherUseCases {
         IdGenerator.generate()
       );
       await this.teacherRepository.save(teacher);
+    }
+
+    if (teacher && dto.assignedClassStreamIds?.length) {
+      await this.assignStream({ teacherId: teacher.id, streamId: dto.assignedClassStreamIds[0] });
     }
 
     if (this.systemLogRepository) {

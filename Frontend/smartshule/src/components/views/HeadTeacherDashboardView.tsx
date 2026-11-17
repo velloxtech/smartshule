@@ -42,14 +42,12 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
     loadAcademicData();
   }, []);
 
-  const pendingLessonPlans = lessonPlans.filter((lp) => lp.status === 'SUBMITTED');
-  const approvedLessonPlans = lessonPlans.filter((lp) => lp.status === 'APPROVED');
-  const revisionLessonPlans = lessonPlans.filter((lp) => lp.status === 'REJECTED');
+  const recordedLessonPlanCount = lessonPlans.length;
 
   return (
     <div className="space-y-6 pb-12">
       {/* Top Academic Leadership Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7a1228] via-[#5e0d1e] to-[#450a15] p-6 sm:p-8 text-white shadow-xl border border-[#5e0d1e]">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary-container to-primary-container p-6 sm:p-8 text-white shadow-xl border border-primary-container">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 mb-2.5">
@@ -73,18 +71,18 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
             {onOpenUploadMarks && (
               <button
                 onClick={onOpenUploadMarks}
-                className="px-4 py-2.5 rounded-xl bg-white text-slate-900 font-extrabold text-xs hover:bg-slate-100 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-white text-on-surface font-extrabold text-xs hover:bg-surface-container-low shadow-md flex items-center gap-2 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px] text-[#7a1228]">upload_file</span>
+                <span className="material-symbols-outlined text-[18px] text-primary">upload_file</span>
                 <span>Upload Marks</span>
               </button>
             )}
             <button
               onClick={() => onNavigateTab('schemes-lesson-plans')}
-              className="px-4 py-2.5 rounded-xl bg-white text-slate-900 font-extrabold text-xs hover:bg-slate-100 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-white text-on-surface font-extrabold text-xs hover:bg-surface-container-low shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px] text-[#7a1228]">fact_check</span>
-              <span>Review Lesson Plans ({pendingLessonPlans.length})</span>
+              <span className="material-symbols-outlined text-[18px] text-primary">fact_check</span>
+              <span>Lesson Plan Records ({recordedLessonPlanCount})</span>
             </button>
             <button
               onClick={() => onNavigateTab('teachers-staff')}
@@ -115,61 +113,61 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
       {/* Academic Highlights Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Enrolled Learners */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-800">Total Enrolled Learners</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center">
+            <span className="text-xs font-black uppercase tracking-wider text-on-surface">Total Enrolled Learners</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">groups</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black font-data-mono text-slate-900">{students.length}</div>
-            <div className="text-xs text-slate-800 font-bold mt-1.5">
+            <div className="text-3xl font-black font-data-mono text-on-surface">{students.length}</div>
+            <div className="text-xs text-on-surface font-bold mt-1.5">
               Active across Playgroup through Grade 9
             </div>
           </div>
         </div>
 
         {/* Teaching Faculty */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-800">Teaching Faculty</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+            <span className="text-xs font-black uppercase tracking-wider text-on-surface">Teaching Faculty</span>
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">badge</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black font-data-mono text-slate-900">{teachers.length}</div>
-            <div className="text-xs text-slate-800 font-bold mt-1.5">Certified CBE subject specialists</div>
+            <div className="text-3xl font-black font-data-mono text-on-surface">{teachers.length}</div>
+            <div className="text-xs text-on-surface font-bold mt-1.5">Certified CBE subject specialists</div>
           </div>
         </div>
 
         {/* Schemes of Work */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-800">Schemes of Work</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <span className="text-xs font-black uppercase tracking-wider text-on-surface">Schemes of Work</span>
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">menu_book</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black font-data-mono text-slate-900">{schemes.length}</div>
+            <div className="text-3xl font-black font-data-mono text-on-surface">{schemes.length}</div>
             <div className="text-xs text-emerald-900 font-bold mt-1.5">Approved for Term 1 Delivery</div>
           </div>
         </div>
 
-        {/* Lesson Plans In Review */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
+        {/* Recorded Lesson Plans */}
+        <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between hover:shadow-sm transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-800">Lesson Plans In Review</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+            <span className="text-xs font-black uppercase tracking-wider text-on-surface">Lesson Plans in Workflow</span>
+            <div className="w-8 h-8 rounded-lg bg-primary-fixed text-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">pending_actions</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black font-data-mono text-amber-800">{pendingLessonPlans.length}</div>
+            <div className="text-3xl font-black font-data-mono text-emerald-800">{recordedLessonPlanCount}</div>
             <div className="text-xs text-amber-950 font-bold mt-1.5">
-              {approvedLessonPlans.length} Approved · {revisionLessonPlans.length} In Revision
+              Drafted, submitted, and reviewed lesson plans
             </div>
           </div>
         </div>
@@ -180,54 +178,54 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
 
       {/* Curriculum Supervision & Lesson Plans Review Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-white border border-slate-200 shadow-xs">
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-black text-slate-900">Lesson Plans Review Pipeline</h2>
-              <p className="text-xs font-semibold text-slate-700 mt-0.5">
-                Direct oversight on lesson plan quality, competencies, and curriculum alignment.
+              <h2 className="text-base font-black text-on-surface">Recorded Lesson Plans</h2>
+              <p className="text-xs font-semibold text-on-surface-variant mt-0.5">
+                Browse lesson plans saved by teaching staff. Actual coverage is recorded in Records of Work.
               </p>
             </div>
             <button
               onClick={() => onNavigateTab('schemes-lesson-plans')}
-              className="text-xs font-extrabold text-[#7a1228] hover:text-[#5e0d1e] flex items-center gap-1 cursor-pointer"
+              className="text-xs font-extrabold text-primary hover:text-primary-container flex items-center gap-1 cursor-pointer"
             >
               <span>Manage Schemes</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>
 
-          {pendingLessonPlans.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-600 flex flex-col items-center gap-2">
+          {lessonPlans.length === 0 ? (
+            <div className="py-12 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
               <span className="material-symbols-outlined text-emerald-600 text-[36px]">verified</span>
-              <span className="font-bold text-sm text-slate-900">All Lesson Plans Up to Date</span>
-              <span className="font-medium text-slate-600">No pending lesson plans require review right now.</span>
+              <span className="font-bold text-sm text-on-surface">No lesson plans recorded yet</span>
+              <span className="font-medium text-on-surface-variant">Saved lesson plans will appear here for reference.</span>
             </div>
           ) : (
             <div className="space-y-3">
-              {pendingLessonPlans.slice(0, 4).map((plan) => (
+              {lessonPlans.slice(0, 4).map((plan) => (
                 <div
                   key={plan.id}
                   className="p-4 rounded-xl border border-amber-300 bg-amber-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-900">
+                      <span className="text-xs font-black text-on-surface">
                         {plan.strand} - {plan.subStrand}
                       </span>
                       <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 border border-amber-400 font-black">
-                        Pending Review
+                        Recorded
                       </span>
                     </div>
-                    <div className="text-xs font-semibold text-slate-700 mt-1">
+                    <div className="text-xs font-semibold text-on-surface-variant mt-1">
                       Date: {plan.lessonDate} · Duration: {plan.durationMinutes} mins · Outlines: {plan.specificLearningOutcomes?.length || 0} outcomes
                     </div>
                   </div>
                   <button
                     onClick={() => onNavigateTab('schemes-lesson-plans')}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#7a1228] text-white font-bold text-xs hover:bg-[#5e0d1e] transition-colors shrink-0 self-start sm:self-auto cursor-pointer shadow-xs"
+                    className="px-3.5 py-1.5 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary-container transition-colors shrink-0 self-start sm:self-auto cursor-pointer shadow-xs"
                   >
-                    Review Plan
+                    View Records
                   </button>
                 </div>
               ))}
@@ -236,83 +234,83 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
         </div>
 
         {/* Academic Quick Links & Directives */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <h2 className="text-base font-black text-slate-900 mb-1">Academic Directives</h2>
-            <p className="text-xs font-semibold text-slate-700 mb-4">
+            <h2 className="text-base font-black text-on-surface mb-1">Academic Directives</h2>
+            <p className="text-xs font-semibold text-on-surface-variant mb-4">
               Key administrative shortcuts and oversight tools.
             </p>
 
             <div className="space-y-2.5">
               <button
                 onClick={() => onNavigateTab('CBC-analytics')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:bg-rose-50/60 hover:border-[#7a1228]/30 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-rose-50/60 hover:border-primary/30 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[20px]">monitoring</span>
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-900">Competency Analytics</div>
-                  <div className="text-[11px] font-semibold text-slate-700">Class proficiency & bell curve</div>
+                  <div className="text-xs font-black text-on-surface">Competency Analytics</div>
+                  <div className="text-[11px] font-semibold text-on-surface-variant">Class proficiency & bell curve</div>
                 </div>
               </button>
 
               <button
                 onClick={() => onNavigateTab('report-cards')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:bg-rose-50/60 hover:border-[#7a1228]/30 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-rose-50/60 hover:border-primary/30 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[20px]">article</span>
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-900">CBE Report Cards</div>
-                  <div className="text-[11px] font-semibold text-slate-700">Compile term summaries & comments</div>
+                  <div className="text-xs font-black text-on-surface">CBE Report Cards</div>
+                  <div className="text-[11px] font-semibold text-on-surface-variant">Compile term summaries & comments</div>
                 </div>
               </button>
 
               <button
                 onClick={() => onNavigateTab('attendance-register')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:bg-rose-50/60 hover:border-[#7a1228]/30 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-rose-50/60 hover:border-primary/30 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[20px]">checklist</span>
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-900">Daily Attendance Roster</div>
-                  <div className="text-[11px] font-semibold text-slate-700">Verify roll call across streams</div>
+                  <div className="text-xs font-black text-on-surface">Daily Attendance Roster</div>
+                  <div className="text-[11px] font-semibold text-on-surface-variant">Verify roll call across streams</div>
                 </div>
               </button>
 
               <button
                 onClick={() => onNavigateTab('timetable')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:bg-rose-50/60 hover:border-[#7a1228]/30 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-rose-50/60 hover:border-primary/30 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[20px]">calendar_view_week</span>
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-900">Master Timetable</div>
-                  <div className="text-[11px] font-semibold text-slate-700">Verify teacher duty & subject allocation</div>
+                  <div className="text-xs font-black text-on-surface">Master Timetable</div>
+                  <div className="text-[11px] font-semibold text-on-surface-variant">Verify teacher duty & subject allocation</div>
                 </div>
               </button>
 
               <button
                 onClick={() => onNavigateTab('teachers-staff')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:bg-rose-50/60 hover:border-[#7a1228]/30 transition-all flex items-center gap-3 text-left cursor-pointer"
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-rose-50/60 hover:border-primary/30 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[20px]">badge</span>
                 </div>
                 <div>
-                  <div className="text-xs font-black text-slate-900">Faculty Directory</div>
-                  <div className="text-[11px] font-semibold text-slate-700">View teaching staff & departmental allocations</div>
+                  <div className="text-xs font-black text-on-surface">Faculty Directory</div>
+                  <div className="text-[11px] font-semibold text-on-surface-variant">View teaching staff & departmental allocations</div>
                 </div>
               </button>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-300 text-xs text-slate-900 leading-relaxed font-medium">
-            <span className="font-black text-slate-900">Curriculum Delivery Directives:</span> Formative rubrics for Grades 3 through 6 should be finalized 2 weeks prior to mid-term break.
+          <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface leading-relaxed font-medium">
+            <span className="font-black text-on-surface">Curriculum Delivery Directives:</span> Formative rubrics for Grades 3 through 6 should be finalized 2 weeks prior to mid-term break.
           </div>
         </div>
       </div>

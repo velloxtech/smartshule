@@ -530,24 +530,15 @@ describe('SmartShule: Teacher Diary Pipeline End-to-End Test Suite (Scenarios 1 
     expect(app2.status).toBe('APPROVED');
   });
 
-  // Scenario 11: Sequential progression gating
-  test('Scenario 11: Teacher cannot claim Week 2 before preceding Week 1 is approved', async () => {
-    // Attempting to submit Week 2 when Week 1 is incomplete/unapproved
-    await expect(
-      container.recordOfWorkUseCases.createDiaryEntry(
-        {
-          schoolId,
-          classRoomId: classRoomG3.id,
-          learningAreaId: learningAreaMath.id,
-          strand: 'Numbers',
-          weekNumber: 2,
-          day: 'Mon',
-          lessonTopic: 'Multiplication intro',
-          status: 'SUBMITTED'
-        },
-        { userId: teacherA.id, role: UserRole.TEACHER, schoolId, fullName: 'Jane Muthoni' }
-      )
-    ).rejects.toThrow(ValidationError);
+  // Pacing follows teaching, not preceding calendar-week approval.
+  test('Scenario 11: Teacher can submit continued work in Week 2 while Week 1 is unapproved', async () => {
+    const record = await container.recordOfWorkUseCases.createDiaryEntry({
+      schoolId, classRoomId: classRoomG3.id, learningAreaId: learningAreaMath.id,
+      strand: 'Numbers', subStrand: 'Multiplication', weekNumber: 2, day: 'Mon',
+      lessonTopic: 'Continued multiplication practice', status: 'SUBMITTED'
+    }, { userId: teacherA.id, role: UserRole.TEACHER, schoolId, fullName: 'Jane Muthoni' });
+    expect(record.status).toBe('SUBMITTED');
+    expect(record.isOfficialCoverage).toBe(false);
   });
 
   // Scenario 12: Authorized supervisor override works and logs audit

@@ -122,7 +122,7 @@ export class DisciplineUseCases {
               ? 'Disciplinary Notice'
               : 'Counseling & Guidance Notice';
 
-          const msg = `SmartShule Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.CBCCoreValue}.`;
+          const msg = `Grace Seeds School Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.CBCCoreValue}.`;
           await this.notificationService.sendSms(phone, msg);
           parentInformed = true;
         }
@@ -204,8 +204,9 @@ export class DisciplineUseCases {
     };
   }
 
-  public async getDisciplineStats(schoolId?: string) {
-    const incidents = await this.disciplineRepository.findIncidents({ schoolId });
+  public async getDisciplineStats(schoolId?: string, authorize?: (record:any)=>Promise<boolean>) {
+    let incidents = await this.disciplineRepository.findIncidents({ schoolId });
+    if(authorize){const permitted=[];for(const record of incidents)if(await authorize(record))permitted.push(record);incidents=permitted;}
     const clubs = await this.disciplineRepository.findAllClubs(schoolId);
 
     const commendations = incidents.filter(i => i.incidentType === 'MERIT_COMMENDATION').length;

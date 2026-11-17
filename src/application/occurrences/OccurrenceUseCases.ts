@@ -131,7 +131,7 @@ export class OccurrenceUseCases {
           const primaryPhone = guardians[0]?.emergencyContact;
 
           if (primaryPhone) {
-            const smsText = `SmartShule Occurrence Notice: An incident (${dto.title}) involving ${sName} was recorded on ${incidentDate} at ${incidentTime}. Immediate action: ${dto.immediateActionTaken || 'Being addressed by duty staff'}.`;
+            const smsText = `Grace Seeds School Occurrence Notice: An incident (${dto.title}) involving ${sName} was recorded on ${incidentDate} at ${incidentTime}. Immediate action: ${dto.immediateActionTaken || 'Being addressed by duty staff'}.`;
             await this.notificationService.sendSms(primaryPhone, smsText);
             parentNotified = true;
             parentNotificationMethod = 'SMS';
@@ -234,13 +234,14 @@ export class OccurrenceUseCases {
     await this.occurrenceRepository.delete(id);
   }
 
-  public async getDailyOccurrenceSummary(date: string, schoolId?: string): Promise<DailyOccurrenceSummary> {
+  public async getDailyOccurrenceSummary(date: string, schoolId?: string, authorize?: (record:any)=>Promise<boolean>): Promise<DailyOccurrenceSummary> {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    const incidents = await this.occurrenceRepository.findOccurrences({
+    let incidents = await this.occurrenceRepository.findOccurrences({
       date: targetDate,
       schoolId
     });
 
+    if(authorize){const permitted=[];for(const record of incidents)if(await authorize(record))permitted.push(record);incidents=permitted;}
     const openCount = incidents.filter(i => i.status === 'OPEN').length;
     const investigatingCount = incidents.filter(i => i.status === 'INVESTIGATING').length;
     const resolvedCount = incidents.filter(i => i.status === 'RESOLVED').length;

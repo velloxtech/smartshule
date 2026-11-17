@@ -185,7 +185,7 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto animate-fade-in">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary to-[#500b1a] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-primary to-primary-container text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">forward_to_inbox</span>
@@ -262,10 +262,10 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
             )}
 
             {/* Official School Remittance Instructions Card */}
-            <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-emerald-500/10 border border-emerald-600/30 text-xs space-y-2">
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary-container/10 via-primary/10 to-maroon-light/10 border border-primary/30 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-emerald-700">account_balance</span>
+                  <span className="material-symbols-outlined text-[18px] text-primary">account_balance</span>
                   Official School Fee Remittance Channels
                 </span>
                 <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
@@ -280,7 +280,7 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
                   <div className="text-[10px] text-emerald-900 font-semibold mt-1">Guide: Please use Child's Name &amp; Grade as account reference, not admission number.</div>
                 </div>
                 <div className="p-2 rounded-lg bg-white/70 border border-emerald-200/50">
-                  <div className="font-bold text-sky-900">2. Bank Wire / Deposit:</div>
+                  <div className="font-bold text-on-primary-fixed">2. Bank Wire / Deposit:</div>
                   <div>Bank: <strong>KCB Bank Kenya</strong></div>
                   <div>Account: <strong className="font-data-mono">1234567890</strong> (Branch: Nairobi Main)</div>
                 </div>
@@ -313,20 +313,20 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
             </div>
 
             {/* Smart SMS Quick-Paste Box */}
-            <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 space-y-2">
+            <div className="p-3 rounded-xl bg-primary-fixed/70 border border-primary space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-purple-700">content_paste</span>
+                <label className="text-xs font-bold text-on-primary-fixed flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">content_paste</span>
                   Quick Paste M-Pesa SMS Text (Auto-Fill)
                 </label>
-                <span className="text-[10px] text-purple-700 font-semibold">Optional Helper</span>
+                <span className="text-[10px] text-primary font-semibold">Optional Helper</span>
               </div>
               <textarea
                 rows={2}
                 value={smsMessage}
                 onChange={(e) => handleParseSms(e.target.value)}
                 placeholder="Paste the full M-Pesa SMS message here (e.g., QK7823LM91 Confirmed. Ksh15,000.00 sent to 522533 Grace Seeds School on 17/10/26...)"
-                className="w-full bg-white border border-purple-200 rounded-lg p-2 text-xs text-on-surface focus:outline-purple-600 font-data-mono placeholder:font-body"
+                className="w-full bg-surface border border-primary rounded-lg p-2 text-xs text-on-surface focus:outline-primary font-data-mono placeholder:font-body"
               />
               {parseSuccessMsg && (
                 <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1 animate-fade-in">
@@ -466,7 +466,7 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-[#500b1a] text-white text-xs font-bold hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white text-xs font-bold hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

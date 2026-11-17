@@ -195,7 +195,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
               <span>Director &amp; Administrator Portal</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-[32px] text-amber-300">
+              <span className="material-symbols-outlined text-[32px] text-primary-fixed-dim">
                 notification_important
               </span>
               <span>Parent Fee Banner &amp; Deadline Management</span>
@@ -281,7 +281,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
         <div className="lg:col-span-7 space-y-6">
           <form onSubmit={handleSave} className="space-y-6">
             {/* Card 1: Activation & Visibility */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-primary text-[22px]">
@@ -295,7 +295,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
               </div>
 
               {/* Master Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-surface border border-slate-200/80">
                 <div className="space-y-0.5">
                   <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <span>Display Fee Payment Notice Banner</span>
@@ -303,7 +303,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         isEnabled
                           ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-slate-200 text-slate-700'
+                          : 'bg-surface-container text-slate-700'
                       }`}
                     >
                       {isEnabled ? 'Enabled' : 'Disabled'}
@@ -320,7 +320,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                     onChange={(e) => setIsEnabled(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
 
@@ -384,7 +384,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
             </div>
 
             {/* Card 2: Deadline Date Setting */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-primary text-[22px]">
@@ -427,10 +427,10 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       value={deadlineDate}
                       onChange={(e) => setDeadlineDate(e.target.value)}
                       required
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
                     />
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <div className="p-2.5 rounded-xl bg-surface border border-slate-200 flex items-center gap-2 text-xs font-bold text-slate-700">
                     <span className="material-symbols-outlined text-[18px] text-primary">
                       event_available
                     </span>
@@ -447,28 +447,28 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setPresetDate(7)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer border border-slate-200"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low hover:bg-surface-container text-slate-800 transition-colors cursor-pointer border border-slate-200"
                     >
                       +7 Days (1 Week)
                     </button>
                     <button
                       type="button"
                       onClick={() => setPresetDate(14)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer border border-slate-200"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low hover:bg-surface-container text-slate-800 transition-colors cursor-pointer border border-slate-200"
                     >
                       +14 Days (2 Weeks)
                     </button>
                     <button
                       type="button"
                       onClick={setMonthEndDate}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer border border-slate-200"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low hover:bg-surface-container text-slate-800 transition-colors cursor-pointer border border-slate-200"
                     >
                       End of Current Month
                     </button>
                     <button
                       type="button"
                       onClick={setNextMonthEndDate}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer border border-slate-200"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low hover:bg-surface-container text-slate-800 transition-colors cursor-pointer border border-slate-200"
                     >
                       End of Next Month
                     </button>
@@ -485,7 +485,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
             </div>
 
             {/* Card 3: Notice Title & Custom Directive */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-primary text-[22px]">
@@ -509,7 +509,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   onChange={(e) => setBannerTitle(e.target.value)}
                   placeholder="e.g. School Fee Payment Notice"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
                 />
               </div>
 
@@ -522,7 +522,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => applyMessageTemplate('standard')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-surface-container-low hover:bg-surface-container text-slate-700 border border-slate-200 cursor-pointer"
                   >
                     Standard Term Notice
                   </button>
@@ -536,14 +536,14 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => applyMessageTemplate('exams')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary cursor-pointer"
                   >
                     Exams Clearance
                   </button>
                   <button
                     type="button"
                     onClick={() => applyMessageTemplate('end-term')}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-primary-fixed hover:bg-primary-fixed text-on-primary-fixed border border-primary cursor-pointer"
                   >
                     End-Term / 2027 Reservation
                   </button>
@@ -563,13 +563,13 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="e.g. Kindly note that accounts must be regularized prior to the commencement of end-of-term continuous assessments."
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs leading-relaxed focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-surface text-slate-900 text-xs leading-relaxed focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-xs"
                 />
               </div>
             </div>
 
             {/* Card 4: Official Remittance Channels */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-primary text-[22px]">
@@ -592,7 +592,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                     value={paybillNumber}
                     onChange={(e) => setPaybillNumber(e.target.value)}
                     placeholder="522533"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-data-mono font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-data-mono font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
 
@@ -605,7 +605,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     placeholder="KCB Bank"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
 
@@ -618,18 +618,18 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                     value={bankAccountNumber}
                     onChange={(e) => setBankAccountNumber(e.target.value)}
                     placeholder="1234567890"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-data-mono font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-surface text-slate-900 font-data-mono font-bold text-sm focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
-                <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
                   info
                 </span>
                 <div>
                   <strong>Paybill Account Number Format:</strong> Parents are automatically instructed to use their child’s full name &amp; grade format (e.g.{' '}
-                  <span className="font-data-mono font-bold text-[#7a1228]">
+                  <span className="font-data-mono font-bold text-primary">
                     8048859#{previewStudent} ({previewGrade})
                   </span>
                   ), preventing unallocated payments and wrong admission numbers.
@@ -651,7 +651,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   setIsEnabled(true);
                   setShowOnlyToDefaulters(true);
                 }}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-surface-container-low text-slate-700 font-bold text-xs transition-colors cursor-pointer"
               >
                 Reset to Defaults
               </button>
@@ -659,7 +659,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-[#500b1a] hover:from-[#650e21] hover:to-[#400814] text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-container hover:from-[#650e21] hover:to-[#400814] text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {saving ? (
                   <>
@@ -681,10 +681,10 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
 
         {/* Right Column: 5 Columns for Live Realistic Preview */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5 sticky top-6">
+          <div className="bg-surface-container-lowest border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5 sticky top-6">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-500 text-[22px]">
+                <span className="material-symbols-outlined text-primary text-[22px]">
                   visibility
                 </span>
                 <h3 className="text-base font-bold text-slate-900">
@@ -697,7 +697,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
             </div>
 
             {/* Interactive Preview Controls */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
+            <div className="p-3 bg-surface rounded-xl border border-slate-200/80 space-y-3">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Preview Scenario Simulator:
               </div>
@@ -719,7 +719,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   onClick={() => setPreviewMode('cleared')}
                   className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     previewMode === 'cleared'
-                      ? 'bg-emerald-600 text-white shadow-xs'
+                      ? 'bg-primary text-white shadow-xs'
                       : 'bg-white text-slate-700 border border-slate-200'
                   }`}
                 >
@@ -736,7 +736,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       type="number"
                       value={previewBalance}
                       onChange={(e) => setPreviewBalance(Number(e.target.value))}
-                      className="w-full px-2.5 py-1 rounded-md border border-slate-300 bg-white text-slate-900 font-data-mono text-xs"
+                      className="w-full px-2.5 py-1 rounded-md border border-slate-300 bg-surface text-slate-900 font-data-mono text-xs"
                     />
                   </div>
                   <div>
@@ -745,7 +745,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       type="number"
                       value={previewArrears}
                       onChange={(e) => setPreviewArrears(Number(e.target.value))}
-                      className="w-full px-2.5 py-1 rounded-md border border-slate-300 bg-white text-slate-900 font-data-mono text-xs"
+                      className="w-full px-2.5 py-1 rounded-md border border-slate-300 bg-surface text-slate-900 font-data-mono text-xs"
                     />
                   </div>
                 </div>
@@ -776,19 +776,19 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   </p>
                 </div>
               ) : previewMode === 'defaulter' || !showOnlyToDefaulters ? (
-                <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col gap-4 animate-fade-in text-slate-900">
+                <div className="bg-gradient-to-r from-primary-container/15 via-rose-500/10 to-maroon-light/15 border-2 border-primary/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col gap-4 animate-fade-in text-slate-900">
                   <div className="flex items-start gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
-                      <span className="material-symbols-outlined text-[28px] text-amber-900">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                      <span className="material-symbols-outlined text-[28px] text-on-primary-fixed">
                         calendar_clock
                       </span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm font-extrabold text-amber-950 tracking-tight">
+                        <h3 className="text-sm font-extrabold text-on-primary-fixed tracking-tight">
                           {bannerTitle || 'School Fee Payment Notice'}
                         </h3>
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-primary text-white shadow-2xs">
                           Due: {formatFriendlyDate(deadlineDate)}
                         </span>
                         {previewArrears > 0 && (
@@ -818,7 +818,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       </div>
                       <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
                         The outstanding school fee balance of{' '}
-                        <strong className="font-bold text-[#7a1228] font-data-mono">
+                        <strong className="font-bold text-primary font-data-mono">
                           KES {previewBalance.toLocaleString()}
                         </strong>
                         {previewArrears > 0 ? (
@@ -844,7 +844,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                           Pay via Lipa na M-Pesa Paybill{' '}
                           <strong className="font-data-mono text-emerald-800">{paybillNumber}</strong>{' '}
                           (Account:{' '}
-                          <strong className="font-data-mono text-[#7a1228]">
+                          <strong className="font-data-mono text-primary">
                             8048859#{previewStudent} ({previewGrade})
                           </strong>{' '}
                           — kindly use child’s name &amp; grade, not admission number) or {bankName}{' '}
@@ -855,7 +855,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end">
-                    <div className="px-3.5 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 opacity-90 cursor-default">
+                    <div className="px-3.5 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 opacity-90 cursor-default">
                       <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
                       <span>Forward Payment Confirmation</span>
                     </div>
@@ -864,12 +864,12 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
               ) : (
                 <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-900 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
+                    <div className="w-11 h-11 rounded-2xl bg-primary/20 text-on-primary-fixed border border-primary/30 flex items-center justify-center font-bold shrink-0">
                       <span className="material-symbols-outlined text-[26px]">task_alt</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-extrabold text-emerald-950">
+                        <h3 className="text-sm font-extrabold text-on-primary-fixed">
                           Fees Cleared · Zero Balance
                         </h3>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-700 text-white">
@@ -886,7 +886,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
             </div>
 
             {/* Quick Tips for Director */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+            <div className="p-4 rounded-xl bg-surface border border-slate-200 text-xs text-slate-600 space-y-2">
               <div className="font-bold text-slate-800 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
                 <span>Security &amp; Role Restriction</span>
