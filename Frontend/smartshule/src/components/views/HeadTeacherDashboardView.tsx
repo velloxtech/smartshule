@@ -1,3 +1,4 @@
+import { AssessmentRubricsCard } from '../common/AssessmentRubricsCard';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -101,6 +102,8 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
           </div>
         </div>
       </div>
+
+      <AssessmentRubricsCard />
 
       {/* Academic Daily Roll Call & Attendance Oversight */}
       <DailyAttendanceOverviewCard

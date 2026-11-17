@@ -1,3 +1,4 @@
+import { AssessmentRubricsCard } from '../common/AssessmentRubricsCard';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -15,25 +16,29 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
   const { user } = useAuth();
   const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [assessmentError, setAssessmentError] = useState('');
+  const [statsAttempt, setStatsAttempt] = useState(0);
   const [systemUptime] = useState('99.98%');
   const [dbMode] = useState('PostgreSQL (Primary) + MongoDB (Audit) + In-Memory Failover');
 
   useEffect(() => {
     async function loadStats() {
-      setLoading(true);
+      setLoading(true); setAssessmentError('');
       try {
         const res = await apiService.getDashboardAnalytics();
         if (res.success && res.data) {
           setSummaryData(res.data);
+        } else {
+          setAssessmentError('Could not load assessment results. Please retry.');
         }
       } catch (err) {
-        console.warn('Failed loading super admin stats:', err);
+        setAssessmentError('Could not load assessment results. Please retry.');
       } finally {
         setLoading(false);
       }
     }
     loadStats();
-  }, []);
+  }, [statsAttempt]);
 
   const totalStudents = summaryData?.totalStudents ?? 0;
   const totalTeachers = summaryData?.totalTeachers ?? 0;
@@ -75,6 +80,8 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
         </div>
       </div>
+
+      <AssessmentRubricsCard summaryData={summaryData} loading={loading} error={assessmentError} onRetry={() => setStatsAttempt(value => value + 1)} />
 
       {/* Infrastructure & Multi-Database Health Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

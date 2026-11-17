@@ -1,3 +1,4 @@
+import { AssessmentRubricsCard } from '../common/AssessmentRubricsCard';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { Teacher, LessonPlan } from '../../types';
@@ -83,6 +84,8 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      <AssessmentRubricsCard />
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
