@@ -85,8 +85,6 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
         </div>
       </div>
 
-      <AssessmentRubricsCard />
-
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
@@ -138,6 +136,8 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
 
       {/* Live Faculty Attendance & Geofence Clock-In Roster */}
       <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
+
+      <AssessmentRubricsCard />
 
       {/* Lesson plan records */}
       <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">

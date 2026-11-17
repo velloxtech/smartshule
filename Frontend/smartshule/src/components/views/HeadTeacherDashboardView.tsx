@@ -103,8 +103,6 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
         </div>
       </div>
 
-      <AssessmentRubricsCard />
-
       {/* Academic Daily Roll Call & Attendance Oversight */}
       <DailyAttendanceOverviewCard
         onNavigateTab={onNavigateTab}
@@ -178,6 +176,8 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
 
       {/* Live Faculty Attendance & Geofence Clock-In Roster */}
       <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
+
+      <AssessmentRubricsCard />
 
       {/* Curriculum Supervision & Lesson Plans Review Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

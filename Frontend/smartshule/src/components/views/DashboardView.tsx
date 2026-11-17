@@ -576,8 +576,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      <AssessmentRubricsCard summaryData={summaryData} loading={isLoading} error={analyticsError} onRetry={() => loadDashboardStats(selectedYearId, selectedTermId, selectedAttendanceDate)} />
-
       {/* 2. Director Pending Approvals & Operational Action Hub */}
       {pendingApprovals.totalActionable > 0 && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-fixed via-rose-50/40 to-rose-100/30 border border-primary/80 shadow-xs">
@@ -933,10 +931,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         theme="maroon"
       />
 
-      {/* 6. Attendance Breakdown */}
+      {/* 6. Primary Analytic Row: Attendance Breakdown & CBC Rubrics */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md my-sm">
         {/* Attendance Breakdown */}
-        <div className="lg:col-span-12 rounded-xl bg-surface-container-lowest p-lg shadow-xs flex flex-col justify-between border border-outline-variant/30">
+        <div className="lg:col-span-7 rounded-xl bg-surface-container-lowest p-lg shadow-xs flex flex-col justify-between border border-outline-variant/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm pb-md">
             <div>
               <div className="flex items-center gap-xs">
@@ -1029,7 +1027,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-
+        <div className="lg:col-span-5 [&>*]:h-full">
+          <AssessmentRubricsCard summaryData={summaryData} loading={isLoading} error={analyticsError} onRetry={() => loadDashboardStats(selectedYearId, selectedTermId, selectedAttendanceDate)} />
+        </div>
       </div>
 
       {/* 7. Secondary Analytic Row: Finance Streams & Live System Audit Activity */}

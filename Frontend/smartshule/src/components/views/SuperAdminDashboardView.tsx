@@ -81,8 +81,6 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
         </div>
       </div>
 
-      <AssessmentRubricsCard summaryData={summaryData} loading={loading} error={assessmentError} onRetry={() => setStatsAttempt(value => value + 1)} />
-
       {/* Infrastructure & Multi-Database Health Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
@@ -183,6 +181,8 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           ))}
         </div>
       </div>
+
+      <AssessmentRubricsCard summaryData={summaryData} loading={loading} error={assessmentError} onRetry={() => setStatsAttempt(value => value + 1)} />
 
       {/* Global Quick Navigation Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
