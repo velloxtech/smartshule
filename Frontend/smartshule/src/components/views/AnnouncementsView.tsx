@@ -581,7 +581,7 @@ export const AnnouncementsView: React.FC = () => {
     doc.text(motto, pageWidth / 2, curY, { align: 'center' });
     curY += 4.5;
 
-    const contactLine = `${school?.address || 'P.O Box 12-20123'} • Tel: ${school?.phone || '+254 712 345 678'} • Email: ${school?.email || 'info@graceseedsschool.sc.ke'}`;
+    const contactLine = `${school?.address || 'P.O Box 12-40123'} • Tel: ${school?.phone || '+254 712 345 678'} • Email: ${school?.email || 'info@graceseedsschool.sc.ke'}`;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
@@ -1449,7 +1449,7 @@ export const AnnouncementsView: React.FC = () => {
                   {school?.motto ? `"${school.motto}"` : '"Nurturing Excellence, Character & Integrity"'}
                 </p>
                 <p className="text-[11px] text-on-surface-variant">
-                  {school?.address || 'P.O Box 12-20123'} • Tel: {school?.phone || '+254 712 345 678'} • Email:{' '}
+                  {school?.address || 'P.O Box 12-40123'} • Tel: {school?.phone || '+254 712 345 678'} • Email:{' '}
                   {school?.email || 'info@graceseedsschool.sc.ke'}
                 </p>
 

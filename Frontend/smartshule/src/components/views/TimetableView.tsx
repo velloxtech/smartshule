@@ -522,7 +522,7 @@ export const TimetableView: React.FC = () => {
   // Generates complete, full-page A4 Landscape calibrated HTML for Print & PDF download
   const buildTimetablePrintHTML = (titleContext: string, yearName: string) => {
     const schoolTitle = schoolInfo?.name || 'GRACE SEEDS SCHOOL';
-    const schoolAddress = schoolInfo?.address || 'P.O Box 12-20123';
+    const schoolAddress = schoolInfo?.address || 'P.O Box 12-40123';
     const schoolPhone = schoolInfo?.phone || '0745436312';
     const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
     const numDays = days.length || 5;
@@ -1585,7 +1585,7 @@ export const TimetableView: React.FC = () => {
                 MINISTRY OF EDUCATION · CBE MASTER TIMETABLE
               </p>
               <p className="text-[11px] print:text-[7.5px] text-gray-500 font-medium">
-                P.O Box 12-20123 · Tel: 0745436312 · schoolgraceseeds@gmail.com
+                P.O Box 12-40123 · Tel: 0745436312 · schoolgraceseeds@gmail.com
               </p>
             </div>
           </div>

@@ -510,7 +510,7 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
                 </span>
               </div>
               <p className="text-xs text-rose-200">
-                P.O Box 12-20123 · Tel: 0745436312 · &quot;The Future Begins Here&quot;
+                P.O Box 12-40123 · Tel: 0745436312 · &quot;The Future Begins Here&quot;
               </p>
             </div>
           </div>

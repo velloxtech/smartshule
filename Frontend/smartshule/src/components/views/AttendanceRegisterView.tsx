@@ -344,7 +344,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, curY + 9);
+    doc.text(`"${motto}" · P.O Box 12-40123 · Tel: 0745436312`, 32, curY + 9);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -496,7 +496,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, curY + 9);
+    doc.text(`"${motto}" · P.O Box 12-40123 · Tel: 0745436312`, 32, curY + 9);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);

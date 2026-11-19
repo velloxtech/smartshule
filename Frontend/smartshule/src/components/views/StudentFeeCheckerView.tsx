@@ -879,7 +879,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text('Official Learner Fee Statement & Ledger Advice', 14, 16);
-    doc.text('P.O Box 12-20123 | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 20);
+    doc.text('P.O Box 12-40123 | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 20);
 
     // Learner Details Card
     doc.setTextColor(30, 41, 59);

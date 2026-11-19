@@ -869,7 +869,7 @@ export const PayrollManagementView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
     const schoolName = school?.name || 'Grace Seeds School';
-    const address = school?.address || 'P.O Box 12-20123';
+    const address = school?.address || 'P.O Box 12-40123';
     const phone = school?.phone || '0745436312';
 
     // Top burgundy accent band
@@ -2693,7 +2693,7 @@ export const PayrollManagementView: React.FC = () => {
                         {school?.name || 'Grace Seeds School'}
                       </h2>
                       <p className="text-xs text-on-surface-variant font-medium">
-                        {school?.address ? `${school.address} · ` : 'P.O Box 12-20123 · '}{school?.phone ? `Tel: ${school.phone}` : 'Tel: 0745436312'}{school?.email ? ` · ${school.email}` : ' · schoolgraceseeds@gmail.com'}
+                        {school?.address ? `${school.address} · ` : 'P.O Box 12-40123 · '}{school?.phone ? `Tel: ${school.phone}` : 'Tel: 0745436312'}{school?.email ? ` · ${school.email}` : ' · schoolgraceseeds@gmail.com'}
                       </p>
                       <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
                         Official Faculty & Staff Payslip Advice

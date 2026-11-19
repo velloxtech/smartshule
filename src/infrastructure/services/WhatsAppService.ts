@@ -116,7 +116,7 @@ export class WhatsAppService {
     let motto = 'The future Begins Here';
     let phone = '0745436312';
     let email = 'schoolgraceseeds@gmail.com';
-    let address = 'P.O Box 12-20123';
+    let address = 'P.O Box 12-40123';
     let centerCode = '';
 
     if (this.academicRepository) {

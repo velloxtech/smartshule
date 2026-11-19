@@ -180,7 +180,7 @@ export const FeeStructureView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
     const schoolName = school?.name || 'GRACE SEEDS SCHOOL';
-    const address = school?.address || 'P.O Box 12-20123';
+    const address = school?.address || 'P.O Box 12-40123';
     const phone = school?.phone || '0745436312';
     const motto = school?.motto || 'The Future Begins Here';
 

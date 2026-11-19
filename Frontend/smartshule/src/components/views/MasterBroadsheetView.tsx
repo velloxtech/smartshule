@@ -412,7 +412,7 @@ export const MasterBroadsheetView: React.FC = () => {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
-      doc.text(`"${motto}" · P.O Box 12-20123 · Tel: 0745436312`, 32, 20);
+      doc.text(`"${motto}" · P.O Box 12-40123 · Tel: 0745436312`, 32, 20);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
@@ -1036,7 +1036,7 @@ export const MasterBroadsheetView: React.FC = () => {
             GRACE SEEDS SCHOOL
           </h2>
           <p className="text-xs text-slate-600 font-medium">
-            P.O Box 12-20123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
+            P.O Box 12-40123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
           </p>
         </div>
 

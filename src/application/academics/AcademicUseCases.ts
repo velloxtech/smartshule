@@ -63,7 +63,7 @@ export class AcademicUseCases {
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',
-          address: 'P.O Box 12-20123',
+          address: 'P.O Box 12-40123',
           logoUrl: '/logo.png',
           currency: 'KES',
           latitude: -0.061234,
@@ -94,7 +94,7 @@ export class AcademicUseCases {
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',
-          address: school.id === 'school-001' ? 'P.O Box 12-20123' : school.address,
+          address: school.id === 'school-001' ? 'P.O Box 12-40123' : school.address,
           logoUrl: school.logoUrl || '/logo.png',
           currency: school.currency || 'KES',
           latitude: school.latitude ?? -0.061234,
@@ -107,7 +107,7 @@ export class AcademicUseCases {
       );
       await this.academicRepository.updateSchool(school);
     }
-    return { ...school.toJSON(), ...(school.id === 'school-001' ? { address: 'P.O Box 12-20123' } : {}) };
+    return { ...school.toJSON(), ...(school.id === 'school-001' ? { address: 'P.O Box 12-40123' } : {}) };
   }
 
   public async getGeofenceConfig(schoolId?: string) {

@@ -174,7 +174,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                     {receipt.schoolName || 'Grace Seeds School'}
                   </div>
                   <div className="text-[10px] text-outline mt-0.5">
-                    {receipt.schoolAddress || 'P.O Box 12-20123'} · Tel: {receipt.schoolPhone || '0745436312'} · Email: {receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}
+                    {receipt.schoolAddress || 'P.O Box 12-40123'} · Tel: {receipt.schoolPhone || '0745436312'} · Email: {receipt.schoolEmail || 'schoolgraceseeds@gmail.com'}
                   </div>
                   <div className="mt-2 inline-block px-3 py-0.5 bg-surface-container rounded-full text-[10px] font-bold text-on-surface uppercase tracking-wider">
                     Official Fee Payment Receipt

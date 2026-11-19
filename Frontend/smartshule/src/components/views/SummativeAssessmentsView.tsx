@@ -838,7 +838,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
     const lines: string[] = [];
     lines.push('GRACE SEEDS SCHOOL - SUMMATIVE EXAMINATION MARKSHEET MATRIX');
-    lines.push('P.O Box 12-20123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
+    lines.push('P.O Box 12-40123 · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
     lines.push(`Academic Term: ${selectedTermId}, Year: ${selectedYearId}, Exported: ${new Date().toLocaleDateString('en-KE')}`);
     lines.push('');
     lines.push(headers.join(','));

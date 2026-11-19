@@ -1055,7 +1055,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   {schoolData?.name || 'Grace Seeds School'}
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5">
-                  {schoolData?.address || 'P.O Box 12-20123'} · Tel: {schoolData?.phone || '0745436312'} · Email: {schoolData?.email || 'schoolgraceseeds@gmail.com'}
+                  {schoolData?.address || 'P.O Box 12-40123'} · Tel: {schoolData?.phone || '0745436312'} · Email: {schoolData?.email || 'schoolgraceseeds@gmail.com'}
                 </div>
                 <div className="mt-2 inline-block px-3 py-0.5 bg-surface-container rounded-full text-[10px] font-bold text-slate-800 uppercase tracking-wider">
                   {recordedResult.channel === 'CASH' ? 'Official Cash Receipt' : 'Bank Deposit Acknowledgment'}

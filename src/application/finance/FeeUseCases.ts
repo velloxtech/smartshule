@@ -2685,7 +2685,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolName: 'Grace Seeds School',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'P.O Box 12-20123',
+      schoolAddress: 'P.O Box 12-40123',
       servedBy: data.servedBy || 'School Accounts Office',
       bankName: data.bankName,
       slipNumber: data.slipNumber,
@@ -2811,7 +2811,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolName: 'Grace Seeds School',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'P.O Box 12-20123',
+      schoolAddress: 'P.O Box 12-40123',
       servedBy: payment.recordedByUserId,
       notes: payment.notes
     };
@@ -4314,7 +4314,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       schoolLogoUrl: '/logo.png',
       schoolPhone: '0745436312',
       schoolEmail: 'schoolgraceseeds@gmail.com',
-      schoolAddress: 'P.O Box 12-20123'
+      schoolAddress: 'P.O Box 12-40123'
     };
 
     const application = FeeCreditApplication.create(
@@ -4620,7 +4620,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
           schoolLogoUrl: '/logo.png',
           schoolPhone: '0745436312',
           schoolEmail: 'schoolgraceseeds@gmail.com',
-          schoolAddress: 'P.O Box 12-20123'
+          schoolAddress: 'P.O Box 12-40123'
         };
 
         for (const app of applicationsCreated) {
@@ -5310,7 +5310,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         schoolLogoUrl: '/logo.png',
         schoolPhone: '0745436312',
         schoolEmail: 'schoolgraceseeds@gmail.com',
-        schoolAddress: 'P.O Box 12-20123'
+        schoolAddress: 'P.O Box 12-40123'
       };
 
       for (const app of applicationsCreated) {
@@ -6348,7 +6348,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
           schoolName: 'Grace Seeds School',
           schoolPhone: '0745436312',
           schoolEmail: 'schoolgraceseeds@gmail.com',
-          schoolAddress: 'P.O Box 12-20123',
+          schoolAddress: 'P.O Box 12-40123',
           studentId: currentReq.studentId,
           studentName: currentReq.studentName,
           admissionNumber: currentReq.admissionNumber,

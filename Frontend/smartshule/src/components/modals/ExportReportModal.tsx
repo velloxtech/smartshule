@@ -10,7 +10,7 @@ interface ExportReportModalProps {
 
 const DEFAULT_SCHOOL: Partial<SchoolInfo> = {
   name: 'Grace Seeds School',
-  address: 'P.O Box 12-20123',
+  address: 'P.O Box 12-40123',
   phone: '0745436312',
   email: 'schoolgraceseeds@gmail.com',
   motto: 'The future begins here',
@@ -130,7 +130,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
             </div>
             <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBE EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              {school?.address || 'P.O Box 12-20123'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
+              {school?.address || 'P.O Box 12-40123'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
             </p>
             <div className="mt-2 text-xs font-data-mono text-outline">
               Generated on: {new Date().toLocaleDateString('en-KE', { dateStyle: 'full' })}

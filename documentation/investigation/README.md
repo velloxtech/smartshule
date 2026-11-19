@@ -67,7 +67,7 @@ The browser navigation audit is a route/layout smoke test, not a claim that ever
 
 ## Postal address
 
-The school API presentation and applicable hardcoded contact templates now use exactly **P.O Box 12-20123**. Updated surfaces include login/admission contact text, notices, attendance exports, broadsheets, report cards, timetable output, invoices/receipts/credit receipts, fee reports/structures, payroll, stationery requirements, and email/WhatsApp fallback contact templates. Geofence physical-location defaults are not a postal-address field.
+The school API presentation and applicable hardcoded contact templates now use exactly **P.O Box 12-40123**. Updated surfaces include login/admission contact text, notices, attendance exports, broadsheets, report cards, timetable output, invoices/receipts/credit receipts, fee reports/structures, payroll, stationery requirements, and email/WhatsApp fallback contact templates. Geofence physical-location defaults are not a postal-address field.
 
 The stored production school setting still has its previous street address. [repair-school-address.sql](../../scripts/investigation/repair-school-address.sql) defaults to a **read-only dry run**, targets only `school-001`, checks the expected old value, and backs up the prior address before a reviewed apply. [rollback-school-address.sql](../../scripts/investigation/rollback-school-address.sql) restores that address and refuses to overwrite a subsequent address change. Dry-run, apply, and rollback were exercised successfully against the isolated database.
 

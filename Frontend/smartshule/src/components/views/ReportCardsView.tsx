@@ -510,7 +510,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const schoolName = schoolInfo?.name || 'Grace Seeds School';
   const schoolMotto = schoolInfo?.motto || 'The future begins here';
-  const schoolAddress = schoolInfo?.address || 'P.O Box 12-20123';
+  const schoolAddress = schoolInfo?.address || 'P.O Box 12-40123';
   const schoolPhone = schoolInfo?.phone || '0745436312';
   const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
 
