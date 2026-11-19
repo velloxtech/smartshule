@@ -430,7 +430,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">location_on</span>
-                <span>P.O Box 12-20123</span>
+                <span>P.O Box 12-40123</span>
               </div>
             </div>
           </div>
