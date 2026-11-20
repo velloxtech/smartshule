@@ -3824,6 +3824,10 @@ export class PostgresFeeRepository implements IFeeRepository {
     const params: any[] = [];
     if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
+    if (filters.studentIds) {
+      params.push(filters.studentIds);
+      q += ` AND student_id = ANY($${params.length}::text[])`;
+    }
     if (filters.invoiceId) { params.push(filters.invoiceId); q += ` AND invoice_id = $${params.length}`; }
     if (filters.startDate) { params.push(filters.startDate); q += ` AND payment_date >= $${params.length}`; }
     if (filters.endDate) { params.push(filters.endDate); q += ` AND payment_date <= $${params.length}`; }

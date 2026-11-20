@@ -1055,7 +1055,7 @@ export class InMemoryFeeRepository implements IFeeRepository {
     let result = Array.from(this.payments.values());
     if (filters.schoolId) result = result.filter(p => p.schoolId === filters.schoolId);
     if (filters.studentId) result = result.filter(p => p.studentId === filters.studentId);
-    if (filters.studentIds && filters.studentIds.length > 0) {
+    if (filters.studentIds) {
       result = result.filter(p => filters.studentIds!.includes(p.studentId));
     }
     if (filters.invoiceId) result = result.filter(p => p.invoiceId === filters.invoiceId);

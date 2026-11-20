@@ -27,6 +27,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
 
+  const [parentReceipts, setParentReceipts] = useState<{ userId?: string; transactions: FeeTransaction[] }>({ transactions: [] });
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
   const [school, setSchool] = useState<any>(null);
@@ -87,6 +88,40 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const [selectedInvoiceForPay, setSelectedInvoiceForPay] = useState<StudentInvoice | undefined>(undefined);
   const [selectedStudentForPay, setSelectedStudentForPay] = useState<Student | undefined>(undefined);
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
+
+  const loadParentReceipts = async (isCancelled: () => boolean) => {
+    setParentReceipts({ userId: user?.id, transactions: [] });
+    setSelectedTx(null);
+    if (!isGuardian) return;
+    try {
+      const portal = await apiService.getGuardianPortalData();
+      const childIds: string[] = (portal.data?.children || []).map((child: any) => child.id);
+      const responses = await Promise.all(childIds.map(id => apiService.getPayments(undefined, id)));
+      const payments = responses.flatMap(response => response.data || [])
+        .filter(payment => childIds.includes(payment.studentId));
+      if (isCancelled()) return;
+      setParentReceipts({ userId: user?.id, transactions: payments.map((payment: any) => ({
+        ...payment,
+        ref: payment.receiptNumber || payment.transactionReference || payment.id,
+        studentName: payment.studentName || 'Learner',
+        admNo: payment.admissionNumber || '',
+        grade: payment.gradeLevel || '',
+        channel: payment.paymentMethod === 'CASH' ? 'Cash Office'
+          : payment.paymentMethod === 'MPESA' ? 'M-Pesa Express'
+          : payment.paymentMethod === 'BANK_DEPOSIT' ? 'Bank Deposit'
+          : payment.paymentMethod === 'CHEQUE' ? "Banker's Cheque" : 'Bank Wire / EFT',
+        status: payment.status === 'COMPLETED' ? 'Settled' : payment.status,
+      })) });
+    } catch (err) {
+      console.error('Failed to load child receipts:', err);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    loadParentReceipts(() => cancelled);
+    return () => { cancelled = true; };
+  }, [user?.id, isGuardian]);
 
   const loadData = async () => {
     setLoading(true);
@@ -171,7 +206,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const totalBalance = financeSummary?.totalOutstanding || Math.max(0, totalInvoiced - totalPaid);
   const collectionRate = financeSummary?.collectionRatePercentage || (totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0);
 
-  const filteredTransactions = propTransactions.filter((tx) => {
+  const transactions = isGuardian
+    ? (parentReceipts.userId === user?.id ? parentReceipts.transactions : [])
+    : propTransactions;
+  const filteredTransactions = transactions.filter((tx) => {
     if (channelFilter === 'ALL') return true;
     const ch = (tx.channel || '').toUpperCase();
     if (channelFilter === 'CASH') return ch.includes('CASH');
@@ -667,7 +705,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                   : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
               }`}
             >
-              All Channels ({propTransactions.length})
+              All Channels ({transactions.length})
             </button>
             <button
               onClick={() => setChannelFilter('CASH')}

@@ -1279,6 +1279,11 @@ export class MongoFeeRepository implements IFeeRepository {
     const query: any = {};
     if (filters.schoolId) query.schoolId = filters.schoolId;
     if (filters.studentId) query.studentId = filters.studentId;
+    if (filters.studentIds) {
+      query.studentId = { $in: filters.studentId
+        ? filters.studentIds.filter(id => id === filters.studentId)
+        : filters.studentIds };
+    }
     if (filters.invoiceId) query.invoiceId = filters.invoiceId;
     const docs = await PaymentModel.find(query).lean();
     return docs.map((d: any) => Payment.create(d, d._id, d.createdAt, d.updatedAt));
