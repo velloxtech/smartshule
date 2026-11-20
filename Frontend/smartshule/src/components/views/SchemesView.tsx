@@ -9,7 +9,6 @@ import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
 import { CreateSchemeModal } from '../modals/CreateSchemeModal';
 import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
 import { ViewSchemeModal } from '../modals/ViewSchemeModal';
-import { CurriculumSuiteSwitcher, CurriculumSuiteTab } from '../common/CurriculumSuiteSwitcher';
 import { useAuth } from '../../context/AuthContext';
 
 interface SchemesViewProps {
@@ -211,15 +210,31 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         </div>
       </div>
 
-      {/* Curriculum Planning & Coverage Suite Switcher */}
-      <CurriculumSuiteSwitcher
-        activeTab={activeTab}
-        onSelectTab={navigatePlanningTab}
-        counts={{
-          schemes: schemes.length,
-          lessonPlans: lessonPlans.length,
-        }}
-      />
+      {/* Schemes & Lesson Plans Tabs */}
+      <div className="flex border-b border-surface-container gap-6 text-sm font-semibold mb-6">
+        <button
+          onClick={() => setActiveTab('schemes')}
+          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
+            activeTab === 'schemes'
+              ? 'text-primary border-b-2 border-primary font-bold'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+          <span>Schemes of Work ({schemes.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('lesson-plans')}
+          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
+            activeTab === 'lesson-plans'
+              ? 'text-primary border-b-2 border-primary font-bold'
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">menu_book</span>
+          <span>40-Min Lesson Plans ({lessonPlans.length})</span>
+        </button>
+      </div>
 
       {/* Schemes View */}
       {activeTab === 'schemes' && (

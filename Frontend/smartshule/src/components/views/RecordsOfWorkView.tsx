@@ -5,7 +5,6 @@ import CreateRecordOfWorkModal from '../modals/CreateRecordOfWorkModal';
 import { CreateLinkedRecordOfWorkModal } from '../modals/CreateLinkedRecordOfWorkModal';
 import EditRecordOfWorkModal from '../modals/EditRecordOfWorkModal';
 import { ViewRecordOfWorkModal } from '../modals/ViewRecordOfWorkModal';
-import { CurriculumSuiteSwitcher } from '../common/CurriculumSuiteSwitcher';
 import { apiService } from '../../services/api';
 import { RecordOfWork, RecordOfWorkStatus, RecordOfWorkSummary } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -285,19 +284,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
       )}
       {actionNotice&&<div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><strong>Progression exception recorded.</strong> {actionNotice} This week is marked exempt, not taught.</div>}
 
-      {/* Curriculum Planning & Coverage Suite Switcher */}
-      <CurriculumSuiteSwitcher
-        activeTab="records-of-work"
-        onSelectTab={(tab) => {
-          if (tab === 'records-of-work') return;
-          if (onNavigateTab) {
-            onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
-          }
-        }}
-        counts={{
-          recordsOfWork: summary?.totalLessons ?? records.length,
-        }}
-      />
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

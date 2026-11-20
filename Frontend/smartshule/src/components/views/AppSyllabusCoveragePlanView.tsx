@@ -1,4 +1,5 @@
 import { ClassCoverageSummary } from '../curriculum/ClassCoverageSummary';
+
 import { TermClosingDateEditor } from '../common/TermClosingDateEditor';
 import { SubStrandSchemePlanner } from '../curriculum/SubStrandSchemePlanner';
 import { TermCoveragePlanner } from '../curriculum/TermCoveragePlanner';
@@ -10,6 +11,8 @@ import { CurriculumTrackerView } from './CurriculumTrackerView';
 const weekdays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const input='ui-field';
 export function AppSyllabusCoveragePlanView({onNavigateTab,mode='coverage'}:{onNavigateTab?:(tab:string)=>void;mode?:'coverage'|'scheme-builder'}){
+
+
  const Planner=mode==='scheme-builder'?SubStrandSchemePlanner:TermCoveragePlanner;
  const {user}=useAuth();const admin=['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'].includes(user?.role || '');
  const workspaceRequest=useRef(0);

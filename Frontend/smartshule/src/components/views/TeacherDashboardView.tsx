@@ -242,7 +242,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       } catch (err) {
         if (!cancelled) {
           setClassError(err instanceof Error ? err.message : 'Could not load your assigned class.');
-          if (web) {setAuthorized(null);setResolvedAssignedClass('Assignments could not be loaded');}
+          if (web) {setAuthorized(null);setResolvedAssignedClass('');}
         }
         console.error('Error loading teacher dashboard data:', err);
       } finally {
@@ -416,41 +416,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <h1 className="font-headline-lg text-2xl font-bold text-on-surface tracking-tight">
               Welcome, Tr. {teacherName}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
-              CBC Educator
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-data-mono font-semibold bg-surface-container text-on-surface-variant">
-              {tscNumber}
-            </span>
+            {teacherProfile?.tscNumber && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-data-mono font-semibold bg-surface-container text-on-surface-variant">
+                TSC: {teacherProfile.tscNumber}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 font-semibold text-primary">
-              <span className="material-symbols-outlined text-[15px]">meeting_room</span>
-              {assignedClass}
-            </span>
-            <span>·</span>
-            <span className="inline-flex items-center gap-1 text-on-surface-variant">
-              <span className="material-symbols-outlined text-[15px]">psychology</span>
-              {specialization}
-            </span>
-            {qualification && (
-              <>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-medium">
-                  <span className="material-symbols-outlined text-[15px]">school</span>
-                  {qualification}
-                </span>
-              </>
-            )}
-            {currentContext?.currentTerm?.name && (
-              <>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1 font-data-mono text-success font-semibold">
-                  {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
-                </span>
-              </>
-            )}
-          </p>
+          {currentContext?.currentTerm?.name && (
+            <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 font-data-mono text-primary font-semibold">
+                {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
+              </span>
+            </p>
+          )}
         </div>
 
         {/* Quick Action Buttons Header */}
@@ -496,24 +474,8 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Real-Time School Compound Geofence Clock-In Section */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px] text-rose-800">share_location</span>
-            School Compound Clock-In Station
-          </span>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('geofencing')}
-            className="text-xs font-semibold text-primary hover:text-primary-container inline-flex items-center gap-1 cursor-pointer"
-          >
-            <span>Open Standalone Geofencing Page</span>
-            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-          </button>
-        </div>
-        <TeacherGeofenceClockInCard teacherName={teacherName} />
-      </div>
+      {/* Clock Station Card */}
+      <TeacherGeofenceClockInCard teacherName={teacherName} compact={true} />
 
       {/* 4 Core Teacher KPI Cards */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${canViewSelectedRoster?'lg:grid-cols-4':'lg:grid-cols-3'} gap-4`}>

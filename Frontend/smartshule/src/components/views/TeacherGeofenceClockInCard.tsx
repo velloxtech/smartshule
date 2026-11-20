@@ -5,6 +5,7 @@ import { GeofenceConfig, TeacherClockInRecord } from '../../types';
 interface TeacherGeofenceClockInCardProps {
   teacherName?: string;
   onClockInChange?: (record: TeacherClockInRecord) => void;
+  compact?: boolean;
 }
 
 function calculateHaversineDistance(
@@ -29,6 +30,7 @@ function calculateHaversineDistance(
 export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProps> = ({
   teacherName,
   onClockInChange,
+  compact = false,
 }) => {
   const [geofence, setGeofence] = useState<GeofenceConfig | null>(null);
   const [clockInRecord, setClockInRecord] = useState<TeacherClockInRecord | null>(null);
@@ -190,6 +192,85 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
       setSubmitting(false);
     }
   };
+
+  if (compact) {
+    return (
+      <div className="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-xs border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-xs shrink-0 ${
+              isClockedIn ? 'bg-primary' : 'bg-surface-container text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[24px]">
+              {isClockedIn ? 'alarm_on' : 'schedule'}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-on-surface">Clock Station</h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  isClockedIn
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : clockInRecord?.status === 'CLOCKED_OUT'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-surface-container text-on-surface-variant'
+                }`}
+              >
+                {isClockedIn
+                  ? `Clocked In (${clockInRecord?.clockInTime || 'Active'})`
+                  : clockInRecord?.status === 'CLOCKED_OUT'
+                  ? `Clocked Out (${clockInRecord?.clockOutTime || 'Ended'})`
+                  : 'Not Clocked In'}
+              </span>
+            </div>
+            <p className="text-xs text-on-surface-variant mt-0.5 truncate">
+              {actionError ? (
+                <span className="text-rose-600 font-medium">{actionError}</span>
+              ) : actionSuccess ? (
+                <span className="text-emerald-700 font-medium">{actionSuccess}</span>
+              ) : isClockedIn ? (
+                `Clocked in at ${clockInRecord?.clockInTime || '--:--'} • Active on duty`
+              ) : clockInRecord?.status === 'CLOCKED_OUT' ? (
+                `Shift ended at ${clockInRecord?.clockOutTime || '--:--'}`
+              ) : (
+                'Daily attendance verification'
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {!isClockedIn ? (
+            <button
+              onClick={() => handleClockToggle('CLOCK_IN')}
+              disabled={submitting || locating}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-primary hover:bg-primary-container text-white transition-all shadow-xs cursor-pointer disabled:opacity-60"
+              title="Record Clock-In"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${submitting || locating ? 'animate-spin' : ''}`}>
+                {submitting || locating ? 'progress_activity' : 'login'}
+              </span>
+              <span>{submitting ? 'Clocking In...' : locating ? 'Verifying...' : 'Clock In'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleClockToggle('CLOCK_OUT')}
+              disabled={submitting}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-rose-700 hover:bg-rose-800 text-white transition-all shadow-xs cursor-pointer disabled:opacity-60"
+              title="Record Clock-Out"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${submitting ? 'animate-spin' : ''}`}>
+                {submitting ? 'progress_activity' : 'logout'}
+              </span>
+              <span>{submitting ? 'Clocking Out...' : 'Clock Out'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant/30 space-y-5">

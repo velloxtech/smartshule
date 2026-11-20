@@ -446,20 +446,6 @@ export const OccurrenceBookView: React.FC = () => {
             Official School Daily Register
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Daily Occurrence Book (OB)</h1>
-          <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
-            Duty teachers, class teachers, and administrators record incidents, accidents, disciplinary events, safety issues, and good deeds as they happen throughout the school day.
-          </p>
-          <div className="mt-3 flex items-center gap-3 text-xs text-rose-200">
-            <span className="inline-flex items-center gap-1">
-              <span className="material-symbols-outlined text-xs">calendar_today</span>
-              Selected Scope: {dateScope === 'today' ? `Today (${todayStr})` : dateScope === 'yesterday' ? 'Yesterday' : dateScope === 'all' ? 'All Historic Dates' : selectedDate}
-            </span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="material-symbols-outlined text-xs">badge</span>
-              Logged by Duty Master / CBE Staff
-            </span>
-          </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">

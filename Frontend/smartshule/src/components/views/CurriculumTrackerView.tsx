@@ -19,7 +19,6 @@ import {
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { matchGradeLevels } from '../../utils/formatters';
-import { CurriculumSuiteSwitcher } from '../common/CurriculumSuiteSwitcher';
 import { ViewCurriculumTrackerModal } from '../modals/ViewCurriculumTrackerModal';
 import { ViewTrackerWeekModal } from '../modals/ViewTrackerWeekModal';
 import { ViewDailyLogModal } from '../modals/ViewDailyLogModal';
@@ -686,19 +685,6 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
 
   return (
     <div className="w-full space-y-6 pb-12">
-      {/* Curriculum Planning & Coverage Suite Switcher */}
-      {showSuiteSwitcher && <CurriculumSuiteSwitcher
-        activeTab="curriculum-tracker"
-        onSelectTab={(tab) => {
-          if (tab === 'curriculum-tracker') return;
-          if (onNavigateTab) {
-            onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
-          }
-        }}
-        counts={{
-          curriculumTrackers: trackers.length,
-        }}
-      />}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
