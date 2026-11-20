@@ -10,9 +10,7 @@ import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
 import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
-import { TeacherSalaryAcknowledgementCard } from './TeacherSalaryAcknowledgementCard';
 import {teacherDashboardCohorts} from '../../utils/teacherDashboardCohorts';
-import {TeacherTodaySummary} from '../teacher/TeacherTodaySummary';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -408,7 +406,6 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {web&&<TeacherTodaySummary slots={mySlots} classes={authorized?.assignedClasses||[]} context={currentContext} loading={loading} error={classError} unavailable={timetableUnavailable} onNavigate={onNavigateTab}/>}
       {/* Teacher Welcome & Profile Banner */}
       <div className="bg-surface-container-lowest rounded-2xl p-5 sm:p-6 shadow-xs border border-outline-variant/30 flex flex-col lg:flex-row lg:items-start justify-between gap-5 sm:gap-6">
         <div className="flex-1 min-w-0">
@@ -844,8 +841,6 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Teacher Salary Payment & Digital Acknowledgement Section */}
-      <TeacherSalaryAcknowledgementCard />
 
       {canViewSelectedRoster&&<><div id="teacher-class-roster" className="scroll-mt-24" />
       {/* Class Learners Table (Partial Details Only: No Fees, No Financial Invoices) */}
