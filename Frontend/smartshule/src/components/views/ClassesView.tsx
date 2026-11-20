@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export const ClassesView: React.FC = () => {
   const { user } = useAuth();
+  const canManageClasses = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(user?.role || '');
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -327,13 +328,15 @@ export const ClassesView: React.FC = () => {
             </div>
           )}
 
-          <button
-            onClick={() => setIsAddClassOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>Add Class</span>
-          </button>
+          {canManageClasses && (
+            <button
+              onClick={() => setIsAddClassOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>Add Class</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -438,20 +441,22 @@ export const ClassesView: React.FC = () => {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                      onClick={() =>
-                                        openAssignModal(
-                                          c.id,
-                                          c.name,
-                                          s.id,
-                                          s.name,
-                                          activeAssignment?.teacherId || s.classTeacherId
-                                        )
-                                      }
-                                      className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
-                                    >
-                                      {teacherName ? 'Reassign' : 'Assign'}
-                                    </button>
+                                    {canManageClasses && (
+                                      <button
+                                        onClick={() =>
+                                          openAssignModal(
+                                            c.id,
+                                            c.name,
+                                            s.id,
+                                            s.name,
+                                            activeAssignment?.teacherId || s.classTeacherId
+                                          )
+                                        }
+                                        className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                                      >
+                                        {teacherName ? 'Reassign' : 'Assign'}
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => openHistoryModal(c.id, c.name, s.id, s.name)}
                                       title="Assignment History"
@@ -488,20 +493,22 @@ export const ClassesView: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() =>
-                                  openAssignModal(
-                                    c.id,
-                                    c.name,
-                                    undefined,
-                                    undefined,
-                                    singleClassAssignment?.teacherId
-                                  )
-                                }
-                                className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
-                              >
-                                {singleTeacherName ? 'Reassign' : 'Assign'}
-                              </button>
+                              {canManageClasses && (
+                                <button
+                                  onClick={() =>
+                                    openAssignModal(
+                                      c.id,
+                                      c.name,
+                                      undefined,
+                                      undefined,
+                                      singleClassAssignment?.teacherId
+                                    )
+                                  }
+                                  className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                                >
+                                  {singleTeacherName ? 'Reassign' : 'Assign'}
+                                </button>
+                              )}
                               <button
                                 onClick={() => openHistoryModal(c.id, c.name, undefined, undefined)}
                                 title="Assignment History"
@@ -517,25 +524,29 @@ export const ClassesView: React.FC = () => {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-surface-container flex justify-between items-center">
-                    <button
-                      onClick={() => {
-                        setSelectedClassId(c.id);
-                        setIsAddStreamOpen(true);
-                      }}
-                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">add</span>
-                      <span>Add Stream</span>
-                    </button>
-                    <div className="flex items-center gap-2">
+                    {canManageClasses ? (
                       <button
-                        onClick={() => handleDeleteClass(c.id, c.name)}
-                        title="Delete Class"
-                        className="text-xs text-outline hover:text-error hover:bg-error/10 p-1 rounded transition-colors cursor-pointer flex items-center gap-1"
+                        onClick={() => {
+                          setSelectedClassId(c.id);
+                          setIsAddStreamOpen(true);
+                        }}
+                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[14px]">delete</span>
-                        <span>Delete</span>
+                        <span className="material-symbols-outlined text-[14px]">add</span>
+                        <span>Add Stream</span>
                       </button>
+                    ) : <div />}
+                    <div className="flex items-center gap-2">
+                      {canManageClasses && (
+                        <button
+                          onClick={() => handleDeleteClass(c.id, c.name)}
+                          title="Delete Class"
+                          className="text-xs text-outline hover:text-error hover:bg-error/10 p-1 rounded transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                          <span>Delete</span>
+                        </button>
+                      )}
                       <span className="text-[10px] text-outline font-data-mono">{c.id}</span>
                     </div>
                   </div>

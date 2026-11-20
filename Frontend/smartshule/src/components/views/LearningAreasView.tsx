@@ -334,20 +334,22 @@ export const LearningAreasView: React.FC = () => {
           </h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setIsAddSubjectOpen(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>Create Global Subject</span>
-          </button>
-          <button onClick={() => setIsAddStreamOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[16px]">splitscreen</span>
-            <span>Add Stream</span>
-          </button>
-          <button onClick={() => setIsAddClassOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-surface text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[16px]">school</span>
-            <span>Add Class</span>
-          </button>
-        </div>
+        {canManageAssignments && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setIsAddSubjectOpen(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>Create Global Subject</span>
+            </button>
+            <button onClick={() => setIsAddStreamOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-[16px]">splitscreen</span>
+              <span>Add Stream</span>
+            </button>
+            <button onClick={() => setIsAddClassOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-surface text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-[16px]">school</span>
+              <span>Add Class</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {feedback && (
@@ -506,10 +508,12 @@ export const LearningAreasView: React.FC = () => {
                   <span className="text-[10px] text-on-surface-variant font-medium">
                     {la.gradeLevel ? `Grade: ${la.gradeLevel.replace('_', ' ')}` : 'School-wide Subject'}
                   </span>
-                  <button onClick={() => handleDeleteSubject(la.id, la.name)} className="px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
-                    <span className="material-symbols-outlined text-[15px]">delete</span>
-                    <span>Remove</span>
-                  </button>
+                  {canManageAssignments && (
+                    <button onClick={() => handleDeleteSubject(la.id, la.name)} className="px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
+                      <span className="material-symbols-outlined text-[15px]">delete</span>
+                      <span>Remove</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
