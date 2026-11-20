@@ -1059,42 +1059,7 @@ export default function App() {
           }}
         />
 
-        {/* Term Lifecycle Notice Banner */}
-        {currentContext?.termNotice && (
-          <div
-            className={`no-print print:hidden term-lifecycle-banner px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
-              currentContext.termNotice.type === 'TERM_ENDED'
-                ? 'bg-primary-container text-rose-100 border-b border-[#770000]'
-                : currentContext.termNotice.type === 'ENDING_SOON'
-                ? 'bg-primary-container text-amber-100 border-b border-[#880000]'
-                : 'bg-[#770000] text-white/90 border-b border-[#990000]'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">
-                {currentContext.termNotice.type === 'TERM_ENDED'
-                  ? 'event_busy'
-                  : currentContext.termNotice.type === 'ENDING_SOON'
-                  ? 'hourglass_top'
-                  : 'date_range'}
-              </span>
-              <span className="font-semibold">{currentContext.termNotice.message}</span>
-            </div>
-            {(user?.role === UserRole.SUPER_ADMIN ||
-              user?.role === UserRole.ADMIN ||
-              user?.role === UserRole.SCHOOL_ADMIN ||
-              user?.role === UserRole.HEAD_TEACHER) && (
-              <button
-                onClick={() => setAcademicTermsModalOpen(true)}
-                className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors cursor-pointer text-[11px] shrink-0 border border-white/20"
-              >
-                {currentContext.termNotice.type === 'TERM_ENDED'
-                  ? 'Transition Term'
-                  : 'Term Schedule'}
-              </button>
-            )}
-          </div>
-        )}
+
 
         {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">

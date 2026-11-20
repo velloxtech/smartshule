@@ -142,8 +142,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalStudents = summaryData?.counts?.totalStudents ?? students.length;
   const activeStudents = summaryData?.counts?.activeStudents ?? students.filter(s => s.status === 'ACTIVE').length;
   const inactiveStudents = summaryData?.counts?.inactiveStudents ?? Math.max(0, totalStudents - activeStudents);
-  const boysCount = summaryData?.counts?.boysCount ?? students.filter((s) => s.gender === 'Boy' || s.gender === 'Male').length;
-  const girlsCount = summaryData?.counts?.girlsCount ?? students.filter((s) => s.gender === 'Girl' || s.gender === 'Female').length;
+  const boysCount = summaryData?.counts?.boysCount ?? students.filter((s) => ['Boy', 'Male', 'MALE'].includes(s.gender)).length;
+  const girlsCount = summaryData?.counts?.girlsCount ?? students.filter((s) => ['Girl', 'Female', 'FEMALE'].includes(s.gender)).length;
 
   const totalTeachersCount = summaryData?.counts?.totalTeachers ?? teachers.length;
   const totalNonTeachingStaffCount = summaryData?.counts?.totalNonTeachingStaff ?? 5;
@@ -298,8 +298,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       const entry = classDataMap.get(key)!;
       entry.total += 1;
-      if (s.gender === 'Boy' || s.gender === 'Male') entry.boys += 1;
-      else if (s.gender === 'Girl' || s.gender === 'Female') entry.girls += 1;
+      if (['Boy', 'Male', 'MALE'].includes(s.gender)) entry.boys += 1;
+      else if (['Girl', 'Female', 'FEMALE'].includes(s.gender)) entry.girls += 1;
     });
 
     return Array.from(classDataMap.values()).filter((c) => c.total > 0 || availableClasses.some((ac) => ac.id === c.id));

@@ -362,6 +362,8 @@ export const LunchFeeManagementView: React.FC = () => {
         setEnrollForm({
           studentId: '',
           planName: 'Standard Hot Lunch',
+          paymentFrequency: 'TERMLY',
+          dailyRate: 0,
           amount: 6000,
           dietaryNotes: '',
           notes: '',
@@ -1464,6 +1466,8 @@ export const LunchFeeManagementView: React.FC = () => {
                                   setSelectedEnrollment(enr);
                                   setEditForm({
                                     planName: enr.planName,
+                                    paymentFrequency: (enr as any).paymentFrequency || 'TERMLY',
+                                    dailyRate: (enr as any).dailyRate || 0,
                                     amount: enr.amount,
                                     dietaryNotes: enr.dietaryNotes || '',
                                     status: enr.status,

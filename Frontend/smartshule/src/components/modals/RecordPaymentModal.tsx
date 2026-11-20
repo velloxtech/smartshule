@@ -2183,7 +2183,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                           <option value="">Select Year...</option>
                           {academicYears.map((y) => (
                             <option key={y.id} value={y.id}>
-                              {y.year} {y.isCurrent ? '(Current)' : ''}
+                              {y.year ?? y.name} {y.isCurrent ? '(Current)' : ''}
                             </option>
                           ))}
                         </select>

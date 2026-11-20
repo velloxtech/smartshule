@@ -1308,7 +1308,7 @@ export const TimetableView: React.FC = () => {
       `}</style>
 
       {/* Top Header & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print bg-white rounded-lg shadow-md p-4">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
@@ -1321,7 +1321,7 @@ export const TimetableView: React.FC = () => {
             Grace Seeds School Timetable Engine
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Single school scheduling system · Configure periods, days, and assign teachers with automated conflict checks
+
           </p>
         </div>
 
