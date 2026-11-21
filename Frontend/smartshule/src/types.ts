@@ -332,6 +332,8 @@ export interface Student {
   arrearsDue?: number;
   hasInvoices?: boolean;
   isUnbilled?: boolean;
+  schoolId?: string;
+  totalBalance?: number;
 }
 
 export interface ArchivedGuardianInfo {
@@ -525,6 +527,8 @@ export interface TeacherProfileData {
     label?: string;
   }[];
   pendingCorrectionRequests?: TeacherCorrectionRequest[];
+  classTeacherAssignments?: any[];
+  subjectAssignments?: any[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -555,6 +559,8 @@ export interface Teacher {
   department?: string;
   emergencyContact?: TeacherEmergencyContact;
   documents?: TeacherDocument[];
+  schoolId?: string;
+  assignedClassStreamIds?: string[];
 }
 
 export interface ClassStream {
@@ -735,6 +741,7 @@ export interface FacultyDailyRoster {
 export interface AcademicYear {
   id: string;
   name: string;
+  year?: number | string;
   startDate: string;
   endDate: string;
   isCurrent: boolean;
@@ -1339,6 +1346,8 @@ export interface DashboardSummary {
     };
     unverifiedPaymentsCount?: number;
     unverifiedPaymentsAmount?: number;
+    income?: Array<{ category?: string; amount?: number }>;
+    expenditure?: Array<{ category?: string; amount?: number }>;
   };
   CBCProficiency: {
     exceeding: number;
@@ -2790,6 +2799,7 @@ export interface BestStudentPerSubjectItem {
   gender: string;
   score: number;
   performanceLevel: string;
+  scope?: 'SCHOOL' | 'CLASS' | string;
 }
 
 export interface StreamSection {
@@ -2822,8 +2832,10 @@ export interface BroadsheetResult {
   totalClassStudents?: number;
   genderStats?: GenderStats;
   classRankings?: ClassRankingItem[];
+  schoolClassRankings?: ClassRankingItem[];
   bestClassesPerSubject?: BestClassPerSubjectItem[];
   bestStudentsPerSubject?: BestStudentPerSubjectItem[];
+  schoolBestStudentsPerSubject?: BestStudentPerSubjectItem[];
 }
 
 // ==========================================
@@ -2899,6 +2911,7 @@ export interface DailyReflection {
   comprehensionLevel: LearnerComprehension;
   whatWentWell: string;
   challengesFaced?: string;
+  challenges?: string;
   remedialPlan?: string;
   nextSteps?: string;
 }
@@ -2907,6 +2920,7 @@ export interface AdministrativeEndorsement {
   endorsedByUserId: string;
   endorsedByName: string;
   endorsedByRole: string;
+  role?: string;
   remarks: string;
   endorsedAt: string;
 }
@@ -3086,6 +3100,8 @@ export interface FeeCreditUtilizationReceiptPayload {
   receiptNumber: string;
   receiptTitle?: string;
   transactionReference: string;
+  applicationId?: string;
+  amountUtilized?: number;
   timestamp: string;
   formattedDate: string;
   transactionType: 'AUTOMATIC' | 'ADMIN-INITIATED';

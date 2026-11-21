@@ -1308,7 +1308,7 @@ export const TimetableView: React.FC = () => {
       `}</style>
 
       {/* Top Header & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print bg-white rounded-lg shadow-md p-4">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
@@ -1321,7 +1321,7 @@ export const TimetableView: React.FC = () => {
             Grace Seeds School Timetable Engine
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Single school scheduling system · Configure periods, days, and assign teachers with automated conflict checks
+
           </p>
         </div>
 
@@ -1409,152 +1409,6 @@ export const TimetableView: React.FC = () => {
           </button>
         </div>
       )}
-
-      {!isParent&&<section className="no-print flex flex-wrap gap-4 rounded-xl border bg-surface-container-lowest p-4"><label>Planning academic year<select aria-label="Timetable academic year" className="ui-field" value={planningYear} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setTimetable(null);setIsGridDirty(false);setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===e.target.value),currentTerm:undefined}));setPlanningYear(e.target.value);}}}>{planningYears.map(y=><option key={y.id} value={y.id}>{y.name}{y.isCurrent?' · Operational':''}</option>)}</select></label><label>Planning term<select aria-label="Timetable term" className="ui-field" value={currentContext?.currentTerm?.id||''} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setCurrentContext((old:any)=>({...old,currentTerm:planningTerms.find(t=>t.id===e.target.value)}));rememberPlanningScope(user,{academicYearId:planningYear,termId:e.target.value,classRoomId:selectedClassId,streamId:selectedStreamId});}}}>{planningTerms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><p className="text-sm">This selects the timetable you are preparing. It does not activate a future school year.</p></section>}
-      {/* Control Filters (Class, Stream, Teacher Selection) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 no-print">
-        {isParent ? (
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-white shadow-xs flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px]">school</span>
-              <span>Child Class Timetable</span>
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('class')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'class'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              {isTeacher ? 'My Class Timetable' : 'Class Schedule'}
-            </button>
-            <button
-              onClick={() => setViewMode('teacher')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'teacher'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              {isTeacher ? 'My Teaching Timetable' : 'Teacher Individual View'}
-            </button>
-          </div>
-        )}
-
-        {isParent ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {parentChildren.length > 1 ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-on-surface-variant">Learner:</span>
-                <select
-                  value={selectedChildId}
-                  onChange={(e) => {
-                    const cId = e.target.value;
-                    setSelectedChildId(cId);
-                    const child = parentChildren.find((c) => c.id === cId);
-                    if (child) {
-                      if (child.classroomId) setSelectedClassId(child.classroomId);
-                      if (child.streamId) setSelectedStreamId(child.streamId);
-                    }
-                  }}
-                  className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-bold text-on-surface shadow-xs"
-                >
-                  {parentChildren.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName} ({c.gradeLevel ? c.gradeLevel.replace('_', ' ') : 'Primary'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : parentChildren.length === 1 ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-on-surface">
-                  {parentChildren[0].firstName} {parentChildren[0].lastName}
-                </span>
-                <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[11px] font-semibold">
-                  {parentChildren[0].gradeLevel ? parentChildren[0].gradeLevel.replace('_', ' ') : 'Primary'}
-                </span>
-              </div>
-            ) : null}
-
-            <span className="text-[11px] text-on-surface-variant font-data-mono">
-              {activeClassName}{selectedStreamName ? ` - ${selectedStreamName}` : ''}
-            </span>
-          </div>
-        ) : viewMode === 'class' ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Primary Class Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-on-surface-variant">Class:</span>
-              <select
-                value={selectedClassId}
-                onChange={(e) => setSelectedClassId(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
-              >
-                {classesList.length === 0 ? (
-                  <option value="">{isTeacher?'No class-teacher assignment':'No classes configured'}</option>
-                ) : (
-                  sortAndGroupClasses(classesList).map((group) => (
-                    <optgroup key={group.category} label={group.category}>
-                      {group.classes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {/* Optional Stream Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-on-surface-variant">Stream (Optional):</span>
-              <select
-                value={selectedStreamId}
-                onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
-              >
-                {(!isTeacher||activeClassObj?.allowsWholeClass)&&<option value="">Main Cohort (No Stream)</option>}
-                {classStreams.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span className="text-[11px] text-on-surface-variant font-data-mono hidden md:inline">
-              Grid: {days.length} Days (Rows) × {periods.length} Periods (Cols)
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-on-surface-variant">Teacher:</span>
-            {isTeacher?<span className="text-xs font-semibold">{activeTeacherName} (You)</span>:<select
-              value={teacherId}
-              onChange={(e) => setTeacherId(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
-            >
-              {teachersList.length === 0 ? (
-                <option value="">No teachers available</option>
-              ) : (
-                teachersList.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name || t.user?.fullName || `Teacher ${t.tscNumber || ''}`}
-                  </option>
-                ))
-              )}
-            </select>}
-          </div>
-        )}
-      </div>
-
-      {isTeacher&&<p role="status" className="no-print rounded-xl bg-surface-container-low p-3 text-sm">{accessMessage||'My Teaching Timetable shows only your lessons. Full class timetables are available only for your active class-teacher assignments.'}{!accessMessage&&teacherAccessPeriod&&!classesList.length&&' You have no class-teacher assignment for this period. You can still view your own teaching timetable.'}</p>}
 
       {/* Main Printable Card (Contains Centered School Logo, Letterhead, and Full-Page Grid) */}
       <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 print:p-0 space-y-4 print:space-y-0 print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:rounded-none">
@@ -1816,6 +1670,153 @@ export const TimetableView: React.FC = () => {
         </div>
 
       </div>
+
+
+      {!isParent&&<section className="no-print flex flex-wrap gap-4 rounded-xl border bg-surface-container-lowest p-4"><label>Planning academic year<select aria-label="Timetable academic year" className="ui-field" value={planningYear} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setTimetable(null);setIsGridDirty(false);setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===e.target.value),currentTerm:undefined}));setPlanningYear(e.target.value);}}}>{planningYears.map(y=><option key={y.id} value={y.id}>{y.name}{y.isCurrent?' · Operational':''}</option>)}</select></label><label>Planning term<select aria-label="Timetable term" className="ui-field" value={currentContext?.currentTerm?.id||''} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setCurrentContext((old:any)=>({...old,currentTerm:planningTerms.find(t=>t.id===e.target.value)}));rememberPlanningScope(user,{academicYearId:planningYear,termId:e.target.value,classRoomId:selectedClassId,streamId:selectedStreamId});}}}>{planningTerms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><p className="text-sm">This selects the timetable you are preparing. It does not activate a future school year.</p></section>}
+      {/* Control Filters (Class, Stream, Teacher Selection) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 no-print">
+        {isParent ? (
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-white shadow-xs flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px]">school</span>
+              <span>Child Class Timetable</span>
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('class')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'class'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {isTeacher ? 'My Class Timetable' : 'Class Schedule'}
+            </button>
+            <button
+              onClick={() => setViewMode('teacher')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'teacher'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {isTeacher ? 'My Teaching Timetable' : 'Teacher Individual View'}
+            </button>
+          </div>
+        )}
+
+        {isParent ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {parentChildren.length > 1 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-on-surface-variant">Learner:</span>
+                <select
+                  value={selectedChildId}
+                  onChange={(e) => {
+                    const cId = e.target.value;
+                    setSelectedChildId(cId);
+                    const child = parentChildren.find((c) => c.id === cId);
+                    if (child) {
+                      if (child.classroomId) setSelectedClassId(child.classroomId);
+                      if (child.streamId) setSelectedStreamId(child.streamId);
+                    }
+                  }}
+                  className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-bold text-on-surface shadow-xs"
+                >
+                  {parentChildren.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName} ({c.gradeLevel ? c.gradeLevel.replace('_', ' ') : 'Primary'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : parentChildren.length === 1 ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-on-surface">
+                  {parentChildren[0].firstName} {parentChildren[0].lastName}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[11px] font-semibold">
+                  {parentChildren[0].gradeLevel ? parentChildren[0].gradeLevel.replace('_', ' ') : 'Primary'}
+                </span>
+              </div>
+            ) : null}
+
+            <span className="text-[11px] text-on-surface-variant font-data-mono">
+              {activeClassName}{selectedStreamName ? ` - ${selectedStreamName}` : ''}
+            </span>
+          </div>
+        ) : viewMode === 'class' ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Primary Class Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-on-surface-variant">Class:</span>
+              <select
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
+              >
+                {classesList.length === 0 ? (
+                  <option value="">{isTeacher?'No class-teacher assignment':'No classes configured'}</option>
+                ) : (
+                  sortAndGroupClasses(classesList).map((group) => (
+                    <optgroup key={group.category} label={group.category}>
+                      {group.classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Optional Stream Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-on-surface-variant">Stream (Optional):</span>
+              <select
+                value={selectedStreamId}
+                onChange={(e) => setSelectedStreamId(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
+              >
+                {(!isTeacher||activeClassObj?.allowsWholeClass)&&<option value="">Main Cohort (No Stream)</option>}
+                {classStreams.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-[11px] text-on-surface-variant font-data-mono hidden md:inline">
+              Grid: {days.length} Days (Rows) × {periods.length} Periods (Cols)
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-on-surface-variant">Teacher:</span>
+            {isTeacher?<span className="text-xs font-semibold">{activeTeacherName} (You)</span>:<select
+              value={teacherId}
+              onChange={(e) => setTeacherId(e.target.value)}
+              className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-semibold text-on-surface shadow-xs"
+            >
+              {teachersList.length === 0 ? (
+                <option value="">No teachers available</option>
+              ) : (
+                teachersList.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name || t.user?.fullName || `Teacher ${t.tscNumber || ''}`}
+                  </option>
+                ))
+              )}
+            </select>}
+          </div>
+        )}
+      </div>
+
+      {isTeacher&&<p role="status" className="no-print rounded-xl bg-surface-container-low p-3 text-sm">{accessMessage||'My Teaching Timetable shows only your lessons. Full class timetables are available only for your active class-teacher assignments.'}{!accessMessage&&teacherAccessPeriod&&!classesList.length&&' You have no class-teacher assignment for this period. You can still view your own teaching timetable.'}</p>}
 
       {/* Quick Period Edit Modal */}
       {editingPeriod && (

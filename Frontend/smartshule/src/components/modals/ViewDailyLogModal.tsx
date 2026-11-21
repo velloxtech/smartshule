@@ -133,10 +133,10 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
                 </div>
               )}
 
-              {reflection.challenges && (
+              {(reflection.challenges || reflection.challengesFaced) && (
                 <div>
                   <span className="font-bold text-amber-900 block text-xs">Challenges / Learner Gaps Encountered:</span>
-                  <p className="text-slate-800 mt-0.5 leading-relaxed text-xs">{reflection.challenges}</p>
+                  <p className="text-slate-800 mt-0.5 leading-relaxed text-xs">{reflection.challenges || reflection.challengesFaced}</p>
                 </div>
               )}
 
@@ -170,7 +170,7 @@ export const ViewDailyLogModal: React.FC<ViewDailyLogModalProps> = ({
               </div>
               <p className="text-emerald-950 font-medium italic text-xs">"{endorsement.remarks}"</p>
               <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-emerald-200 flex justify-between">
-                <span>Endorsed by: <strong>{endorsement.endorsedByName} ({endorsement.role})</strong></span>
+                <span>Endorsed by: <strong>{endorsement.endorsedByName} ({endorsement.role || endorsement.endorsedByRole})</strong></span>
                 <span>{new Date(endorsement.endorsedAt).toLocaleString('en-GB')}</span>
               </div>
             </div>

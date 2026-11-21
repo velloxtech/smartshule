@@ -62,17 +62,6 @@ export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = (
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-2 shadow-xs mb-6">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-2 py-1.5 border-b border-outline-variant/30 mb-2">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-lg text-primary">account_tree</span>
-          <span className="text-xs font-black uppercase tracking-wider text-on-surface">
-            Curriculum Planning & Coverage Suite
-          </span>
-        </div>
-        <span className="text-[11px] text-on-surface-variant italic">
-          KICD Competency-Based Curriculum (CBC) Professional Pedagogical Records
-        </span>
-      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {tabs.map((tab) => {

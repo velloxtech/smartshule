@@ -3,8 +3,6 @@ import { TabType, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   getFilteredNavModules,
-  getRoleDisplayName,
-  getRoleBadgeStyle,
   NavModuleDef,
   NavItemDef,
 } from '../utils/rbac';
@@ -32,25 +30,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCompact = false,
   onToggleCompact,
 }) => {
-  const { user, logout, activeViewMode, setActiveViewMode, isStaffWithChildren } = useAuth();
+  const { user, logout, activeViewMode, isStaffWithChildren } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const navModules = useMemo(() => getFilteredNavModules(effectiveRole), [effectiveRole]);
-  const badgeStyle = getRoleBadgeStyle(effectiveRole);
 
   const [pendingOnboardingsCount, setPendingOnboardingsCount] = useState(0);
   const [pendingSlotsCount, setPendingSlotsCount] = useState(0);
   const [pendingForwardedCount, setPendingForwardedCount] = useState(0);
-
-  const canAccessOnboardQueue = Boolean(
-    effectiveRole && [
-      UserRole.SUPER_ADMIN,
-      UserRole.ADMIN,
-      UserRole.SCHOOL_ADMIN,
-      UserRole.HEAD_TEACHER,
-      UserRole.DEPUTY_HEAD_TEACHER,
-      UserRole.ADMISSIONS,
-    ].includes(effectiveRole)
-  );
 
   // Hover state for compact flyout menu
   const [hoveredModuleId, setHoveredModuleId] = useState<string | null>(null);
@@ -227,193 +213,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Main Sidebar */}
       <aside
         id="main-sidebar"
-        className={`fixed left-0 top-0 bottom-0 bg-[#f5ada8] border-r border-primary/20 z-40 flex flex-col justify-between shadow-xl transition-all duration-200 ease-in-out ${
+        className={`fixed left-0 top-0 bottom-0 bg-[#f5ada8] border-r border-primary/20 z-40 flex flex-col shadow-xl transition-all duration-200 ease-in-out ${
           isCompact ? 'w-20' : 'w-64'
         } ${
           mobileOpen ? 'translate-x-0 !w-64' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Top Brand Header */}
-          <div className="h-16 px-3 flex items-center justify-between gap-2 border-b border-primary/15 shrink-0 bg-[#f5ada8]">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <img
-                src="/logo.png"
-                alt="Logo"
-                className="w-9 h-9 rounded-xl object-cover shadow-xs border border-primary/25 shrink-0"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                  const fallback = (e.target as HTMLElement).nextElementSibling;
-                  if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                }}
-              />
-              <div className="w-9 h-9 rounded-xl bg-primary hidden items-center justify-center text-white shadow-xs shrink-0">
-                <span className="material-symbols-outlined text-[20px]">school</span>
-              </div>
-              {(!isCompact || mobileOpen) && (
-                <div className="flex flex-col leading-tight min-w-0">
-                  <span className="font-headline-md text-sm text-primary font-bold tracking-tight truncate">
-                    {user?.schoolName || 'Grace Seeds School'}
-                  </span>
-                  <span className="text-[10px] text-primary/75 italic truncate" title="The future Begins Here">
-                    &quot;The future Begins Here&quot;
-                  </span>
-                </div>
-              )}
+        {/* Top Brand Header */}
+        <div className="h-16 px-3 flex items-center justify-between gap-2 border-b border-primary/15 shrink-0 bg-[#f5ada8]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-9 h-9 rounded-xl object-cover shadow-xs border border-primary/25 shrink-0"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+                const fallback = (e.target as HTMLElement).nextElementSibling;
+                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+              }}
+            />
+            <div className="w-9 h-9 rounded-xl bg-primary hidden items-center justify-center text-white shadow-xs shrink-0">
+              <span className="material-symbols-outlined text-[20px]">school</span>
             </div>
-
-            {/* Desktop Compact Toggle Button */}
-            {onToggleCompact && (
-              <button
-                type="button"
-                onClick={onToggleCompact}
-                className="hidden lg:flex p-1.5 rounded-lg text-primary hover:bg-primary/15 transition-colors cursor-pointer shrink-0"
-                title={isCompact ? 'Expand Sidebar' : 'Collapse Sidebar to Icons'}
-                aria-label="Toggle compact sidebar"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isCompact ? 'chevron_right' : 'chevron_left'}
+            {(!isCompact || mobileOpen) && (
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="font-headline-md text-sm text-primary font-bold tracking-tight truncate">
+                  {user?.schoolName || 'Grace Seeds School'}
                 </span>
-              </button>
+                <span className="text-[10px] text-primary/75 italic truncate" title="The future Begins Here">
+                  &quot;The future Begins Here&quot;
+                </span>
+              </div>
             )}
+          </div>
 
-            {/* Mobile Close Button */}
+          {/* Desktop Compact Toggle Button */}
+          {onToggleCompact && (
             <button
-              onClick={onCloseMobile}
-              className="lg:hidden p-1.5 rounded-lg text-primary hover:bg-primary/15 cursor-pointer shrink-0"
-              aria-label="Close sidebar"
+              type="button"
+              onClick={onToggleCompact}
+              className="hidden lg:flex p-1.5 rounded-lg text-primary hover:bg-primary/15 transition-colors cursor-pointer shrink-0"
+              title={isCompact ? 'Expand Sidebar' : 'Collapse Sidebar to Icons'}
+              aria-label="Toggle compact sidebar"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span className="material-symbols-outlined text-[18px]">
+                {isCompact ? 'chevron_right' : 'chevron_left'}
+              </span>
             </button>
-          </div>
+          )}
 
-          {/* User Profile Card (Full vs Compact) */}
-          <div className="p-3 shrink-0">
-            {!isCompact || mobileOpen ? (
-              <div className="w-full p-2.5 rounded-xl bg-white/95 border border-primary/15 shadow-2xs flex flex-col gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                    {user ? `${user.firstName[0]}${user.lastName[0]}` : <span className="material-symbols-outlined text-[16px]">person</span>}
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-xs text-on-surface font-bold truncate">
-                      {user?.fullName || 'Authorized Admin'}
-                    </span>
-                    <span className="text-[10px] text-on-surface-variant font-mono truncate">
-                      {user?.email || 'Administrator'}
-                    </span>
-                  </div>
-                </div>
+          {/* Mobile Close Button */}
+          <button
+            onClick={onCloseMobile}
+            className="lg:hidden p-1.5 rounded-lg text-primary hover:bg-primary/15 cursor-pointer shrink-0"
+            aria-label="Close sidebar"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-primary/10">
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeStyle.bg} ${badgeStyle.text} uppercase tracking-wider`}>
-                    {isStaffWithChildren && activeViewMode === 'PARENT'
-                      ? "Parent View"
-                      : getRoleDisplayName(user?.role)}
-                  </span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" title="Active Session"></span>
-                </div>
-
-                {isStaffWithChildren && activeViewMode === 'PARENT' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveViewMode('STAFF');
-                      onSelectTab('dashboard');
-                      onCloseMobile();
-                    }}
-                    className="w-full mt-0.5 py-1 px-2 rounded-lg bg-primary text-white text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-primary-container transition-colors cursor-pointer"
-                    title={user?.role === UserRole.TEACHER ? "Return to Teacher Workspace" : "Return to Staff Workspace"}
-                  >
-                    <span className="material-symbols-outlined text-[13px]">badge</span>
-                    <span>{user?.role === UserRole.TEACHER ? 'Return to Teacher Workspace' : 'Return to Staff Workspace'}</span>
-                  </button>
-                )}
-
-                {isStaffWithChildren && activeViewMode === 'STAFF' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveViewMode('PARENT');
-                      onSelectTab('dashboard');
-                      onCloseMobile();
-                    }}
-                    className="w-full mt-0.5 py-1 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    title="Switch to Parent View to monitor your enrolled children"
-                  >
-                    <span className="material-symbols-outlined text-[13px]">family_restroom</span>
-                    <span>Switch to Parent View (My Children)</span>
-                  </button>
-                )}
-
-                {canAccessOnboardQueue && (
-                  <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-primary/10">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('slot-applications');
-                        onCloseMobile();
-                      }}
-                      className={`py-1 px-1.5 rounded-lg border text-[10px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                        currentTab === 'slot-applications'
-                          ? 'bg-primary text-white border-primary shadow-2xs'
-                          : 'bg-primary/10 hover:bg-primary-container/20 border-primary/25 text-on-primary-fixed'
-                      }`}
-                      title="Open Admission Slot Applications"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="material-symbols-outlined text-[13px] text-on-primary-fixed shrink-0">event_available</span>
-                        <span className="truncate">Slots</span>
-                      </div>
-                      {pendingSlotsCount > 0 ? (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-primary text-white animate-pulse shrink-0">
-                          {pendingSlotsCount}
-                        </span>
-                      ) : (
-                        <span className="text-[8.5px] font-mono text-on-primary-fixed/60 uppercase">0</span>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTab('onboard-queue');
-                        onCloseMobile();
-                      }}
-                      className={`py-1 px-1.5 rounded-lg border text-[10px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                        currentTab === 'onboard-queue'
-                          ? 'bg-primary text-white border-primary shadow-2xs'
-                          : 'bg-primary/10 hover:bg-primary-container/20 border-primary/25 text-on-primary-fixed'
-                      }`}
-                      title="Open Admitted Learner Onboard Queue"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="material-symbols-outlined text-[13px] text-on-primary-fixed shrink-0">how_to_reg</span>
-                        <span className="truncate">Onboard</span>
-                      </div>
-                      {pendingOnboardingsCount > 0 ? (
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-primary text-white animate-pulse shrink-0">
-                          {pendingOnboardingsCount}
-                        </span>
-                      ) : (
-                        <span className="text-[8.5px] font-mono text-on-primary-fixed/60 uppercase">0</span>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div
-                className="w-10 h-10 mx-auto rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer"
-                title={`${user?.fullName} (${getRoleDisplayName(user?.role)})`}
-              >
-                {user ? `${user.firstName[0]}${user.lastName[0]}` : 'GS'}
-              </div>
-            )}
-          </div>
-
-          {/* Scrollable Navigation Items */}
-          <nav className="flex-1 min-h-0 overflow-y-auto px-2 pb-4 space-y-1.5 scrollbar-thin scrollbar-thumb-[#7a1228]/20">
+        {/* Scrollable Container with Nav and Non-Sticky Bottom Card (moves with sidebar) */}
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-[#7a1228]/20 flex flex-col justify-between">
+          <nav className="px-2 pt-3 pb-2 space-y-1.5">
             {/* Standalone Top Item: Dashboard */}
             {dashboardItem && (
               <div className="mb-2">
@@ -597,70 +458,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
           </nav>
-        </div>
 
-        {/* Sidebar Footer: Landing, Privacy, Sign Out */}
-        <div className="p-2.5 shrink-0 border-t border-primary/15 bg-[#f5ada8] space-y-1.5">
-          {(!isCompact || mobileOpen) ? (
-            <div className="bg-white/95 rounded-xl p-2 border border-primary/15 shadow-2xs space-y-1">
-              {onNavigateLanding && (
+          {/* Sidebar Footer Card: Landing, Privacy, Sign Out (moves with the sidebar, non-sticky) */}
+          <div className="p-2.5 mt-auto space-y-1.5">
+            {(!isCompact || mobileOpen) ? (
+              <div className="bg-white/95 rounded-xl p-2 border border-primary/15 shadow-2xs space-y-1">
+                {onNavigateLanding && (
+                  <button
+                    type="button"
+                    onClick={onNavigateLanding}
+                    className="w-full py-1.5 px-2 text-xs font-semibold text-[#40000e] hover:text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">home</span>
+                    <span>Landing Page</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={onNavigateLanding}
-                  className="w-full py-1.5 px-2 text-xs font-semibold text-[#40000e] hover:text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => onOpenLegalModal?.('privacy')}
+                  className="w-full py-1 px-2 text-[10px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-surface-container-low rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[15px]">home</span>
-                  <span>Landing Page</span>
+                  <span className="material-symbols-outlined text-[14px] text-primary">verified_user</span>
+                  <span>Legal & Privacy (KDPA)</span>
                 </button>
-              )}
 
-              <button
-                type="button"
-                onClick={() => onOpenLegalModal?.('privacy')}
-                className="w-full py-1 px-2 text-[10px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-surface-container-low rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[14px] text-primary">verified_user</span>
-                <span>Legal & Privacy (KDPA)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={logout}
-                className="w-full py-1.5 px-2 text-xs font-bold text-rose-800 hover:bg-rose-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">logout</span>
-                <span>Sign Out</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-1 flex flex-col items-center">
-              {onNavigateLanding && (
                 <button
                   type="button"
-                  onClick={onNavigateLanding}
-                  className="p-2 rounded-xl text-[#40000e] hover:bg-primary/15 cursor-pointer"
-                  title="Landing Page"
+                  onClick={logout}
+                  className="w-full py-1.5 px-2 text-xs font-bold text-rose-800 hover:bg-rose-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">home</span>
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  <span>Sign Out</span>
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={logout}
-                className="p-2 rounded-xl text-rose-700 hover:bg-rose-100 cursor-pointer"
-                title="Sign Out"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-              </button>
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="space-y-1 flex flex-col items-center">
+                {onNavigateLanding && (
+                  <button
+                    type="button"
+                    onClick={onNavigateLanding}
+                    className="p-2 rounded-xl text-[#40000e] hover:bg-primary/15 cursor-pointer"
+                    title="Landing Page"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">home</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-2 rounded-xl text-rose-700 hover:bg-rose-100 cursor-pointer"
+                  title="Sign Out"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                </button>
+              </div>
+            )}
 
-          {(!isCompact || mobileOpen) && (
-            <div className="text-center text-[9.5px] text-primary/70 flex items-center justify-center gap-1 pt-0.5">
-              <span>Powered by</span>
-              <span className="font-bold text-primary tracking-wide">Vellox Tech</span>
-            </div>
-          )}
+            {(!isCompact || mobileOpen) && (
+              <div className="text-center text-[9.5px] text-primary/70 flex items-center justify-center gap-1 pt-0.5">
+                <span>Powered by</span>
+                <span className="font-bold text-primary tracking-wide">Vellox Tech</span>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>

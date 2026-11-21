@@ -407,10 +407,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             setCurrentPage('home')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
+
           onNavigateAdmissions={() => {
             setCurrentPage('admissions')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
+
           onNavigateApplySlot={() => {
             setCurrentPage('apply-slot')
             window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -478,6 +480,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <span>{isAuthenticated ? 'Return to Dashboard' : 'School Portal Login'}</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setCurrentPage('find-us');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="bg-[#800000] hover:bg-[#660000] border border-[#990000] text-white font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-md hover:scale-105 cursor-pointer flex items-center gap-2"
+                  >
+                    <span>Find me</span>
+                  </button>
                 </div>
               </div>
 

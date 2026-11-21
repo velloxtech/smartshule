@@ -585,7 +585,7 @@ export const FeeCreditReceiptModal: React.FC<FeeCreditReceiptModalProps> = ({
             reference: receipt.receiptNumber || receipt.transactionReference,
             receiptNumber: receipt.receiptNumber,
             type: 'CREDIT_UTILIZATION',
-            amount: receipt.amountUtilized,
+            amount: receipt.amountUtilized ?? receipt.totalCreditUtilized,
             date: receipt.timestamp ? new Date(receipt.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             studentId: receipt.studentId,
             studentName: receipt.studentName,
