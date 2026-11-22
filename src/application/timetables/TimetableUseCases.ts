@@ -15,6 +15,7 @@ export interface CreateTimetableDTO {
 }
 
 export interface AddSlotDTO {
+  slotId?: string;
   timetableId?: string;
   classRoomId?: string;
   streamId?: string;
@@ -42,24 +43,59 @@ export class TimetableUseCases {
     private readonly teacherRepository: ITeacherRepository
   ) {}
 
-  public async createTimetable(dto: CreateTimetableDTO) {
-    let existing = dto.streamId ? await this.timetableRepository.findByStream(dto.streamId, dto.termId) : null;
-    if (!existing && dto.classRoomId) {
-      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
-      existing = classTimetables.find(t=>(t.streamId||'')===(dto.streamId||'')&&(!dto.academicYearId||t.academicYearId===dto.academicYearId))||null;
+  private async assertCanEdit(actor: AcademicActor | undefined, scope: TeachingScope) {
+    if (!actor) return; // Internal callers retain their existing contract.
+    if (!['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'TEACHER'].includes(actor.role)) {
+      throw new ForbiddenError('Timetable editing access denied.');
     }
-    if (existing) {
-      return existing.toJSON();
+    const access = new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository);
+    await access.assert(actor, scope);
+    if (actor.role === 'TEACHER' && !await access.canClassTeacher(actor, scope)) {
+      throw new ForbiddenError('Only an active class teacher can edit this class or stream timetable.');
     }
+  }
 
-    let yearId = dto.academicYearId;
-    if (!yearId && this.academicRepository) {
-      const curYear = await this.academicRepository.findCurrentYear(dto.schoolId || 'school-001');
-      yearId = curYear?.id;
+  private async personalSlotEditor(dto: AddSlotDTO, timetable: Timetable | null, scope: TeachingScope, actor?: AcademicActor): Promise<string[] | null> {
+    if (!actor || actor.role !== 'TEACHER') {
+      await this.assertCanEdit(actor, scope);
+      return null;
     }
-    if (!yearId) {
-      yearId = `year-${new Date().getFullYear()}`;
+    const access = new TeacherAssignmentAccess(this.academicRepository, this.teacherRepository);
+    if (await access.canClassTeacher(actor, scope)) return null;
+    const assigned = await access.assignments(actor, scope);
+    const ownIds = [actor.userId, assigned.teacher.id];
+    const source = timetable?.slots.find(slot => slot.id === dto.slotId);
+    if (!source?.teacherId || !ownIds.includes(source.teacherId)
+      || !dto.teacherId || !ownIds.includes(dto.teacherId)
+      || dto.isBreak || dto.isLunch || !source.learningAreaId || !dto.learningAreaId) {
+      throw new ForbiddenError('You can only edit your own assigned teaching lessons.');
     }
+    await access.assert(actor, {...scope, learningAreaId: source.learningAreaId});
+    await access.assert(actor, {...scope, learningAreaId: dto.learningAreaId});
+    return ownIds;
+  }
+
+  private actorScope<T extends {schoolId?: string}>(dto: T, actor?: AcademicActor): T {
+    if (actor && (!actor.schoolId || (dto.schoolId && dto.schoolId !== actor.schoolId))) {
+      throw new ForbiddenError('School access denied.');
+    }
+    return {...dto, schoolId: actor?.schoolId || dto.schoolId};
+  }
+
+  private slotsOverlap(a: Pick<TimetableSlot, 'dayOfWeek' | 'periodNumber' | 'startTime' | 'endTime'>, b: Pick<TimetableSlot, 'dayOfWeek' | 'periodNumber' | 'startTime' | 'endTime'>) {
+    if (String(a.dayOfWeek).trim().toUpperCase() !== String(b.dayOfWeek).trim().toUpperCase()) return false;
+    if ([a.startTime, a.endTime, b.startTime, b.endTime].every(t => /^\d{2}:\d{2}$/.test(t || ''))) {
+      return a.startTime < b.endTime && b.startTime < a.endTime;
+    }
+    return Number(a.periodNumber) === Number(b.periodNumber);
+  }
+
+  public async createTimetable(dto: CreateTimetableDTO, actor?: AcademicActor) {
+    const {timetable: existing, ...scope} = await this.resolveTimetableScope(this.actorScope(dto, actor));
+    await this.assertCanEdit(actor, scope);
+    if (existing) return existing.toJSON();
+    dto = {...dto, ...scope};
+    const yearId = scope.academicYearId;
 
     const timetable = Timetable.create(
       {
@@ -78,8 +114,9 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
-  public async addOrUpdateSlot(dto: AddSlotDTO) {
-    const {timetable:found,...scope}=await this.resolveTimetableScope(dto);
+  public async addOrUpdateSlot(dto: AddSlotDTO, actor?: AcademicActor) {
+    const {timetable:found,...scope}=await this.resolveTimetableScope(this.actorScope(dto, actor));
+    const personalEditorIds = await this.personalSlotEditor(dto, found, scope, actor);
     let timetable=found;dto={...dto,...scope};
 
     if (!timetable) {
@@ -126,12 +163,10 @@ export class TimetableUseCases {
     }
 
     // Conflict Check: Check if teacher is already booked elsewhere at that day & period
-    if (dto.teacherId && !dto.isBreak && !dto.isLunch) {
+    if (!dto.slotId && dto.teacherId && !dto.isBreak && !dto.isLunch) {
       const teacherSlots = await this.timetableRepository.findByTeacher(dto.teacherId, timetable.termId);
       const conflict = teacherSlots.find(s => {
-        const isSameDay = String(s.dayOfWeek).trim().toUpperCase() === String(dto.dayOfWeek).trim().toUpperCase();
-        const isSamePeriod = Number(s.periodNumber) === Number(dto.periodNumber);
-        if (!isSameDay || !isSamePeriod) return false;
+        if (!this.slotsOverlap(s, {...dto, dayOfWeek: dto.dayOfWeek})) return false;
 
         const isSameTimetable = (timetable.id && s.timetableId && s.timetableId === timetable.id) ||
           (s.classRoomId === timetable.classRoomId && (s.streamId || '') === (timetable.streamId || ''));
@@ -190,6 +225,23 @@ export class TimetableUseCases {
       label: dto.label
     };
 
+    if (dto.slotId) {
+      const source = timetable.slots.find(s => s.id === dto.slotId);
+      if (!source) throw new NotFoundError('Timetable slot', dto.slotId);
+      const target = timetable.slots.find(s => s.dayOfWeek === slot.dayOfWeek && s.periodNumber === slot.periodNumber);
+      // Moving onto an occupied cell exchanges lessons in one validated save.
+      const slots = timetable.slots.flatMap(existing => {
+        if (existing.id === source.id) return [{...slot, id: source.id}];
+        if (target && existing.id === target.id) return [{...existing,
+          dayOfWeek: source.dayOfWeek, periodNumber: source.periodNumber,
+          startTime: source.startTime, endTime: source.endTime}];
+        return [existing];
+      });
+      // Personal edits are authorized above against the persisted source lesson.
+      const saved = await this.saveTimetableGrid({...scope, timetableId: timetable.id, slots}, personalEditorIds ? undefined : actor);
+      return personalEditorIds ? {...saved, slots: saved.slots.filter(s => s.teacherId && personalEditorIds.includes(s.teacherId))} : saved;
+    }
+
     timetable.addOrUpdateSlot(slot);
     await this.timetableRepository.update(timetable);
     return timetable.toJSON();
@@ -223,24 +275,22 @@ export class TimetableUseCases {
     periods?: any[];
     days?: any[];
     slots: TimetableSlot[];
-  }) {
-    const {timetable:found,...scope}=await this.resolveTimetableScope(dto);
+  }, actor?: AcademicActor) {
+    const {timetable:found,...scope}=await this.resolveTimetableScope(this.actorScope(dto, actor));
+    await this.assertCanEdit(actor, scope);
     let timetable=found;dto={...dto,...scope};
     const targetClassRoomId=scope.classRoomId,targetStreamId=scope.streamId||'',targetTimetableId=timetable?.id||'',effectiveTermId=scope.termId;
 
-    // Conflict Check 1: Intra-grid conflict (same teacher scheduled multiple times in this grid at same day & period)
-    const seenTeacherSlots = new Map<string, string>();
-    for (const slot of (dto.slots || [])) {
-      if (slot.teacherId && !slot.isBreak && !slot.isLunch) {
-        const key = `${String(slot.dayOfWeek).trim().toUpperCase()}_${Number(slot.periodNumber)}_${slot.teacherId}`;
-        if (seenTeacherSlots.has(key)) {
-          const teacherLabel = slot.teacherName || 'Teacher';
-          throw new ConflictError(
-            `Conflict in grid: ${teacherLabel} is assigned more than once to ${slot.dayOfWeek}, Period ${slot.periodNumber}.`
-          );
-        }
-        seenTeacherSlots.set(key, slot.id || 'slot');
+    // Check the final grid so moves and swaps are validated together.
+    const seenTeacherSlots = new Map<string, TimetableSlot[]>();
+    for (const slot of dto.slots || []) {
+      if (!slot.teacherId || slot.isBreak || slot.isLunch) continue;
+      const seen = seenTeacherSlots.get(slot.teacherId) || [];
+      if (seen.some(existing => this.slotsOverlap(existing, slot))) {
+        throw new ConflictError(`Conflict in grid: ${slot.teacherName || 'Teacher'} has overlapping lessons on ${slot.dayOfWeek}.`);
       }
+      seen.push(slot);
+      seenTeacherSlots.set(slot.teacherId, seen);
     }
 
     // Conflict Check 2: Inter-timetable conflict (is teacher booked in any other class/stream at this day & period?)
@@ -258,9 +308,7 @@ export class TimetableUseCases {
 
       for (const slot of slotsForThisTeacher) {
         const conflict = existingTeacherSlots.find(existing => {
-          const isSameDay = String(existing.dayOfWeek).trim().toUpperCase() === String(slot.dayOfWeek).trim().toUpperCase();
-          const isSamePeriod = Number(existing.periodNumber) === Number(slot.periodNumber);
-          if (!isSameDay || !isSamePeriod) return false;
+          if (!this.slotsOverlap(existing, slot)) return false;
 
           const isSameTimetable = (targetTimetableId && existing.timetableId && existing.timetableId === targetTimetableId) ||
             (existing.classRoomId === targetClassRoomId && (existing.streamId || '') === (targetStreamId || ''));
@@ -339,10 +387,11 @@ export class TimetableUseCases {
     return newTimetable.toJSON();
   }
 
-  public async deleteSlot(timetableId: string, slotId: string) {
+  public async deleteSlot(timetableId: string, slotId: string, actor?: AcademicActor) {
     const timetable = await this.timetableRepository.findById(timetableId);
     if (!timetable) throw new NotFoundError('Timetable', timetableId);
 
+    await this.assertCanEdit(actor, timetable.toJSON());
     timetable.removeSlot(slotId);
     await this.timetableRepository.update(timetable);
     return timetable.toJSON();
@@ -404,7 +453,10 @@ export class TimetableUseCases {
       const table=parents.get(slot.timetableId);
       if(!table||table.schoolId!==actor.schoolId||table.academicYearId!==period.year.id||!sameTerm(table.termId,period.term.id))continue;
       if(assigned&&!assigned.classes.some(a=>matchesTeachingCohort(a,table.classRoomId,table.streamId))&&!assigned.subjects.some(a=>matchesTeachingCohort(a,table.classRoomId,table.streamId)&&a.learningAreaId===slot.learningAreaId))continue;
-      const key=JSON.stringify([slot.timetableId,slot.id||[slot.dayOfWeek,slot.periodNumber]]);if(seen.has(key))continue;seen.add(key);slots.push(slot);
+      const key=JSON.stringify([slot.timetableId,slot.id||[slot.dayOfWeek,slot.periodNumber]]);if(seen.has(key))continue;seen.add(key);
+      const classroom = await this.academicRepository.findClassById(table.classRoomId);
+      const stream = table.streamId ? await this.academicRepository.findStreamById(table.streamId) : null;
+      slots.push({...slot, teacherId: table.slots.find(s => s.id === slot.id)?.teacherId, className: classroom?.name, streamName: stream?.name});
     }
     return slots;
   }

@@ -126,7 +126,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
       const minutes = times.length === 2 ? times[1][0] * 60 + times[1][1] - times[0][0] * 60 - times[0][1] : 30;
       const duration = Number.isFinite(minutes) && minutes > 0 ? minutes : 30;
       setDurationMinutes(duration); setRollBoys('0'); setRollGirls('0'); setPcis(''); setCompetencies([]); setValues([]); setExtendedActivity('');
-      setSteps(duration < 3 ? [{ stepNumber: 1, stepTitle: 'Lesson Development', durationMinutes: duration, teacherActivities: '', learnerActivities: '' }] : [
+      setSteps(duration === 35 ? ['Starter','Introduction','Guided practice','Independent practice','Conclusion'].map((stepTitle,index)=>({stepNumber:index+1,stepTitle,durationMinutes:[5,8,10,8,4][index],teacherActivities:'',learnerActivities:''})) : duration < 3 ? [{ stepNumber: 1, stepTitle: 'Lesson Development', durationMinutes: duration, teacherActivities: '', learnerActivities: '' }] : [
         { stepNumber: 1, stepTitle: 'Introduction', durationMinutes: Math.min(5, Math.floor(duration / 3)), teacherActivities: '', learnerActivities: '' },
         { stepNumber: 2, stepTitle: 'Lesson Development', durationMinutes: duration - 2 * Math.min(5, Math.floor(duration / 3)), teacherActivities: '', learnerActivities: '' },
         { stepNumber: 3, stepTitle: 'Conclusion', durationMinutes: Math.min(5, Math.floor(duration / 3)), teacherActivities: '', learnerActivities: '' },

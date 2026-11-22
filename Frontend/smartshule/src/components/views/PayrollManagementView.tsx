@@ -300,7 +300,7 @@ export const PayrollManagementView: React.FC = () => {
     return payrolls.filter((p) => {
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
       if (ackFilter === 'ACKNOWLEDGED' && p.acknowledgementStatus !== 'ACKNOWLEDGED') return false;
-      if (ackFilter === 'AWAITING' && (p.status !== 'PAID' || p.acknowledgementStatus === 'ACKNOWLEDGED' || p.acknowledgementStatus === 'UNDER_REVIEW')) return false;
+      if (ackFilter === 'AWAITING' && (!['PAID','PARTIALLY_PAID'].includes(p.status) || p.acknowledgementStatus === 'ACKNOWLEDGED' || p.acknowledgementStatus === 'UNDER_REVIEW')) return false;
       if (ackFilter === 'DISPUTED' && p.acknowledgementStatus !== 'UNDER_REVIEW') return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();

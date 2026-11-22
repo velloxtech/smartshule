@@ -4,34 +4,40 @@ import { sortAndGroupClasses, sortClassesInCBCSequence } from '../../utils/class
 
 interface AddTimetableSlotModalProps {
   isOpen: boolean;
+  lockScope?: boolean;
   onClose: () => void;
   onSlotAdded: (data: any) => void;
   timetableId?: string;
   classRoomId?: string;
   streamId?: string;
   termId?: string;
+  academicYearId?: string;
   classes?: any[];
   streams?: any[];
   learningAreas?: any[];
   teachers?: any[];
   initialSlot?: any;
+  periods?: Array<{periodNumber: number; startTime: string; endTime: string; isBreak?: boolean; name?: string}>;
   availableDays?: Array<{ key: string; label: string }>;
   onDeleteSlot?: (slotId: string) => void;
 }
 
 export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   isOpen,
+  lockScope = false,
   onClose,
   onSlotAdded,
   timetableId = '',
   classRoomId,
   streamId,
   termId,
+  academicYearId,
   classes: propClasses = [],
   streams: propStreams = [],
   learningAreas: propLearningAreas = [],
   teachers: propTeachers = [],
   initialSlot,
+  periods = [],
   availableDays = [
     { key: 'MONDAY', label: 'Monday' },
     { key: 'TUESDAY', label: 'Tuesday' },
@@ -86,7 +92,8 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
 
   const handlePeriodChange = (val: string) => {
     setPeriodNumber(val);
-    const preset = PERIOD_TIME_PRESETS[val];
+    const period = periods.find(p => p.periodNumber === Number(val));
+    const preset = period ? {start: period.startTime, end: period.endTime, isBreak: period.isBreak, label: period.name} : PERIOD_TIME_PRESETS[val];
     if (preset) {
       setStartTime(preset.start);
       setEndTime(preset.end);
@@ -210,7 +217,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     let isMounted = true;
     setIsCheckingClash(true);
 
-    apiService.getTeacherTimetable(teacherId, termId || '')
+    apiService.getTeacherTimetable(teacherId, termId || '', academicYearId)
       .then((res) => {
         if (!isMounted) return;
         setIsCheckingClash(false);
@@ -218,7 +225,9 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
 
         const conflict = slots.find((s: any) => {
           const isSameDay = String(s.dayOfWeek).trim().toUpperCase() === String(dayOfWeek).trim().toUpperCase();
-          const isSamePeriod = Number(s.periodNumber) === Number(periodNumber);
+          const isSamePeriod = s.startTime && s.endTime
+            ? s.startTime < endTime && startTime < s.endTime
+            : Number(s.periodNumber) === Number(periodNumber);
           if (!isSameDay || !isSamePeriod) return false;
 
           // Slot in the exact same class & stream (or same timetable)?
@@ -251,7 +260,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, teacherId, dayOfWeek, periodNumber, selectedClassRoomId, selectedStreamId, isBreak, timetableId, termId, classesList, teachers]);
+  }, [isOpen, teacherId, dayOfWeek, periodNumber, startTime, endTime, selectedClassRoomId, selectedStreamId, isBreak, timetableId, termId, academicYearId, classesList, teachers]);
 
   const currentClassObj = classesList.find((c) => c.id === selectedClassRoomId);
   const currentStreamObj = streamsList.find((s) => s.id === selectedStreamId);
@@ -317,9 +326,11 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     try {
       const res = await apiService.addTimetableSlot({
         timetableId: timetableId || undefined,
+        slotId: initialSlot?.id,
         classRoomId: selectedClassRoomId || undefined,
         streamId: selectedStreamId || undefined,
         termId: termId || undefined,
+        academicYearId,
         dayOfWeek,
         periodNumber: Number(periodNumber),
         startTime,
@@ -371,6 +382,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1 overscroll-contain">
+          {initialSlot?.id && <p className="text-sm text-on-surface-variant">Change the day or period to move this lesson. If the destination already has a lesson, the two lessons will swap when you save.</p>}
           {error && (
             <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-semibold">
               {error}
@@ -384,6 +396,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                 Class / Grade
               </label>
               <select
+                disabled={lockScope}
                 value={selectedClassRoomId}
                 onChange={(e) => {
                   setSelectedClassRoomId(e.target.value);
@@ -391,6 +404,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                 }}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary"
               >
+                {lockScope && !classesList.some(c => c.id === selectedClassRoomId) && <option value={selectedClassRoomId}>{initialSlot?.className || 'Assigned class'}</option>}
                 {classesList.length === 0 ? (
                   <option value="">No classes configured</option>
                 ) : (
@@ -412,11 +426,13 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                 Stream (Optional)
               </label>
               <select
+                disabled={lockScope}
                 value={selectedStreamId}
                 onChange={(e) => setSelectedStreamId(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary"
               >
                 <option value="">Main Cohort (No Stream)</option>
+                {lockScope && selectedStreamId && !streamsList.some(s => s.id === selectedStreamId) && <option value={selectedStreamId}>{initialSlot?.streamName || 'Assigned stream'}</option>}
                 {streamsList.map((st) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
@@ -555,12 +571,14 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                   )}
                 </div>
                 <select
+                  disabled={lockScope}
                   value={teacherId}
                   onChange={(e) => setTeacherId(e.target.value)}
                   className={`w-full bg-surface-container-low border rounded-lg p-2 text-xs font-semibold text-on-surface ${
                     isClashBlocked ? 'border-error ring-1 ring-error' : 'border-outline-variant/40'
                   }`}
                 >
+                  {lockScope && !teachers.some(t => t.id === teacherId) && <option value={teacherId}>{initialSlot?.teacherName || 'You'}</option>}
                   {teachers.length === 0 ? (
                     <option value="">No teachers found</option>
                   ) : (

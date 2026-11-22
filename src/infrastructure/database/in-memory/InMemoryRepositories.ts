@@ -126,6 +126,13 @@ export class InMemoryUserRepository implements IUserRepository {
 }
 
 export class InMemoryStudentRepository implements IStudentRepository {
+  async deleteParentPermissions(userId:string,studentId:string) { this.parentPermissions.get(userId)?.delete(studentId); }
+  private parentPermissions = new Map<string, Map<string,{studentId:string;canViewFinances:boolean;canViewAcademics:boolean}>>();
+  async findParentPermissions(userId:string) { return [...(this.parentPermissions.get(userId)?.values() || [])].map(row=>({...row})); }
+  async saveParentPermissions(userId:string,studentId:string,_schoolId:string,permissions:{canViewFinances:boolean;canViewAcademics:boolean}) {
+    if(!this.parentPermissions.has(userId))this.parentPermissions.set(userId,new Map());
+    this.parentPermissions.get(userId)!.set(studentId,{studentId,...permissions});
+  }
   private students: Map<string, Student> = new Map();
 
   public async findById(id: string): Promise<Student | null> {

@@ -24,7 +24,7 @@ export const UpdateWeekPlanSchema = z.object({
   strand: z.string().optional(),
   subStrand: z.string().optional(),
   learningOutcomes: z.string().optional(),
-  plannedLessons: z.number().int().min(1).optional(),
+  plannedLessons: z.number().int().min(0).max(100).optional(),
   targetDate: z.string().optional(),
   suggestedActivities: z.string().optional(),
   resources: z.string().optional()
@@ -43,7 +43,7 @@ export const UpdateWeekCommentSchema = z.object({
 });
 
 export const BatchUpdateWeeksSchema = z.object({
-  weeks: z.array(z.any())
+  weeks: z.array(UpdateWeekPlanSchema.extend({weekNumber:z.number().int().min(1).max(25)})).min(1).max(25)
 });
 
 export const AddDailyLogSchema = z.object({

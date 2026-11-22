@@ -1,12 +1,15 @@
 import React from 'react';
-import {AppSyllabusCoveragePlanView} from './AppSyllabusCoveragePlanView';
-import {WebSyllabusCoveragePlanView} from './WebSyllabusCoveragePlanView';
+import { WebSyllabusCoveragePlanView } from './WebSyllabusCoveragePlanView';
 
-export function SyllabusCoveragePlanView(props:{onNavigateTab?:(tab:string)=>void;mode?:'coverage'|'scheme-builder'}){
- const packaged=Boolean((window as any).Capacitor?.isNativePlatform?.()||(window as any).electronAPI||navigator.userAgent.includes('Electron')||['file:','capacitor:'].includes(window.location.protocol)||(window.location.hostname==='localhost'&&window.location.protocol==='https:'&&!window.location.port));
- return packaged?<AppSyllabusCoveragePlanView {...props}/>:<WebSyllabusCoveragePlanView {...props}/>;
+type PageProps = { onNavigateTab?: (tab: string) => void };
+
+// Use the same responsive workflow on the web, desktop and mobile apps.
+export function SyllabusCoveragePlanView(props: PageProps) {
+  return <WebSyllabusCoveragePlanView {...props} mode="coverage" />;
 }
-
-export function SchemeOfWorkBuilderView(props:{onNavigateTab?:(tab:string)=>void}){
- return <SyllabusCoveragePlanView {...props} mode="scheme-builder"/>;
+export function CoverageTrackingView(props: PageProps) {
+  return <WebSyllabusCoveragePlanView {...props} mode="monitoring" />;
+}
+export function SchemeOfWorkBuilderView(props: PageProps) {
+  return <div className="space-y-4"><button type="button" className="ui-button" onClick={()=>props.onNavigateTab?.('schemes-lesson-plans')}>← Back to Schemes of Work</button><WebSyllabusCoveragePlanView {...props} mode="scheme-builder" /></div>;
 }

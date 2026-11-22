@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { IAuthTokenService } from '../../../core/ports/services/IExternalServices';
-import { UserRole } from '../../../core/domain/user/User';
+import {IUserRepository} from '../../../core/ports/repositories/IUserRepository';
+import { UserStatus, UserRole } from '../../../core/domain/user/User';
 import { UnauthorizedError, ForbiddenError } from '../../../core/domain/shared/Errors';
 
 export interface AuthenticatedRequest extends Request {
@@ -13,36 +14,34 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export function createAuthMiddleware(tokenService: IAuthTokenService) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next(new UnauthorizedError('Authorization token required'));
+async function authenticatedActor(req: AuthenticatedRequest, tokenService: IAuthTokenService, users?: IUserRepository) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) throw new UnauthorizedError('Authorization token required');
+  const payload = tokenService.verifyAccessToken(header.split(' ')[1]);
+  if (!payload) throw new UnauthorizedError('Invalid or expired token');
+  if (users) {
+    const user = await users.findById(payload.userId);
+    if (!user || user.status !== UserStatus.ACTIVE || user.role !== payload.role || user.schoolId !== payload.schoolId) {
+      throw new UnauthorizedError('Your account permissions have changed. Please sign in again.');
     }
+  }
+  // Parent View can reduce authority; a header can never grant a staff role.
+  return req.headers['x-portal-view'] === 'PARENT' && payload.role !== UserRole.STUDENT
+    ? {...payload,role:UserRole.PARENT} : payload;
+}
 
-    const token = authHeader.split(' ')[1];
-    const payload = tokenService.verifyAccessToken(token);
-
-    if (!payload) {
-      return next(new UnauthorizedError('Invalid or expired token'));
-    }
-
-    req.user = payload;
-    next();
+export function createAuthMiddleware(tokenService: IAuthTokenService, users?: IUserRepository) {
+  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+    try { req.user = await authenticatedActor(req,tokenService,users);next(); } catch(error) { next(error); }
   };
 }
 
-export function createOptionalAuthMiddleware(tokenService: IAuthTokenService) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      const payload = tokenService.verifyAccessToken(token);
-      if (payload) {
-        req.user = payload;
-      }
-    }
-    next();
+export function createOptionalAuthMiddleware(tokenService: IAuthTokenService, users?: IUserRepository) {
+  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+    try {
+      if (req.headers.authorization) req.user = await authenticatedActor(req,tokenService,users);
+      next();
+    } catch(error) { if(!users){delete req.user;return next();}next(error); }
   };
 }
 

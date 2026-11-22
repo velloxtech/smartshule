@@ -291,12 +291,12 @@ export class RecordOfWork extends Entity<RecordOfWorkProps> {
     this.touch();
   }
 
-  public submit(submitterId?: string, submitterName?: string): void {
+  public submit(_submitterId?: string, submitterName?: string): void {
     this._props.status = 'SUBMITTED';
     this._props.submittedAt = new Date();
     this._props.isOfficialCoverage = false;
-    if (submitterId) this._props.teacherId = submitterId;
-    if (submitterName) this._props.teacherName = submitterName;
+    // Submission records an action; it must preserve the assigned teacher profile.
+    if (!this._props.teacherName && submitterName) this._props.teacherName = submitterName;
     this.touch();
   }
 

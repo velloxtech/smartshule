@@ -76,7 +76,7 @@ export const TimetableView: React.FC = () => {
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isTeacher = effectiveRole === UserRole.TEACHER;
   const isParent = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
-  const canEditGrid = !isParent && (effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.DEPUTY_HEAD_TEACHER);
+  const canManageTimetable = !isParent && (effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.TEACHER|| effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.DEPUTY_HEAD_TEACHER);
 
   const [viewMode, setViewMode] = useState<'class' | 'teacher'>(isTeacher ? 'teacher' : 'class');
   
@@ -94,6 +94,11 @@ export const TimetableView: React.FC = () => {
   const [teachersList, setTeachersList] = useState<any[]>([]);
   const [teacherAccessPeriod,setTeacherAccessPeriod]=useState('');
   const [accessMessage,setAccessMessage]=useState('');
+  const canEditGrid = canManageTimetable && viewMode === 'class' && Boolean(selectedClassId)
+    && (!isTeacher || classesList.some(cls => cls.id === selectedClassId
+      && (cls.allowsWholeClass || cls.streams?.some((stream: any) => stream.id === selectedStreamId))));
+
+  const canEditPersonalLessons = canManageTimetable && viewMode === 'teacher';
 
   // Dynamic context and entities
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
@@ -411,9 +416,14 @@ export const TimetableView: React.FC = () => {
 
   const handleUpdatePeriod = async (updatedPeriod: PeriodDefinition) => {
     const updated = periods.map((p) => (p.periodNumber === updatedPeriod.periodNumber ? updatedPeriod : p));
-    setPeriods(updated);
-    setEditingPeriod(null);
-    await persistGridActive(updated, days, timetable?.slots || [], 'Period times updated and actively saved to database!');
+    const updatedSlots = (timetable?.slots || []).map(slot => slot.periodNumber === updatedPeriod.periodNumber
+      ? {...slot, startTime: updatedPeriod.startTime, endTime: updatedPeriod.endTime} : slot);
+    try {
+      await persistGridActive(updated, days, updatedSlots, 'Period times updated and actively saved to database!');
+      setEditingPeriod(null);
+    } catch {
+      // Persistence shows the error; keep the editor open and the saved times intact.
+    }
   };
 
   const handleDeletePeriod = async (periodNum: number) => {
@@ -458,6 +468,12 @@ export const TimetableView: React.FC = () => {
   };
 
   const handleSlotAdded = (updatedTimetable: TimetableData) => {
+    if (viewMode === 'teacher') {
+      void loadTimetable();
+      setSaveSuccessMsg('Lesson updated. Your teaching timetable has been refreshed.');
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+      return;
+    }
     setTimetable(updatedTimetable);
     if (updatedTimetable.periods && updatedTimetable.periods.length > 0) {
       setPeriods(updatedTimetable.periods);
@@ -497,7 +513,7 @@ export const TimetableView: React.FC = () => {
   };
 
   const handleCellClick = (dayKey: string, pDef: PeriodDefinition, existingSlot?: TimetableSlot) => {
-    if (!canEditGrid || loading || !currentContext?.currentTerm?.id) return;
+    if ((!canEditGrid && !(canEditPersonalLessons && existingSlot?.timetableId)) || loading || !currentContext?.currentTerm?.id) return;
     if (existingSlot) {
       setSelectedSlotForEdit({
         ...existingSlot,
@@ -1490,188 +1506,6 @@ export const TimetableView: React.FC = () => {
           </div>
         </div>
 
-        {/* Timetable Grid Table Container */}
-        <div className="timetable-table-wrapper overflow-x-auto flex-1">
-          <table className="timetable-grid-table w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30 print:bg-rose-50">
-              <tr>
-                <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-28 print:w-[75px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-on-surface print:text-primary">Day / Period</span>
-                    {canEditGrid && (
-                      <button
-                        onClick={() => setIsAddDayOpen(true)}
-                        title="Add day row"
-                        className="text-primary hover:opacity-80 cursor-pointer no-print"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">add_box</span>
-                      </button>
-                    )}
-                  </div>
-                </th>
-                {periods.map((pDef) => (
-                  <th
-                    key={pDef.periodNumber}
-                    className={`py-2 px-2.5 print:py-1 print:px-1 min-w-[140px] print:min-w-0 border-r border-surface-container last:border-r-0 print:border-gray-400 text-xs print:text-[8.5px] ${
-                      pDef.isBreak ? 'bg-amber-500/10 print:bg-amber-100/60' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="text-left">
-                        <span className="font-bold text-primary block text-xs print:text-[8px] leading-tight">
-                          P{pDef.periodNumber} · {pDef.name}
-                        </span>
-                        <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0 font-data-mono">
-                          {pDef.startTime} - {pDef.endTime}
-                        </span>
-                        {pDef.isBreak && (
-                          <span className="inline-block mt-1 print:mt-0 px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-900 text-[10px] print:text-[6.5px] font-bold">
-                            {pDef.isLunch ? 'Lunch' : 'Break'}
-                          </span>
-                        )}
-                      </div>
-
-                      {canEditGrid && (
-                        <div className="flex items-center gap-0.5 ml-1 shrink-0 no-print">
-                          <button
-                            type="button"
-                            onClick={() => setEditingPeriod(pDef)}
-                            title="Edit Period Times & Label"
-                            className="text-on-surface-variant hover:text-primary cursor-pointer p-0.5 rounded hover:bg-surface-container"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">edit</span>
-                          </button>
-                          {periods.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePeriod(pDef.periodNumber)}
-                              title="Delete this period column"
-                              className="text-on-surface-variant hover:text-error cursor-pointer p-0.5 rounded hover:bg-surface-container"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">delete</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-container">
-              {days.map((d) => (
-                <tr
-                  key={d.dayOfWeek}
-                  className="hover:bg-surface-container-low/20 transition-colors"
-                >
-                  {/* Day Header Row Label */}
-                  <td className="col-day-cell py-2.5 px-3 print:py-1 print:px-1.5 border-r border-surface-container print:border-gray-400 align-middle print:bg-[#fbfbfb]">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary block text-xs print:text-[8.5px] uppercase tracking-wider">
-                        {d.label}
-                      </span>
-                      {canEditGrid && days.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteDay(d.dayOfWeek)}
-                          title={`Delete ${d.label} row`}
-                          className="text-outline hover:text-error transition-colors cursor-pointer no-print ml-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">close</span>
-                        </button>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Period Columns for this Day */}
-                  {periods.map((pDef) => {
-                    const slot = activeSlots.find(
-                      (s) => s.dayOfWeek === d.dayOfWeek && s.periodNumber === pDef.periodNumber
-                    );
-
-                    return (
-                      <td
-                        key={`${d.dayOfWeek}-${pDef.periodNumber}`}
-                        onClick={() => handleCellClick(d.dayOfWeek, pDef, slot)}
-                        className={`py-2 px-2 print:py-0.5 print:px-1 border-r border-surface-container last:border-r-0 print:border-gray-400 align-top transition-colors ${
-                          pDef.isBreak ? 'bg-amber-500/5 print:bg-[#fef8ee]' : ''
-                        } ${canEditGrid ? 'cursor-pointer hover:bg-rose-50/30' : ''}`}
-                      >
-                        {slot ? (
-                          slot.isBreak ? (
-                            <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-amber-50 border border-amber-200/60 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
-                              <span className="material-symbols-outlined text-primary text-sm no-print">coffee</span>
-                              <span className="text-[11px] print:text-[8px] font-bold text-amber-900 print:text-[#886200] mt-0.5 print:mt-0">
-                                {slot.label || (slot.isLunch ? 'Lunch & Rest' : 'Morning Break')}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="slot-card h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-1.5 print:p-0.5 shadow-xs print:shadow-none hover:border-primary/50 transition-all flex flex-col justify-between items-center text-center">
-                              <div className="slot-teacher w-full text-center">
-                                <span className="text-[10px] print:text-[7px] text-on-surface-variant print:text-gray-600 font-semibold block truncate">
-                                  {slot.teacherName || 'Assigned Teacher'}
-                                </span>
-                              </div>
-
-                              <div className="subject-abbr-wrapper my-1 print:my-0.5 flex-1 flex items-center justify-center w-full">
-                                <span className="subject-abbr font-black text-primary text-sm sm:text-base print:text-[14px] uppercase tracking-wider block">
-                                  {formatSubjectAbbreviation(slot.learningAreaName)}
-                                </span>
-                              </div>
-
-                              <div className="slot-meta w-full text-center pt-1 print:pt-0 border-t print:border-none border-surface-container-high text-[9px] print:text-[6.5px] text-outline print:text-gray-500 font-data-mono truncate">
-                                <span>{slot.roomName ? slot.roomName + ' · ' : ''}{slot.startTime}-{slot.endTime}</span>
-                              </div>
-                            </div>
-                          )
-                        ) : pDef.isBreak ? (
-                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-low/50 border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
-                            <span className="text-[11px] print:text-[8px] text-outline italic print:text-[#886200] print:font-bold">
-                              {pDef.name || 'Break'}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center text-outline hover:text-primary hover:border-primary transition-all group">
-                            {canEditGrid && (
-                              <div className="no-print flex flex-col items-center">
-                                <span className="material-symbols-outlined text-xs group-hover:scale-110 transition-transform">add</span>
-                                <span className="text-[10px] font-semibold mt-0.5">Empty Slot</span>
-                              </div>
-                            )}
-                            <span className="hidden print:inline text-gray-400 text-[8px]">—</span>
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Official Verification Signatures Block (Visible in Print & at bottom of document) */}
-        <div className="print-only-signatures mt-8 print:mt-2 pt-6 print:pt-1 border-t-2 print:border-t border-gray-300 grid grid-cols-1 sm:grid-cols-3 gap-6 print:gap-3 text-xs print:text-[8px]">
-          <div className="space-y-2 print:space-y-0.5">
-            <p className="font-bold text-gray-800 print:text-[8px]">Class Teacher:</p>
-            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
-            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
-          </div>
-          <div className="space-y-2 print:space-y-0.5">
-            <p className="font-bold text-gray-800 print:text-[8px]">Deputy Headteacher (Academics):</p>
-            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
-            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
-          </div>
-          <div className="space-y-2 print:space-y-0.5">
-            <p className="font-bold text-gray-800 print:text-[8px]">Principal / Headteacher:</p>
-            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
-            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Official School Stamp & Signature</p>
-          </div>
-        </div>
-
-      </div>
-
-
       {!isParent&&<section className="no-print flex flex-wrap gap-4 rounded-xl border bg-surface-container-lowest p-4"><label>Planning academic year<select aria-label="Timetable academic year" className="ui-field" value={planningYear} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setTimetable(null);setIsGridDirty(false);setCurrentContext((old:any)=>({...old,currentYear:planningYears.find(y=>y.id===e.target.value),currentTerm:undefined}));setPlanningYear(e.target.value);}}}>{planningYears.map(y=><option key={y.id} value={y.id}>{y.name}{y.isCurrent?' · Operational':''}</option>)}</select></label><label>Planning term<select aria-label="Timetable term" className="ui-field" value={currentContext?.currentTerm?.id||''} onChange={e=>{if(!isGridDirty||window.confirm('Discard unsaved timetable edits before changing the period?')){setCurrentContext((old:any)=>({...old,currentTerm:planningTerms.find(t=>t.id===e.target.value)}));rememberPlanningScope(user,{academicYearId:planningYear,termId:e.target.value,classRoomId:selectedClassId,streamId:selectedStreamId});}}}>{planningTerms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><p className="text-sm">This selects the timetable you are preparing. It does not activate a future school year.</p></section>}
       {/* Control Filters (Class, Stream, Teacher Selection) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 no-print">
@@ -1816,7 +1650,191 @@ export const TimetableView: React.FC = () => {
         )}
       </div>
 
-      {isTeacher&&<p role="status" className="no-print rounded-xl bg-surface-container-low p-3 text-sm">{accessMessage||'My Teaching Timetable shows only your lessons. Full class timetables are available only for your active class-teacher assignments.'}{!accessMessage&&teacherAccessPeriod&&!classesList.length&&' You have no class-teacher assignment for this period. You can still view your own teaching timetable.'}</p>}
+      {isTeacher&&<p role="status" className="no-print rounded-xl bg-surface-container-low p-3 text-sm">{accessMessage||'Click Edit lesson in My Teaching Timetable to change a lesson time or swap periods. My Class Timetable lets you manage your assigned class timetable.'}{!accessMessage&&teacherAccessPeriod&&!classesList.length&&' You have no class-teacher assignment for this period. You can still edit your own assigned teaching lessons.'}</p>}
+
+        {/* Timetable Grid Table Container */}
+        <div className="timetable-table-wrapper overflow-x-auto flex-1">
+          <table className="timetable-grid-table w-full text-left text-xs border-collapse">
+            <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30 print:bg-rose-50">
+              <tr>
+                <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-28 print:w-[75px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-on-surface print:text-primary">Day / Period</span>
+                    {canEditGrid && (
+                      <button
+                        onClick={() => setIsAddDayOpen(true)}
+                        title="Add day row"
+                        className="text-primary hover:opacity-80 cursor-pointer no-print"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">add_box</span>
+                      </button>
+                    )}
+                  </div>
+                </th>
+                {periods.map((pDef) => (
+                  <th
+                    key={pDef.periodNumber}
+                    className={`py-2 px-2.5 print:py-1 print:px-1 min-w-[140px] print:min-w-0 border-r border-surface-container last:border-r-0 print:border-gray-400 text-xs print:text-[8.5px] ${
+                      pDef.isBreak ? 'bg-amber-500/10 print:bg-amber-100/60' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="text-left">
+                        <span className="font-bold text-primary block text-xs print:text-[8px] leading-tight">
+                          P{pDef.periodNumber} · {pDef.name}
+                        </span>
+                        <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0 font-data-mono">
+                          {pDef.startTime} - {pDef.endTime}
+                        </span>
+                        {pDef.isBreak && (
+                          <span className="inline-block mt-1 print:mt-0 px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-900 text-[10px] print:text-[6.5px] font-bold">
+                            {pDef.isLunch ? 'Lunch' : 'Break'}
+                          </span>
+                        )}
+                      </div>
+
+                      {canEditGrid && (
+                        <div className="flex items-center gap-0.5 ml-1 shrink-0 no-print">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPeriod(pDef)}
+                            title="Edit Period Times & Label"
+                            className="text-on-surface-variant hover:text-primary cursor-pointer p-0.5 rounded hover:bg-surface-container"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">edit</span>
+                          </button>
+                          {periods.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePeriod(pDef.periodNumber)}
+                              title="Delete this period column"
+                              className="text-on-surface-variant hover:text-error cursor-pointer p-0.5 rounded hover:bg-surface-container"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-container">
+              {days.map((d) => (
+                <tr
+                  key={d.dayOfWeek}
+                  className="hover:bg-surface-container-low/20 transition-colors"
+                >
+                  {/* Day Header Row Label */}
+                  <td className="col-day-cell py-2.5 px-3 print:py-1 print:px-1.5 border-r border-surface-container print:border-gray-400 align-middle print:bg-[#fbfbfb]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-primary block text-xs print:text-[8.5px] uppercase tracking-wider">
+                        {d.label}
+                      </span>
+                      {canEditGrid && days.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDay(d.dayOfWeek)}
+                          title={`Delete ${d.label} row`}
+                          className="text-outline hover:text-error transition-colors cursor-pointer no-print ml-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Period Columns for this Day */}
+                  {periods.map((pDef) => {
+                    const slot = activeSlots.find(
+                      (s) => s.dayOfWeek === d.dayOfWeek && s.periodNumber === pDef.periodNumber
+                    );
+
+                    return (
+                      <td
+                        key={`${d.dayOfWeek}-${pDef.periodNumber}`}
+                        onClick={() => handleCellClick(d.dayOfWeek, pDef, slot)}
+                        className={`py-2 px-2 print:py-0.5 print:px-1 border-r border-surface-container last:border-r-0 print:border-gray-400 align-top transition-colors ${
+                          pDef.isBreak ? 'bg-amber-500/5 print:bg-[#fef8ee]' : ''
+                        } ${canEditGrid || (canEditPersonalLessons && slot?.timetableId) ? 'cursor-pointer hover:bg-rose-50/30' : ''}`}
+                      >
+                        {slot ? (
+                          slot.isBreak ? (
+                            <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-amber-50 border border-amber-200/60 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
+                              <span className="material-symbols-outlined text-primary text-sm no-print">coffee</span>
+                              <span className="text-[11px] print:text-[8px] font-bold text-amber-900 print:text-[#886200] mt-0.5 print:mt-0">
+                                {slot.label || (slot.isLunch ? 'Lunch & Rest' : 'Morning Break')}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="slot-card h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-1.5 print:p-0.5 shadow-xs print:shadow-none hover:border-primary/50 transition-all flex flex-col justify-between items-center text-center">
+                              <div className="slot-teacher w-full text-center">
+                                <span className="text-[10px] print:text-[7px] text-on-surface-variant print:text-gray-600 font-semibold block truncate">
+                                  {slot.teacherName || 'Assigned Teacher'}
+                                </span>
+                              </div>
+
+                              {(canEditGrid || canEditPersonalLessons) && <button type="button" aria-label={`Edit ${slot.learningAreaName || 'lesson'} on ${d.label}, period ${pDef.periodNumber}`} className="no-print inline-flex items-center gap-1 text-xs font-semibold text-primary" onClick={event => {event.stopPropagation();handleCellClick(d.dayOfWeek, pDef, slot);}}><span className="material-symbols-outlined text-sm">edit</span>Edit lesson</button>}
+
+                              <div className="subject-abbr-wrapper my-1 print:my-0.5 flex-1 flex items-center justify-center w-full">
+                                <span className="subject-abbr font-black text-primary text-sm sm:text-base print:text-[14px] uppercase tracking-wider block">
+                                  {formatSubjectAbbreviation(slot.learningAreaName)}
+                                </span>
+                              </div>
+
+                              <div className="slot-meta w-full text-center pt-1 print:pt-0 border-t print:border-none border-surface-container-high text-[9px] print:text-[6.5px] text-outline print:text-gray-500 font-data-mono truncate">
+                                <span>{slot.roomName ? slot.roomName + ' · ' : ''}{slot.startTime}-{slot.endTime}</span>
+                              </div>
+                            </div>
+                          )
+                        ) : pDef.isBreak ? (
+                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-low/50 border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
+                            <span className="text-[11px] print:text-[8px] text-outline italic print:text-[#886200] print:font-bold">
+                              {pDef.name || 'Break'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center text-outline hover:text-primary hover:border-primary transition-all group">
+                            {canEditGrid && (
+                              <div className="no-print flex flex-col items-center">
+                                <span className="material-symbols-outlined text-xs group-hover:scale-110 transition-transform">add</span>
+                                <span className="text-[10px] font-semibold mt-0.5">Empty Slot</span>
+                              </div>
+                            )}
+                            <span className="hidden print:inline text-gray-400 text-[8px]">—</span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Official Verification Signatures Block (Visible in Print & at bottom of document) */}
+        <div className="print-only-signatures mt-8 print:mt-2 pt-6 print:pt-1 border-t-2 print:border-t border-gray-300 grid grid-cols-1 sm:grid-cols-3 gap-6 print:gap-3 text-xs print:text-[8px]">
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Class Teacher:</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
+          </div>
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Deputy Headteacher (Academics):</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
+          </div>
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Principal / Headteacher:</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Official School Stamp & Signature</p>
+          </div>
+        </div>
+
+      </div>
+
 
       {/* Quick Period Edit Modal */}
       {editingPeriod && (
@@ -2034,15 +2052,18 @@ export const TimetableView: React.FC = () => {
           setSelectedSlotForEdit(null);
         }}
         onSlotAdded={handleSlotAdded}
-        timetableId={timetable?.id || ''}
-        classRoomId={selectedClassId}
-        streamId={selectedStreamId}
+        timetableId={viewMode === 'teacher' ? selectedSlotForEdit?.timetableId || '' : timetable?.id || ''}
+        classRoomId={viewMode === 'teacher' ? selectedSlotForEdit?.classRoomId : selectedClassId}
+        streamId={viewMode === 'teacher' ? selectedSlotForEdit?.streamId || '' : selectedStreamId}
         termId={currentContext?.currentTerm?.id || ''}
+        academicYearId={currentContext?.currentYear?.id}
         classes={classesList}
         streams={classStreams}
         initialSlot={selectedSlotForEdit}
+        periods={periods}
         availableDays={days.map((d) => ({ key: d.dayOfWeek, label: d.label }))}
-        onDeleteSlot={handleDeleteSlot}
+        onDeleteSlot={viewMode === 'class' ? handleDeleteSlot : undefined}
+        lockScope={viewMode === 'teacher'}
       />
     </div>
   );

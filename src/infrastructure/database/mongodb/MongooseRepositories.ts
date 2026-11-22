@@ -602,7 +602,18 @@ export class MongoUserRepository implements IUserRepository {
   }
 }
 
+const parentAccessSchema = new Schema({userId:{type:String,required:true},studentId:{type:String,required:true},schoolId:{type:String,required:true},canViewFinances:{type:Boolean,default:true},canViewAcademics:{type:Boolean,default:true}});
+parentAccessSchema.index({userId:1,studentId:1},{unique:true});
+const ParentAccessModel=mongoose.models.ParentLearnerAccess||mongoose.model('ParentLearnerAccess',parentAccessSchema);
 export class MongoStudentRepository implements IStudentRepository {
+  async deleteParentPermissions(userId:string,studentId:string) { await ParentAccessModel.deleteOne({userId,studentId}); }
+  async findParentPermissions(userId:string) {
+    const rows=await ParentAccessModel.find({userId}).lean();
+    return rows.map((row:any)=>({studentId:row.studentId,canViewFinances:row.canViewFinances!==false,canViewAcademics:row.canViewAcademics!==false}));
+  }
+  async saveParentPermissions(userId:string,studentId:string,schoolId:string,permissions:{canViewFinances:boolean;canViewAcademics:boolean}) {
+    await ParentAccessModel.updateOne({userId,studentId},{$set:{schoolId,...permissions}},{upsert:true});
+  }
   public async findById(id: string): Promise<Student | null> {
     const doc = await StudentModel.findById(id).lean();
     if (!doc) return null;

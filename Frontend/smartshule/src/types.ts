@@ -47,6 +47,7 @@ export type TabType =
   | 'discipline'
   | 'broadsheets'
   | 'occurrence-records'
+  | 'syllabus-coverage-plan'
   | 'curriculum-tracker'
   | 'scheme-of-work-builder'
   | 'fee-deadline-banner'

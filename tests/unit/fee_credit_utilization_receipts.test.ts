@@ -253,6 +253,9 @@ describe('SmartShule — Fee Credit Utilization with Receipts (14 Scenarios)', (
       guardianId
     );
     await guardianRepo.save(g);
+    const student = await studentRepo.findById(studentId);
+    student!.addGuardian(guardianId);
+    await studentRepo.update(student!);
     return g;
   };
 

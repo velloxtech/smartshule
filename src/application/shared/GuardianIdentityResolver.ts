@@ -1,9 +1,8 @@
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
-import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
+import { Guardian } from '../../core/domain/user/Guardian';
 import { Student, StudentStatus } from '../../core/domain/user/Student';
-import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 
 export interface ResolveGuardianResult {
   guardian: Guardian | null;
@@ -18,191 +17,39 @@ export class GuardianIdentityResolver {
    * server-verified identity and students.guardian_ids JSONB relationship.
    *
    * Security Invariant:
-   * A student belongs to a guardian if and only if students.guardian_ids contains guardian.id.
+   * A family relationship requires a learner-side guardian link or an explicit normalized parent link.
    * Client-supplied guardian/student IDs and unverified guardian.student_ids arrays are never trusted.
    */
   public static async resolveLinkedStudentIdsForUser(params: {
     userId: string;
     userPhone?: string;
     userEmail?: string;
+    permission?: 'finance' | 'academics';
     guardianRepository: IGuardianRepository;
     studentRepository: IStudentRepository;
     userRepository?: IUserRepository;
   }): Promise<ResolveGuardianResult> {
-    const { userId, userPhone, userEmail, guardianRepository, studentRepository, userRepository } = params;
+    const { userId, guardianRepository, studentRepository, userRepository } = params;
 
-    // 1. Resolve guardian profile for user
-    let guardian = await guardianRepository.findByUserId(userId);
-    let user = userRepository ? await userRepository.findById(userId) : null;
-    const effectivePhone = userPhone || user?.phone;
-    const effectiveEmail = userEmail || user?.email;
-
-    if (!guardian && effectivePhone) {
-      guardian = await guardianRepository.findByPhone(effectivePhone);
-      if (!guardian) {
-        const allGuardians = await guardianRepository.findAll();
-        guardian = allGuardians.find((g: any) =>
-          (effectivePhone && PhoneUtils.areMatches(g.emergencyContact, effectivePhone)) ||
-          g.userId === userId
-        ) || null;
-      }
-      if (guardian && guardian.userId !== userId) {
-        guardian.setUserId(userId);
-        await guardianRepository.update(guardian);
-      }
+    // Account/profile and learner-side links are authoritative. Phone matches,
+    // cached studentIds and demo identities must never grant family access.
+    const guardian = await guardianRepository.findByUserId(userId);
+    const user = userRepository ? await userRepository.findById(userId) : null;
+    if (!guardian || guardian.userId !== userId || (userRepository && !user?.schoolId)) {
+      return {guardian:null,studentIds:[],students:[],hasEnrolledChildren:false};
     }
-
-    // Demo/seed fallback for automated test accounts
-    if (!guardian && (effectiveEmail === 'parent@smartshule.ac.ke' || userId === 'usr-parent-01')) {
-      const allStudents = await studentRepository.findAll();
-      if (allStudents.length > 0) {
-        const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-        guardian = Guardian.create(
-          {
-            userId,
-            nationalId: '28475921',
-            relationship: GuardianRelationship.MOTHER,
-            emergencyContact: effectivePhone || '+254777000777',
-            studentIds: [demoStudent.id]
-          },
-          'grd-default-01'
-        );
-        await guardianRepository.save(guardian);
-        if (!demoStudent.guardianIds.includes(guardian.id)) {
-          demoStudent.addGuardian(guardian.id);
-          await studentRepository.update(demoStudent);
-        }
-      }
-    }
-
-    if (!guardian) {
-      return {
-        guardian: null,
-        studentIds: [],
-        students: [],
-        hasEnrolledChildren: false
-      };
-    }
-
-    // 2. Authoritative query: Retrieve learners whose guardian_ids contains this guardian's profile ID or user ID
-    let linkedStudents = await studentRepository.findByGuardianId(guardian.id);
-    if (guardian.userId && guardian.userId !== guardian.id) {
-      const byUserStudents = await studentRepository.findByGuardianId(guardian.userId);
-      for (const s of byUserStudents) {
-        if (!linkedStudents.some(ls => ls.id === s.id)) {
-          linkedStudents.push(s);
-        }
-      }
-    }
-
-    // Resolve any sibling guardian accounts for this parent (e.g. same phone number across duplicate imports)
-    let siblingGuardians: Guardian[] = [];
-    if (effectivePhone) {
-      try {
-        const allG = await guardianRepository.findAll();
-        siblingGuardians = allG.filter((g: any) => 
-          g.id !== guardian!.id && PhoneUtils.areMatches(g.emergencyContact, effectivePhone)
-        );
-        for (const sg of siblingGuardians) {
-          const bySgStudents = await studentRepository.findByGuardianId(sg.id);
-          for (const s of bySgStudents) {
-            if (!linkedStudents.some(ls => ls.id === s.id)) {
-              linkedStudents.push(s);
-            }
-          }
-          if (sg.userId && sg.userId !== sg.id) {
-            const bySgUserStudents = await studentRepository.findByGuardianId(sg.userId);
-            for (const s of bySgUserStudents) {
-              if (!linkedStudents.some(ls => ls.id === s.id)) {
-                linkedStudents.push(s);
-              }
-            }
-          }
-          // Also check explicit studentIds on sibling guardian
-          if (Array.isArray(sg.studentIds)) {
-            for (const sid of sg.studentIds) {
-              const candidate = await studentRepository.findById(sid);
-              if (candidate && !linkedStudents.some(ls => ls.id === candidate.id)) {
-                linkedStudents.push(candidate);
-              }
-            }
-          }
-        }
-      } catch {}
-    }
-
-    const isThisGuardian = (gid: string) =>
-      gid === guardian!.id || 
-      (Boolean(guardian!.userId) && gid === guardian!.userId) || 
-      gid === userId ||
-      siblingGuardians.some(sg => sg.id === gid || sg.userId === gid);
-
-    // Filter to active learners
-    let verifiedStudents = linkedStudents.filter(
-      s => (s.status === StudentStatus.ACTIVE || !s.status) &&
-           s.guardianIds &&
-           s.guardianIds.some(gid => isThisGuardian(gid))
-    );
-
-    // Ensure guardian.id is in student.guardianIds if only userId was present
-    for (const s of verifiedStudents) {
-      if (!s.guardianIds.includes(guardian.id)) {
-        s.addGuardian(guardian.id);
-        await studentRepository.update(s);
-      }
-    }
-
-    // 3. Fallback support for unit test fixtures where students were mocked without guardian_ids
-    // but guardian was instantiated with studentIds. We ONLY accept this if the candidate student
-    // DOES NOT belong to another guardian (i.e. student.guardianIds does not have another guardian).
-    if (verifiedStudents.length === 0 && guardian.studentIds && guardian.studentIds.length > 0) {
-      for (const sid of guardian.studentIds) {
-        const candidate = await studentRepository.findById(sid);
-        if (candidate && (candidate.status === StudentStatus.ACTIVE || !candidate.status)) {
-          // If candidate already belongs to other guardian(s), do NOT adopt!
-          const hasOtherGuardians = candidate.guardianIds && candidate.guardianIds.length > 0 && candidate.guardianIds.some(gid => !isThisGuardian(gid));
-          const hasThisGuardian = candidate.guardianIds && candidate.guardianIds.some(gid => isThisGuardian(gid));
-          if (!hasOtherGuardians || hasThisGuardian) {
-            if (!candidate.guardianIds.includes(guardian.id)) {
-              candidate.addGuardian(guardian.id);
-              await studentRepository.update(candidate);
-            }
-            if (!verifiedStudents.some(s => s.id === candidate.id)) {
-              verifiedStudents.push(candidate);
-            }
-          }
-        }
-      }
-    }
-
-    // 4. Bidirectional Reconciliation & Stale Linkage Purification
-    // If guardian.studentIds contains students who do NOT belong to this guardian (e.g. Denzel Ted in Rael's guardian record),
-    // sanitize guardian.studentIds so stale or cross-account references are purged.
-    const verifiedIds = verifiedStudents.map(s => s.id);
-    const verifiedSet = new Set(verifiedIds);
-    let driftDetected = false;
-
-    for (const sid of (guardian.studentIds || [])) {
-      if (!verifiedSet.has(sid)) {
-        guardian.unlinkStudent(sid);
-        driftDetected = true;
-      }
-    }
-    for (const sid of verifiedIds) {
-      if (!guardian.studentIds.includes(sid)) {
-        guardian.linkStudent(sid);
-        driftDetected = true;
-      }
-    }
-    if (driftDetected) {
-      await guardianRepository.update(guardian);
-    }
-
-    return {
-      guardian,
-      studentIds: verifiedIds,
-      students: verifiedStudents,
-      hasEnrolledChildren: verifiedIds.length > 0
-    };
+    const permissions=await studentRepository.findParentPermissions?.(userId)||[];
+    const byStudent=new Map(permissions.map(row=>[row.studentId,row]));
+    const normalized=permissions.length ? await studentRepository.findByIds(permissions.map(row=>row.studentId)) : [];
+    const candidates = [...normalized,...await studentRepository.findByGuardianId(guardian.id),
+      ...await studentRepository.findByGuardianId(userId)];
+    const students = [...new Map(candidates.filter(student =>
+      (!user?.schoolId || student.schoolId === user.schoolId) &&
+      (student.status === StudentStatus.ACTIVE || !student.status) &&
+      (student.guardianIds.some(id => id === guardian.id || id === userId) || byStudent.has(student.id)) &&
+      (params.permission !== 'finance' || byStudent.get(student.id)?.canViewFinances !== false) &&
+      (params.permission !== 'academics' || byStudent.get(student.id)?.canViewAcademics !== false)
+    ).map(student => [student.id,student])).values()];
+    return {guardian,students,studentIds:students.map(student=>student.id),hasEnrolledChildren:students.length>0};
   }
 }

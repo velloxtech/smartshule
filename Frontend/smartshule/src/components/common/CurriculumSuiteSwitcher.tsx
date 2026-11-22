@@ -1,115 +1,17 @@
 import React from 'react';
+import { CURRICULUM_WORKFLOW, CurriculumPage } from '../../utils/curriculumWorkflow';
 
-export type CurriculumSuiteTab = 'schemes' | 'lesson-plans' | 'records-of-work' | 'curriculum-tracker';
-
-interface CurriculumSuiteSwitcherProps {
-  activeTab: CurriculumSuiteTab;
-  onSelectTab: (tab: CurriculumSuiteTab) => void;
-  counts?: {
-    schemes?: number;
-    lessonPlans?: number;
-    recordsOfWork?: number;
-    curriculumTrackers?: number;
-  };
+export function CurriculumSuiteSwitcher({activeTab,onSelectTab,canAccess}:{activeTab:CurriculumPage;onSelectTab:(tab:CurriculumPage)=>void;canAccess:(tab:CurriculumPage)=>boolean}) {
+  const current=CURRICULUM_WORKFLOW.find(step=>step.id===activeTab)!;
+  return <nav aria-label="Curriculum workflow" className="mb-6 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 sm:p-4">
+    <p className="mb-3 text-sm font-semibold text-primary">Plan → Prepare → Teach → Verify</p>
+    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+      {CURRICULUM_WORKFLOW.map((step,index)=>canAccess(step.id)&&<li key={step.id}>
+        <button type="button" aria-current={activeTab===step.id?'page':undefined} onClick={()=>onSelectTab(step.id)} className={`h-full w-full rounded-xl border p-3 text-left text-xs font-semibold ${activeTab===step.id?'border-primary bg-primary text-white':'border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-low'}`}>
+          <span className="mb-1 block text-[11px] opacity-80">Step {index+1}</span>{step.label}
+        </button>
+      </li>)}
+    </ol>
+    <p className="mt-3 text-xs text-on-surface-variant"><strong>{current.label}:</strong> {current.description}</p>
+  </nav>;
 }
-
-export const CurriculumSuiteSwitcher: React.FC<CurriculumSuiteSwitcherProps> = ({
-  activeTab,
-  onSelectTab,
-  counts,
-}) => {
-  const tabs: Array<{
-    id: CurriculumSuiteTab;
-    label: string;
-    shortLabel: string;
-    icon: string;
-    count?: number;
-    description: string;
-  }> = [
-    {
-      id: 'curriculum-tracker',
-      label: 'Syllabus Coverage Plan',
-      shortLabel: 'Coverage Plan',
-      icon: 'fact_check',
-      count: counts?.curriculumTrackers,
-      description: 'Curriculum allocation & coverage progress',
-    },
-    {
-      id: 'schemes',
-      label: 'Schemes of Work',
-      shortLabel: 'Schemes',
-      icon: 'calendar_month',
-      count: counts?.schemes,
-      description: 'Term-long curriculum breakdown',
-    },
-    {
-      id: 'lesson-plans',
-      label: '40-Min Lesson Plans',
-      shortLabel: 'Lesson Plans',
-      icon: 'menu_book',
-      count: counts?.lessonPlans,
-      description: 'Daily lesson delivery steps',
-    },
-    {
-      id: 'records-of-work',
-      label: 'Records of Work',
-      shortLabel: 'Records of Work',
-      icon: 'auto_stories',
-      count: counts?.recordsOfWork,
-      description: 'Documented work covered & reflections',
-    },
-  ];
-
-  return (
-    <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-2 shadow-xs mb-6">
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => onSelectTab(tab.id)}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                isActive
-                  ? 'bg-gradient-to-r from-primary to-maroon-light text-white border-primary shadow-sm'
-                  : 'bg-surface/70 hover:bg-surface-container-low/80 text-on-surface-variant border-outline-variant/30'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`material-symbols-outlined text-[18px] ${
-                      isActive ? 'text-white' : 'text-primary'
-                    }`}
-                  >
-                    {tab.icon}
-                  </span>
-                  <span className="font-black text-xs truncate">{tab.label}</span>
-                </div>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-surface-container text-on-surface-variant'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </div>
-              <p
-                className={`text-[10px] truncate ${
-                  isActive ? 'text-white/80' : 'text-on-surface-variant'
-                }`}
-              >
-                {tab.description}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};

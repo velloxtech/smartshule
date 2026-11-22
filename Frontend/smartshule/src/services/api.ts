@@ -212,6 +212,7 @@ const getHeaders = () => {
   const token = getStoredAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Portal-View': localStorage.getItem('smartshule_active_view_mode') === 'PARENT' ? 'PARENT' : 'STAFF',
     'X-Device-Fingerprint': getDeviceFingerprint(),
   };
   if (token) {
@@ -239,6 +240,7 @@ export function clearApiCache(endpointPrefix?: string) {
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const requestKey = `${getStoredAuthToken()}::${localStorage.getItem('smartshule_active_view_mode') || 'STAFF'}::${url}`;
 
   // On any mutating request, clear relevant cache so user never sees stale data
   if (method !== 'GET') {
@@ -255,7 +257,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   );
 
   if (isCacheable) {
-    const cached = apiCache.get(url);
+    const cached = apiCache.get(requestKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
       return cached.data as T;
     }
@@ -263,7 +265,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   // In-flight deduplication: collapse simultaneous identical GET requests into 1 network call
   if (method === 'GET') {
-    const activePromise = inFlightRequests.get(url);
+    const activePromise = inFlightRequests.get(requestKey);
     if (activePromise) {
       return activePromise as Promise<T>;
     }
@@ -305,20 +307,20 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
       const json = await res.json();
       if (isCacheable) {
-        apiCache.set(url, { timestamp: Date.now(), data: json });
+        apiCache.set(requestKey, { timestamp: Date.now(), data: json });
       }
       return json;
     } finally {
       window.clearTimeout(timer);
       options.signal?.removeEventListener('abort', abort);
       if (method === 'GET') {
-        inFlightRequests.delete(url);
+        inFlightRequests.delete(requestKey);
       }
     }
   })();
 
   if (method === 'GET') {
-    inFlightRequests.set(url, fetchPromise);
+    inFlightRequests.set(requestKey, fetchPromise);
   }
 
   return fetchPromise;
@@ -3892,7 +3894,7 @@ export const libraryApi = {
 
   acknowledgeSalary: async (
     id: string,
-    data: { statement?: string; method?: string; signature?: string }
+    data: { statement?: string; method?: string; signature?: string; expectedAmountPaid?: number; expectedPaymentReference?: string }
   ): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/payroll/${id}/acknowledge`, {
       method: 'POST',
@@ -4790,6 +4792,12 @@ export const parentConsentApi = {
 
 // Unified apiService containing core and extended domain endpoints
 export const apiService = {
+  downloadWeeklyMonitoring: async(id:string,format:'pdf'|'doc',context:any):Promise<void>=>{
+    const query=new URLSearchParams({...Object.fromEntries(Object.entries(context).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)])),format,view:'monitoring'});
+    const response=await fetch(`${API_BASE_URL}/curriculum/schemes/${encodeURIComponent(id)}/weekly/export?${query}`,{headers:getHeaders()});
+    if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||'Register download failed.');}
+    const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`Weekly_Syllabus_Monitoring_Register.${format==='doc'?'docx':format}`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  },
   schemePlanning: async (path:string,options:RequestInit={}):Promise<any> => apiFetch(`/curriculum/schemes/${path}`,options),
   saveSlotReflection: async (id:string,reflection:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reflection?${new URLSearchParams(context)}`,{method:'PUT',body:JSON.stringify({reflection})}),
   downloadWeeklyScheme: async (id:string,format:'pdf'|'doc',context:{academicYearId:string;termId:string}):Promise<void> => {

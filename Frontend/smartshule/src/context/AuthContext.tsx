@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthUser, UserRole } from '../types';
-import { apiService, setAuthToken } from '../services/api';
+import { clearApiCache, apiService, setAuthToken } from '../services/api';
 import { biometricService } from '../services/biometricService';
 
 interface AuthContextType {
@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setActiveViewMode = (mode: 'STAFF' | 'PARENT') => {
     setActiveViewModeState(mode);
     localStorage.setItem('smartshule_active_view_mode', mode);
+    clearApiCache();
   };
 
   const refreshProfile = async () => {

@@ -186,6 +186,7 @@ export class LunchFeeUseCases {
   public async getLinkedStudentIdsForParent(userId: string): Promise<string[]> {
     if (!this.guardianRepository || !this.studentRepository) return [];
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      permission: 'finance',
       userId,
       guardianRepository: this.guardianRepository,
       studentRepository: this.studentRepository,

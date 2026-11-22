@@ -261,7 +261,7 @@ describe('Finance Automation, Parent-to-Learner Linking & Invoice Source of Trut
   // SECTION 2: PARENT-TO-LEARNER LINKING & MULTI-ACCOUNT RESOLUTION (0790760008)
   // =========================================================================
   describe('Robust Parent-to-Learner Linking & Directory Workflow', () => {
-    it('Scenario 3: Resolves children for parent 0790760008 across duplicate user accounts', async () => {
+    it('Scenario 3: keeps duplicate-phone accounts isolated until an administrator explicitly links the learners', async () => {
       // 1. Create Scarlet Achieng in Grade 4
       const scarlet = Student.create({
         schoolId,
@@ -352,8 +352,7 @@ describe('Finance Automation, Parent-to-Learner Linking & Invoice Source of Trut
         requestingUser: adminContext
       });
 
-      // 6. VERIFY: When Sophy logs in with user154 (the empty account that previously failed):
-      // GuardianIdentityResolver resolves BOTH Scarlet (Grade 4) AND Junior (Playgroup)!
+      // A shared phone number is not permission to access a different account’s child.
       const resolved154 = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
         userId: user154.id,
         userPhone: '0790760008',
@@ -363,11 +362,16 @@ describe('Finance Automation, Parent-to-Learner Linking & Invoice Source of Trut
       });
 
       expect(resolved154.hasEnrolledChildren).toBe(true);
-      expect(resolved154.studentIds).toContain(scarlet.id);
-      expect(resolved154.studentIds).toContain(playgroupChild.id);
-      expect(resolved154.students.length).toBe(2);
+      expect(resolved154.studentIds).not.toContain(scarlet.id);
+      expect(resolved154.studentIds).toEqual([playgroupChild.id]);
+      expect(resolved154.students.length).toBe(1);
+      const isolatedPortal = await studentUseCases.getGuardianPortalData(user154.id);
+      expect(isolatedPortal.students.map(s=>s.id)).toEqual([playgroupChild.id]);
 
-      // 7. VERIFY: Parent Portal data returns both children
+      // Administrative linking, rather than phone matching at read time, grants family access.
+      await studentUseCases.linkParentToLearners({parentUserId:user154.id,studentIds:[scarlet.id],relationship:'MOTHER',isPrimary:true,requestingUser:adminContext});
+
+      // Parent Portal data now returns both explicitly linked children.
       const portalData = await studentUseCases.getGuardianPortalData(user154.id);
       expect(portalData.students.length).toBe(2);
       const studentNames = portalData.students.map(s => s.fullName);

@@ -110,6 +110,14 @@ export class CurriculumTrackerUseCases {
     private readonly teacherRepo?: ITeacherRepository
   ) {}
 
+  private weekPlan(data:Partial<CurriculumTrackerWeekItem>) {
+    const keys=['weekNumber','strand','strandId','subStrand','subStrandId','learningOutcomes','plannedLessons','targetDate','suggestedActivities','resources'] as const;
+    const clean=Object.fromEntries(keys.filter(key=>data[key]!==undefined).map(key=>[key,data[key]])) as Partial<CurriculumTrackerWeekItem>;
+    if(clean.weekNumber!==undefined&&(!Number.isInteger(clean.weekNumber)||clean.weekNumber<1||clean.weekNumber>25))throw new ValidationError('Choose a valid teaching week.');
+    if(clean.plannedLessons!==undefined&&(!Number.isInteger(clean.plannedLessons)||clean.plannedLessons<0||clean.plannedLessons>100))throw new ValidationError('Planned lessons must be a non-negative whole number.');
+    return clean;
+  }
+
   public async createTracker(
     dto: CreateCurriculumTrackerDTO,
     requestingUser?: { userId?: string; role?: string; schoolId?: string; fullName?: string }
@@ -144,7 +152,7 @@ export class CurriculumTrackerUseCases {
     if (dto.items && Array.isArray(dto.items)) {
       for (const item of dto.items) {
         if (item.weekNumber) {
-          itemsMap.set(item.weekNumber, item);
+          itemsMap.set(item.weekNumber, this.weekPlan(item));
         }
       }
     }
@@ -247,7 +255,7 @@ export class CurriculumTrackerUseCases {
 
     await this.checkPermission(tracker, requestingUser);
 
-    tracker.setWeekPlan(weekNumber, data);
+    tracker.setWeekPlan(weekNumber, this.weekPlan(data));
     await this.trackerRepo.update(tracker);
     return tracker.toJSON();
   }
@@ -407,7 +415,7 @@ export class CurriculumTrackerUseCases {
 
     await this.checkPermission(tracker, requestingUser);
 
-    tracker.batchUpdateWeeks(weeks);
+    tracker.batchUpdateWeeks(weeks.map(week=>this.weekPlan(week)));
     await this.trackerRepo.update(tracker);
     return tracker.toJSON();
   }

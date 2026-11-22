@@ -22,7 +22,7 @@ describe('Record of Work deletion permissions and coverage cleanup', () => {
     expect(repo.delete).not.toHaveBeenCalled();
   });
   it.each(['ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'])('lets %s delete approved work and removes its tracker evidence', async role => {
-    const tracker:any={dailyLogs:[{id:'record',weekNumber:1,endorsement:{}}],items:[{weekNumber:1,isCovered:true}],removeDailyLog:jest.fn(function(this:any){this.dailyLogs=[];}),returnWeekCoverage:jest.fn()};
+    const tracker:any={dailyLogs:[{id:'record',weekNumber:1,endorsement:{}}],items:[{weekNumber:1,isCovered:true}],removeDailyLog:jest.fn(function(this:any){this.dailyLogs=[];}),setWeekPlan:jest.fn(),returnWeekCoverage:jest.fn()};
     const trackers={findTrackers:jest.fn().mockResolvedValue([tracker]),update:jest.fn()};
     const {repo,useCases}=setup({status:'APPROVED'},trackers);
     await useCases.deleteDiaryEntry('record',{userId:'leader',role,schoolId:'school'});
@@ -32,10 +32,11 @@ describe('Record of Work deletion permissions and coverage cleanup', () => {
     expect(repo.delete).toHaveBeenCalledWith('record');
   });
   it('retains week approval when another endorsed record remains', async () => {
-    const tracker:any={dailyLogs:[{id:'record',weekNumber:1},{id:'other',weekNumber:1,endorsement:{}}],items:[{weekNumber:1,isCovered:true}],removeDailyLog:jest.fn(function(this:any){this.dailyLogs=this.dailyLogs.filter((log:any)=>log.id!=='record');}),returnWeekCoverage:jest.fn()};
+    const tracker:any={dailyLogs:[{id:'record',weekNumber:1},{id:'other',weekNumber:1,status:'TAUGHT',endorsement:{}}],items:[{weekNumber:1,isCovered:true}],removeDailyLog:jest.fn(function(this:any){this.dailyLogs=this.dailyLogs.filter((log:any)=>log.id!=='record');}),setWeekPlan:jest.fn(),returnWeekCoverage:jest.fn()};
     const {useCases}=setup({status:'APPROVED'},{findTrackers:jest.fn().mockResolvedValue([tracker]),update:jest.fn()});
     await useCases.deleteDiaryEntry('record',{userId:'leader',role:'ADMIN',schoolId:'school'});
     expect(tracker.returnWeekCoverage).not.toHaveBeenCalled();
+    expect(tracker.setWeekPlan).toHaveBeenCalledWith(1,{lessonsTaught:1});
     expect(tracker.dailyLogs[0].id).toBe('other');
   });
 

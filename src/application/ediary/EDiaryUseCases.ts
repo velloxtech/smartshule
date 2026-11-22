@@ -268,6 +268,7 @@ export class EDiaryUseCases {
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
     if (!this.guardianRepository || !this.studentRepository) return [];
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      permission: 'academics',
       userId,
       guardianRepository: this.guardianRepository,
       studentRepository: this.studentRepository,
@@ -286,6 +287,7 @@ export class EDiaryUseCases {
 
     // 1. Authoritative resolution of linked children from token identity
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      permission: 'academics',
       userId: requestingUser.userId,
       guardianRepository: this.guardianRepository,
       studentRepository: this.studentRepository,

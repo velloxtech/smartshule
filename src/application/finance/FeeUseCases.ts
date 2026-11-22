@@ -61,7 +61,7 @@ import { FeeBannerConfig } from '../../core/domain/finance/FeeBannerConfig';
 import { IStudentSponsorshipRepository } from '../../core/ports/repositories/IStudentSponsorshipRepository';
 import { SponsorshipStatus } from '../../core/domain/sponsorship/StudentSponsorship';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
-import { UserRole, isBillingAuthorizedRole, isReversalApprovalAuthorizedRole } from '../../core/domain/user/User';
+import { UserRole, BILLING_AUTHORIZED_ROLES, isBillingAuthorizedRole, isReversalApprovalAuthorizedRole } from '../../core/domain/user/User';
 import { WhatsAppClientManager } from '../../infrastructure/services/WhatsAppClientManager';
 
 export interface ReceiptDeliveryInfo {
@@ -521,6 +521,23 @@ export class FeeUseCases {
     }
 
     return { yearId, termId, termNumber };
+  }
+
+  private financeSchool(requestingUser?: UserContext, requestedSchoolId?: string): string | undefined {
+    if (!requestingUser) return requestedSchoolId;
+    const readers = [...BILLING_AUTHORIZED_ROLES,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.ADMISSIONS,UserRole.PARENT,UserRole.GUARDIAN];
+    if (!readers.includes(requestingUser.role) || !requestingUser.schoolId ||
+      (requestedSchoolId && requestedSchoolId !== requestingUser.schoolId)) throw new ForbiddenError('School finance access denied.');
+    return requestingUser.schoolId;
+  }
+
+  private async assertStudentFinanceAccess(studentId: string, requestingUser?: UserContext) {
+    if (!requestingUser) return;
+    const schoolId = this.financeSchool(requestingUser);
+    const student = await this.studentRepository.findById(studentId);
+    if (!student || student.schoolId !== schoolId) throw new ForbiddenError('Learner finance access denied.');
+    if ([UserRole.PARENT,UserRole.GUARDIAN].includes(requestingUser.role) &&
+      !(await this.getFinanceStudentIdsForUser(requestingUser.userId)).includes(studentId)) throw new ForbiddenError('Access denied: You are not authorized to access fee records outside your linked children.');
   }
 
   public verifyBillingAuthorization(requestingUser?: UserContext): void {
@@ -1967,9 +1984,12 @@ export class FeeUseCases {
       throw new NotFoundError('Invoice', invoiceId);
     }
 
+
+    this.financeSchool(requestingUser,invoice.schoolId);
+    await this.assertStudentFinanceAccess(invoice.studentId,requestingUser);
     // Strict Parent Data Isolation
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(invoice.studentId)) {
         throw new ForbiddenError('Access denied: You are only permitted to view invoices for your linked children.');
       }
@@ -2779,9 +2799,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     });
   }
 
-  public async getPaymentReceipt(paymentId: string) {
+  public async getPaymentReceipt(paymentId: string, requestingUser?: UserContext) {
     const payment = await this.feeRepository.findPaymentById(paymentId);
     if (!payment) throw new NotFoundError('Payment Record', paymentId);
+    await this.assertStudentFinanceAccess(payment.studentId,requestingUser);
 
     const student = await this.studentRepository.findById(payment.studentId);
     if (!student) throw new NotFoundError('Student', payment.studentId);
@@ -3374,14 +3395,16 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
   }
 
   // 8. Query Transaction Status via KCB Buni API
-  public async queryKcbBuniStatus(checkoutRequestId: string) {
+  public async queryKcbBuniStatus(checkoutRequestId: string, requestingUser?: UserContext) {
     // 1. Check if transaction has ALREADY been recorded in the database via callback
-    const allPayments = await this.feeRepository.findPayments({});
+    const schoolId = this.financeSchool(requestingUser);
+    const allPayments = await this.feeRepository.findPayments({schoolId});
     const foundPayment = allPayments.find(
       p => (p.notes && p.notes.includes(checkoutRequestId)) || p.transactionReference === checkoutRequestId
     );
 
     if (foundPayment) {
+      await this.assertStudentFinanceAccess(foundPayment.studentId,requestingUser);
       const invoice = foundPayment.invoiceId ? await this.feeRepository.findInvoiceById(foundPayment.invoiceId) : null;
       return {
         success: true,
@@ -3394,6 +3417,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       };
     }
 
+    if (requestingUser) {
+      const pending = this.pendingKcbTransactions.get(checkoutRequestId);
+      if (!pending) throw new ForbiddenError('Transaction access cannot be verified.');
+      const invoice = await this.feeRepository.findInvoiceById(pending.invoiceId);
+      if (!invoice) throw new ForbiddenError('Transaction access cannot be verified.');
+      await this.assertStudentFinanceAccess(invoice.studentId,requestingUser);
+    }
     const statusResult = await this.kcbBuniGateway.queryTransactionStatus(checkoutRequestId);
 
     // Settle pending transaction if confirmed successful and not yet recorded
@@ -3461,10 +3491,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
   }
 
   // 6. Fee Statement & Reports
-  public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
+  public async getLinkedStudentIdsForUser(userId: string, permission?: 'finance' | 'academics'): Promise<string[]> {
     if (!this.guardianRepository || !this.studentRepository) return [];
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
-      userId,
+      userId,permission,
       guardianRepository: this.guardianRepository,
       studentRepository: this.studentRepository,
       userRepository: this.userRepository
@@ -3472,36 +3502,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     return res.studentIds;
   }
 
-  private async getGuardianForUser(userId: string): Promise<Guardian | null> {
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    if (!guardian) {
-      const user = await this.userRepository.findById(userId);
-      if (user && user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allG = await this.guardianRepository.findAll();
-        guardian = allG.find(g => g.emergencyContact === user?.phone || g.userId === userId) || null;
-      }
-      if (guardian && user) {
-        guardian.setUserId(user.id);
-        await this.guardianRepository.update(guardian);
-      }
-    }
+  private getFinanceStudentIdsForUser(userId:string) { return this.getLinkedStudentIdsForUser(userId,'finance'); }
 
-    // Link demo parent if needed
-    if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0)) {
-      const user = await this.userRepository.findById(userId);
-      if (user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
-        const allS = await this.studentRepository.findAll();
-        if (allS.length > 0) {
-          const targetS = allS.find(s => s.id === 'student-001') || allS[0];
-          guardian.linkStudent(targetS.id);
-          await this.guardianRepository.update(guardian);
-        }
-      }
-    }
-    return guardian;
+  private async getGuardianForUser(userId: string): Promise<Guardian | null> {
+    return this.guardianRepository.findByUserId(userId);
   }
 
   // 6. Invoices Query with Parent Isolation & Rich Filtering
@@ -3515,11 +3519,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     status?: InvoiceStatus;
     requestingUser?: UserContext;
   }) {
+    filters = {...filters,schoolId:this.financeSchool(filters.requestingUser,filters.schoolId)};
+    if (filters.studentId) await this.assertStudentFinanceAccess(filters.studentId,filters.requestingUser);
     let studentIdsToQuery: string[] | undefined = undefined;
 
     // Strict Parent Data Isolation: A parent can only see invoices of their own children
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(filters.requestingUser.userId);
       if (childIds.length === 0) {
         return [];
       }
@@ -3641,8 +3647,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 7. Fee Statement with Parent Isolation
   public async getStudentFeeStatement(studentId: string, requestingUser?: UserContext) {
+    await this.assertStudentFinanceAccess(studentId,requestingUser);
+
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only authorized to view fee statements for your linked children.');
       }
@@ -3806,8 +3814,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     options?: { termId?: string; academicYearId?: string },
     requestingUser?: UserContext
   ) {
+    await this.assertStudentFinanceAccess(studentId,requestingUser);
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only authorized to view fee accounts for your linked children.');
       }
@@ -3824,7 +3833,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
     if (this.academicRepository) {
       try {
-        activeYear = await this.academicRepository.findCurrentYear();
+        activeYear = await this.academicRepository.findCurrentYear(student.schoolId);
         if (activeYear) {
           if (!targetYearId) targetYearId = activeYear.id;
           const terms = await this.academicRepository.findTermsByYear(activeYear.id);
@@ -4356,8 +4365,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 7c. Retrieve Student Credit Ledger and Application History
   public async getStudentCredits(studentId: string, requestingUser?: UserContext) {
+    await this.assertStudentFinanceAccess(studentId,requestingUser);
+
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only authorized to view credits for your linked children.');
       }
@@ -5357,6 +5368,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     }
 
     const firstApp = apps[0];
+    for (const app of apps) await this.assertStudentFinanceAccess(app.studentId,requestingUser);
     const receiptPayload = firstApp.receiptPayload;
     if (!receiptPayload) {
       throw new NotFoundError('Receipt payload for', receiptNumber);
@@ -5366,7 +5378,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        const linkedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        const linkedStudentIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (!linkedStudentIds.includes(firstApp.studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipt.");
         }
@@ -5381,13 +5393,15 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 7c-12. Retrieve All Fee Credit Utilization Receipts for a Learner
   public async getStudentCreditUtilizationReceipts(studentId: string, requestingUser?: UserContext) {
+    await this.assertStudentFinanceAccess(studentId,requestingUser);
+
     if (!studentId) throw new ValidationError('Student ID is required.');
 
     // Role-based authorization
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        const linkedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        const linkedStudentIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (!linkedStudentIds.includes(studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipts.");
         }
@@ -5560,12 +5574,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     },
     requestingUser?: UserContext
   ): Promise<FeeCreditUtilizationReceiptPayload[]> {
+    filters = {...filters,schoolId:this.financeSchool(requestingUser,filters?.schoolId)};
+    if (filters.studentId) await this.assertStudentFinanceAccess(filters.studentId,requestingUser);
     // Role isolation: Parents only see their linked children
     let allowedStudentIds: string[] | undefined = undefined;
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        allowedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        allowedStudentIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (filters?.studentId && !allowedStudentIds.includes(filters.studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipts.");
         }
@@ -5583,6 +5599,8 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const receiptsMap = new Map<string, FeeCreditUtilizationReceiptPayload>();
 
     for (const app of apps) {
+      if (allowedStudentIds && !allowedStudentIds.includes(app.studentId)) continue;
+      if (filters.schoolId && (await this.studentRepository.findById(app.studentId))?.schoolId !== filters.schoolId) continue;
       if (app.receiptNumber && app.receiptPayload) {
         if (!receiptsMap.has(app.receiptNumber)) {
           receiptsMap.set(app.receiptNumber, app.receiptPayload);
@@ -6027,13 +6045,15 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     filters: ReversalRequestFilterCriteria,
     requestingUser?: UserContext
   ): Promise<TransactionReversalRequest[]> {
+    filters = {...filters,schoolId:this.financeSchool(requestingUser,filters.schoolId)};
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        const linkedIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (filters.studentId && !linkedIds.includes(filters.studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal requests.");
         }
+        if (!linkedIds.length) return [];
         filters.studentIds = linkedIds;
       } else if (!isBillingAuthorizedRole(requestingUser.role)) {
         throw new ForbiddenError('Access denied: You are not authorized to view transaction reversal requests.');
@@ -6055,10 +6075,11 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       throw new NotFoundError('Transaction Reversal Request', requestId);
     }
 
+    await this.assertStudentFinanceAccess(req.studentId,requestingUser);
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        const linkedIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (!linkedIds.includes(req.studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal request.");
         }
@@ -6453,7 +6474,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     receipt: ReversalReceiptPayload;
     request: Record<string, any>;
   }> {
-    const filters: ReversalRequestFilterCriteria = {};
+    const filters: ReversalRequestFilterCriteria = {schoolId:this.financeSchool(requestingUser)};
     const requests = await this.feeRepository.findReversalRequests(filters);
     const req = requests.find(r => r.reversalReceiptNumber === reversalReceiptNumber);
 
@@ -6461,10 +6482,11 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       throw new NotFoundError('Reversal Receipt Document', reversalReceiptNumber);
     }
 
+    await this.assertStudentFinanceAccess(req.studentId,requestingUser);
     if (requestingUser) {
       const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
       if (isParent) {
-        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        const linkedIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
         if (!linkedIds.includes(req.studentId)) {
           throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal receipt.");
         }
@@ -6485,6 +6507,8 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     gradeLevel?: string;
     requestingUser?: UserContext;
   }) {
+    criteria = {...criteria,schoolId:this.financeSchool(criteria.requestingUser,criteria.schoolId)};
+    if (criteria.requestingUser && [UserRole.PARENT,UserRole.GUARDIAN].includes(criteria.requestingUser.role)) throw new ForbiddenError('The school fee accounts directory is restricted to staff.');
     // 1. Resolve Academic Year and Term
     let targetYearId = criteria.academicYearId;
     let targetTermId = criteria.termId;
@@ -6493,7 +6517,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
     if (this.academicRepository) {
       try {
-        activeYear = await this.academicRepository.findCurrentYear();
+        activeYear = await this.academicRepository.findCurrentYear(criteria.schoolId);
         if (activeYear) {
           if (!targetYearId) {
             targetYearId = activeYear.id;
@@ -6529,7 +6553,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const isParent = criteria.requestingUser?.role === UserRole.PARENT || criteria.requestingUser?.role === UserRole.GUARDIAN;
     let students: Student[] = [];
     if (isParent && criteria.requestingUser) {
-      const childIds = await this.getLinkedStudentIdsForUser(criteria.requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(criteria.requestingUser.userId);
       if (childIds.length === 0) return { accounts: [], summary: {} };
       students = await this.studentRepository.findByIds(childIds);
     } else {
@@ -6542,7 +6566,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     // 3. Fetch Fee Structures
     let feeStructures: FeeStructure[] = [];
     try {
-      feeStructures = await this.feeRepository.findAllFeeStructures();
+      feeStructures = await this.feeRepository.findAllFeeStructures(criteria.schoolId);
     } catch {}
 
     // 4. Fetch Invoices and Credits
@@ -6886,10 +6910,12 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 9. Payment History with Parent Isolation
   public async listPayments(filters: { schoolId?: string; studentId?: string; requestingUser?: UserContext }) {
+    filters = {...filters,schoolId:this.financeSchool(filters.requestingUser,filters.schoolId)};
+    if (filters.studentId) await this.assertStudentFinanceAccess(filters.studentId,filters.requestingUser);
     let studentIdsToQuery: string[] | undefined = undefined;
 
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(filters.requestingUser.userId);
       if (childIds.length === 0) {
         return [];
       }
@@ -6932,9 +6958,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 10. Financial Summary (Role Isolated)
   public async getFinanceSummary(schoolId?: string, requestingUser?: UserContext) {
+    schoolId = this.financeSchool(requestingUser,schoolId);
     // Case 1: Parent View - strictly only their children
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (childIds.length === 0) {
         return {
           isParentView: true,
@@ -7778,7 +7805,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
     // If guardian is requesting, ensure they are linked to this student
     if (requestingUser && (requestingUser.role === UserRole.GUARDIAN || requestingUser.role === UserRole.PARENT)) {
-      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      const childIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(student.id)) {
         throw new ForbiddenError('You are only authorized to forward payment messages for your linked children.');
       }
@@ -7857,10 +7884,11 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
   }
 
   public async getForwardedTransactions(schoolId?: string, requestingUser?: UserContext) {
+    schoolId = this.financeSchool(requestingUser,schoolId);
     let studentIds: string[] | undefined = undefined;
 
     if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
-      studentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      studentIds = await this.getFinanceStudentIdsForUser(requestingUser.userId);
       if (!studentIds || studentIds.length === 0) {
         return [];
       }

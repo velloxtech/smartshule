@@ -67,7 +67,8 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to load salary records:', err.message);
-      setErrorMsg('Failed to load salary records.');
+      setSalaryRecords([]);
+      setErrorMsg(err.message || 'Failed to load salary records.');
     } finally {
       setLoading(false);
     }
@@ -143,12 +144,12 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
 
   const handleOpenAckModal = (record: any) => {
     setSelectedRecordForAck(record);
-    const amount = record.amountPaid > 0 ? record.amountPaid : record.netSalary;
+    const amount = record.amountPaid || 0;
     setCustomStatement(
       `I, ${record.teacherName}, hereby confirm receipt of salary payment of KES ${Number(amount).toLocaleString()} for the ${record.month} payroll period (Payment Ref: ${record.paymentReference || 'N/A'}).`
     );
     setSignatureMode('TYPE');
-    setTypedSignature(user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : record.teacherName);
+    setTypedSignature(user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || record.teacherName);
     setErrorMsg(null);
     setSuccessMsg(null);
   };
@@ -197,15 +198,14 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
         statement: customStatement.trim(),
         method,
         signature: signatureStr,
+        expectedAmountPaid: selectedRecordForAck.amountPaid,
+        expectedPaymentReference: selectedRecordForAck.paymentReference || '',
       });
 
       if (res.success) {
         setSuccessMsg(res.message || 'Salary payment receipt acknowledged successfully.');
-        setTimeout(() => {
-          handleCloseAckModal();
-          fetchRecords();
-          setTimeout(() => setSuccessMsg(null), 3000);
-        }, 1200);
+        handleCloseAckModal();
+        await fetchRecords();
       } else {
         setErrorMsg(res.message || 'Failed to record acknowledgement.');
       }
@@ -442,7 +442,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                   const isAck = r.acknowledgementStatus === 'ACKNOWLEDGED';
                   const isDisputed = r.acknowledgementStatus === 'UNDER_REVIEW';
                   const isAwaiting = isPaid && !isAck && !isDisputed;
-                  const netAmount = r.amountPaid > 0 ? r.amountPaid : r.netSalary;
+                  const netAmount = r.amountPaid || 0;
 
                   return (
                     <tr key={r.id} className="hover:bg-surface/70 transition-colors">
@@ -604,7 +604,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                 <div className="flex justify-between pt-1 border-t border-outline-variant/30">
                   <span className="text-on-surface-variant font-bold">Net Amount Disbursed:</span>
                   <span className="font-bold font-mono text-emerald-800 text-sm">
-                    KES {Number(selectedRecordForAck.amountPaid > 0 ? selectedRecordForAck.amountPaid : selectedRecordForAck.netSalary).toLocaleString()}
+                    KES {Number(selectedRecordForAck.amountPaid || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-[11px] text-on-surface-variant">
@@ -795,7 +795,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Recorded Disbursed Amount:</span>
                   <span className="font-mono font-bold text-emerald-800">
-                    KES {Number(selectedRecordForDispute.amountPaid > 0 ? selectedRecordForDispute.amountPaid : selectedRecordForDispute.netSalary).toLocaleString()}
+                    KES {Number(selectedRecordForDispute.amountPaid || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -920,7 +920,7 @@ export const TeacherSalaryAcknowledgementView: React.FC = () => {
                 <div className="flex justify-between pt-1 border-t border-slate-200 text-sm">
                   <span className="font-bold text-slate-900">Net Salary Paid:</span>
                   <span className="font-bold font-mono text-emerald-800">
-                    KES {Number(viewingCertificateRecord.amountPaid > 0 ? viewingCertificateRecord.amountPaid : viewingCertificateRecord.netSalary).toLocaleString()}
+                    KES {Number(viewingCertificateRecord.amountPaid || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-[11px] text-slate-500">

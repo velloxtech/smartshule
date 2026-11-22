@@ -3,7 +3,7 @@ import { apiService, SubjectTeacherAssignmentItem } from '../../services/api';
 import { BackendLearningArea, ClassRoom, StreamItem, Teacher, AcademicYear, GlobalSubject } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
-export const LearningAreasView: React.FC = () => {
+export const LearningAreasView: React.FC<{onNavigateTab?:(tab:string)=>void}> = ({onNavigateTab}) => {
   const { user } = useAuth();
   const canManageAssignments = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(user?.role || '');
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
@@ -21,8 +21,6 @@ export const LearningAreasView: React.FC = () => {
 
   // Modals
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
-  const [isAddStreamOpen, setIsAddStreamOpen] = useState(false);
-  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
 
   // Subject Leadership Modal
   const [isAssignLeadOpen, setIsAssignLeadOpen] = useState(false);
@@ -59,17 +57,6 @@ export const LearningAreasView: React.FC = () => {
   const [isElective, setIsElective] = useState(false);
   const [assignedTeacherId, setAssignedTeacherId] = useState('');
 
-  // Stream Form State
-  const [streamClassRoomId, setStreamClassRoomId] = useState('');
-  const [streamName, setStreamName] = useState('');
-  const [streamCapacity, setStreamCapacity] = useState('40');
-  const [streamTeacherId, setStreamTeacherId] = useState('');
-
-  // Class Form State
-  const [className, setClassName] = useState('');
-  const [classGradeLevel, setClassGradeLevel] = useState('GRADE_7');
-  const [classEducationLevel, setClassEducationLevel] = useState('JUNIOR_SCHOOL');
-
   // Feedback State
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -101,10 +88,6 @@ export const LearningAreasView: React.FC = () => {
       }
       if (cRes?.data) {
         setClasses(cRes.data || []);
-        if (cRes.data.length > 0 && !streamClassRoomId) {
-          setStreamClassRoomId(cRes.data[0].id);
-        }
-
         const sMap: Record<string, StreamItem[]> = {};
         for (const cls of cRes.data) {
           const sRes = await apiService.getStreamsByClass(cls.id).catch(() => null);
@@ -239,50 +222,6 @@ export const LearningAreasView: React.FC = () => {
     }
   };
 
-  const handleCreateStream = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!streamClassRoomId || !streamName.trim()) return;
-    try {
-      const res = await apiService.createStream({
-        classRoomId: streamClassRoomId,
-        name: streamName.trim(),
-        capacity: parseInt(streamCapacity, 10) || 40,
-        classTeacherId: streamTeacherId || undefined,
-      });
-      if (res.success) {
-        setFeedback({ type: 'success', message: `Stream "${streamName}" saved successfully!` });
-        setIsAddStreamOpen(false);
-        setStreamName('');
-        setStreamTeacherId('');
-        await loadAllData();
-      }
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Error saving stream' });
-    }
-  };
-
-  const handleCreateClass = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!className.trim()) return;
-    const schoolId = user?.schoolId || schoolInfo?.id || 'school-001';
-    try {
-      const res = await apiService.createClass({
-        name: className.trim(),
-        gradeLevel: classGradeLevel,
-        educationLevel: classEducationLevel,
-        schoolId,
-      });
-      if (res.success) {
-        setFeedback({ type: 'success', message: `Class "${className}" created successfully!` });
-        setIsAddClassOpen(false);
-        setClassName('');
-        await loadAllData();
-      }
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Error saving class' });
-    }
-  };
-
   const handleDeleteSubject = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete the global subject "${name}"?`)) {
       try {
@@ -315,11 +254,16 @@ export const LearningAreasView: React.FC = () => {
   const getTeacherName = (tId?: string) => {
     if (!tId) return 'Unassigned';
     const teacher = teachers.find((t) => t.id === tId);
-    return teacher ? teacher.name : 'Assigned Teacher';
+    return teacher ? teacher.name || (teacher as any).user?.fullName || [(teacher as any).user?.firstName,(teacher as any).user?.lastName].filter(Boolean).join(' ') || 'Assigned Teacher' : 'Assigned Teacher';
   };
 
   return (
     <div className="space-y-6 pb-16">
+      <label className="block text-sm font-semibold">Planning academic year
+        <select aria-label="Learning area assignment academic year" className="ui-field mt-2" value={selectedYearId} onChange={event=>{setSelectedYearId(event.target.value);setIsAssignLeadOpen(false);}}>
+          {academicYears.map(year=><option key={year.id} value={year.id}>{year.name}{year.isCurrent?' · Current':''}</option>)}
+        </select>
+      </label>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-on-surface-variant font-semibold">
@@ -327,10 +271,10 @@ export const LearningAreasView: React.FC = () => {
             <span>/</span>
             <span>Academics</span>
             <span>/</span>
-            <span className="text-primary">Global Subjects & Classes</span>
+            <span className="text-primary">Learning Areas</span>
           </div>
           <h1 className="text-2xl font-black text-on-surface tracking-tight mt-1">
-            Subjects & Cohort Management
+            Learning Areas
           </h1>
         </div>
 
@@ -338,16 +282,9 @@ export const LearningAreasView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => setIsAddSubjectOpen(true)} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer">
               <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Create Global Subject</span>
+              <span>Create Learning Area</span>
             </button>
-            <button onClick={() => setIsAddStreamOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
-              <span className="material-symbols-outlined text-[16px]">splitscreen</span>
-              <span>Add Stream</span>
-            </button>
-            <button onClick={() => setIsAddClassOpen(true)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-surface text-on-surface-variant border border-outline-variant/30 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer">
-              <span className="material-symbols-outlined text-[16px]">school</span>
-              <span>Add Class</span>
-            </button>
+            <button type="button" onClick={()=>onNavigateTab?.('classes-streams')} className="ui-button">Manage Classes &amp; Streams →</button>
           </div>
         )}
       </div>
@@ -599,203 +536,6 @@ export const LearningAreasView: React.FC = () => {
               <div className="pt-3 flex items-center gap-2">
                 <button type="button" onClick={() => setIsAddSubjectOpen(false)} className="flex-1 py-2.5 bg-surface-container-low font-bold rounded-xl cursor-pointer">Cancel</button>
                 <button type="submit" className="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl cursor-pointer">Save Subject</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE CLASS MODAL */}
-      {isAddClassOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-[#F8F5F5] rounded-2xl shadow-2xl max-w-md w-full border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-primary text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">school</span>
-                <h3 className="font-bold text-sm">Add New Academic Class</h3>
-              </div>
-              <button
-                onClick={() => setIsAddClassOpen(false)}
-                className="text-rose-100 hover:text-white cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateClass} className="p-5 space-y-3.5 text-xs overflow-y-auto">
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                  Class Room Title <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value)}
-                  placeholder="e.g. Grade 7, Grade 8, Pre-Primary 1"
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                  Grade Level
-                </label>
-                <select
-                  value={classGradeLevel}
-                  onChange={(e) => setClassGradeLevel(e.target.value)}
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                >
-                  <option value="PLAYGROUP">Playgroup</option>
-                  <option value="PP1">Pre-Primary 1 (PP1)</option>
-                  <option value="PP2">Pre-Primary 2 (PP2)</option>
-                  <option value="GRADE_1">Grade 1</option>
-                  <option value="GRADE_2">Grade 2</option>
-                  <option value="GRADE_3">Grade 3</option>
-                  <option value="GRADE_4">Grade 4</option>
-                  <option value="GRADE_5">Grade 5</option>
-                  <option value="GRADE_6">Grade 6</option>
-                  <option value="GRADE_7">Grade 7</option>
-                  <option value="GRADE_8">Grade 8</option>
-                  <option value="GRADE_9">Grade 9</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                  Education Level (CBC Stage)
-                </label>
-                <select
-                  value={classEducationLevel}
-                  onChange={(e) => setClassEducationLevel(e.target.value)}
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                >
-                  <option value="PRE_PRIMARY">Pre-Primary (Playgroup - PP2)</option>
-                  <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
-                  <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
-                  <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>
-                  <option value="SENIOR_SCHOOL">Senior Secondary (Grade 10 - 12)</option>
-                </select>
-              </div>
-
-              <div className="pt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddClassOpen(false)}
-                  className="flex-1 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-primary hover:bg-primary-container text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Save Class into Database
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE STREAM MODAL */}
-      {isAddStreamOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-[#F8F5F5] rounded-2xl shadow-2xl max-w-md w-full border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">splitscreen</span>
-                <h3 className="font-bold text-sm">Add Stream to Class</h3>
-              </div>
-              <button
-                onClick={() => setIsAddStreamOpen(false)}
-                className="text-slate-300 hover:text-white cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStream} className="p-5 space-y-3.5 text-xs overflow-y-auto">
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                  Target Class Room <span className="text-rose-600">*</span>
-                </label>
-                <select
-                  required
-                  value={streamClassRoomId}
-                  onChange={(e) => setStreamClassRoomId(e.target.value)}
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                >
-                  <option value="">-- Select Class --</option>
-                  {classes.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} ({cls.gradeLevel.replace('_', ' ')})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                    Stream Name <span className="text-rose-600">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={streamName}
-                    onChange={(e) => setStreamName(e.target.value)}
-                    placeholder="e.g. East, West, Alpha"
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                    Student Capacity
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={streamCapacity}
-                    onChange={(e) => setStreamCapacity(e.target.value)}
-                    className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-                  Assigned Class Teacher (From Database)
-                </label>
-                <select
-                  value={streamTeacherId}
-                  onChange={(e) => setStreamTeacherId(e.target.value)}
-                  className="w-full bg-surface border border-outline-variant/30 rounded-xl p-2.5 text-on-surface focus:outline-primary"
-                >
-                  <option value="">-- Select Class Teacher (Optional) --</option>
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.tscNumber || 'Educator'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddStreamOpen(false)}
-                  className="flex-1 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-primary hover:bg-black text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Save Stream into Database
-                </button>
               </div>
             </form>
           </div>

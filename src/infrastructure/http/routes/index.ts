@@ -1,3 +1,5 @@
+import {requirePaymentWebhook} from '../middlewares/paymentWebhookAuth';
+import {createAccessBoundary,createFinanceAccessBoundary} from '../middlewares/accessBoundary';
 import { CalendarPlanningController } from '../controllers/CalendarPlanningController';
 import { teacherAssignmentGuard } from '../middlewares/teacherAssignmentGuard';
 import { Router } from 'express';
@@ -253,9 +255,15 @@ import { ParentConsentController } from '../controllers/ParentConsentController'
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
-  const authMiddleware = createAuthMiddleware(container.tokenService);
-  const optionalAuthMiddleware = createOptionalAuthMiddleware(container.tokenService);
+  const authMiddleware = createAuthMiddleware(container.tokenService,container.userRepository);
+  const optionalAuthMiddleware = createOptionalAuthMiddleware(container.tokenService,container.userRepository);
+  router.use((req,res,next)=>{
+    if(/^\/finance\/(kcb-buni\/(callback|validate|confirm)|mpesa\/callback)\/?$/i.test(req.path)){delete (req as any).user;return next();}
+    if(/^\/auth\/(login|register|refresh|setup-status|forgot-password|reset-password|verify-reset-token|webauthn\/(login\/(options|verify)|user-status))\/?$/i.test(req.path)){delete (req as any).user;return next();}
+    return optionalAuthMiddleware(req,res,next);
+  },createAccessBoundary(container));
   router.use(['/curriculum','/curriculum-tracker','/curriculum-trackers','/syllabus-coverage','/students','/academics','/CBC','/attendance','/timetables','/broadsheets','/ediary','/clinic','/discipline','/library','/media','/occurrences','/occurrence-book','/analytics'],optionalAuthMiddleware,teacherAssignmentGuard(container));
+
 
   const authController = new AuthController(container.authUseCases, container.systemLogUseCases, container.webAuthnUseCases);
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
@@ -658,11 +666,11 @@ export function createApiRouter(container: AppContainer): Router {
   // 7. TIMETABLE ROUTES
   // ==========================================
   const timetableRouter = Router();
-  timetableRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(CreateTimetableSchema), timetableController.createTimetable);
-  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
-  timetableRouter.post('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
-  timetableRouter.put('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
-  timetableRouter.delete('/:timetableId/slots/:slotId', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), timetableController.deleteSlot);
+  timetableRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.TEACHER), validateBody(CreateTimetableSchema), timetableController.createTimetable);
+  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
+  timetableRouter.post('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.put('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.delete('/:timetableId/slots/:slotId', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.TEACHER), timetableController.deleteSlot);
   timetableRouter.get('/stream', authMiddleware, timetableController.getStreamTimetable);
   timetableRouter.get('/teacher', authMiddleware, timetableController.getTeacherTimetable);
   timetableRouter.get('/access-options', authMiddleware, timetableController.getTeacherAccess);
@@ -739,6 +747,10 @@ export function createApiRouter(container: AppContainer): Router {
   // 9. FINANCE & FEE PAYMENTS (KCB BUNI / BANK) ROUTES
   // ==========================================
   const financeRouter = Router();
+  financeRouter.use((req,res,next)=>{
+    if(/^\/(kcb-buni\/(callback|validate|confirm)|mpesa\/callback)\/?$/i.test(req.path))return next();
+    return optionalAuthMiddleware(req,res,next);
+  },createFinanceAccessBoundary(container));
   financeRouter.post('/structures', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
   financeRouter.put('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(UpdateFeeStructureSchema), financeController.updateFeeStructure);
   financeRouter.post('/structures/init-graceseed', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.initGraceSeedsStructures);
@@ -805,15 +817,15 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/arrears/summary', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getArrearsSummary);
   // KCB Buni Developer API Platform Integration
   financeRouter.post('/kcb-buni/stk-push', authMiddleware, validateBody(KcbBuniStkPushSchema), financeController.initiateKcbBuniStk);
-  financeRouter.post('/kcb-buni/callback', financeController.kcbBuniCallback);
-  financeRouter.post('/kcb-buni/validate', validateBody(KcbBuniValidationSchema), financeController.validateKcbBuniBill);
-  financeRouter.post('/kcb-buni/confirm', validateBody(KcbBuniConfirmationSchema), financeController.confirmKcbBuniBill);
+  financeRouter.post('/kcb-buni/callback', requirePaymentWebhook, financeController.kcbBuniCallback);
+  financeRouter.post('/kcb-buni/validate', requirePaymentWebhook, validateBody(KcbBuniValidationSchema), financeController.validateKcbBuniBill);
+  financeRouter.post('/kcb-buni/confirm', requirePaymentWebhook, validateBody(KcbBuniConfirmationSchema), financeController.confirmKcbBuniBill);
   financeRouter.get('/kcb-buni/status/:checkoutRequestId', authMiddleware, financeController.queryKcbBuniStatus);
   financeRouter.get('/kcb-buni/config', financeController.getKcbBuniConfig);
 
   // Legacy M-Pesa routes maintained
   financeRouter.post('/mpesa/stk-push', authMiddleware, validateBody(MpesaStkPushSchema), financeController.initiateMpesa);
-  financeRouter.post('/mpesa/callback', financeController.mpesaCallback);
+  financeRouter.post('/mpesa/callback', requirePaymentWebhook, financeController.mpesaCallback);
 
   // Cash Flow Ledger (Money In vs Money Out)
   financeRouter.get('/cashflow-ledger', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR), financeController.getCashFlowLedger);
@@ -884,7 +896,7 @@ export function createApiRouter(container: AppContainer): Router {
   whatsappRouter.get('/messages', ...adminOnly, whatsAppController.getRecentMessages);
   whatsappRouter.get('/webhook', whatsAppController.webhookVerification);
   whatsappRouter.post('/webhook', whatsAppController.webhookInbound);
-  whatsappRouter.post('/simulate', validateBody(WhatsAppSimulateSchema), whatsAppController.simulate);
+  whatsappRouter.post('/simulate', ...adminOnly, validateBody(WhatsAppSimulateSchema), whatsAppController.simulate);
   whatsappRouter.get('/config', ...adminOnly, whatsAppController.getConfig);
   whatsappRouter.post('/config', ...adminOnly, validateBody(WhatsAppConfigSchema), whatsAppController.updateConfig);
   router.use('/whatsapp', whatsappRouter);

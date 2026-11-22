@@ -1,3 +1,4 @@
+import {weeklyMonitoringRegister} from './WeeklyMonitoringRegister';
 import { assertWeeklyCoverage, selectWeeklySubmission } from './WeeklySchemePolicy';
 import type { AppContainer } from '../../infrastructure/container';
 import { AcademicActor, TeachingScope, sameTerm } from '../shared/TeacherAssignmentAccess';
@@ -278,10 +279,11 @@ export class TermAllocationService {
       const reported=linkedWork.some((r:any)=>r.status==='SUBMITTED'||r.status==='APPROVED');
       const recordOfWorkStatus=linkedWork.sort((a:any,b:any)=>new Date(b.updatedAt||b.createdAt||0).getTime()-new Date(a.updatedAt||a.createdAt||0).getTime())[0]?.status;
       weeks.get(slot.weekNumber).endDate=slot.date;
-      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,statuses:{planned:matching.some(p=>this.isPlanned(p)),reported,taught,reflection:matching.some(p=>Boolean(p.teacherSelfReflection?.trim()))}});
+      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,recordsOfWork:linkedWork,statuses:{planned:matching.some(p=>this.isPlanned(p)),reported,taught,reflection:matching.some(p=>Boolean(p.teacherSelfReflection?.trim()))}});
     }
     const [school,cls,area,term,stream,year]=await Promise.all([this.c.academicRepository.getSchool(actor.schoolId!),this.c.academicRepository.findClassById(scheme.classRoomId),this.c.academicRepository.findLearningAreaById(scheme.learningAreaId),this.c.academicRepository.findTermById(scheme.termId),scheme.streamId?this.c.academicRepository.findStreamById(scheme.streamId):Promise.resolve(null),this.c.academicRepository.findYearById(scheme.academicYearId)]);
-    return {coverageSummary:{reportedOutcomes:reportedOutcomes.size,confirmedOutcomes:confirmedOutcomes.size},scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
+    const monitoringRegister=weeklyMonitoringRegister([...weeks.values()],term?.startDate,term?.endDate);
+    return {monitoringRegister,coverageSummary:{reportedOutcomes:reportedOutcomes.size,confirmedOutcomes:confirmedOutcomes.size},scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
   }
 
   private isPlanned(p:any) {

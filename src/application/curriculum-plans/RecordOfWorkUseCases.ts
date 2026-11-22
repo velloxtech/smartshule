@@ -181,7 +181,8 @@ export class RecordOfWorkUseCases {
         const teacherProfile = await this.teacherRepo.findByUserId(rawUserId);
         if (teacherProfile) {
           teacherId = teacherProfile.id;
-          teacherName = requestingUser?.fullName || teacherName;
+          const teacherUser = this.userRepo ? await this.userRepo.findById(teacherProfile.userId) : null;
+          teacherName = teacherUser?.fullName || requestingUser?.fullName || teacherName;
         }
       }
 
@@ -464,27 +465,30 @@ export class RecordOfWorkUseCases {
       throw new ForbiddenError('Teachers are not permitted to approve their own diary records.');
     }
 
+    if (requestingUser?.schoolId && existing.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
+
     // Idempotency: avoid double-incrementing coverage if already approved
     if (existing.status === 'APPROVED' && existing.isOfficialCoverage) {
       return existing;
     }
 
     if (existing.status !== 'SUBMITTED') throw new ValidationError('Only submitted records of work can be approved.');
-    if (requestingUser?.schoolId && existing.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
-    const reviewerName = requestingUser?.fullName || 'Academic Supervisor';
+    const reviewer = rawUserId && this.userRepo ? await this.userRepo.findById(rawUserId) : null;
+    const reviewerName = reviewer?.fullName || requestingUser?.fullName || 'Academic Supervisor';
     existing.approve(rawUserId || 'admin-001', reviewerName, dto.remarks);
     const saved = await this.recordOfWorkRepo.update(id, existing);
 
     // Synchronize Official Curriculum Progression in CurriculumTracker
     if (this.curriculumTrackerRepo && existing.classRoomId && existing.learningAreaId && !existing.toJSON().planningLink) {
       try {
-        let trackers = await this.curriculumTrackerRepo.findTrackers({
+        let trackers = (await this.curriculumTrackerRepo.findTrackers({
           schoolId: existing.schoolId,
           classRoomId: existing.classRoomId,
           learningAreaId: existing.learningAreaId,
           term: existing.term,
-          academicYear: existing.academicYear
-        });
+          academicYear: existing.academicYear,
+          teacherId: existing.teacherId
+        })).filter(tracker => (tracker.streamId || '') === (existing.streamId || ''));
 
         let tracker: CurriculumTracker;
         if (trackers.length === 0) {
@@ -524,7 +528,7 @@ export class RecordOfWorkUseCases {
           learningOutcomesTaught: existing.learningObjectives || existing.strandAndWorkCovered,
           activitiesConducted: existing.learningActivities,
           resourcesUsed: existing.resources || existing.reference,
-          status: 'TAUGHT',
+          status: existing.reflectionData?.teachingStatus === 'PARTIAL' ? 'PARTIALLY_TAUGHT' : ['POSTPONED','CANCELLED'].includes(existing.reflectionData?.teachingStatus || '') ? 'POSTPONED' : 'TAUGHT',
           reflection: {
             comprehensionLevel: existing.reflectionData?.comprehensionLevel || 'GOOD',
             whatWentWell: existing.reflection || existing.reflectionData?.whatWentWell || 'Covered successfully',
@@ -550,11 +554,15 @@ export class RecordOfWorkUseCases {
             strand: existing.strand || 'Strand',
             subStrand: existing.subStrand || 'Sub-Strand',
             learningOutcomes: existing.learningObjectives || existing.strandAndWorkCovered || 'Learning Outcomes',
-            plannedLessons: 4
+            plannedLessons: 5
           });
         }
 
-        // Officially approve week coverage in tracker
+        // Count distinct approved teaching sessions; one record cannot complete an entire week.
+        const completed = tracker.dailyLogs.filter(log => log.weekNumber === existing.weekNumber && log.status === 'TAUGHT' && log.endorsement);
+        tracker.setWeekPlan(existing.weekNumber, {lessonsTaught: new Set(completed.map(log => `${log.date}:${log.lessonPeriod || log.id}`)).size});
+
+        // Officially approve only the evidenced number of lessons.
         tracker.approveWeekCoverage(existing.weekNumber, {
           approvedByUserId: rawUserId || 'admin-001',
           approvedByName: reviewerName,
@@ -867,7 +875,9 @@ export class RecordOfWorkUseCases {
       for (const tracker of trackers) {
         if (!tracker.dailyLogs.some(log => log.id === id)) continue;
         tracker.removeDailyLog(id);
-        if (!tracker.dailyLogs.some(log => log.weekNumber === existing.weekNumber && log.endorsement) && tracker.items.some(item => item.weekNumber === existing.weekNumber && item.isCovered)) {
+        const completed = tracker.dailyLogs.filter(log => log.weekNumber === existing.weekNumber && log.endorsement && log.status === 'TAUGHT');
+        tracker.setWeekPlan(existing.weekNumber, {lessonsTaught: new Set(completed.map(log => `${log.date}:${log.lessonPeriod || log.id}`)).size});
+        if (!completed.length && tracker.items.some(item => item.weekNumber === existing.weekNumber && item.isCovered)) {
           tracker.returnWeekCoverage(existing.weekNumber, {returnedByUserId: rawUserId || 'admin', returnedByName: requestingUser?.fullName || 'School leadership', reason: 'The supporting Record of Work was deleted.'});
         }
         await this.curriculumTrackerRepo.update(tracker);

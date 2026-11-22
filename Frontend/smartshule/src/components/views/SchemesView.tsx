@@ -6,7 +6,6 @@ import { LessonPlanDocument, lessonPlansPDF } from '../curriculum/LessonPlanDocu
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
-import { CreateSchemeModal } from '../modals/CreateSchemeModal';
 import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
 import { ViewSchemeModal } from '../modals/ViewSchemeModal';
 import { useAuth } from '../../context/AuthContext';
@@ -28,10 +27,9 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const isTeacher = user?.role === UserRole.TEACHER;
   const isApprover = canReviewCurriculum(user?.role);
 
-  const [activeTab, setActiveTab] = useState<'schemes' | 'lesson-plans'>(initialTab);
+  const activeTab = initialTab;
   const navigatePlanningTab = (tab: string) => {
     if (onNavigateTab) onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
-    else if (tab === 'schemes' || tab === 'lesson-plans') setActiveTab(tab);
   };
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
@@ -48,10 +46,10 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const [loading, setLoading] = useState(true);
   const [reviewOnly, setReviewOnly] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const pendingReviews = schemes.filter(scheme => scheme.status === 'SUBMITTED' || scheme.planningState?.coverageReviewStatus === 'SUBMITTED');
+  const savedSchemes = schemes.filter(scheme => !scheme.planningState || scheme.planningState.weeklyPlanningStarted || scheme.entries?.some(entry=>!entry.archivedAt));
+  const pendingReviews = savedSchemes.filter(scheme => scheme.status === 'SUBMITTED');
 
   // Modals
-  const [isCreateSchemeOpen, setIsCreateSchemeOpen] = useState(false);
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
   const [selectedScheme, setSelectedScheme] = useState<SchemeOfWork | null>(null);
@@ -169,23 +167,20 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
 
   return (
     <div className="space-y-6 pb-12">
-      {isTeacher&&<section className="rounded-xl border bg-rose-50 p-4"><h2 className="font-semibold">Plan and teach — one step at a time</h2><p className="my-2 text-sm">School Calendar → Timetable → Syllabus Coverage Plan → Scheme of Work → Lesson Plan → Record of Work</p><button className="ui-button ui-button-primary" onClick={()=>onNavigateTab?.('curriculum-tracker')}>Show my next teaching action</button></section>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
             <span>/</span>
-            <span>Operations</span>
+            <span>Curriculum</span>
             <span>/</span>
             <span className="text-primary font-semibold">{activeTab === 'lesson-plans' ? 'Lesson Plans' : 'Schemes of Work'}</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            {activeTab === 'lesson-plans' ? '40-Min CBE Lesson Plans' : 'Teacher Schemes of Work'}
+            {activeTab === 'lesson-plans' ? 'Lesson Plans' : 'Schemes of Work'}
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {isTeacher
-              ? 'Your personalized curriculum work plans, weekly syllabus progression, and instructional designs'
-              : 'Weekly syllabus progression, learning experiences, inquiry questions, and digital approvals'}
+            {activeTab === 'lesson-plans' ? 'Prepare daily lesson activities and timing from approved scheme sessions.' : 'Create dated teaching sessions, submit schemes for review and manage saved schemes.'}
           </p>
         </div>
 
@@ -210,40 +205,14 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         </div>
       </div>
 
-      {/* Schemes & Lesson Plans Tabs */}
-      <div className="flex border-b border-surface-container gap-6 text-sm font-semibold mb-6">
-        <button
-          onClick={() => setActiveTab('schemes')}
-          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
-            activeTab === 'schemes'
-              ? 'text-primary border-b-2 border-primary font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-          <span>Schemes of Work ({schemes.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('lesson-plans')}
-          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
-            activeTab === 'lesson-plans'
-              ? 'text-primary border-b-2 border-primary font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">menu_book</span>
-          <span>40-Min Lesson Plans ({lessonPlans.length})</span>
-        </button>
-      </div>
-
       {/* Schemes View */}
       {activeTab === 'schemes' && (
         <div className="space-y-4">
           {loadError && <div role="alert" className="rounded-xl border border-error/30 bg-error-container p-4 text-sm text-on-error-container">{loadError}<button className="ui-button ml-3" onClick={loadCurriculum}>Retry loading schemes</button></div>}
-          {isApprover && <div className="flex flex-wrap items-center gap-3"><button className="ui-button" aria-pressed={reviewOnly} onClick={() => setReviewOnly(!reviewOnly)}>{reviewOnly ? 'Show all schemes' : `Awaiting review (${pendingReviews.length})`}</button><p className="text-xs text-on-surface-variant">Review submitted coverage and completed sessions below. Drafts show why approval is not yet available.</p></div>}
-          {reviewOnly && !pendingReviews.length && <p className="rounded-xl bg-surface-container-low p-4 text-sm">No submitted coverage or scheme sessions are awaiting review.</p>}
-          {schemes.length > 0 ? (
-            (reviewOnly ? pendingReviews : schemes).map((s) => (
+          {isApprover && <div className="flex flex-wrap items-center gap-3"><button className="ui-button" aria-pressed={reviewOnly} onClick={() => setReviewOnly(!reviewOnly)}>{reviewOnly ? 'Show all schemes' : `Awaiting review (${pendingReviews.length})`}</button><p className="text-xs text-on-surface-variant">Review submitted scheme sessions here. Syllabus coverage plans are reviewed on Syllabus Planning.</p></div>}
+          {reviewOnly && !pendingReviews.length && <p className="rounded-xl bg-surface-container-low p-4 text-sm">No scheme sessions are awaiting review.</p>}
+          {savedSchemes.length > 0 ? (
+            (reviewOnly ? pendingReviews : savedSchemes).map((s) => (
               <div
                 key={s.id}
                 className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -417,7 +386,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       <button
                         onClick={() => downloadLessonPlanPDF(lp)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary-container text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                        title="Download official 40-Minute Lesson Plan as PDF"
+                        title="Download official Lesson Plan as PDF"
                       >
                         <span className="material-symbols-outlined text-[14px]">download</span>
                         <span>PDF</span>
@@ -437,7 +406,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     <button
                       onClick={() => setSelectedPlan(lp)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                      title="View complete 40-Minute CBE Lesson Plan details"
+                      title="View complete CBE Lesson Plan details"
                     >
                       <span className="material-symbols-outlined text-[16px]">visibility</span>
                       <span>View Details</span>
@@ -452,7 +421,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 space-y-2">
               <span className="material-symbols-outlined text-4xl text-outline">post_add</span>
               <p className="font-bold text-sm text-on-surface">No lesson plans prepared yet</p>
-              <p className="text-xs text-outline">Click "New Lesson Plan" to prepare a 40-minute CBE instructional guide.</p>
+              <p className="text-xs text-outline">Click "New Lesson Plan" to prepare a CBE instructional guide for the scheduled period.</p>
             </div>
           )}
         </div>
@@ -464,7 +433,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
             <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-semibold text-sm">CBC 40-Minute Lesson Plan</h3>
+                <h3 className="font-semibold text-sm">CBC Lesson Plan</h3>
                 <p className="text-xs text-rose-100">{selectedPlan.strand} · {selectedPlan.subStrand}</p>
               </div>
               <button
@@ -495,7 +464,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                 <button
                   onClick={() => downloadLessonPlanPDF(selectedPlan)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs cursor-pointer"
-                  title="Download 40-Minute Lesson Plan as PDF"
+                  title="Download Lesson Plan as PDF"
                 >
                   <span className="material-symbols-outlined text-[14px]">download</span>
                   <span>Download PDF</span>
@@ -507,12 +476,6 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       )}
 
       {/* Modals */}
-      <CreateSchemeModal
-        isOpen={isCreateSchemeOpen}
-        onClose={() => setIsCreateSchemeOpen(false)}
-        onSchemeCreated={() => loadCurriculum()}
-      />
-
       <CreateLessonPlanModal
         isOpen={isCreatePlanOpen}
         onClose={() => setIsCreatePlanOpen(false)}
@@ -533,3 +496,6 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
     </div>
   );
 };
+
+export function SchemesOfWorkView(props: {onNavigateTab?: (tab:string)=>void}) { return <SchemesView {...props} initialTab="schemes" />; }
+export function LessonPlansView(props: {onNavigateTab?: (tab:string)=>void}) { return <SchemesView {...props} initialTab="lesson-plans" />; }
