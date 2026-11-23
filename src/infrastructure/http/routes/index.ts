@@ -1,5 +1,6 @@
 import {requirePaymentWebhook} from '../middlewares/paymentWebhookAuth';
 import {createAccessBoundary,createFinanceAccessBoundary} from '../middlewares/accessBoundary';
+import {StaffMessagingController, SendStaffMessageSchema, ReadStaffMessagesSchema, BroadcastStaffMessageSchema} from '../controllers/StaffMessagingController';
 import { CalendarPlanningController } from '../controllers/CalendarPlanningController';
 import { teacherAssignmentGuard } from '../middlewares/teacherAssignmentGuard';
 import { Router } from 'express';
@@ -264,6 +265,17 @@ export function createApiRouter(container: AppContainer): Router {
   },createAccessBoundary(container));
   router.use(['/curriculum','/curriculum-tracker','/curriculum-trackers','/syllabus-coverage','/students','/academics','/CBC','/attendance','/timetables','/broadsheets','/ediary','/clinic','/discipline','/library','/media','/occurrences','/occurrence-book','/analytics'],optionalAuthMiddleware,teacherAssignmentGuard(container));
 
+  const staffMessaging = new StaffMessagingController(container.staffMessagingUseCases);
+  const staffMessagesRouter = Router();
+  staffMessagesRouter.use((_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next();});
+  staffMessagesRouter.use(authMiddleware);
+  staffMessagesRouter.get('/contacts',staffMessaging.contacts);
+  staffMessagesRouter.get('/conversations',staffMessaging.inbox);
+  staffMessagesRouter.get('/conversations/:userId',staffMessaging.messages);
+  staffMessagesRouter.post('/messages',validateBody(SendStaffMessageSchema),staffMessaging.send);
+  staffMessagesRouter.post('/broadcast/teachers',validateBody(BroadcastStaffMessageSchema),staffMessaging.broadcast);
+  staffMessagesRouter.post('/conversations/:userId/read',validateBody(ReadStaffMessagesSchema),staffMessaging.read);
+  router.use('/staff-messages',staffMessagesRouter);
 
   const authController = new AuthController(container.authUseCases, container.systemLogUseCases, container.webAuthnUseCases);
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);

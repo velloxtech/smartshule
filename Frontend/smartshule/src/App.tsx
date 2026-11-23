@@ -83,6 +83,7 @@ const ParentConsentView = lazy(() => import('./components/views/ParentConsentVie
 const AdminConsentManagementView = lazy(() => import('./components/views/AdminConsentManagementView').then(m => ({ default: m.AdminConsentManagementView })));
 const TeacherSalaryAcknowledgementView = lazy(() => import('./components/views/TeacherSalaryAcknowledgementView').then(m => ({ default: m.TeacherSalaryAcknowledgementView })));
 
+const StaffMessagesView = lazy(() => import('./components/views/StaffMessagesView').then(m => ({default:m.StaffMessagesView})));
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -1457,6 +1458,7 @@ export default function App() {
 
           {currentTab === 'ediary' && <EDiaryView />}
 
+          {currentTab === 'staff-messages' && <StaffMessagesView />}
           {currentTab === 'announcements' && <AnnouncementsView />}
 
           {currentTab === 'visual-CBC' && <VisualCBCView />}

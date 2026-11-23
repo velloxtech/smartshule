@@ -52,7 +52,7 @@ export function createAccountabilityMiddleware(systemLogUseCases?: SystemLogUseC
       else if (originalUrl.includes('/students')) category = 'STUDENTS';
       else if (originalUrl.includes('/academics') || originalUrl.includes('/CBC') || originalUrl.includes('/timetables')) category = 'ACADEMICS';
       else if (originalUrl.includes('/complaints')) category = 'COMPLAINTS';
-      else if (originalUrl.includes('/announcements')) category = 'COMMUNICATION';
+      else if (originalUrl.includes('/announcements') || originalUrl.includes('/staff-messages')) category = 'COMMUNICATION';
 
       // 5. Infer Level
       let level: SystemLogLevel = 'AUDIT';

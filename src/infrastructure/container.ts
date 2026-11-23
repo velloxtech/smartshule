@@ -1,3 +1,6 @@
+import {IStaffMessageRepository} from '../core/ports/repositories/IStaffMessageRepository';
+import {InMemoryStaffMessageRepository} from './database/in-memory/InMemoryStaffMessageRepository';
+import {StaffMessagingUseCases} from '../application/messaging/StaffMessagingUseCases';
 import {CurriculumProposalService} from '../application/planning/CurriculumProposalService';
 import { PlanningWorkflowService } from '../application/planning/PlanningWorkflowService';
 import { IBiometricCredentialRepository } from '../core/ports/repositories/IBiometricCredentialRepository';
@@ -119,6 +122,8 @@ import { Teacher } from '../core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../core/domain/user/Guardian';
 
 export class AppContainer {
+  public staffMessageRepository: IStaffMessageRepository;
+  public staffMessagingUseCases!: StaffMessagingUseCases;
   // Repositories
   public assignmentAccess!: TeacherAssignmentAccess;
   public termAllocations!: TermAllocationService;
@@ -205,6 +210,7 @@ export class AppContainer {
   public parentConsentUseCases!: ParentConsentUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
+    this.staffMessageRepository = customRepositories?.staffMessageRepository || new InMemoryStaffMessageRepository();
     this.planningRepository = customRepositories?.planningRepository || new MemoryPlanningRepository();
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
     this.studentRepository = customRepositories?.studentRepository || new InMemoryStudentRepository();
@@ -366,6 +372,7 @@ export class AppContainer {
       this.guardianRepository,
       this.userRepository
     );
+    this.staffMessagingUseCases = new StaffMessagingUseCases(this.staffMessageRepository,this.userRepository);
     this.systemLogUseCases = new SystemLogUseCases(this.systemLogRepository);
     this.announcementUseCases = new AnnouncementUseCases(
       this.announcementRepository,

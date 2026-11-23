@@ -1,3 +1,4 @@
+import type {StaffContact,StaffMessage,StaffInbox,StaffMessagePage} from '../types';
 import {
   AuthResponse,
   RegisteredWebAuthnCredential,
@@ -4798,6 +4799,12 @@ export const apiService = {
     if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||'Register download failed.');}
     const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`Weekly_Syllabus_Monitoring_Register.${format==='doc'?'docx':format}`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   },
+  getStaffContacts: ():Promise<ApiResponse<StaffContact[]>> => apiFetch('/staff-messages/contacts'),
+  getStaffInbox: ():Promise<ApiResponse<StaffInbox>> => apiFetch('/staff-messages/conversations'),
+  getStaffMessages: (userId:string,before?:string):Promise<ApiResponse<StaffMessagePage>> => apiFetch(`/staff-messages/conversations/${encodeURIComponent(userId)}${before?'?'+new URLSearchParams({before}):''}`),
+  sendStaffMessage: (recipientId:string,body:string):Promise<ApiResponse<StaffMessage>> => apiFetch('/staff-messages/messages',{method:'POST',body:JSON.stringify({recipientId,body})}),
+  broadcastToTeachers: (body:string):Promise<ApiResponse<{recipientCount:number;createdAt:string}>> => apiFetch('/staff-messages/broadcast/teachers',{method:'POST',body:JSON.stringify({body})}),
+  readStaffMessages: (userId:string,throughId:string):Promise<ApiResponse<{read:boolean}>> => apiFetch(`/staff-messages/conversations/${encodeURIComponent(userId)}/read`,{method:'POST',body:JSON.stringify({throughId})}),
   schemePlanning: async (path:string,options:RequestInit={}):Promise<any> => apiFetch(`/curriculum/schemes/${path}`,options),
   saveSlotReflection: async (id:string,reflection:string,context:{academicYearId:string;termId:string}):Promise<any> => apiFetch(`/curriculum/lesson-plans/${id}/reflection?${new URLSearchParams(context)}`,{method:'PUT',body:JSON.stringify({reflection})}),
   downloadWeeklyScheme: async (id:string,format:'pdf'|'doc',context:{academicYearId:string;termId:string}):Promise<void> => {

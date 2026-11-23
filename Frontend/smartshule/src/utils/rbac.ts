@@ -873,6 +873,12 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
     ],
     items: [
       {
+        id: 'staff-messages',
+        label: 'Staff Messages',
+        icon: 'forum',
+        allowedRoles: [UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.ADMISSIONS,UserRole.BURSAR,UserRole.ACCOUNTANT,UserRole.TEACHER],
+      },
+      {
         id: 'announcements',
         label: 'Notice Board & Circulars',
         icon: 'campaign',
