@@ -5,7 +5,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Network } from '@capacitor/network';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
-import { apiService } from './services/api';
+import { apiService, captureApiRequestScope } from './services/api';
 import { useAuth } from './context/AuthContext';
 import { isTabPermitted } from './utils/rbac';
 import { resolveStreamName, resolveGradeName, resolveTeacherAssignedClasses } from './utils/formatters';
@@ -104,7 +104,7 @@ import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
-  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren, updateUser, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, error: authError, activeViewMode, isStaffWithChildren, updateUser, logout } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const dataScopeKey = `${user?.id}:${user?.schoolId}:${effectiveRole}`;
@@ -291,8 +291,10 @@ export default function App() {
   useEffect(() => {
     if (isAuthenticated) {
       setAppView('portal');
+    } else if (authError) {
+      setAppView('login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authError]);
 
   useEffect(()=>{
     setLoadedDataScope(dataScopeKey);
@@ -309,8 +311,9 @@ export default function App() {
 
   // Refresh students and attached fee balances
   const refreshStudentsAndFees = useCallback(async () => {
+    const isCurrentScope = captureApiRequestScope();
     const requestScope=activeDataScope.current;
-    const commitStudents: typeof setStudents = value => {if(activeDataScope.current===requestScope)setStudents(value);};
+    const commitStudents: typeof setStudents = value => {if(isCurrentScope()&&activeDataScope.current===requestScope)setStudents(value);};
 
     try {
       const isParentOnly = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
@@ -459,7 +462,9 @@ export default function App() {
   // Sync with Backend API on Mount & Auth State Changes
   useEffect(() => {
     let cancelled = false;
-    const guarded = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => (value: React.SetStateAction<T>) => {if(!cancelled)setter(value);};
+    const isCurrentScope = captureApiRequestScope();
+    const isStale = () => cancelled || !isCurrentScope();
+    const guarded = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => (value: React.SetStateAction<T>) => {if(!isStale())setter(value);};
     const safeSetAssessments = guarded(setAssessments);
     const safeSetBackendConnected = guarded(setBackendConnected);
     const safeSetCurrentContext = guarded(setCurrentContext);
@@ -472,6 +477,7 @@ export default function App() {
 
     async function syncBackend() {
       const isUp = await apiService.checkHealth();
+      if (isStale()) return;
       safeSetBackendConnected(isUp);
       if (isUp && isAuthenticated) {
         const isFinanceOnly = effectiveRole === UserRole.BURSAR || effectiveRole === UserRole.ACCOUNTANT;
@@ -482,6 +488,7 @@ export default function App() {
             apiService.getCurrentContext().catch(() => null),
             apiService.getSchool().catch(() => null),
           ]);
+          if (isStale()) return;
           if (ctxRes?.data) {
             safeSetCurrentContext(ctxRes.data);
             if (ctxRes.data.currentTerm?.name) {
@@ -529,6 +536,7 @@ export default function App() {
           safeSetStudents([]);
         }
 
+        if (isStale()) return;
         if (!isFinanceOnly && !isParentOnly) {
           try {
             const teacherData = await apiService.getTeachers().catch(() => null);
@@ -555,6 +563,7 @@ export default function App() {
           }
         }
 
+        if (isStale()) return;
         if (!isFinanceOnly) {
           try {
             const formativesRes = await apiService.listFormatives().catch(() => null);
@@ -583,6 +592,7 @@ export default function App() {
             safeSetAssessments([]);
           }
         }
+        if (isStale()) return;
         if (isParentOnly) {
           try {
             const paymentsRes = await apiService.getPayments().catch(() => null);

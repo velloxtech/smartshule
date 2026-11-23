@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { isPackagedClient } from '../../utils/runtime';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import type { TeacherAuthorizedContext } from '../../services/api';
-import { apiService } from '../../services/api';
+import { apiService, captureApiRequestScope } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
@@ -87,6 +87,8 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
   useEffect(() => {
     let cancelled = false;
+    const isCurrentScope = captureApiRequestScope();
+    const isStale = () => cancelled || !isCurrentScope();
     async function loadTeacherData() {
       setLoading(true);
       setTimetableUnavailable(false);
@@ -100,7 +102,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           apiService.getClasses().catch(() => null),
           apiService.getSchool().catch(() => null),
         ]);
-        if(cancelled)return;
+        if(isStale())return;
         const profile = profileRes?.data || null;
         setTeacherProfile(profile);
         const ctx = ctxRes?.data || null;
@@ -114,10 +116,12 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         const allStreams: any[] = [];
 
         for (const c of classList) {
+          if (isStale()) return;
           const cName = c.name || resolveGradeName(c.gradeLevel);
           classMap.set(c.id, cName);
           try {
             const strRes = await apiService.getStreamsByClass(c.id);
+            if (isStale()) return;
             if (strRes?.success && Array.isArray(strRes.data)) {
               for (const s of strRes.data) {
                 const sName = resolveStreamName(s.id, s.name);
@@ -132,12 +136,13 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         }
 
         let assignedStreamId: string | undefined;
+        if (isStale()) return;
         let assignedClassId: string | undefined;
         let hasAssignment = true;
         let canViewClassRoster = !web;
         if (web) {
           const contextRes = await apiService.getTeacherAuthorizedContext(ctx?.currentYear?.id, ctx?.currentTerm?.id);
-          if (cancelled) return;
+          if (isStale()) return;
           const context = contextRes.data;
           setAuthorized(context);
           const choices = teacherDashboardCohorts(context.assignedClasses);
@@ -184,7 +189,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           apiService.listSummatives().catch(() => null),
         ]);
 
-        if (cancelled) return;
+        if (isStale()) return;
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped: Student[] = stRes.data.map((s: any) => ({
             id: s.id,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthUser, UserRole } from '../types';
-import { clearApiCache, apiService, setAuthToken } from '../services/api';
+import { apiService, setAuthToken, setApiPortalView, captureApiRequestScope } from '../services/api';
 import { biometricService } from '../services/biometricService';
 
 interface AuthContextType {
@@ -27,9 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('smartshule_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeViewMode, setActiveViewModeState] = useState<'STAFF' | 'PARENT'>(
-    (localStorage.getItem('smartshule_active_view_mode') as 'STAFF' | 'PARENT') || 'STAFF'
-  );
+  const [activeViewMode, setActiveViewModeState] = useState<'STAFF' | 'PARENT'>('STAFF');
 
   const isStaffRole = user?.role && ![UserRole.PARENT, UserRole.GUARDIAN, UserRole.STUDENT].includes(user.role);
   // Only staff/teachers who the system has explicitly recognised as having an admitted/enrolled child in the school
@@ -45,23 +43,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!isStaffWithChildren && activeViewMode === 'PARENT') {
       setActiveViewModeState('STAFF');
-      localStorage.removeItem('smartshule_active_view_mode');
+      setApiPortalView('STAFF');
     }
   }, [isStaffWithChildren, activeViewMode]);
 
   const setActiveViewMode = (mode: 'STAFF' | 'PARENT') => {
-    setActiveViewModeState(mode);
-    localStorage.setItem('smartshule_active_view_mode', mode);
-    clearApiCache();
+    const next = mode === 'PARENT' && isStaffWithChildren ? 'PARENT' : 'STAFF';
+    setApiPortalView(next);
+    setActiveViewModeState(next);
   };
 
+  useEffect(() => {
+    const expireSession = () => {
+      setUser(null);
+      setToken(null);
+      setApiPortalView('STAFF');
+      setActiveViewModeState('STAFF');
+      setError('Your session has expired. Please sign in again.');
+    };
+    window.addEventListener('smartshule:session-expired', expireSession);
+    return () => window.removeEventListener('smartshule:session-expired', expireSession);
+  }, []);
+
   const refreshProfile = async () => {
+    const isCurrentScope = captureApiRequestScope();
     try {
       const res = await apiService.getProfile();
+      if (!isCurrentScope()) return;
       if (res.success && res.data) {
         setUser(res.data);
       }
     } catch {
+      if (!isCurrentScope()) return;
       // If token expired or invalid, clear auth
       setUser(null);
       setAuthToken(null);
@@ -72,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     async function initAuth() {
       setIsLoading(true);
+      setApiPortalView('STAFF');
       const savedToken = localStorage.getItem('smartshule_token');
       if (savedToken) {
         setAuthToken(savedToken);
@@ -90,6 +104,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+    setAuthToken(null);
+    setUser(null);
+    setToken(null);
+    setApiPortalView('STAFF');
+    setActiveViewModeState('STAFF');
     try {
       const res = await apiService.login(email, password);
       if (res.success && res.data) {
@@ -112,6 +131,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithBiometrics = async (identifier?: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+    setAuthToken(null);
+    setUser(null);
+    setToken(null);
+    setApiPortalView('STAFF');
+    setActiveViewModeState('STAFF');
     try {
       const res = await biometricService.loginWithBiometrics(identifier);
       if (res.success && res.data) {
@@ -134,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(null);
     setToken(null);
     setUser(null);
-    localStorage.removeItem('smartshule_active_view_mode');
+    setApiPortalView('STAFF');
     setActiveViewModeState('STAFF');
   };
 

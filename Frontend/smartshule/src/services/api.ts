@@ -164,11 +164,14 @@ export const getApiBaseUrl = (): string => API_BASE_URL;
 let authToken: string | null = localStorage.getItem('smartshule_token') || null;
 
 export const setAuthToken = (token: string | null) => {
+  if (token !== authToken) resetApiRequestScope();
   authToken = token;
   if (token) {
     localStorage.setItem('smartshule_token', token);
   } else {
     localStorage.removeItem('smartshule_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
   }
 };
 
@@ -225,6 +228,28 @@ const getHeaders = () => {
 const inFlightRequests = new Map<string, Promise<any>>();
 const apiCache = new Map<string, { timestamp: number; data: any }>();
 const CACHE_TTL_MS = 30_000; // 30 seconds for static metadata
+let requestGeneration = 0;
+const activeControllers = new Set<AbortController>();
+
+function resetApiRequestScope() {
+  requestGeneration++;
+  for (const controller of activeControllers) controller.abort();
+  activeControllers.clear();
+  inFlightRequests.clear();
+  clearApiCache();
+}
+
+// Async loaders must stop between requests when their account or portal changes.
+export function captureApiRequestScope(): () => boolean {
+  const generation = requestGeneration;
+  return () => generation === requestGeneration;
+}
+
+export function setApiPortalView(mode: 'STAFF' | 'PARENT') {
+  const previous = localStorage.getItem('smartshule_active_view_mode') || 'STAFF';
+  localStorage.setItem('smartshule_active_view_mode', mode);
+  if (previous !== mode) resetApiRequestScope();
+}
 
 export function clearApiCache(endpointPrefix?: string) {
   if (!endpointPrefix) {
@@ -241,6 +266,8 @@ export function clearApiCache(endpointPrefix?: string) {
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const headers = getHeaders();
+  const isCurrentScope = captureApiRequestScope();
   const requestKey = `${getStoredAuthToken()}::${localStorage.getItem('smartshule_active_view_mode') || 'STAFF'}::${url}`;
 
   // On any mutating request, clear relevant cache so user never sees stale data
@@ -274,6 +301,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   const fetchPromise = (async () => {
     const controller = new AbortController();
+    activeControllers.add(controller);
     const abort = () => controller.abort();
     const timer = window.setTimeout(abort, 45000);
     if (options.signal?.aborted) abort();
@@ -283,12 +311,21 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
         ...options,
         signal: controller.signal,
         headers: {
-          ...getHeaders(),
+          ...headers,
           ...(options.headers || {}),
         },
       });
 
+      if (!isCurrentScope()) throw new DOMException('Account or portal changed', 'AbortError');
+
       if (!res.ok) {
+        // Ignore stale responses and failed login attempts. Only the current
+        // authenticated session can expire the user currently on screen.
+        if (res.status === 401 && headers.Authorization &&
+            (!endpoint.startsWith('/auth/') || endpoint === '/auth/profile')) {
+          setAuthToken(null);
+          window.dispatchEvent(new Event('smartshule:session-expired'));
+        }
         const errorData = await res.json().catch(() => ({}));
         let detailsMsg = '';
         if (errorData.error?.details) {
@@ -307,14 +344,16 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       }
 
       const json = await res.json();
+      if (!isCurrentScope()) throw new DOMException('Account or portal changed', 'AbortError');
       if (isCacheable) {
         apiCache.set(requestKey, { timestamp: Date.now(), data: json });
       }
       return json;
     } finally {
+      activeControllers.delete(controller);
       window.clearTimeout(timer);
       options.signal?.removeEventListener('abort', abort);
-      if (method === 'GET') {
+      if (method === 'GET' && isCurrentScope()) {
         inFlightRequests.delete(requestKey);
       }
     }
