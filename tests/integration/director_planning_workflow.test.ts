@@ -136,3 +136,30 @@ it('keeps approved partial work distinct from completed coverage and permits fol
  const p=await c.termAllocations.weekly(teacher,weekly.scheme.id);expect(p.weeks[0].lessons[0].statuses.taught).toBe(false);expect(p.coverageSummary.confirmedOutcomes).toBe(0);
  const followup=await request(app).post(url('record-taught')).set('Authorization',auth()).send({schemeId:weekly.scheme.id,schemeEntryId:lessons[1].entry.id,notes:'Follow-up scheduled session completed'});expect(followup.status).toBe(200);
 });
+
+it('records postponement and reflection from syllabus tracking, then continues and teaches in another actual period',async()=>{
+ const before=await approvedScheme();
+ const first=before.weeks[0].lessons[0];
+ const postponed=await request(app).post(url('record-taught')).set('Authorization',auth()).send({schemeId:before.scheme.id,schemeEntryId:first.entry.id,timetableSlotId:'2026-11-09:p1',actualDate:'2026-11-09',notes:'Children needed more concrete preparation',teachingStatus:'POSTPONED',outcomesCovered:[],remainingWork:'Continue with paper models',reflection:'Use smaller groups next time'});
+ expect(postponed.status).toBe(200);
+ await c.recordOfWorkUseCases.submitDiaryEntry(postponed.body.data.id,teacher);
+ await c.recordOfWorkUseCases.approveDiaryEntry(postponed.body.data.id,{remarks:'Postponement acknowledged'},admin);
+ let progress=await c.termAllocations.weekly(teacher,before.scheme.id);
+ expect(progress.coverageSummary).toMatchObject({totalOutcomes:1,recordedOutcomes:0,confirmedOutcomes:0,confirmedPercent:0});
+ expect(progress.weeks[0].lessons[0].statuses).toMatchObject({taught:false,reflection:true});
+ const continuation=await request(app).post(`/api/v1/curriculum/schemes/${before.scheme.id}/sessions/continue?${new URLSearchParams(scope)}`).set('Authorization',auth()).send({revision:progress.scheme.planningState!.revision,subStrandId:'director-sub',reason:'Continue after postponement at the children’s pace'});
+ expect(continuation.status).toBe(200);
+ const added=continuation.body.data.scheme.entries.at(-1);
+ expect(added.weekNumber).toBe(3);
+ await c.termAllocations.submitWeekly(teacher,before.scheme.id,continuation.body.data.scheme.planningState.revision,[added.id]);
+ await c.curriculumUseCases.reviewScheme(before.scheme.id,admin.userId,true,'Continuation approved',admin);
+ const taught=await request(app).post(url('record-taught')).set('Authorization',auth()).send({schemeId:before.scheme.id,schemeEntryId:added.id,timetableSlotId:'2026-11-16:p1',actualDate:'2026-11-16',notes:'Compared paper models in smaller groups',teachingStatus:'COMPLETED',outcomesCovered:content.specificLearningOutcomes,reflection:'Concrete practice helped'});
+ expect(taught.status).toBe(200);
+ progress=await c.termAllocations.weekly(teacher,before.scheme.id);
+ expect(progress.coverageSummary).toMatchObject({recordedOutcomes:1,confirmedOutcomes:0,recordedPercent:100});
+ await c.recordOfWorkUseCases.submitDiaryEntry(taught.body.data.id,teacher);
+ await c.recordOfWorkUseCases.approveDiaryEntry(taught.body.data.id,{remarks:'Learner work verified'},admin);
+ progress=await c.termAllocations.weekly(teacher,before.scheme.id);
+ expect(progress.coverageSummary).toMatchObject({confirmedOutcomes:1,confirmedPercent:100});
+ expect(progress.scheme.entries.find((entry:any)=>entry.id===first.entry.id)).toEqual(before.scheme.entries.find((entry:any)=>entry.id===first.entry.id));
+});

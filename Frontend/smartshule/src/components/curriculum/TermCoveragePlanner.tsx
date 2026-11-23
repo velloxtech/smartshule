@@ -1,3 +1,4 @@
+import {SyllabusTeachingProgress} from './SyllabusTeachingProgress';
 import {DeleteCurriculumPlanButton} from './DeleteCurriculumPlanButton';
 import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculumPermissions';
 import React, {useEffect,useRef,useState} from 'react';
@@ -75,6 +76,7 @@ export function TermCoveragePlanner({scope,area,className,streamName,termName,ye
    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-primary">{className} · {streamName||'Whole class'}</p><h2 className="text-xl font-bold mt-1">{area.name}</h2><p className="text-sm text-on-surface-variant">{termName} · {yearName}</p></div>{locked&&<span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800"><span className="material-symbols-outlined text-sm">lock</span>Locked</span>}</div>
   </div></>}
 
+  <SyllabusTeachingProgress schemeId={schemeId} scope={scope} onNavigateTab={onNavigateTab}/>
   <DeleteCurriculumPlanButton schemeId={schemeId} disabled={busy||loading} onDeleted={async()=>{setDirty(false);await onRefresh();}}/>
   {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}{notice&&<p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm">{notice}</p>}
   {busy&&<p role="status" className="text-sm text-on-surface-variant">Saving changes or loading the current schedule…</p>}

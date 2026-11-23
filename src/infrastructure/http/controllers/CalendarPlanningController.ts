@@ -28,7 +28,7 @@ export class CalendarPlanningController {
   const body=z.object({revision:z.number().int().min(0),specificLearningOutcomes:lines,keyInquiryQuestions:lines,learningExperiences:lines,learningResources:lines,assessmentMethods:lines}).strict().parse(req.body);
   return this.c.termAllocations.saveWeeklyLesson(a,String(req.params.id),String(req.params.entryId),body.revision,body);
  });
- continueSubStrand=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotId:z.string().min(1),reason:z.string().trim().min(3).max(1000)}).strict().parse(req.body);return this.c.termAllocations.continueSubStrand(a,String(req.params.id),body.revision,body.subStrandId,body.slotId,body.reason);});
+ continueSubStrand=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotId:z.string().min(1).optional(),reason:z.string().trim().min(3).max(1000)}).strict().parse(req.body);return this.c.termAllocations.continueSubStrand(a,String(req.params.id),body.revision,body.subStrandId,body.slotId,body.reason);});
  allocateSessions=this.handle(async(req,a)=>{
   const lines=z.array(z.string().max(10000)).max(100);
   const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotIds:z.array(z.string().min(1)).min(1).max(500),specificLearningOutcomes:lines.min(1),keyInquiryQuestions:lines,learningExperiences:lines,learningResources:lines,assessmentMethods:lines,pacing:z.object({weeks:z.number().int().min(1).max(52),lessonsPerWeek:z.number().int().min(1).max(50)}).optional()}).strict().parse(req.body);
@@ -62,7 +62,7 @@ export class CalendarPlanningController {
  getSequence=this.handle(async(req,a)=>this.c.calendarPlanning.sequence(a,this.scope(req)));
  saveSequence=this.handle(async(req,a)=>{const data=z.object({revision:z.number().int().min(0),enabled:z.boolean(),learningAreaIds:z.array(z.string())}).parse(req.body);return this.c.calendarPlanning.saveSequence(a,this.scope(req),data,data.revision);});
  recordTaught=this.handle(async(req,a)=>{
-  const body=z.object({lessonPlanId:z.string().optional(),schemeId:z.string().optional(),schemeEntryId:z.string().optional(),notes:z.string().trim().min(3),actualDate:date.optional(),teachingStatus:z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).default('COMPLETED'),outcomesCovered:z.array(z.string()).optional(),remainingWork:z.string().optional(),reflection:z.string().optional()}).parse(req.body);
+  const body=z.object({lessonPlanId:z.string().optional(),schemeId:z.string().optional(),schemeEntryId:z.string().optional(),notes:z.string().trim().min(3),timetableSlotId:z.string().optional(),actualDate:date.optional(),teachingStatus:z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).default('COMPLETED'),outcomesCovered:z.array(z.string()).optional(),remainingWork:z.string().optional(),reflection:z.string().optional()}).parse(req.body);
   const plan=body.lessonPlanId?await this.c.curriculumUseCases.getLessonPlanById(body.lessonPlanId,a):null;
   const rawSource=body.schemeId?await this.c.curriculumUseCases.getSchemeById(body.schemeId,a):(await this.c.schemeOfWorkRepository.findAll()).find(s=>s.entries.some(e=>e.id===plan?.schemeOfWorkEntryId));
   if(!rawSource)throw new ValidationError('Select an approved scheduled scheme lesson.');
@@ -72,7 +72,7 @@ export class CalendarPlanningController {
   if(!entry||entry.archivedAt||(source.planningState?.approvedEntryIds?!source.planningState.approvedEntryIds.includes(entry.id):source.status!=='APPROVED'))throw new ValidationError('Leadership must approve this scheme lesson before teaching is recorded.');
   if(plan&&plan.schemeOfWorkEntryId!==entry.id)throw new ValidationError('Lesson plan and scheme entry must match.');
   const scheduled=await this.c.calendarPlanning.slots(a,source);
-  const slot=plan?scheduled.slots.find(s=>s.date===plan.lessonDate&&plan.lessonTime===`${s.startTime}-${s.endTime}`):scheduled.slots.find(s=>s.id===entry.slotId)||scheduled.slots.find(s=>s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber);
+  const slot=plan?scheduled.slots.find(s=>s.date===plan.lessonDate&&plan.lessonTime===`${s.startTime}-${s.endTime}`):body.timetableSlotId?scheduled.slots.find(s=>s.id===body.timetableSlotId):scheduled.slots.find(s=>s.id===entry.slotId)||scheduled.slots.find(s=>s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber);
   if(!slot)throw new ValidationError('Reschedule the cancelled lesson before recording new work.');
   const actualDate=body.actualDate||slot.date;
   const period=await this.c.assignmentAccess.context(a,source);

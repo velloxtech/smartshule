@@ -1,3 +1,4 @@
+import {SyllabusTeachingProgress} from './SyllabusTeachingProgress';
 import React,{useEffect,useState} from 'react';
 import {apiService} from '../../services/api';
 
@@ -18,17 +19,18 @@ export function WeeklyMonitoringRegister({schemeId,scope,onNavigateTab}:{schemeI
     {error&&<p role="alert" className="rounded-lg bg-error/10 p-3 text-sm text-error">{error}</p>}
     {loading&&<p role="status">Loading verified teaching records…</p>}
     {data&&<>
+      <SyllabusTeachingProgress schemeId={schemeId} scope={scope} initialData={data} onChanged={async()=>{setRefresh(value=>value+1);}} onNavigateTab={onNavigateTab}/>
       <p className="text-sm font-semibold">{[data.className,data.streamName,data.learningAreaName,data.academicYearName,data.termName].filter(Boolean).join(' · ')}</p>
-      <p className="rounded-xl bg-surface p-3 text-sm">{planned} scheduled lessons · {reported} reported · {taught} verified complete. {planned?Math.round(taught/planned*100):0}% of scheduled lessons verified. Remediation and repeat practice do not imply new outcomes covered.</p>
+      <p className="rounded-xl bg-surface p-3 text-sm">{planned} planned scheme lessons · {reported} reported · {taught} verified complete. {planned?Math.round(taught/planned*100):0}% of planned scheme lessons verified. Remediation and repeat practice do not imply new outcomes covered.</p>
       {data.scheduleChanged&&<p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">The timetable changed. Review moved lessons before preparing or reporting further work.</p>}
       <div className="flex flex-wrap gap-2"><button type="button" className="ui-button" onClick={()=>void download('pdf')}>Download register PDF</button><button type="button" className="ui-button" onClick={()=>void download('doc')}>Download register Word</button><button type="button" className="ui-button" onClick={()=>onNavigateTab?.('records-of-work')}>Open Records of Work</button></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1000px] border-collapse text-left text-sm"><thead><tr>{headings.map(heading=><th key={heading} scope="col" className="border border-primary bg-primary p-2 text-white">{heading}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.weekNumber}>
         <th scope="row" className="border border-outline-variant/40 p-2 align-top">{row.weekNumber}<span className="mt-1 block text-xs font-normal">{row.startDate}–{row.endDate}</span></th>
         <td className="border border-outline-variant/40 p-2 align-top">{row.plannedLessons}</td><td className="border border-outline-variant/40 p-2 align-top">{row.taughtLessons}<span className="mt-1 block text-xs text-on-surface-variant">{row.reportedLessons} reported</span></td>
-        <td className="whitespace-pre-wrap border border-outline-variant/40 p-2 align-top">{row.noInstruction?'No scheduled instruction':`Covered: ${row.contentCovered||'Not yet verified'}\nNot yet verified: ${row.contentNotCovered||'None'}`}</td>
+        <td className="whitespace-pre-wrap border border-outline-variant/40 p-2 align-top">{row.noInstruction?'No scheme lessons planned':`Covered: ${row.contentCovered||'Not yet verified'}\nNot yet verified: ${row.contentNotCovered||'None'}`}</td>
         <td className="whitespace-pre-wrap border border-outline-variant/40 p-2 align-top">{row.varianceReason||'—'}</td><td className="whitespace-pre-wrap border border-outline-variant/40 p-2 align-top">{row.teacher||'—'}</td><td className="whitespace-pre-wrap border border-outline-variant/40 p-2 align-top">{row.hodVerification||(row.noInstruction?'Not applicable':'Awaiting verification')}</td>
       </tr>)}</tbody></table></div>
-      <p className="text-xs text-on-surface-variant">This register uses the selected school calendar and timetable. Closed weeks remain visible with zero scheduled lessons. A prepared lesson or a submitted record does not count as verified teaching.</p>
+      <p className="text-xs text-on-surface-variant">This register follows the scheme planning weeks. Actual teaching dates are recorded separately; planning weeks are not completion deadlines. Weeks without planned scheme lessons remain visible. A prepared lesson or a submitted record does not count as verified teaching.</p>
     </>}
   </section>;
 }

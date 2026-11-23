@@ -1,3 +1,4 @@
+import {syllabusCoverageProgress} from './SyllabusCoverageProgress';
 import {SchemePacing} from './CalendarPlanningService';
 import { canPrepareCurriculum } from '../shared/AdministrativeAccess';
 import {weeklyMonitoringRegister} from './WeeklyMonitoringRegister';
@@ -243,13 +244,19 @@ export class TermAllocationService {
     return this.weekly(actor,id);
   }
 
-  async continueSubStrand(actor:AcademicActor,id:string,revision:number,subStrandId:string,slotId:string,reason:string) {
+  async continueSubStrand(actor:AcademicActor,id:string,revision:number,subStrandId:string,slotId:string|undefined,reason:string) {
     const scheme=await this.editableWeekly(actor,id,revision,false);
     if(reason.trim().length<3)throw new ValidationError('Explain why this sub-strand needs another teaching session.');
     const state=scheme.planningState!;
     const allocation=state.allocations.find(item=>item.subStrandId===subStrandId&&item.lessons>0);
     if(!allocation)throw new ValidationError('Choose a sub-strand from the saved coverage plan.');
-    const scheduled=await this.c.calendarPlanning.schemeSchedule(actor,scheme.toJSON(),scheme.planningState?.pacing,scheme.entries);
+    let scheduled=await this.c.calendarPlanning.schemeSchedule(actor,scheme.toJSON(),scheme.planningState?.pacing,scheme.entries);
+    if(!slotId){
+      const weeks=Math.max(...scheduled.slots.map(item=>item.weekNumber))+1;
+      const lessonsPerWeek=scheduled.pacing?.lessonsPerWeek||Math.max(1,...scheduled.slots.map(item=>item.lessonNumber));
+      scheduled=await this.c.calendarPlanning.schemeSchedule(actor,scheme.toJSON(),{weeks,lessonsPerWeek},scheme.entries);
+      slotId=scheduled.slots.find(item=>item.weekNumber===weeks&&item.lessonNumber===1)!.id;
+    }
     const slot=scheduled.slots.find(item=>item.id===slotId);
     if(!slot)throw new ValidationError('Choose an available scheme week and lesson position.');
     const original=scheme.entries.find(entry=>!entry.archivedAt&&entry.slotId===slotId);
@@ -264,11 +271,14 @@ export class TermAllocationService {
     const curriculum=catalogue.flatMap(strand=>strand.subStrands.map(sub=>({strand,sub})));
     const selected=[subStrandId,...(allocation.combinedSubStrandIds||[])].map(subId=>curriculum.find(item=>item.sub.id===subId)!);
     const source=scheme.entries.find(entry=>!entry.archivedAt&&entry.subStrandId===subStrandId);
-    const entry:SchemeOfWorkEntry={id:IdGenerator.generate(),slotId:slot.id,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,scheduledDate:slot.date,scheduledStartTime:slot.startTime,scheduledEndTime:slot.endTime,strandId:selected[0].strand.id,subStrandId,combinedSubStrandIds:allocation.combinedSubStrandIds,strandTitle:[...new Set(selected.map(item=>item.strand.title))].join(' + '),subStrandTitle:selected.map(item=>item.sub.title).join(' + '),specificLearningOutcomes:source?.specificLearningOutcomes||allocation.specificLearningOutcomes||selected.flatMap(item=>item.sub.specificLearningOutcomes),keyInquiryQuestions:source?.keyInquiryQuestions||allocation.keyInquiryQuestions||[],learningExperiences:source?.learningExperiences||allocation.learningExperiences||[],learningResources:source?.learningResources||allocation.learningResources||[],assessmentMethods:source?.assessmentMethods||allocation.assessmentMethods||[]};
+    const records=await this.c.recordOfWorkRepository.find({schoolId:actor.schoolId,academicYearId:scheme.academicYearId,termId:scheme.termId});
+    const remaining=syllabusCoverageProgress(scheme.toJSON(),catalogue,records.map(record=>record.toJSON())).subStrands.find((sub:any)=>sub.subStrandId===subStrandId)?.remainingOutcomes||[];
+    const continuationOutcomes=remaining.length?remaining:allocation.specificLearningOutcomes?.length?allocation.specificLearningOutcomes:selected.flatMap(item=>item.sub.specificLearningOutcomes);
+    const entry:SchemeOfWorkEntry={id:IdGenerator.generate(),slotId:slot.id,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,scheduledDate:slot.date,scheduledStartTime:slot.startTime,scheduledEndTime:slot.endTime,strandId:selected[0].strand.id,subStrandId,combinedSubStrandIds:allocation.combinedSubStrandIds,strandTitle:[...new Set(selected.map(item=>item.strand.title))].join(' + '),subStrandTitle:selected.map(item=>item.sub.title).join(' + '),specificLearningOutcomes:continuationOutcomes,keyInquiryQuestions:source?.keyInquiryQuestions||allocation.keyInquiryQuestions||[],learningExperiences:source?.learningExperiences||allocation.learningExperiences||[],learningResources:source?.learningResources||allocation.learningResources||[],assessmentMethods:source?.assessmentMethods||allocation.assessmentMethods||[]};
     const originalEntries=structuredClone(scheme.entries);
     const entries=scheme.entries.map(row=>row.id===original?.id?{...row,archivedAt:new Date().toISOString(),archivedReason:`Pacing adjustment: session deferred to continue ${entry.subStrandTitle}. ${reason.trim()}`} :row);
     entries.push(entry);
-    scheme.setPlanningState({...state,revision:revision+1,locked:false,weeklyPlanningStarted:true,submittedEntryIds:undefined,history:[...state.history,{at:new Date().toISOString(),actorId:actor.userId,action:'PACING_ADJUSTED',reason:reason.trim(),allocations:structuredClone(state.allocations),scheduleFingerprint:scheduled.fingerprint}]},entries);
+    scheme.setPlanningState({...state,pacing:scheduled.pacing||state.pacing,scheduleFingerprint:scheduled.fingerprint,revision:revision+1,locked:false,weeklyPlanningStarted:true,submittedEntryIds:undefined,history:[...state.history,{at:new Date().toISOString(),actorId:actor.userId,action:'PACING_ADJUSTED',reason:reason.trim(),allocations:structuredClone(state.allocations),scheduleFingerprint:scheduled.fingerprint}]},entries);
     scheme.draft();await this.persist(scheme,revision,originalEntries);return this.describe(actor,scheme);
   }
 
@@ -305,30 +315,26 @@ export class TermAllocationService {
     const scheduledWeekdays=[...new Set(actual.slots.map(slot=>new Date(`${slot.date}T00:00:00Z`).getUTCDay()))].sort((a,b)=>a-b);
     const plans=await this.c.curriculumUseCases.listLessonPlans({classRoomId:scheme.classRoomId,streamId:scheme.streamId,learningAreaId:scheme.learningAreaId},actor);
     const work=await this.c.recordOfWorkRepository.find({schoolId:actor.schoolId,academicYearId:scheme.academicYearId,termId:scheme.termId});
-    const reportedOutcomes=new Set<string>(),confirmedOutcomes=new Set<string>();
+    const catalogue=await this.catalogue(actor,scheme.toJSON());
+    const coverageSummary=syllabusCoverageProgress(scheme.toJSON(),catalogue,work.map(record=>record.toJSON()));
     const weeks=new Map<number,any>();
     for(const position of schedule.slots){
       const entry=scheme.entries.find(e=>!e.archivedAt&&(e.slotId===position.id||(e.weekNumber===position.weekNumber&&e.lessonNumber===position.lessonNumber)));
       const matching=plans.filter(p=>entry&&p.schemeOfWorkEntryId===entry.id).sort((a:any,b:any)=>new Date(b.updatedAt||b.createdAt||0).getTime()-new Date(a.updatedAt||a.createdAt||0).getTime());
       const plan=matching.find(p=>this.isPlanned(p))||matching[0];
-      const real=(plan?actual.slots.find(slot=>slot.date===plan.lessonDate&&plan.lessonTime===`${slot.startTime}-${slot.endTime}`):undefined)||actual.slots.find(slot=>slot.id===position.id)||actual.slots.find(slot=>slot.weekNumber===position.weekNumber&&slot.lessonNumber===position.lessonNumber);
+      const linkedWork=work.map(record=>record.toJSON()).filter((r:any)=>entry&&r.classRoomId===scheme.classRoomId&&(r.streamId||'')===(scheme.streamId||'')&&r.learningAreaId===scheme.learningAreaId&&r.planningLink?.schemeId===id&&r.planningLink?.schemeEntryId===entry?.id);
+      const real=(plan?actual.slots.find(slot=>slot.date===plan.lessonDate&&plan.lessonTime===`${slot.startTime}-${slot.endTime}`):undefined)||actual.slots.find(slot=>linkedWork.some((record:any)=>record.planningLink?.slotId===slot.id))||actual.slots.find(slot=>slot.id===position.id)||actual.slots.find(slot=>slot.weekNumber===position.weekNumber&&slot.lessonNumber===position.lessonNumber);
       const slot={...position,date:real?.date||'',startTime:real?.startTime||'',endTime:real?.endTime||'',timetableSlotId:real?.id};
       if(!weeks.has(slot.weekNumber))weeks.set(slot.weekNumber,{weekNumber:slot.weekNumber,startDate:slot.date,endDate:slot.date,lessons:[]});
-      const linkedWork=work.map(record=>record.toJSON()).filter((r:any)=>entry&&r.classRoomId===scheme.classRoomId&&(r.streamId||'')===(scheme.streamId||'')&&r.learningAreaId===scheme.learningAreaId&&r.planningLink?.schemeId===id&&r.planningLink?.schemeEntryId===entry?.id);
-      for(const record of linkedWork){
-        if(!entry||!['SUBMITTED','APPROVED'].includes(record.status)||['POSTPONED','CANCELLED'].includes(record.reflectionData?.teachingStatus||''))continue;
-        const covered=record.reflectionData?.outcomesCovered||(!record.reflectionData?.teachingStatus||record.reflectionData.teachingStatus==='COMPLETED'?entry.specificLearningOutcomes:[]);
-        for(const outcome of covered.filter((o:string)=>entry.specificLearningOutcomes.includes(o))){const key=JSON.stringify([entry.subStrandId||entry.subStrandTitle,outcome.trim().toLowerCase()]);reportedOutcomes.add(key);if(record.status==='APPROVED'&&record.isOfficialCoverage)confirmedOutcomes.add(key);}
-      }
       const taught=linkedWork.some((r:any)=>r.status==='APPROVED'&&r.isOfficialCoverage&&(!r.reflectionData?.teachingStatus||r.reflectionData.teachingStatus==='COMPLETED'));
       const reported=linkedWork.some((r:any)=>r.status==='SUBMITTED'||r.status==='APPROVED');
       const recordOfWorkStatus=linkedWork.sort((a:any,b:any)=>new Date(b.updatedAt||b.createdAt||0).getTime()-new Date(a.updatedAt||a.createdAt||0).getTime())[0]?.status;
       weeks.get(slot.weekNumber).endDate=slot.date;
-      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,recordsOfWork:linkedWork,statuses:{planned:matching.some(p=>this.isPlanned(p)),reported,taught,reflection:matching.some(p=>Boolean(p.teacherSelfReflection?.trim()))}});
+      weeks.get(slot.weekNumber).lessons.push({...slot,entry,lessonPlan:plan,recordOfWorkStatus,recordsOfWork:linkedWork,statuses:{planned:matching.some(p=>this.isPlanned(p)),reported,taught,reflection:matching.some(p=>Boolean(p.teacherSelfReflection?.trim()))||linkedWork.some((record:any)=>Boolean(record.reflection?.trim()||record.reflectionData?.whatWentWell?.trim()||record.reflectionData?.challengesFaced?.trim()))}});
     }
     const [school,cls,area,term,stream,year]=await Promise.all([this.c.academicRepository.getSchool(actor.schoolId!),this.c.academicRepository.findClassById(scheme.classRoomId),this.c.academicRepository.findLearningAreaById(scheme.learningAreaId),this.c.academicRepository.findTermById(scheme.termId),scheme.streamId?this.c.academicRepository.findStreamById(scheme.streamId):Promise.resolve(null),this.c.academicRepository.findYearById(scheme.academicYearId)]);
     const monitoringRegister=weeklyMonitoringRegister([...weeks.values()],term?.startDate,term?.endDate);
-    return {pacing:schedule.pacing,timetableSlots:actual.slots,timetableSetupRequired,monitoringRegister,coverageSummary:{reportedOutcomes:reportedOutcomes.size,confirmedOutcomes:confirmedOutcomes.size},scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
+    return {pacing:schedule.pacing,timetableSlots:actual.slots,timetableSetupRequired,monitoringRegister,coverageSummary,scheme:scheme.toJSON(),school:school?.toJSON(),className:cls?.name,streamName:stream?.name,learningAreaName:area?.name,termName:term?.name,academicYearName:year?.name,teachingDays:calendar?.data.teachingDays||[1,2,3,4,5],scheduledWeekdays,weeks:[...weeks.values()],fingerprint:schedule.fingerprint,scheduleChanged:Boolean(scheme.planningState&&scheme.planningState.scheduleFingerprint!==schedule.fingerprint)};
   }
 
   private isPlanned(p:any) {

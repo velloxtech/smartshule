@@ -310,6 +310,17 @@ describe('schemes before school opens; daily lessons after timetable setup',()=>
   expect(refreshed.weeks[0].lessons[0].lessonPlan.id).toBe(daily.id);
   expect(refreshed.weeks[0].lessons[0].date).toBe('2027-01-11');
  });
+ it('continues an approved sub-strand beyond its original weeks without changing its history or pacing estimate',async()=>{
+  const before=await approvedBeforeOpening();
+  const entries=structuredClone(before.scheme.entries);
+  const extended=await c.termAllocations.continueSubStrand(teacher,plan.scheme.id,before.scheme.planningState!.revision,'director-sub',undefined,'Children need further concrete practice');
+  expect(extended.scheme.planningState!.pacing).toEqual({weeks:13,lessonsPerWeek:5});
+  expect(extended.scheme.planningState!.allocations[0].lessons).toBe(3);
+  expect(extended.scheme.entries.slice(0,entries.length)).toEqual(entries);
+  expect(extended.scheme.entries.at(-1)).toMatchObject({subStrandId:'director-sub',weekNumber:13,lessonNumber:1});
+  expect(extended.scheme.planningState!.approvedEntryIds).toEqual(before.scheme.planningState!.approvedEntryIds);
+  expect((await c.termAllocations.weekly(teacher,plan.scheme.id)).monitoringRegister.at(-1)!.weekNumber).toBe(13);
+ });
  it('retains saved and approved lesson positions when the requested planning grid is too small',async()=>{
   const weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w12:l5'],content,pacing);
   await expect(c.termAllocations.allocateSessions(teacher,plan.scheme.id,weekly.scheme.planningState!.revision,'director-sub',['scheme:w1:l1'],content,{weeks:3,lessonsPerWeek:5})).rejects.toThrow('retain all existing');
