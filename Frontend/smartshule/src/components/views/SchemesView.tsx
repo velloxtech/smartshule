@@ -215,22 +215,33 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             (reviewOnly ? pendingReviews : savedSchemes).map((s) => (
               <div
                 key={s.id}
-                className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="min-w-0 bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-xs border border-outline-variant/30 space-y-4"
               >
-                <div className="space-y-1.5 flex-1">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-xs text-success font-data-mono bg-success-container px-2 py-0.5 rounded">
+                    <span className="shrink-0 whitespace-nowrap font-bold text-xs text-success font-data-mono bg-success-container px-2 py-0.5 rounded">
                       {schemePeriodLabel(s)}
                     </span>
                     <button
                       type="button"
                       onClick={() => setSelectedScheme(s)}
-                      className="font-bold text-sm text-primary hover:underline cursor-pointer flex items-center gap-1.5 text-left"
+                      className="min-w-0 font-bold text-sm text-primary hover:underline cursor-pointer flex items-start gap-1.5 text-left"
                       title="Click to view full Scheme of Work details"
                     >
                       <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
-                      <span>{s.title}</span>
+                      <span className="min-w-0 break-words">{s.title}</span>
                     </button>
+                    <span
+                      className={`shrink-0 sm:ml-auto px-2.5 py-1 rounded text-xs font-bold ${
+                        s.status === 'APPROVED'
+                          ? 'bg-success-container text-on-success-container'
+                          : s.status === 'SUBMITTED'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-surface-container text-on-surface-variant'
+                      }`}
+                    >
+                      {s.status}
+                    </span>
                   </div>
 
                   {s.entries && s.entries[0] && (
@@ -263,20 +274,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                   )}
                 </div>
 
-                <div className="shrink-0 flex md:flex-col items-end justify-between gap-2">
-                  <span
-                    className={`px-2.5 py-1 rounded text-xs font-bold ${
-                      s.status === 'APPROVED'
-                        ? 'bg-success-container text-on-success-container'
-                        : s.status === 'SUBMITTED'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-surface-container text-on-surface-variant'
-                    }`}
-                  >
-                    {s.status}
-                  </span>
-
-                  <div className="flex gap-2 items-center flex-wrap">
+                <div className="min-w-0 border-t border-outline-variant/30 pt-4">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setSelectedScheme(s)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-container text-xs font-bold shadow-xs transition-colors cursor-pointer"
@@ -306,16 +305,18 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                         Continue term draft
                       </button>
                     )}
-                    {isApprover && <SchemeApprovalActions compact scheme={s} onReviewed={loadCurriculum} />}
                     <button
                       onClick={() => handleDeleteScheme(s.id, s.title)}
                       title="Delete Scheme"
-                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                      aria-label={`Delete scheme ${s.title}`}
+                      className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/10 transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">delete</span>
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
+                {isApprover && <SchemeApprovalActions compact scheme={s} onReviewed={loadCurriculum} />}
               </div>
             ))
           ) : (

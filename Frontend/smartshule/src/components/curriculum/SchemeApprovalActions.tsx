@@ -36,7 +36,7 @@ export function SchemeApprovalActions({ scheme, onReviewed, compact = false }: P
     finally { setBusy(false); }
   };
 
-  return <section aria-label="School leadership approval" className={`rounded-xl border border-outline-variant/30 bg-surface ${compact ? 'p-3' : 'p-4'} space-y-3`}>
+  return <section aria-label="School leadership approval" className={`min-w-0 w-full rounded-xl border border-outline-variant/30 bg-surface ${compact ? 'p-3' : 'p-4'} space-y-3`}>
     <div><h3 className="text-sm font-bold text-primary">School leadership review</h3>
       <p className="mt-1 text-xs text-on-surface-variant">Admin, Head Teacher and Deputy Head Teacher can review submitted scheme sessions here. Coverage plans are reviewed on Syllabus Planning.</p>
     </div>
