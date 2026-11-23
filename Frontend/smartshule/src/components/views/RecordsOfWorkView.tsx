@@ -468,7 +468,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
               <tbody className="divide-y divide-gray-100">
                 {filteredRecords.map((record) => {
                   const isRecordTeacher = currentUserId && record.teacherId === currentUserId;
-                  const canApprove = isSupervisor && !isRecordTeacher;
+                  const canApprove = isSupervisor && (canManageCurriculum(user?.role) || !isRecordTeacher);
 
                   return (
                     <tr key={record.id} className="hover:bg-surface/70 transition-colors align-top group">
