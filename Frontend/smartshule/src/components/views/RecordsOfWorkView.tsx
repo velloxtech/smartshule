@@ -1,3 +1,4 @@
+import {canManageCurriculum} from '../../utils/curriculumPermissions';
 import {loadDocumentSchool} from '../curriculum/SchoolDocumentHeader';
 import React, { useState, useEffect, useMemo } from 'react';
 import {recordsOfWorkPDF,RecordDocumentSchool} from '../curriculum/RecordOfWorkDocument';
@@ -312,6 +313,10 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
             <span className="material-symbols-outlined text-[18px]">print</span>
             Print
           </button>
+          {canManageCurriculum(user?.role) && <button
+            onClick={() => setIsLinkedCreateOpen(true)}
+            className="ui-button"
+          >Record Work from Lesson</button>}
           <button
             onClick={() => user?.role === 'TEACHER' ? setIsLinkedCreateOpen(true) : setIsCreateModalOpen(true)}
             className="px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-container transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"

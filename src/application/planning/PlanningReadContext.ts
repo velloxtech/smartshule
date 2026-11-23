@@ -37,7 +37,7 @@ export function createPlanningReadContext(c: AppContainer) {
   const calendarPlanning = new CalendarPlanningService(planningRepository, academicRepository,
     memoizePlanningReads(c.timetableRepository), schemeOfWorkRepository, assignmentAccess);
   const curriculumUseCases = new CurriculumPlanUseCases(schemeOfWorkRepository,
-    lessonPlanRepository, teacherRepository, assignmentAccess, calendarPlanning);
+    lessonPlanRepository, teacherRepository, assignmentAccess, calendarPlanning, c.recordOfWorkRepository);
   return { academicRepository, teacherRepository, schemeOfWorkRepository, lessonPlanRepository,
     planningRepository, assignmentAccess, calendarPlanning, curriculumUseCases,
     userRepository: memoizePlanningReads(c.userRepository),

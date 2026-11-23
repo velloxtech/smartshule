@@ -1,3 +1,4 @@
+import {DeleteCurriculumPlanButton} from './DeleteCurriculumPlanButton';
 import { SchemeApprovalActions } from './SchemeApprovalActions';
 import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculumPermissions';
 import React, { useEffect, useRef, useState } from 'react';
@@ -113,6 +114,7 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
       <p className="mt-1 text-sm text-on-surface-variant">{weekly?.className || className} · {weekly?.streamName || streamName} · {termName} · {yearName}</p>
       <p className="mt-3 text-sm text-on-surface-variant">Plan from the saved syllabus by sub-strand, following the children’s learning pace. A sub-strand can continue across any number of teaching sessions or weeks. Submit only the completed lessons for approval; the rest of the term can remain a draft.</p>
     </div>
+    <DeleteCurriculumPlanButton schemeId={scheme?.id || area.schemeId} disabled={busy} onDeleted={async () => { setDirty(false); await onRefresh(); }} />
     {error && <p role="alert" className="rounded-xl border border-error/30 bg-error-container p-4 text-sm text-on-error-container">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{notice}</p>}
     {showReviewActions && canReview && scheme && <SchemeApprovalActions scheme={scheme} onReviewed={async () => { await refresh(); }} />}

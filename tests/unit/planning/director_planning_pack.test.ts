@@ -115,3 +115,35 @@ it.each([UserRole.PARENT,UserRole.ACCOUNTANT,UserRole.STUDENT])('keeps %s out of
  await expect(c.termAllocations.prepareWeekly(outsider,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow();
  await expect(c.curriculumUseCases.submitSchemeForReview(p.scheme.id,outsider)).rejects.toThrow();
 });
+
+it.each([UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN])('allows %s to create and delete curriculum content without a teacher assignment',async(role)=>{
+ const manager={...admin,role};
+ const strand=await c.CBCUseCases.createStrand({learningAreaId:scope.learningAreaId,gradeLevel:CBCGradeLevel.GRADE_4,code:'ADMIN',title:'Admin curriculum'},manager);
+ const sub=await c.CBCUseCases.createSubStrand({strandId:strand.id,code:'ADMIN-1',title:'Admin outcomes',specificLearningOutcomes:['Explain the model']},manager);
+ await c.CBCUseCases.deleteSubStrand(sub.id,manager);
+ await c.CBCUseCases.deleteStrand(strand.id,manager);
+ expect(await c.CBCAssessmentRepository.findStrandById(strand.id)).toBeNull();
+ await calendar();await timetable();await start();
+ const coverage=await c.termAllocations.saveDraft(manager,scope,[{subStrandId:'director-sub',lessons:2}],0);
+ expect(coverage.scheme.teacherId).toBe(manager.userId);
+ await c.curriculumUseCases.deleteScheme(coverage.scheme.id,manager);
+ expect(await c.schemeOfWorkRepository.findById(coverage.scheme.id)).toBeNull();
+});
+
+it.each([UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN])('allows %s to remove approved teaching documents in dependency order',async(role)=>{
+ const manager={...admin,role};
+ const weekly=await approvedScheme(),lesson=weekly.weeks[0].lessons[0];
+ const plan=await c.curriculumUseCases.createLessonPlan(planInput(lesson),manager);
+ const record=await c.recordOfWorkUseCases.createDiaryEntry({...scope,schoolId:manager.schoolId,teacherId:teacher.userId,weekNumber:lesson.weekNumber,lessonDate:lesson.date,lessonPeriod:'1',strand:'Numbers',subStrand:'Fractions',lessonTopic:'Comparing fractions',learningObjectives:'Compare fractions',learningActivities:'Compare models',comments:'Models checked',status:'DRAFT',planningLink:{lessonPlanId:plan.id,schemeId:weekly.scheme.id,schemeEntryId:lesson.entry.id,slotId:lesson.id}},manager);
+ await c.recordOfWorkUseCases.submitDiaryEntry(record.id,manager);
+ await c.recordOfWorkUseCases.approveDiaryEntry(record.id,{remarks:'Verified'},manager);
+ await expect(c.curriculumUseCases.deleteScheme(weekly.scheme.id,manager)).rejects.toThrow('Delete linked');
+ await expect(c.curriculumUseCases.deleteLessonPlan(plan.id,manager)).rejects.toThrow('Delete linked');
+ await expect(c.curriculumUseCases.deleteScheme(weekly.scheme.id,{...manager,schoolId:'another-school'})).rejects.toThrow();
+ await c.recordOfWorkUseCases.deleteDiaryEntry(record.id,manager);
+ await c.curriculumUseCases.deleteLessonPlan(plan.id,manager);
+ await c.curriculumUseCases.deleteScheme(weekly.scheme.id,manager);
+ expect(await c.recordOfWorkRepository.findById(record.id)).toBeNull();
+ expect(await c.lessonPlanRepository.findById(plan.id)).toBeNull();
+ expect(await c.schemeOfWorkRepository.findById(weekly.scheme.id)).toBeNull();
+});

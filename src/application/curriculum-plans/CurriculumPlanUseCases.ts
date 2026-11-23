@@ -2,6 +2,7 @@ import { canPrepareCurriculum, hasAdministrativeAccess } from '../shared/Adminis
 import { assertWeeklyCoverage, selectWeeklySubmission, weeklyReviewEntries } from '../planning/WeeklySchemePolicy';
 import { AcademicActor, TeacherAssignmentAccess, TeachingScope, sameTerm } from '../shared/TeacherAssignmentAccess';
 import { CalendarPlanningService } from '../planning/CalendarPlanningService';
+import { IRecordOfWorkRepository } from '../../core/ports/repositories/IRecordOfWorkRepository';
 import {
   ISchemeOfWorkRepository,
   ILessonPlanRepository,
@@ -65,7 +66,8 @@ export class CurriculumPlanUseCases {
     private readonly lessonPlanRepository: ILessonPlanRepository,
     private readonly teacherRepository?: ITeacherRepository,
     private readonly access?: TeacherAssignmentAccess,
-    private readonly planning?: CalendarPlanningService
+    private readonly planning?: CalendarPlanningService,
+    private readonly records?: IRecordOfWorkRepository
   ) {}
 
   private async authorize(record: TeachingScope, actor?: AcademicActor, lock = true) {
@@ -397,7 +399,14 @@ export class CurriculumPlanUseCases {
     const scheme = await this.schemeRepository.findById(id);
     if (!scheme) throw new NotFoundError('Scheme of Work', id);
     await this.authorize(scheme.toJSON(),requestingUser,false);
-    await this.assertSchemeAllocationsEditable(scheme.toJSON());
+    if (!hasAdministrativeAccess(requestingUser?.role)) await this.assertSchemeAllocationsEditable(scheme.toJSON());
+    const entries = new Set(scheme.entries.map(entry => entry.id));
+    const plans = await this.lessonPlanRepository.findAll({classRoomId: scheme.classRoomId});
+    const records = this.records ? await this.records.find({schoolId: requestingUser?.schoolId, classRoomId: scheme.classRoomId}) : [];
+    if (plans.some(plan => entries.has(plan.toJSON().schemeOfWorkEntryId || '')) ||
+        records.some(record => record.toJSON().planningLink?.schemeId === id)) {
+      throw new ValidationError('Delete linked Records of Work and lesson plans before deleting this syllabus coverage and scheme.');
+    }
     if (requestingUser?.role === 'TEACHER') {
       let isOwner = scheme.teacherId === requestingUser.userId;
       if (!isOwner && this.teacherRepository) {
@@ -417,6 +426,10 @@ export class CurriculumPlanUseCases {
     const plan = await this.lessonPlanRepository.findById(id);
     if (!plan) throw new NotFoundError('Lesson Plan', id);
     await this.authorize(await this.planScope(plan),requestingUser,false);
+    const records = this.records ? await this.records.find({schoolId: requestingUser?.schoolId, classRoomId: plan.toJSON().classRoomId}) : [];
+    if (records.some(record => record.toJSON().planningLink?.lessonPlanId === id)) {
+      throw new ValidationError('Delete linked Records of Work before deleting this lesson plan.');
+    }
     if (requestingUser?.role === 'TEACHER') {
       let isOwner = plan.teacherId === requestingUser.userId;
       if (!isOwner && this.teacherRepository) {

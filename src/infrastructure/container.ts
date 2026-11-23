@@ -344,7 +344,8 @@ export class AppContainer {
       this.lessonPlanRepository,
       this.teacherRepository,
       this.assignmentAccess,
-      this.calendarPlanning
+      this.calendarPlanning,
+      this.recordOfWorkRepository
     );
     this.termAllocations = new TermAllocationService(this);
     this.planningWorkflow = new PlanningWorkflowService(this);

@@ -400,19 +400,6 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
         ],
       },
       {
-        id: 'competencies-strands',
-        label: 'Strands & Outcomes',
-        icon: 'account_tree',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.HEAD_TEACHER,
-          UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.TEACHER,
-        ],
-      },
-      {
         id: 'report-cards',
         label: 'CBE Report Cards',
         icon: 'article',
@@ -505,6 +492,19 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
           UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
           UserRole.STUDENT,
+        ],
+      },
+      {
+        id: 'competencies-strands',
+        label: 'Strands & Outcomes',
+        icon: 'account_tree',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
         ],
       },
       {
