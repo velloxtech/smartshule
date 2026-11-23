@@ -1,3 +1,4 @@
+import {apiService} from '../services/api';
 import React, { useState, useRef, useEffect } from 'react';
 import { Student, Teacher, AcademicContext, AcademicTerm, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -111,6 +112,21 @@ export const Header: React.FC<HeaderProps> = ({
           t.learningAreas.some((la) => la.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : [];
+
+  const canUseStaffMessages = !isParent && !!user && [UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.ADMISSIONS,UserRole.BURSAR,UserRole.ACCOUNTANT,UserRole.TEACHER].includes(user.role);
+  const [unreadMessages,setUnreadMessages] = useState(0);
+  useEffect(()=>{
+    setUnreadMessages(0);
+    if(!canUseStaffMessages)return;
+    let live=true,inFlight=false;
+    const refresh=async()=>{
+      if(inFlight||document.hidden)return;inFlight=true;
+      try{const response=await apiService.getStaffInbox();if(live)setUnreadMessages(response.data?.unreadCount||0);}catch{/* Keep the navigation usable when the inbox is unavailable. */}finally{inFlight=false;}
+    };
+    void refresh();const timer=window.setInterval(()=>void refresh(),30000);
+    window.addEventListener('staff-messages-updated',refresh);
+    return()=>{live=false;window.clearInterval(timer);window.removeEventListener('staff-messages-updated',refresh);};
+  },[canUseStaffMessages,user?.id]);
 
   return (
     <header className="sticky top-0 z-30 w-full h-16 bg-gradient-to-r from-[#7a0f26] via-[#85132d] to-[#6d0c20] text-white border-b border-[#a82442]/40 shadow-md shrink-0">
@@ -430,6 +446,8 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {canUseStaffMessages&&<button type="button" onClick={()=>onNavigateTab?.('staff-messages')} aria-label={`Staff messages${unreadMessages?`, ${unreadMessages} unread`:''}`} title="Staff Messages" className="relative rounded-xl border border-white/10 p-2 text-white hover:bg-primary-container"><span className="material-symbols-outlined text-[20px]">forum</span>{unreadMessages>0&&<span className="absolute -right-1 -top-1 rounded-full bg-white px-1 text-[10px] font-bold text-primary">{unreadMessages>99?'99+':unreadMessages}</span>}</button>}
 
           {/* Help & Guide */}
           <div className="relative">

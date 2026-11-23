@@ -327,7 +327,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     // Reporting this week does not depend on review of an earlier week.
     item.status = 'SUBMITTED';
     item.isCovered = false; // Never count as covered until approved
-    item.lessonsTaught = submission.lessonsTaught || item.plannedLessons || 5;
+    item.lessonsTaught = submission.lessonsTaught ?? item.plannedLessons ?? 5;
     if (submission.teacherComment) item.teacherComment = submission.teacherComment;
     item.confirmedByTeacherId = submission.submittedByTeacherId;
     item.confirmedByTeacherName = submission.submittedByTeacherName;
@@ -465,10 +465,10 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
 
   public getStats(): CurriculumTrackerStats {
     const totalWeeks = this._props.totalWeeks || this._props.items.length || 1;
-    const totalPlannedLessons = this._props.items.reduce((sum, i) => sum + (i.plannedLessons || 5), 0);
-    const approvedItems = this._props.items.filter(i => i.isCovered || i.status === 'APPROVED' || i.status === 'COVERED');
+    const totalPlannedLessons = this._props.items.reduce((sum, i) => sum + (i.plannedLessons ?? 5), 0);
+    const approvedItems = this._props.items.filter(i => !['EXEMPTED','RESCHEDULED'].includes(i.status) && (i.isCovered || i.status === 'APPROVED' || i.status === 'COVERED'));
     const approvedWeeks = approvedItems.length;
-    const approvedLessons = approvedItems.reduce((sum, i) => sum + (i.lessonsTaught || i.plannedLessons || 5), 0);
+    const approvedLessons = approvedItems.reduce((sum, i) => sum + Math.min(i.lessonsTaught ?? i.plannedLessons ?? 5,i.plannedLessons ?? 5), 0);
     const submittedWeeks = this._props.items.filter(i => i.status === 'SUBMITTED').length;
     const inProgressWeeks = this._props.items.filter(i => i.status === 'IN_PROGRESS').length;
     const returnedWeeks = this._props.items.filter(i => i.status === 'RETURNED').length;
@@ -478,7 +478,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
 
     const completionPercentage = totalPlannedLessons > 0
       ? Math.min(100, Math.round((approvedLessons / totalPlannedLessons) * 100))
-      : Math.min(100, Math.round((approvedWeeks / totalWeeks) * 100));
+      : 0;
 
     const dailyLogs = this._props.dailyLogs || [];
     const totalDailyLogs = dailyLogs.length;
@@ -493,7 +493,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
       approvedWeeks,
       approvedLessons,
       submittedWeeks,
-      coveredWeeks: approvedWeeks,
+      coveredWeeks: approvedItems.filter(i=>(i.plannedLessons??5)>0&&(i.lessonsTaught??i.plannedLessons??5)>=(i.plannedLessons??5)).length,
       inProgressWeeks,
       pendingWeeks,
       delayedWeeks,
@@ -509,9 +509,9 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
 
   private checkAndUpdateOverallStatus(): void {
     const stats = this.getStats();
-    if (stats.coveredWeeks >= stats.totalWeeks && stats.totalWeeks > 0) {
+    if (stats.totalPlannedLessons > 0 && stats.approvedLessons >= stats.totalPlannedLessons) {
       this._props.status = 'COMPLETED';
-    } else if (stats.coveredWeeks > 0 || stats.inProgressWeeks > 0) {
+    } else if (this._props.status !== 'ARCHIVED') {
       this._props.status = 'ACTIVE';
     }
   }

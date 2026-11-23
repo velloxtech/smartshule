@@ -290,7 +290,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
         <div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-3xl">menu_book</span>
-            Teacher Diary & Records of Work
+            Records of Work
           </h1>
           <p className="text-sm text-on-surface-variant mt-1">
             Track daily CBC curriculum delivery, lesson reflections, review submissions and official syllabus progression.
@@ -713,7 +713,7 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
                 />
               </div>
               <p className="text-[11px] text-on-surface-variant">
-                Approving this record will update official syllabus coverage plan progress and permit the teacher to proceed to subsequent lessons.
+                Approving this record verifies the teaching evidence used in Coverage Tracking. Other scheduled lessons can be recorded independently.
               </p>
             </div>
             <div className="px-6 py-4 bg-surface/80 border-t border-outline-variant/30 flex items-center justify-end gap-3">

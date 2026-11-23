@@ -30,7 +30,7 @@ export function teacherAssignmentGuard(c:AppContainer){return async(req:Request,
   if(segments[0]==='broadsheets'&&segments[1]==='stream')return next();
   // Timetable reads enforce self-only / class-teacher access in TimetableUseCases.
   // Generic subject filtering must not authorize a complete subject-only class grid.
-  // Timetable mutations are restricted to leadership by their route role guards.
+  // Timetable mutations enforce school and teacher-assignment scope in TimetableUseCases.
   if(segments[0]==='timetables')return next();
   // This self-service portal resolves children from the authenticated guardian identity.
   // Staff can have children outside their teaching assignments; applying teaching scope

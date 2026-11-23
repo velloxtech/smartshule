@@ -260,7 +260,7 @@ export class FinanceController {
 
   public createFeeStructure = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const structure = await this.feeUseCases.createFeeStructure(req.body);
+      const structure = await this.feeUseCases.createFeeStructure({...req.body,schoolId:(req as AuthenticatedRequest).user?.schoolId});
       return res.status(201).json({
         success: true,
         message: 'Fee structure created successfully',
@@ -539,7 +539,7 @@ export class FinanceController {
 
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const recordedByUserId = req.body.recordedByUserId || (req as any).user?.userId || 'SYSTEM';
+      const recordedByUserId = (req as any).user?.userId || 'SYSTEM';
       const result = await this.feeUseCases.recordPayment({
         ...req.body,
         recordedByUserId
@@ -615,7 +615,7 @@ export class FinanceController {
   public getPaymentReceipt = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const id = String(req.params.id);
-      const result = await this.feeUseCases.getPaymentReceipt(id);
+      const result = await this.feeUseCases.getPaymentReceipt(id,req.user);
       return res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -908,7 +908,7 @@ export class FinanceController {
   public queryKcbBuniStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const checkoutRequestId = req.params.checkoutRequestId as string;
-      const result = await this.feeUseCases.queryKcbBuniStatus(checkoutRequestId);
+      const result = await this.feeUseCases.queryKcbBuniStatus(checkoutRequestId,(req as AuthenticatedRequest).user);
       return res.status(200).json({
         success: true,
         data: result

@@ -34,7 +34,7 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
 
   const handleOpenAcknowledge = (record: any) => {
     setSelectedRecord(record);
-    const amount = record.amountPaid > 0 ? record.amountPaid : record.netSalary;
+    const amount = record.amountPaid || 0;
     setCustomStatement(
       `I, ${record.teacherName}, hereby confirm receipt of salary payment of KES ${Number(amount).toLocaleString()} for the ${record.month} payroll period (Payment Ref: ${record.paymentReference || 'N/A'}).`
     );
@@ -67,14 +67,15 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
         statement: customStatement.trim(),
         method: 'PORTAL_AUTH',
         signature: signatureText.trim(),
+        expectedAmountPaid: selectedRecord.amountPaid,
+        expectedPaymentReference: selectedRecord.paymentReference || '',
       });
 
       if (res.success) {
         setSuccessMsg(res.message || 'Salary receipt acknowledged successfully.');
-        setTimeout(() => {
-          handleCloseModal();
-          fetchSalaryRecords();
-        }, 1200);
+        handleCloseModal();
+        setSuccessMsg(res.message || 'Salary receipt acknowledged successfully.');
+        await fetchSalaryRecords();
       } else {
         setErrorMsg(res.message || 'Failed to record acknowledgement.');
       }
@@ -109,6 +110,7 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
         </button>
       </div>
 
+      {successMsg && !selectedRecord && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{successMsg}</p>}
       {loading ? (
         <div className="py-8 text-center text-xs text-on-surface-variant space-y-2">
           <span className="material-symbols-outlined text-2xl animate-spin text-primary">progress_activity</span>
@@ -191,12 +193,12 @@ export const TeacherSalaryAcknowledgementCard: React.FC = () => {
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-low text-slate-700 border border-slate-200">
                           <span className="material-symbols-outlined text-[12px]">radio_button_unchecked</span>
-                          <span>UNACKNOWLEDGED</span>
+                          <span>{r.acknowledgementStatus === 'UNDER_REVIEW' ? 'UNDER REVIEW' : 'UNACKNOWLEDGED'}</span>
                         </span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      {isPaid && !isAck ? (
+                      {r.canAcknowledge ? (
                         <button
                           onClick={() => handleOpenAcknowledge(r)}
                           className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-container text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"

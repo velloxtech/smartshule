@@ -205,6 +205,19 @@ export class PayrollRecord extends Entity<PayrollProps> {
     this.touch();
   }
 
+  private resetSalaryReceipt(): void {
+    this._props.acknowledgedAt = undefined;
+    this._props.acknowledgedByUserId = undefined;
+    this._props.acknowledgementStatement = undefined;
+    this._props.acknowledgementMethod = undefined;
+    this._props.acknowledgementSignature = undefined;
+    this._props.acknowledgementIp = undefined;
+    this._props.disputedAt = undefined;
+    this._props.disputeReason = undefined;
+    this._props.disputedByUserId = undefined;
+    this._props.acknowledgementStatus = this.amountPaid > 0 ? 'AWAITING_ACKNOWLEDGEMENT' : 'UNACKNOWLEDGED';
+  }
+
   public recordPayment(
     amount: number,
     method: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH',
@@ -216,7 +229,7 @@ export class PayrollRecord extends Entity<PayrollProps> {
     paymentDate?: string
   ): void {
     const cleanAmount = Math.round(Number(amount) * 100) / 100;
-    if (cleanAmount <= 0) {
+    if (!Number.isFinite(cleanAmount) || cleanAmount <= 0) {
       throw new Error('Salary payment amount must be greater than zero.');
     }
     const currentPaid = this._props.amountPaid || 0;
@@ -239,6 +252,8 @@ export class PayrollRecord extends Entity<PayrollProps> {
     } else {
       this._props.status = 'PARTIALLY_PAID';
     }
+    // A receipt for an earlier instalment cannot confirm a later disbursement.
+    this.resetSalaryReceipt();
     this.touch();
   }
 
@@ -254,6 +269,7 @@ export class PayrollRecord extends Entity<PayrollProps> {
     this._props.reversedByUserId = reversedByUserId;
     this._props.reversedAt = new Date();
     this._props.reversalReason = reversalReason;
+    this.resetSalaryReceipt();
     this._props.paidAt = undefined;
     this._props.paymentReference = undefined;
     this.touch();
@@ -264,6 +280,7 @@ export class PayrollRecord extends Entity<PayrollProps> {
       id: this.id,
       ...this._props,
       amountPaid: this.amountPaid,
+      acknowledgementStatus: this.acknowledgementStatus,
       balance: this.balance,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt

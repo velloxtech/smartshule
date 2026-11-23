@@ -351,6 +351,7 @@ export class PayrollUseCases {
 
     const p = await this.payrollRepository.findPayrollById(dto.payrollId);
     if (!p) throw new NotFoundError('Payroll record not found.');
+    if (requestingUser?.schoolId && p.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
 
     if (p.status === 'DRAFT') {
       throw new ValidationError('Payroll record must be approved by an authorized administrator before disbursement.');
@@ -360,7 +361,7 @@ export class PayrollUseCases {
     }
 
     const amountToPay = dto.amount != null ? Math.round(Number(dto.amount) * 100) / 100 : p.balance;
-    if (amountToPay <= 0) {
+    if (!Number.isFinite(amountToPay) || amountToPay <= 0) {
       throw new ValidationError('Payment amount must be greater than zero.');
     }
     if (amountToPay > p.balance + 0.001) {
@@ -409,7 +410,8 @@ export class PayrollUseCases {
       await this.feeRepository.saveExpense(expense);
     }
 
-    // Record disbursement on Payroll record
+    // Preserve the previous receipt in the payment audit before reopening acknowledgement.
+    const previousReceipt = this.salaryReceiptSnapshot(p);
     p.recordPayment(
       amountToPay,
       dto.paymentMethod,
@@ -432,6 +434,7 @@ export class PayrollUseCases {
               level: 'INFO',
               category: 'FINANCE',
               action: 'DISBURSE_PAYROLL',
+              metadata: {payrollId:p.id,previousReceipt},
               actorUserId: requestingUser.userId,
               actorEmail: requestingUser.email || 'finance_staff',
               actorRole: requestingUser.role as any,
@@ -568,6 +571,7 @@ export class PayrollUseCases {
 
     const p = await this.payrollRepository.findPayrollById(dto.payrollId);
     if (!p) throw new NotFoundError('Payroll record not found.');
+    if (requestingUser?.schoolId && p.schoolId !== requestingUser.schoolId) throw new ForbiddenError('School access denied.');
 
     if (p.status !== 'PAID' && p.status !== 'PARTIALLY_PAID') {
       throw new ValidationError(`Only paid or partially paid payroll records can be reversed (Current status is "${p.status}").`);
@@ -591,6 +595,7 @@ export class PayrollUseCases {
       }
     }
 
+    const previousReceipt = this.salaryReceiptSnapshot(p);
     p.reversePayment(reason, requestingUser?.userId);
     await this.payrollRepository.updatePayroll(p);
 
@@ -604,6 +609,7 @@ export class PayrollUseCases {
               level: 'WARN',
               category: 'FINANCE',
               action: 'REVERSE_PAYROLL_PAYMENT',
+              metadata: {payrollId:p.id,previousReceipt},
               actorUserId: requestingUser.userId,
               actorEmail: requestingUser.email || 'administrator',
               actorRole: requestingUser.role as any,
@@ -829,6 +835,33 @@ export class PayrollUseCases {
     };
   }
 
+  private async salaryOwnerIds(user: UserContext): Promise<Set<string>> {
+    if (!user?.userId || !user.schoolId || ![UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.ADMISSIONS,UserRole.BURSAR,UserRole.ACCOUNTANT,UserRole.TEACHER].includes(user.role as UserRole)) {
+      throw new ForbiddenError('An authenticated staff account and school are required to access salary records.');
+    }
+    const ids = new Set([user.userId]);
+    const teacher = await this.teacherRepository.findByUserId(user.userId);
+    if (!teacher) return ids;
+    ids.add(teacher.id);
+    // Payroll generation also uses exact staff numbers. Never match salary ownership by name.
+    const aliases = (profile: typeof teacher) => [profile!.employeeNumber, profile!.tscNumber, profile!.tscNumber ? (profile!.tscNumber.toUpperCase().startsWith('TSC') ? profile!.tscNumber : `TSC-${profile!.tscNumber}`) : undefined].filter((id): id is string => Boolean(id?.trim()));
+    const profiles = await this.teacherRepository.findAll();
+    const schoolProfiles = (await Promise.all(profiles.map(async profile => {
+      const owner = await this.userRepository.findById(profile.userId);
+      return owner?.schoolId === user.schoolId ? profile : null;
+    }))).filter((profile): profile is NonNullable<typeof profile> => profile !== null);
+    for (const alias of aliases(teacher)) {
+      const owners = schoolProfiles.filter(profile => profile.id === alias || profile.userId === alias || aliases(profile).includes(alias));
+      if (owners.length === 1 && owners[0].id === teacher.id) ids.add(alias);
+    }
+    return ids;
+  }
+
+  private salaryReceiptSnapshot(record: PayrollRecord) {
+    if (!record.acknowledgedAt && !record.disputedAt) return undefined;
+    return {amountPaid:record.amountPaid,paymentReference:record.paymentReference,acknowledgedAt:record.acknowledgedAt,acknowledgedByUserId:record.acknowledgedByUserId,statement:record.acknowledgementStatement,signature:record.acknowledgementSignature,method:record.acknowledgementMethod,disputedAt:record.disputedAt,disputeReason:record.disputeReason};
+  }
+
   /**
    * Teachers view their own salary payment records
    */
@@ -837,11 +870,9 @@ export class PayrollUseCases {
       throw new ForbiddenError('Authentication required to access salary records.');
     }
 
-    // Resolve teacher record linked to user
-    const teacher = await this.teacherRepository.findByUserId(user.userId);
-    const teacherId = teacher ? teacher.id : user.userId;
-
-    const allPayrolls = await this.payrollRepository.findPayrollsByTeacher(teacherId);
+    const ownerIds = await this.salaryOwnerIds(user);
+    const records = (await Promise.all([...ownerIds].map(id => this.payrollRepository.findPayrollsByTeacher(id)))).flat();
+    const allPayrolls = [...new Map(records.filter(record => record.schoolId === user.schoolId).map(record => [record.id, record])).values()];
     // Sort newest month first
     allPayrolls.sort((a, b) => b.month.localeCompare(a.month));
 
@@ -879,9 +910,9 @@ export class PayrollUseCases {
       disputedAt: p.disputedAt,
       disputeReason: p.disputeReason,
       disputedByUserId: p.disputedByUserId,
-      isPaid: p.status === 'PAID' || p.status === 'PARTIALLY_PAID',
-      canAcknowledge: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED',
-      canDispute: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED'
+      isPaid: p.amountPaid > 0 && (p.status === 'PAID' || p.status === 'PARTIALLY_PAID'),
+      canAcknowledge: p.amountPaid > 0 && (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED' && p.acknowledgementStatus !== 'UNDER_REVIEW',
+      canDispute: p.amountPaid > 0 && (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED' && p.acknowledgementStatus !== 'UNDER_REVIEW'
     }));
   }
 
@@ -897,6 +928,8 @@ export class PayrollUseCases {
       signature?: string;
       ipAddress?: string;
       userAgent?: string;
+      expectedAmountPaid?: number;
+      expectedPaymentReference?: string;
     }
   ) {
     if (!user || !user.userId) {
@@ -908,14 +941,9 @@ export class PayrollUseCases {
       throw new NotFoundError('Payroll Record', payrollId);
     }
 
-    // Strict ownership verification: teacher can only acknowledge their own record
-    const teacher = await this.teacherRepository.findByUserId(user.userId);
-    const authorizedTeacherId = teacher ? teacher.id : null;
-
-    if (payroll.teacherId !== authorizedTeacherId && payroll.teacherId !== user.userId) {
-      throw new ForbiddenError(
-        'Access denied: You are not authorized to view or acknowledge salary records belonging to another staff member.'
-      );
+    const ownerIds = await this.salaryOwnerIds(user);
+    if (payroll.schoolId !== user.schoolId || !ownerIds.has(payroll.teacherId)) {
+      throw new ForbiddenError('Access denied: Salary records belong to another staff member or school.');
     }
 
     // State rule: do not allow acknowledgement of unpaid or pending records
@@ -932,7 +960,13 @@ export class PayrollUseCases {
       );
     }
 
-    const amountPaid = payroll.amountPaid > 0 ? payroll.amountPaid : payroll.netSalary;
+    if (payroll.acknowledgementStatus === 'UNDER_REVIEW') throw new ConflictError('This payment is under review. Accounts must resolve the discrepancy before it can be acknowledged.');
+    if (dto.method && !['PORTAL_AUTH','DIGITAL_SIGNATURE'].includes(dto.method)) throw new ValidationError('Use portal authentication or a digital signature. SMS OTP verification is not configured.');
+    if (dto.method === 'DIGITAL_SIGNATURE' && !dto.signature?.trim()) throw new ValidationError('A digital signature is required.');
+    if (dto.signature && dto.signature.length > 1000000) throw new ValidationError('The signature is too large.');
+    if ((dto.expectedAmountPaid !== undefined && dto.expectedAmountPaid !== payroll.amountPaid) || (dto.expectedPaymentReference !== undefined && dto.expectedPaymentReference !== (payroll.paymentReference || ''))) throw new ConflictError('This salary payment changed. Refresh the record and review the latest payment before acknowledging.');
+    const amountPaid = payroll.amountPaid;
+    if (!Number.isFinite(amountPaid) || amountPaid <= 0) throw new ValidationError('A positive salary disbursement must be recorded before acknowledgement.');
     const defaultStatement = `I, ${payroll.teacherName}, hereby confirm receipt of salary payment of KES ${amountPaid.toLocaleString()} for the ${payroll.month} payroll period (Payment Ref: ${payroll.paymentReference || 'N/A'}).`;
     const finalStatement = dto.statement && dto.statement.trim().length >= 10 ? dto.statement.trim() : defaultStatement;
 
@@ -965,6 +999,8 @@ export class PayrollUseCases {
               teacherId: payroll.teacherId,
               month: payroll.month,
               amountPaid,
+              statement: finalStatement,
+              paymentReference: payroll.paymentReference,
               ipAddress: dto.ipAddress,
               method: dto.method || 'PORTAL_AUTH'
             }
@@ -1014,14 +1050,9 @@ export class PayrollUseCases {
       throw new NotFoundError('Payroll Record', payrollId);
     }
 
-    // Strict ownership verification: teacher can only dispute their own record
-    const teacher = await this.teacherRepository.findByUserId(user.userId);
-    const authorizedTeacherId = teacher ? teacher.id : null;
-
-    if (payroll.teacherId !== authorizedTeacherId && payroll.teacherId !== user.userId) {
-      throw new ForbiddenError(
-        'Access denied: You are not authorized to dispute salary records belonging to another staff member.'
-      );
+    const ownerIds = await this.salaryOwnerIds(user);
+    if (payroll.schoolId !== user.schoolId || !ownerIds.has(payroll.teacherId)) {
+      throw new ForbiddenError('Access denied: Salary records belong to another staff member or school.');
     }
 
     // State rule: only paid/disbursed records can be disputed

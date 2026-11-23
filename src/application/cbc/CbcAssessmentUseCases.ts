@@ -170,6 +170,7 @@ export class CBCAssessmentUseCases {
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
     if (!this.guardianRepository || !this.studentRepository) return [];
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      permission: 'academics',
       userId,
       guardianRepository: this.guardianRepository,
       studentRepository: this.studentRepository,

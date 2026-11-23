@@ -95,12 +95,14 @@ export class AuthUseCases {
       UserRole.DEPUTY_HEAD_TEACHER,
       UserRole.BURSAR,
       UserRole.ACCOUNTANT,
+      UserRole.TEACHER,
       UserRole.ADMISSIONS
     ];
     if (dto.role && privilegedRoles.includes(dto.role)) {
       const existingSuperAdmins = await this.userRepository.findAll({ role: UserRole.SUPER_ADMIN });
       const existingAdmins = await this.userRepository.findAll({ role: UserRole.ADMIN });
-      const hasExistingAdmin = existingSuperAdmins.length > 0 || existingAdmins.length > 0;
+      const existingSchoolAdmins = await this.userRepository.findAll({role:UserRole.SCHOOL_ADMIN});
+      const hasExistingAdmin = existingSuperAdmins.length > 0 || existingAdmins.length > 0 || existingSchoolAdmins.length > 0;
       if (hasExistingAdmin) {
         throw new ForbiddenError('Self-registration is not allowed for privileged administrative roles.');
       }

@@ -1,4 +1,4 @@
-import { weeklySchemeDoc, weeklySchemePDF } from '../exports/WeeklySchemeExport';
+import { weeklySchemeDoc, weeklySchemePDF, weeklyMonitoringDoc, weeklyMonitoringPDF } from '../exports/WeeklySchemeExport';
 import { Request,Response,NextFunction } from 'express';
 import { z } from 'zod';
 import { AppContainer } from '../../container';
@@ -34,12 +34,13 @@ export class CalendarPlanningController {
  reflection=this.handle(async(req,a)=>this.c.curriculumUseCases.updateLessonPlanReflection(String(req.params.id),z.object({reflection:z.string().max(10000)}).parse(req.body).reflection,a));
  exportWeekly=async(req:Request,res:Response,next:NextFunction)=>{try{
   const format=z.enum(['pdf','doc']).parse(req.query.format);
+  const monitoring=z.enum(['scheme','monitoring']).default('scheme').parse(req.query.view)==='monitoring';
   const data=await this.c.termAllocations.weekly((req as any).user,String(req.params.id));
-  if(data.scheme.status==='APPROVED'&&data.scheme.planningState?.approvedEntryIds){const approved=new Set(data.scheme.planningState.approvedEntryIds);data.weeks=data.weeks.map(week=>({...week,lessons:week.lessons.filter((lesson:any)=>approved.has(lesson.entry?.id))})).filter(week=>week.lessons.length);}
+  if(!monitoring&&data.scheme.status==='APPROVED'&&data.scheme.planningState?.approvedEntryIds){const approved=new Set(data.scheme.planningState.approvedEntryIds);data.weeks=data.weeks.map(week=>({...week,lessons:week.lessons.filter((lesson:any)=>approved.has(lesson.entry?.id))})).filter(week=>week.lessons.length);}
   res.setHeader('Cache-Control','private, no-store');
-  res.setHeader('Content-Disposition',`attachment; filename="Schemes_of_Work.${format==='doc'?'docx':format}"`);
+  res.setHeader('Content-Disposition',`attachment; filename="${monitoring?'Weekly_Syllabus_Monitoring_Register':'Schemes_of_Work'}.${format==='doc'?'docx':format}"`);
   res.type(format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  res.send(format==='pdf'?weeklySchemePDF(data):weeklySchemeDoc(data));
+  res.send(monitoring?(format==='pdf'?weeklyMonitoringPDF(data):weeklyMonitoringDoc(data)):(format==='pdf'?weeklySchemePDF(data):weeklySchemeDoc(data)));
  }catch(e){next(e);}};
  proposals=this.handle(async(req,a)=>this.c.curriculumProposals.list(a,String(req.query.learningAreaId||'')));
  reviewProposal=this.handle(async(req,a)=>{const b=z.object({id:z.string(),revision:z.number().int().min(0),approved:z.boolean(),remarks:z.string().min(1)}).parse(req.body);return this.c.curriculumProposals.review(a,String(req.query.learningAreaId||''),b.id,b.revision,b.approved,b.remarks);});
@@ -114,7 +115,7 @@ export class CalendarPlanningController {
       const entry=rowData.entries.find((e:any)=>!e.archivedAt&&e.slotId===slot.id);
       const matching=plans.filter((p:any)=>entry&&p.schemeOfWorkEntryId===entry.id&&p.lessonDate===slot.date&&p.lessonTime===`${slot.startTime}-${slot.endTime}`);
       const isPlanned=(p:any)=>Boolean(p.strand?.trim()&&p.subStrand?.trim()&&p.specificLearningOutcomes?.some((x:string)=>x.trim())&&p.steps?.length&&p.steps.every((step:any)=>step.teacherActivities?.trim()&&step.learnerActivities?.trim()&&step.durationMinutes>0)&&p.steps.reduce((n:number,step:any)=>n+step.durationMinutes,0)===p.durationMinutes);
-      const taught=work.some((record:any)=>entry&&record.classRoomId===row.classRoomId&&(record.streamId||'')===(row.streamId||'')&&record.learningAreaId===row.learningAreaId&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry?.id&&record.planningLink?.slotId===slot.id&&record.lessonDate===slot.date&&record.status==='APPROVED'&&record.isOfficialCoverage&&(!record.reflectionData?.teachingStatus||record.reflectionData.teachingStatus==='COMPLETED'));
+      const taught=work.some((record:any)=>entry&&record.classRoomId===row.classRoomId&&(record.streamId||'')===(row.streamId||'')&&record.learningAreaId===row.learningAreaId&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry?.id&&record.planningLink?.slotId===slot.id&&record.status==='APPROVED'&&record.isOfficialCoverage&&(!record.reflectionData?.teachingStatus||record.reflectionData.teachingStatus==='COMPLETED'));
       return {weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,date:slot.date,strandTitle:entry?.strandTitle,subStrandTitle:entry?.subStrandTitle,statuses:{planned:matching.some((p:any)=>isPlanned(p)),reported:work.some((record:any)=>entry&&record.planningLink?.schemeId===row.id&&record.planningLink?.schemeEntryId===entry.id&&['SUBMITTED','APPROVED'].includes(record.status)),taught,reflection:matching.some((p:any)=>Boolean(p.teacherSelfReflection?.trim()))}};
      });
     }catch(e){if(!(e instanceof ConflictError))throw e;}

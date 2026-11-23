@@ -41,12 +41,14 @@ export type TabType =
   | 'archived-records'
   | 'library'
   | 'announcements'
+  | 'staff-messages'
   | 'payroll'
   | 'clinic'
   | 'inventory'
   | 'discipline'
   | 'broadsheets'
   | 'occurrence-records'
+  | 'syllabus-coverage-plan'
   | 'curriculum-tracker'
   | 'scheme-of-work-builder'
   | 'fee-deadline-banner'
@@ -3364,3 +3366,9 @@ export interface WebAuthnUserStatus {
   deviceLabels: string[];
   deviceTypes: string[];
 }
+
+export interface StaffContact { id: string; name: string; role: UserRole; isActive: boolean }
+export interface StaffMessage { id: string; schoolId: string; senderId: string; recipientId: string; body: string; createdAt: string; readAt: string | null }
+export interface StaffConversation { peerId: string; peer: StaffContact; lastMessage: StaffMessage; unreadCount: number }
+export interface StaffInbox { conversations: StaffConversation[]; unreadCount: number }
+export interface StaffMessagePage { messages: StaffMessage[]; hasMore: boolean; nextCursor: string | null }

@@ -48,7 +48,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const [invoiceGradeFilter, setInvoiceGradeFilter] = useState('ALL');
 
   // Hanging Invoice Deletion state
-  const canManageInvoices = !isGuardian;
+  const canManageInvoices = !isGuardian && [UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.BURSAR,UserRole.ACCOUNTANT].includes(effectiveRole as UserRole);
   const [invoiceToDelete, setInvoiceToDelete] = useState<StudentInvoice | null>(null);
   const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
     return () => { cancelled = true; };
   }, [user?.id, isGuardian]);
 
-  const loadData = async () => {
+  const loadData = async (isCancelled: () => boolean = () => false) => {
     setLoading(true);
     try {
       const [invRes, summaryRes, schoolRes, fwdRes] = await Promise.all([
@@ -133,6 +133,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         apiService.getForwardedTransactions().catch(() => null),
       ]);
 
+      if(isCancelled())return;
       if (invRes?.data && Array.isArray(invRes.data)) {
         setInvoices(invRes.data);
       }
@@ -148,13 +149,17 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
     } catch (err) {
       console.error('Failed to load finance data:', err);
     } finally {
-      setLoading(false);
+      if(!isCancelled())setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    let cancelled=false;
+    setInvoices([]);setFinanceSummary(null);setForwardedTxs([]);setSelectedTx(null);
+    setIsRecordPayOpen(false);setIsGenInvoicesOpen(false);setIsInvoiceDetailsOpen(false);
+    void loadData(()=>cancelled);
+    return()=>{cancelled=true;};
+  }, [user?.id,isGuardian]);
 
   const handlePayInvoice = (inv: StudentInvoice) => {
     setSelectedInvoiceForPay(inv);

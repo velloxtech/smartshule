@@ -1678,6 +1678,9 @@ export class StudentUseCases {
     const { parentUserId, studentIds, relationship = 'PARENT', isPrimary = true, canViewAcademics = true, canViewFinances = true, requestingUser } = dto;
     const parentUser = await this.userRepository.findById(parentUserId);
     if (!parentUser) throw new NotFoundError('Parent User', parentUserId);
+    if(requestingUser && (![UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.ADMISSIONS].includes(requestingUser.role) || !requestingUser.schoolId || parentUser.schoolId!==requestingUser.schoolId))throw new ForbiddenError('Parent linking requires an authorized administrator in the same school.');
+    for(const id of studentIds){const student=await this.studentRepository.findById(id);if(!student||student.schoolId!==parentUser.schoolId)throw new ForbiddenError('The parent and learner must belong to the same school.');}
+
 
     let guardian = await this.guardianRepository.findByUserId(parentUser.id);
     if (!guardian) {
@@ -1691,13 +1694,7 @@ export class StudentUseCases {
       await this.guardianRepository.save(guardian);
     }
 
-    // Resolve any duplicate guardian accounts with identical phone
-    const effectivePhone = parentUser.phone;
-    let siblingGuardians: Guardian[] = [];
-    if (effectivePhone) {
-      const allG = await this.guardianRepository.findAll();
-      siblingGuardians = allG.filter((g: any) => PhoneUtils.areMatches(g.emergencyContact, effectivePhone));
-    }
+    // Duplicate-phone accounts require an explicit administrative link of their own.
 
     const pool = (this.studentRepository as any).pool;
     const linkedResults = [];
@@ -1706,19 +1703,14 @@ export class StudentUseCases {
       const student = await this.studentRepository.findById(studentId);
       if (!student) continue;
 
+      if(this.studentRepository.saveParentPermissions)await this.studentRepository.saveParentPermissions(parentUser.id,student.id,student.schoolId,{canViewFinances,canViewAcademics});
       student.addGuardian(guardian.id);
       guardian.linkStudent(student.id);
-
-      for (const sg of siblingGuardians) {
-        student.addGuardian(sg.id);
-        sg.linkStudent(student.id);
-        await this.guardianRepository.update(sg);
-      }
 
       await this.studentRepository.update(student);
       await this.guardianRepository.update(guardian);
 
-      if (pool) {
+      if (pool && !this.studentRepository.saveParentPermissions) {
         try {
           await pool.query(
             `INSERT INTO student_parent_links (
@@ -1745,29 +1737,6 @@ export class StudentUseCases {
             ]
           );
 
-          // Also mirror for sibling user accounts
-          for (const sg of siblingGuardians) {
-            if (sg.userId && sg.userId !== parentUser.id) {
-              await pool.query(
-                `INSERT INTO student_parent_links (
-                  id, school_id, parent_user_id, guardian_id, student_id, relationship_type, is_primary, can_view_academics, can_view_finances, created_by_user_id
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                ON CONFLICT (school_id, parent_user_id, student_id) DO NOTHING`,
-                [
-                  `link-${IdGenerator.generate()}`,
-                  student.schoolId || parentUser.schoolId || 'school-001',
-                  sg.userId,
-                  sg.id,
-                  student.id,
-                  relationship,
-                  isPrimary,
-                  canViewAcademics,
-                  canViewFinances,
-                  requestingUser?.userId || null
-                ]
-              );
-            }
-          }
         } catch (dbErr) {
           console.warn('student_parent_links write skipped:', dbErr);
         }
@@ -1917,6 +1886,8 @@ export class StudentUseCases {
 
     const student = await this.studentRepository.findById(studentId);
     if (!student) throw new NotFoundError('Student', studentId);
+    if(dto.requestingUser && (![UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.ADMISSIONS].includes(dto.requestingUser.role) || parentUser.schoolId!==dto.requestingUser.schoolId || student.schoolId!==dto.requestingUser.schoolId))throw new ForbiddenError('Parent unlinking requires an authorized administrator in the same school.');
+
 
     const guardian = await this.guardianRepository.findByUserId(parentUser.id);
     if (guardian) {
@@ -1925,8 +1896,10 @@ export class StudentUseCases {
       student.removeGuardian(guardian.id);
     }
 
+    student.removeGuardian(parentUser.id);
+    await this.studentRepository.deleteParentPermissions?.(parentUser.id,student.id);
     const pool = (this.studentRepository as any).pool;
-    if (pool) {
+    if (pool && !this.studentRepository.deleteParentPermissions) {
       try {
         await pool.query(
           `DELETE FROM student_parent_links WHERE parent_user_id = $1 AND student_id = $2`,
@@ -2064,6 +2037,9 @@ export class StudentUseCases {
       userRepository: this.userRepository
     });
     const childIds = res.studentIds;
+    const permissions = await this.studentRepository.findParentPermissions?.(userId) || [];
+    const deniedFinance = new Set(permissions.filter(p=>!p.canViewFinances).map(p=>p.studentId));
+    const deniedAcademics = new Set(permissions.filter(p=>!p.canViewAcademics).map(p=>p.studentId));
     let guardian = res.guardian;
     const user = await this.userRepository.findById(userId);
 
@@ -2203,7 +2179,7 @@ export class StudentUseCases {
             statusLabel,
             isCleared: Boolean(sp) || (hasInvoices && calculatedBalance <= 0),
             isSponsored: !!sp,
-            sponsorship: sp,
+            sponsorship: deniedFinance.has(s.id) ? null : sp,
             overpayment: totalAvailableCredit,
             creditBalance: totalAvailableCredit,
             availableCredit: sp ? 0 : Math.round(availableCredit * 100) / 100,
@@ -2331,15 +2307,17 @@ export class StudentUseCases {
 
         return {
           ...studentWithAcademics,
+          canViewFinances: !deniedFinance.has(s.id),
+          canViewAcademics: !deniedAcademics.has(s.id),
           isSponsored: !!sp,
-          sponsorship: sp,
+          sponsorship: deniedFinance.has(s.id) ? null : sp,
           isChargeExempt: !!sp,
-          feeBalance: feeInfo.balance,
-          creditBalance: feeInfo.creditBalance,
-          fee: feeInfo,
-          CBC: CBCSummary,
+          feeBalance: deniedFinance.has(s.id) ? null : feeInfo.balance,
+          creditBalance: deniedFinance.has(s.id) ? null : feeInfo.creditBalance,
+          fee: deniedFinance.has(s.id) ? null : feeInfo,
+          CBC: deniedAcademics.has(s.id) ? null : CBCSummary,
           attendance: attendanceStats,
-          lunch: lunchInfo
+          lunch: deniedFinance.has(s.id) ? null : lunchInfo
         };
       })
     );

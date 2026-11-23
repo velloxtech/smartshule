@@ -372,20 +372,6 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
     ],
     items: [
       {
-        id: 'learning-areas',
-        label: 'Subjects & Learning Areas',
-        icon: 'menu_book',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.HEAD_TEACHER,
-          UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.TEACHER,
-          UserRole.STUDENT,
-        ],
-      },
-      {
         id: 'formative-assessments',
         label: 'Formative (Continuous / CATs)',
         icon: 'fact_check',
@@ -508,9 +494,23 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
         ],
       },
       {
-        id: 'curriculum-tracker',
-        label: 'Syllabus Coverage Plan',
-        icon: 'fact_check',
+        id: 'learning-areas',
+        label: 'Learning Areas',
+        icon: 'menu_book',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.STUDENT,
+        ],
+      },
+      {
+        id: 'syllabus-coverage-plan',
+        label: 'Syllabus Planning',
+        icon: 'calendar_add_on',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -550,6 +550,19 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
         id: 'records-of-work',
         label: 'Records of Work',
         icon: 'auto_stories',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
+      {
+        id: 'curriculum-tracker',
+        label: 'Coverage Tracking',
+        icon: 'fact_check',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -860,6 +873,12 @@ export const ALL_NAV_MODULES: NavModuleDef[] = [
     ],
     items: [
       {
+        id: 'staff-messages',
+        label: 'Staff Messages',
+        icon: 'forum',
+        allowedRoles: [UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.ADMISSIONS,UserRole.BURSAR,UserRole.ACCOUNTANT,UserRole.TEACHER],
+      },
+      {
         id: 'announcements',
         label: 'Notice Board & Circulars',
         icon: 'campaign',
@@ -1104,7 +1123,7 @@ export function isTabPermitted(tab: TabType, role?: UserRole): boolean {
     'teachers': 'teachers-staff',
     'staff-directory': 'teachers-staff',
     'cashflow-ledger': 'financial-reports',
-    'scheme-of-work-builder': 'curriculum-tracker',
+    'scheme-of-work-builder': 'schemes-lesson-plans',
     'capitation-income': 'financial-reports',
     'assessments': 'formative-assessments',
     'complaints': 'concerns',

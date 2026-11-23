@@ -276,6 +276,7 @@ export class AttendanceUseCases {
     const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean((requestingUser as any)?.isGuardianRoute);
     if (isParent && requestingUser) {
       const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      permission: 'academics',
         userId: requestingUser.userId,
         guardianRepository: this.guardianRepository,
         studentRepository: this.studentRepository,

@@ -10,7 +10,11 @@ export interface StudentFilterCriteria {
   guardianId?: string;
 }
 
+export interface ParentLearnerPermission { studentId: string; canViewFinances: boolean; canViewAcademics: boolean }
 export interface IStudentRepository {
+  deleteParentPermissions?(userId:string,studentId:string):Promise<void>;
+  findParentPermissions?(userId:string):Promise<ParentLearnerPermission[]>;
+  saveParentPermissions?(userId:string,studentId:string,schoolId:string,permissions:{canViewFinances:boolean;canViewAcademics:boolean}):Promise<void>;
   findById(id: string): Promise<Student | null>;
   findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<Student | null>;
   findByUpiNumber(upiNumber: string): Promise<Student | null>;

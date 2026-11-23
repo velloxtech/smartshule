@@ -4,7 +4,7 @@ import { TimetableUseCases } from '../../../application/timetables/TimetableUseC
 import { DayOfWeek } from '../../../core/domain/timetable/Timetable';
 
 export const CreateTimetableSchema = z.object({
-  schoolId: z.string().optional().default('school-001'),
+  schoolId: z.string().optional(),
   academicYearId: z.string().optional(),
   termId: z.string().optional(),
   classRoomId: z.string().min(1),
@@ -12,6 +12,9 @@ export const CreateTimetableSchema = z.object({
 });
 
 export const AddSlotSchema = z.object({
+  slotId: z.string().optional(),
+  schoolId: z.string().optional(),
+  academicYearId: z.string().optional(),
   timetableId: z.string().optional(),
   classRoomId: z.string().optional(),
   streamId: z.string().optional(),
@@ -34,7 +37,7 @@ export const SaveGridSchema = z.object({
   timetableId: z.string().optional(),
   streamId: z.string().optional(),
   termId: z.string().optional(),
-  schoolId: z.string().optional().default('school-001'),
+  schoolId: z.string().optional(),
   academicYearId: z.string().optional(),
   classRoomId: z.string().optional(),
   periods: z.array(z.any()).optional(),
@@ -45,50 +48,51 @@ export const SaveGridSchema = z.object({
 export class TimetableController {
   constructor(private readonly timetableUseCases: TimetableUseCases) {}
 
-  public createTimetable = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const timetable = await this.timetableUseCases.createTimetable(req.body);
-      return res.status(201).json({ success: true, message: 'Timetable initialized', data: timetable });
-    } catch (err) {
-      next(err);
-    }
-  };
+  // Lines 47-89 in TimetableController.ts:
+public createTimetable = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const timetable = await this.timetableUseCases.createTimetable(req.body, (req as any).user);
+    return res.status(201).json({ success: true, message: 'Timetable initialized', data: timetable });
+  } catch (err) {
+    next(err);
+  }
+};
 
-  public addSlot = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const timetable = await this.timetableUseCases.addOrUpdateSlot(req.body);
-      return res.status(200).json({ success: true, message: 'Slot assigned successfully', data: timetable });
-    } catch (err) {
-      next(err);
-    }
-  };
+public addSlot = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const timetable = await this.timetableUseCases.addOrUpdateSlot(req.body, (req as any).user);
+    return res.status(200).json({ success: true, message: 'Slot assigned successfully', data: timetable });
+  } catch (err) {
+    next(err);
+  }
+};
 
-  public saveGrid = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const timetable = await this.timetableUseCases.saveTimetableGrid(req.body);
-      return res.status(200).json({
-        success: true,
-        message: 'Timetable grid updated and saved successfully',
-        data: timetable
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
+public saveGrid = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const timetable = await this.timetableUseCases.saveTimetableGrid(req.body, (req as any).user);
+    return res.status(200).json({
+      success: true,
+      message: 'Timetable grid updated and saved successfully',
+      data: timetable
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
-  public deleteSlot = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { timetableId, slotId } = req.params;
-      const timetable = await this.timetableUseCases.deleteSlot(timetableId as string, slotId as string);
-      return res.status(200).json({
-        success: true,
-        message: 'Slot removed from timetable',
-        data: timetable
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
+public deleteSlot = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { timetableId, slotId } = req.params;
+    const timetable = await this.timetableUseCases.deleteSlot(timetableId as string, slotId as string, (req as any).user);
+    return res.status(200).json({
+      success: true,
+      message: 'Slot removed from timetable',
+      data: timetable
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
   public getStreamTimetable = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -1,3 +1,4 @@
+import { curriculumPageForTab } from '../utils/curriculumWorkflow';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TabType, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -42,15 +43,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [hoveredModuleId, setHoveredModuleId] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<any>(null);
 
+  const navigationTab = curriculumPageForTab(currentTab) || currentTab;
+
   // Find module that owns currentTab
   const activeModuleId = useMemo(() => {
     for (const mod of navModules) {
-      if (mod.items.some((it) => it.id === currentTab)) {
+      if (mod.items.some((it) => it.id === navigationTab)) {
         return mod.id;
       }
     }
     return null;
-  }, [navModules, currentTab]);
+  }, [navModules, navigationTab]);
 
   // Expanded module state (Accordion: only one expanded at a time)
   const [expandedModuleId, setExpandedModuleId] = useState<string | null>(() => {
@@ -310,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Collapsible Accordion Navigation Modules */}
             {collapsibleModules.map((module) => {
               const isExpanded = expandedModuleId === module.id;
-              const hasActiveChild = module.items.some((it) => it.id === currentTab);
+              const hasActiveChild = module.items.some((it) => it.id === navigationTab);
               const moduleBadge = getModuleBadge(module);
 
               return (
@@ -390,7 +393,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                       <div className="space-y-1 max-h-[360px] overflow-y-auto">
                         {module.items.map((item) => {
-                          const isActive = currentTab === item.id;
+                          const isActive = navigationTab === item.id;
                           const itemBadge = getItemBadge(item, isActive);
                           return (
                             <button
@@ -422,7 +425,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {(!isCompact || mobileOpen) && isExpanded && (
                     <div className="mt-1 ml-4 pl-2.5 border-l-2 border-primary/25 space-y-1 py-1 transition-all">
                       {module.items.map((item) => {
-                        const isActive = currentTab === item.id;
+                        const isActive = navigationTab === item.id;
                         const itemBadge = getItemBadge(item, isActive);
 
                         return (

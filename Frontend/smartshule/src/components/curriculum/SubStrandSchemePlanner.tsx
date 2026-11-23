@@ -3,7 +3,6 @@ import { canReviewCurriculum } from '../../utils/curriculumPermissions';
 import React, { useEffect, useRef, useState } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
 
 const fields = {
   specificLearningOutcomes: 'Specific learning outcomes',
@@ -46,7 +45,6 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [source, setSource] = useState<any>();
   const [reviewSubStrand, setReviewSubStrand] = useState('');
   const requestId = useRef(0);
   const query = new URLSearchParams(Object.entries(scope).filter(([, value]) => value !== undefined && value !== '') as [string, string][]).toString();
@@ -167,11 +165,11 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
           <div><h3 className="font-bold">{selected.entry.subStrandTitle} · Teaching session {lessons.findIndex((lesson: any) => lesson.entry?.id === entryId) + 1}</h3><p className="mt-1 text-sm">{selected.entry.strandTitle} / {selected.entry.subStrandTitle}</p></div>
           {Object.entries(fields).map(([key, label]) => <label key={key} className="block text-sm font-semibold">{label}<textarea aria-label={`Scheme ${label.toLowerCase()}`} className="ui-field mt-1 min-h-24 font-normal" disabled={!entryEditable || busy} value={content[key as keyof Content]} onChange={event => { setContent(old => ({ ...old, [key]: event.target.value })); setDirty(true); }} /></label>)}
           {entryEditable && <button className="ui-button ui-button-primary" disabled={busy || !dirty} onClick={saveLesson}>Save teaching session</button>}
-          {selectedApproved && teacher && !selected.lessonPlan && <button className="ui-button ui-button-primary" onClick={() => setSource({ ...selected.entry, ...scope, schemeOfWorkEntryId: selected.entry.id, lessonDate: selected.date, lessonTime: `${selected.startTime}-${selected.endTime}`, weekNumber: selected.weekNumber, lessonNumber: selected.lessonNumber })}>Create lesson plan from scheme lesson</button>}
+          {selectedApproved && teacher && !selected.lessonPlan && <button className="ui-button ui-button-primary" onClick={() => onNavigateTab?.('lesson-plans')}>Continue in Lesson Plans →</button>}
           {selected.lessonPlan && <button className="ui-button" onClick={() => onNavigateTab?.('lesson-plans')}>Open lesson plans</button>}
         </div>}
       </>}
     </>}
-    <CreateLessonPlanModal isOpen={Boolean(source)} sourceEntry={source} onClose={() => setSource(undefined)} onPlanCreated={() => { setSource(undefined); request(async () => { await refresh(); setNotice('Lesson plan draft saved from the approved scheme lesson.'); }); }} />
+
   </section>;
 }

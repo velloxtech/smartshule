@@ -68,7 +68,7 @@ export const CreateLessonPlanSchema = z.object({
   classRoomId: z.string().min(1),
   streamId: z.string().optional(),
   lessonDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  durationMinutes: z.number().int().min(15).max(120).default(40),
+  durationMinutes: z.number().int().min(1).max(240).optional(),
   rollBoys: z.number().int().optional(),
   rollGirls: z.number().int().optional(),
   strand: z.string().min(1),

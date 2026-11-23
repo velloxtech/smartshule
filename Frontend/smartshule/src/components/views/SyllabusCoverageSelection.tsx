@@ -1,5 +1,4 @@
 import React from 'react';
-import type { AnyObject } from '../../types';
 
 interface SelectionProps {
   step: 'class' | 'subject' | 'coverage';

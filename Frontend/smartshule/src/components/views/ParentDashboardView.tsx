@@ -85,6 +85,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   const children = portalData?.children || [];
   const currentChild = children[selectedChildIndex] || null;
+  const canViewFinances = currentChild?.canViewFinances !== false;
 
   const loadChildEdiary = async (studentId: string) => {
     if (!studentId) {
@@ -429,6 +430,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           )}
 
+          {canViewFinances && <>
           {/* Prominent Fee Payment Notice & Remittance Instructions */}
           {isSponsored ? (
             <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
@@ -596,6 +598,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           ) : null}
 
+          </>}
+
           {/* Quick Shortcuts for Parent Portal */}
           {onNavigateTab && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -679,6 +683,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               </span>
             </div>
 
+            {canViewFinances && <>
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                 {isSponsored ? 'Fee Status' : isUnbilled ? 'Term Billing Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
@@ -730,8 +735,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 Official Paybill: 522533 · Acc: 8048859#{currentChild.firstName} {currentChild.lastName} · {resolveGradeName(currentChild.gradeLevel)} (Name &amp; Grade)
               </span>
             </div>
+            </>}
           </div>
 
+          {canViewFinances && <>
           {/* Automatic Fee Credit Utilization & Breakdown for Parents */}
           {(Number(currentChildFee?.totalCreditApplied) > 0 || Number(currentChildFee?.availableCredit) > 0) && (
             <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
@@ -851,6 +858,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               )}
             </div>
           )}
+
+          </>}
 
           {/* Active Daily Homefun & Communication Diary (E-Diary) for Selected Learner */}
           <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
@@ -1052,6 +1061,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
           {/* Two-Column Section: Fee Statement & Continuous Assessments */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {canViewFinances ? <>
             {/* Fee Statement & Invoices */}
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
               <div className="flex items-center justify-between border-b border-surface-container pb-3">
@@ -1161,6 +1171,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </div>
               )}
             </div>
+
+            </> : <div className="rounded-xl border border-outline-variant/30 p-5 text-sm text-on-surface-variant">Fee information is not available to this account. Contact the school if you need access.</div>}
 
             {/* Continuous Assessment Evaluations & CBC Formative Progress */}
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">

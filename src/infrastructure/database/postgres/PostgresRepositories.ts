@@ -1841,6 +1841,16 @@ export class PostgresUserRepository implements IUserRepository {
 }
 
 export class PostgresStudentRepository implements IStudentRepository {
+  async deleteParentPermissions(userId:string,studentId:string) { await this.pool.query('DELETE FROM student_parent_links WHERE parent_user_id=$1 AND student_id=$2',[userId,studentId]); }
+  async findParentPermissions(userId:string) {
+    const rows=await this.pool.query('SELECT student_id,can_view_finances,can_view_academics FROM student_parent_links WHERE parent_user_id=$1',[userId]);
+    return rows.rows.map(row=>({studentId:row.student_id,canViewFinances:row.can_view_finances!==false,canViewAcademics:row.can_view_academics!==false}));
+  }
+  async saveParentPermissions(userId:string,studentId:string,schoolId:string,permissions:{canViewFinances:boolean;canViewAcademics:boolean}) {
+    await this.pool.query(`INSERT INTO student_parent_links (id,school_id,parent_user_id,student_id,can_view_finances,can_view_academics)
+      VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (school_id,parent_user_id,student_id) DO UPDATE SET can_view_finances=EXCLUDED.can_view_finances,can_view_academics=EXCLUDED.can_view_academics,updated_at=NOW()`,
+      [IdGenerator.generate(),schoolId,userId,studentId,permissions.canViewFinances,permissions.canViewAcademics]);
+  }
   constructor(private pool: Pool) {}
   private mapRow(r: any): Student {
     return Student.create({

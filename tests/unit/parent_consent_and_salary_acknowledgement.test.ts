@@ -482,6 +482,58 @@ describe('SmartShule Parental Consent & Teacher Salary Payment Acknowledgement S
       await payrollRepo.savePayroll(draftPayroll);
     });
 
+    test('salary identity lookup includes exact login and staff-number records, but excludes foreign-school records', async () => {
+      for (const [id, owner, school] of [['legacy-login',teacherUser1.id,schoolId],['legacy-staff',teacher1.employeeNumber,schoolId],['foreign-record',teacher1.id,'foreign-school']]) {
+        await payrollRepo.savePayroll(PayrollRecord.create({...paidPayroll1.toJSON(),teacherId:owner,schoolId:school},id));
+      }
+      const actor={userId:teacherUser1.id,role:UserRole.TEACHER,schoolId};
+      const records=await payrollUseCases.getMySalaryRecords(actor);
+      expect(records.map(record=>record.id)).toEqual(expect.arrayContaining(['legacy-login','legacy-staff','pr-001']));
+      expect(records.some(record=>record.id==='foreign-record')).toBe(false);
+      await expect(payrollUseCases.acknowledgeSalaryReceipt('legacy-staff',actor,{})).resolves.toMatchObject({success:true});
+      await expect(payrollUseCases.acknowledgeSalaryReceipt('foreign-record',actor,{})).rejects.toThrow(ForbiddenError);
+      await expect(payrollUseCases.disputeSalaryPayment('foreign-record',actor,{reason:'Payment discrepancy'})).rejects.toThrow(ForbiddenError);
+      await expect(payrollUseCases.getMySalaryRecords({...actor,role:UserRole.PARENT})).rejects.toThrow(ForbiddenError);
+    });
+
+    test('ambiguous staff numbers cannot grant salary ownership', async () => {
+      await teacherRepo.save(Teacher.create({...teacher2.toJSON(),employeeNumber:teacher1.employeeNumber},teacher2.id));
+      await payrollRepo.savePayroll(PayrollRecord.create({...paidPayroll1.toJSON(),teacherId:teacher1.employeeNumber},'ambiguous-staff'));
+      const actor={userId:teacherUser1.id,role:UserRole.TEACHER,schoolId};
+      expect((await payrollUseCases.getMySalaryRecords(actor)).some(record=>record.id==='ambiguous-staff')).toBe(false);
+      await expect(payrollUseCases.acknowledgeSalaryReceipt('ambiguous-staff',actor,{})).rejects.toThrow(ForbiddenError);
+    });
+
+    test('changed payments, unverified OTP and missing digital signatures cannot be acknowledged', async () => {
+      const actor={userId:teacherUser1.id,role:UserRole.TEACHER,schoolId};
+      await expect(payrollUseCases.acknowledgeSalaryReceipt(paidPayroll1.id,actor,{expectedAmountPaid:100})).rejects.toThrow(ConflictError);
+      await expect(payrollUseCases.acknowledgeSalaryReceipt(paidPayroll1.id,actor,{method:'SMS_OTP'})).rejects.toThrow(ValidationError);
+      await expect(payrollUseCases.acknowledgeSalaryReceipt(paidPayroll1.id,actor,{method:'DIGITAL_SIGNATURE'})).rejects.toThrow(ValidationError);
+      await payrollUseCases.disputeSalaryPayment(paidPayroll1.id,actor,{reason:'Received amount differs'});
+      expect((await payrollUseCases.getMySalaryRecords(actor)).find(record=>record.id===paidPayroll1.id)).toMatchObject({canAcknowledge:false,canDispute:false});
+      await expect(payrollUseCases.acknowledgeSalaryReceipt(paidPayroll1.id,actor,{})).rejects.toThrow(ConflictError);
+    });
+
+    test('new instalments reopen acknowledgement, preserve the prior receipt in audit, and reversals clear the active receipt', async () => {
+      const partial=PayrollRecord.create({...paidPayroll1.toJSON(),status:'PARTIALLY_PAID',amountPaid:20000,balance:26790},'partial-payroll');
+      await payrollRepo.savePayroll(partial);
+      const actor={userId:teacherUser1.id,role:UserRole.TEACHER,schoolId};
+      await payrollUseCases.acknowledgeSalaryReceipt(partial.id,actor,{statement:'I confirm receipt of the first instalment.',signature:'David Ochieng'});
+      const finance={userId:'finance-user',role:UserRole.BURSAR,schoolId};
+      await payrollUseCases.recordSalaryPayment({payrollId:partial.id,amount:26790,paymentMethod:'MPESA',paymentReference:'SECOND-INSTALMENT'},finance);
+      expect(partial.toJSON()).toMatchObject({status:'PAID',amountPaid:46790,acknowledgementStatus:'AWAITING_ACKNOWLEDGEMENT'});
+      expect(partial.acknowledgedAt).toBeUndefined();
+      const logs=await systemLogRepo.find();
+      const paymentLog=logs.find(log=>log.action==='DISBURSE_PAYROLL');
+      expect((paymentLog?.toJSON().metadata as any)?.previousReceipt).toMatchObject({amountPaid:20000,signature:'David Ochieng'});
+      await payrollUseCases.acknowledgeSalaryReceipt(partial.id,actor,{});
+      partial.reversePayment('Payment returned');
+      expect(partial.toJSON()).toMatchObject({amountPaid:0,acknowledgementStatus:'UNACKNOWLEDGED'});
+      expect(partial.acknowledgementSignature).toBeUndefined();
+      partial.recordPayment(10000,'CASH','REISSUED');
+      expect(partial.acknowledgementStatus).toBe('AWAITING_ACKNOWLEDGEMENT');
+    });
+
     test('2a. Teacher can only view their own salary records, not records of other teachers', async () => {
       const records1 = await payrollUseCases.getMySalaryRecords({
         userId: teacherUser1.id,

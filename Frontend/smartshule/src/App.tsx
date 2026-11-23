@@ -1,5 +1,5 @@
 import {SchoolCalendarPlanView} from './components/views/SchoolCalendarPlanView';
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -40,7 +40,8 @@ const SummativeAssessmentsView = lazy(() => import('./components/views/Summative
 const StrandsView = lazy(() => import('./components/views/StrandsView').then(m => ({ default: m.StrandsView })));
 const ReportCardsView = lazy(() => import('./components/views/ReportCardsView').then(m => ({ default: m.ReportCardsView })));
 const CompetencyAnalyticsView = lazy(() => import('./components/views/CompetencyAnalyticsView').then(m => ({ default: m.CompetencyAnalyticsView })));
-const SchemesView = lazy(() => import('./components/views/SchemesView').then(m => ({ default: m.SchemesView })));
+const SchemesOfWorkView = lazy(() => import('./components/views/SchemesView').then(m => ({ default: m.SchemesOfWorkView })));
+const LessonPlansView = lazy(() => import('./components/views/SchemesView').then(m => ({ default: m.LessonPlansView })));
 const TimetableView = lazy(() => import('./components/views/TimetableView').then(m => ({ default: m.TimetableView })));
 const AttendanceRegisterView = lazy(() => import('./components/views/AttendanceRegisterView').then(m => ({ default: m.AttendanceRegisterView })));
 const FeeStructureView = lazy(() => import('./components/views/FeeStructureView').then(m => ({ default: m.FeeStructureView })));
@@ -70,7 +71,8 @@ const InventoryManagementView = lazy(() => import('./components/views/InventoryM
 const DisciplineClubsView = lazy(() => import('./components/views/DisciplineClubsView').then(m => ({ default: m.DisciplineClubsView })));
 const MasterBroadsheetView = lazy(() => import('./components/views/MasterBroadsheetView').then(m => ({ default: m.MasterBroadsheetView })));
 const OccurrenceBookView = lazy(() => import('./components/views/OccurrenceBookView').then(m => ({ default: m.OccurrenceBookView })));
-const CurriculumTrackerView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SyllabusCoveragePlanView })));
+const CoverageTrackingView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.CoverageTrackingView })));
+const SyllabusCoveragePlanView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({default:m.SyllabusCoveragePlanView})));
 const SchemeOfWorkBuilderView = lazy(() => import('./components/views/SyllabusCoveragePlanView').then(m => ({ default: m.SchemeOfWorkBuilderView })));
 const FeeDeadlineBannerManagementView = lazy(() => import('./components/views/FeeDeadlineBannerManagementView').then(m => ({ default: m.FeeDeadlineBannerManagementView })));
 const SponsoredStudentsView = lazy(() => import('./components/views/SponsoredStudentsView').then(m => ({ default: m.SponsoredStudentsView })));
@@ -80,6 +82,8 @@ const TeacherProfileView = lazy(() => import('./components/views/TeacherProfileV
 const ParentConsentView = lazy(() => import('./components/views/ParentConsentView').then(m => ({ default: m.ParentConsentView })));
 const AdminConsentManagementView = lazy(() => import('./components/views/AdminConsentManagementView').then(m => ({ default: m.AdminConsentManagementView })));
 const TeacherSalaryAcknowledgementView = lazy(() => import('./components/views/TeacherSalaryAcknowledgementView').then(m => ({ default: m.TeacherSalaryAcknowledgementView })));
+
+const StaffMessagesView = lazy(() => import('./components/views/StaffMessagesView').then(m => ({default:m.StaffMessagesView})));
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -103,6 +107,10 @@ export default function App() {
   const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren, updateUser, logout } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
+  const dataScopeKey = `${user?.id}:${user?.schoolId}:${effectiveRole}`;
+  const activeDataScope = useRef(dataScopeKey);
+  activeDataScope.current = dataScopeKey;
+  const [loadedDataScope,setLoadedDataScope] = useState(dataScopeKey);
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -286,6 +294,12 @@ export default function App() {
     }
   }, [isAuthenticated]);
 
+  useEffect(()=>{
+    setLoadedDataScope(dataScopeKey);
+    setStudents([]);setTeachers([]);setTransactions([]);setAssessments([]);setActivities([]);setTotalCollectedFee(0);
+    setRecordPaymentModalOpen(false);setForwardPaymentModalOpen(false);setOnboardTeacherModalOpen(false);
+  },[effectiveRole,user?.id,user?.schoolId]);
+
   // Role-Based Tab Guard: if active tab is forbidden for this role, bounce to dashboard
   useEffect(() => {
     if (effectiveRole && !isTabPermitted(currentTab, effectiveRole)) {
@@ -295,6 +309,9 @@ export default function App() {
 
   // Refresh students and attached fee balances
   const refreshStudentsAndFees = useCallback(async () => {
+    const requestScope=activeDataScope.current;
+    const commitStudents: typeof setStudents = value => {if(activeDataScope.current===requestScope)setStudents(value);};
+
     try {
       const isParentOnly = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
       if (isParentOnly) {
@@ -328,9 +345,9 @@ export default function App() {
             dateOfBirth: c.dateOfBirth,
             specialNeeds: c.specialNeeds,
           }));
-          setStudents(mappedChildren);
+          commitStudents(mappedChildren);
         } else {
-          setStudents([]);
+          commitStudents([]);
         }
         return;
       }
@@ -430,23 +447,35 @@ export default function App() {
             specialNeeds: st.specialNeeds,
           };
         });
-        setStudents(mappedStudents);
+        commitStudents(mappedStudents);
       } else {
-        setStudents([]);
+        commitStudents([]);
       }
     } catch {
-      setStudents([]);
+      commitStudents([]);
     }
-  }, [user]);
+  }, [user,effectiveRole]);
 
   // Sync with Backend API on Mount & Auth State Changes
   useEffect(() => {
+    let cancelled = false;
+    const guarded = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => (value: React.SetStateAction<T>) => {if(!cancelled)setter(value);};
+    const safeSetAssessments = guarded(setAssessments);
+    const safeSetBackendConnected = guarded(setBackendConnected);
+    const safeSetCurrentContext = guarded(setCurrentContext);
+    const safeSetCurrentTerm = guarded(setCurrentTerm);
+    const safeSetSchool = guarded(setSchool);
+    const safeSetStudents = guarded(setStudents);
+    const safeSetTeachers = guarded(setTeachers);
+    const safeSetTotalCollectedFee = guarded(setTotalCollectedFee);
+    const safeSetTransactions = guarded(setTransactions);
+
     async function syncBackend() {
       const isUp = await apiService.checkHealth();
-      setBackendConnected(isUp);
+      safeSetBackendConnected(isUp);
       if (isUp && isAuthenticated) {
-        const isFinanceOnly = user?.role === UserRole.BURSAR || user?.role === UserRole.ACCOUNTANT;
-        const isParentOnly = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+        const isFinanceOnly = effectiveRole === UserRole.BURSAR || effectiveRole === UserRole.ACCOUNTANT;
+        const isParentOnly = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
 
         try {
           const [ctxRes, schRes] = await Promise.all([
@@ -454,12 +483,12 @@ export default function App() {
             apiService.getSchool().catch(() => null),
           ]);
           if (ctxRes?.data) {
-            setCurrentContext(ctxRes.data);
+            safeSetCurrentContext(ctxRes.data);
             if (ctxRes.data.currentTerm?.name) {
-              setCurrentTerm(ctxRes.data.currentTerm.name);
+              safeSetCurrentTerm(ctxRes.data.currentTerm.name);
             }
           }
-          if (schRes?.data) setSchool(schRes.data);
+          if (schRes?.data) safeSetSchool(schRes.data);
 
           if (isParentOnly) {
             try {
@@ -486,18 +515,18 @@ export default function App() {
                   classroomId: c.classroomId,
                   academicYearId: c.academicYearId,
                 }));
-                setStudents(mappedChildren);
+                safeSetStudents(mappedChildren);
               } else {
-                setStudents([]);
+                safeSetStudents([]);
               }
             } catch {
-              setStudents([]);
+              safeSetStudents([]);
             }
           } else {
             await refreshStudentsAndFees();
           }
         } catch {
-          setStudents([]);
+          safeSetStudents([]);
         }
 
         if (!isFinanceOnly && !isParentOnly) {
@@ -517,12 +546,12 @@ export default function App() {
                 status: t.status || 'Active',
                 clockInTime: t.clockInTime || '--',
               }));
-              setTeachers(mappedTeachers);
+              safeSetTeachers(mappedTeachers);
             } else {
-              setTeachers([]);
+              safeSetTeachers([]);
             }
           } catch {
-            setTeachers([]);
+            safeSetTeachers([]);
           }
         }
 
@@ -546,12 +575,12 @@ export default function App() {
                 targetedCompetencies: f.targetedCompetencies,
                 valuesObserved: f.valuesObserved,
               }));
-              setAssessments(mappedAssessments);
+              safeSetAssessments(mappedAssessments);
             } else {
-              setAssessments([]);
+              safeSetAssessments([]);
             }
           } catch {
-            setAssessments([]);
+            safeSetAssessments([]);
           }
         }
         if (isParentOnly) {
@@ -574,9 +603,9 @@ export default function App() {
                 date: p.paymentDate || 'Today',
                 status: p.status === 'COMPLETED' ? 'Settled' : p.status,
               }));
-              setTransactions(mappedTxs);
+              safeSetTransactions(mappedTxs);
               const parentPaid = mappedTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-              setTotalCollectedFee(parentPaid);
+              safeSetTotalCollectedFee(parentPaid);
             }
           } catch {
             // Keep defaults
@@ -588,7 +617,7 @@ export default function App() {
               user?.role === UserRole.TEACHER ? Promise.resolve(null) : apiService.getPayments().catch(() => null),
             ]);
             if (analyticsData?.data?.finance?.totalCollected) {
-              setTotalCollectedFee(analyticsData.data.finance.totalCollected);
+              safeSetTotalCollectedFee(analyticsData.data.finance.totalCollected);
             }
             if (paymentsRes?.data && Array.isArray(paymentsRes.data) && paymentsRes.data.length > 0) {
               const mappedTxs: FeeTransaction[] = paymentsRes.data.map((p: any) => ({
@@ -607,7 +636,7 @@ export default function App() {
                 date: p.paymentDate || 'Today',
                 status: p.status === 'COMPLETED' ? 'Settled' : p.status,
               }));
-              setTransactions(mappedTxs);
+              safeSetTransactions(mappedTxs);
             }
           } catch {
             // Keep default 0
@@ -616,7 +645,8 @@ export default function App() {
       }
     }
     syncBackend();
-  }, [isAuthenticated]);
+    return () => {cancelled=true;};
+  }, [isAuthenticated,effectiveRole,user?.id,user?.schoolId]);
 
   // Quick Action / Deep Link Triggers
   const handleOpenPayment = (student?: Student) => {
@@ -1039,8 +1069,8 @@ export default function App() {
           onToggleMobile={() => setMobileSidebarOpen(true)}
           currentTerm={currentTerm}
           onChangeTerm={setCurrentTerm}
-          students={students}
-          teachers={teachers}
+          students={loadedDataScope===dataScopeKey?students:[]}
+          teachers={loadedDataScope===dataScopeKey?teachers:[]}
           backendConnected={backendConnected}
           onNavigateLanding={() => setAppView('landing')}
           onNavigateTab={(tab) => setCurrentTab(tab as any)}
@@ -1063,7 +1093,8 @@ export default function App() {
 
         {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
-          <Suspense fallback={<ViewLoadingSkeleton />}>
+          <Suspense key={`${user?.id}:${effectiveRole}`} fallback={<ViewLoadingSkeleton />}>
+          {isTabPermitted(currentTab,effectiveRole) && <>
           {currentTab === 'dashboard' && (
             (() => {
               if (isStaffWithChildren && activeViewMode === 'PARENT') {
@@ -1087,8 +1118,8 @@ export default function App() {
                 case UserRole.HEAD_TEACHER:
                   return (
                     <HeadTeacherDashboardView
-                      students={students}
-                      teachers={teachers}
+                      students={loadedDataScope===dataScopeKey?students:[]}
+                      teachers={loadedDataScope===dataScopeKey?teachers:[]}
                       onNavigateTab={(tab) => setCurrentTab(tab)}
                       onOpenUploadMarks={() => {
                         setUploadMarksInitialStudent(undefined);
@@ -1100,15 +1131,15 @@ export default function App() {
                 case UserRole.DEPUTY_HEAD_TEACHER:
                   return (
                     <DeputyDashboardView
-                      teachers={teachers}
+                      teachers={loadedDataScope===dataScopeKey?teachers:[]}
                       onNavigateTab={(tab) => setCurrentTab(tab)}
                     />
                   );
                 case UserRole.ADMISSIONS:
                   return (
                     <AdmissionsDashboardView
-                      students={students}
-                      teachers={teachers}
+                      students={loadedDataScope===dataScopeKey?students:[]}
+                      teachers={loadedDataScope===dataScopeKey?teachers:[]}
                       onOpenAdmitModal={() => setAdmitModalOpen(true)}
                       onOpenOnboardTeacher={() => setOnboardTeacherModalOpen(true)}
                       onNavigateTab={(tab) => setCurrentTab(tab)}
@@ -1154,9 +1185,9 @@ export default function App() {
                 default:
                   return (
                     <DashboardView
-                      students={students}
-                      teachers={teachers}
-                      activities={activities}
+                      students={loadedDataScope===dataScopeKey?students:[]}
+                      teachers={loadedDataScope===dataScopeKey?teachers:[]}
+                      activities={loadedDataScope===dataScopeKey?activities:[]}
                       totalCollectedFee={totalCollectedFee}
                       onOpenMpesa={() => handleOpenMpesa()}
                       onOpenCBCModal={() => handleOpenCBC()}
@@ -1200,7 +1231,7 @@ export default function App() {
               </div>
             ) : (
               <StudentsView
-                students={students}
+                students={loadedDataScope===dataScopeKey?students:[]}
                 onOpenMpesaWithStudent={handleOpenMpesa}
                 onOpenCBCWithStudent={handleOpenCBC}
                 onOpenAdmitModal={() => setAdmitModalOpen(true)}
@@ -1261,8 +1292,8 @@ export default function App() {
             <AdmissionsEnrolmentHubView
               currentSubTab={currentTab}
               onNavigateTab={(tab) => setCurrentTab(tab)}
-              students={students}
-              teachers={teachers}
+              students={loadedDataScope===dataScopeKey?students:[]}
+              teachers={loadedDataScope===dataScopeKey?teachers:[]}
               onAdmitLearner={handleAdmitStudent}
               onRefreshStudents={refreshStudentsAndFees}
               onOpenAdmitModal={() => setCurrentTab('admit-learner')}
@@ -1279,7 +1310,7 @@ export default function App() {
             'teachers',
           ].includes(currentTab) && (
             <TeachersView
-              teachers={teachers}
+              teachers={loadedDataScope===dataScopeKey?teachers:[]}
               initialCategory={
                 currentTab === 'teachers-staff' || currentTab === 'teaching-staff'
                   ? 'TEACHING'
@@ -1317,12 +1348,12 @@ export default function App() {
 
           {currentTab === 'classes-streams' && <ClassesView />}
 
-          {currentTab === 'learning-areas' && <LearningAreasView />}
+          {currentTab === 'learning-areas' && <LearningAreasView onNavigateTab={tab=>setCurrentTab(tab as any)} />}
 
           {(currentTab === 'assessments' || currentTab === 'formative-assessments') && (
             <FormativeAssessmentsView
-              assessments={assessments}
-              students={students}
+              assessments={loadedDataScope===dataScopeKey?assessments:[]}
+              students={loadedDataScope===dataScopeKey?students:[]}
               onOpenNewAssessment={() => {
                 setUploadMarksInitialType('FORMATIVE');
                 setUploadMarksModalOpen(true);
@@ -1336,7 +1367,7 @@ export default function App() {
 
           {currentTab === 'summative-assessments' && (
             <SummativeAssessmentsView
-              students={students}
+              students={loadedDataScope===dataScopeKey?students:[]}
               refreshTrigger={marksRefreshTrigger}
               onOpenUploadMarks={() => {
                 setUploadMarksInitialType('SUMMATIVE');
@@ -1350,7 +1381,7 @@ export default function App() {
 
           {currentTab === 'report-cards' && (
             <ReportCardsView
-              students={students}
+              students={loadedDataScope===dataScopeKey?students:[]}
               selectedStudent={selectedStudentForReport}
             />
           )}
@@ -1358,9 +1389,8 @@ export default function App() {
           {currentTab === 'CBC-analytics' && <CompetencyAnalyticsView />}
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
-          {(currentTab === 'schemes-lesson-plans' || currentTab === 'lesson-plans') && (
-            <SchemesView key={currentTab} initialTab={currentTab === 'lesson-plans' ? 'lesson-plans' : 'schemes'} onNavigateTab={(tab) => setCurrentTab(tab as any)} />
-          )}
+          {currentTab === 'schemes-lesson-plans' && <SchemesOfWorkView onNavigateTab={tab=>setCurrentTab(tab as any)} />}
+          {currentTab === 'lesson-plans' && <LessonPlansView onNavigateTab={tab=>setCurrentTab(tab as any)} />}
 
           {currentTab === 'records-of-work' && (
             <RecordsOfWorkView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
@@ -1379,9 +1409,9 @@ export default function App() {
 
           {currentTab === 'invoices-mpesa' && (
             <InvoicesMpesaView
-              transactions={transactions}
-              totalCollected={totalCollectedFee}
-              students={students}
+              transactions={loadedDataScope===dataScopeKey?transactions:[]}
+              totalCollected={loadedDataScope===dataScopeKey?totalCollectedFee:0}
+              students={loadedDataScope===dataScopeKey?students:[]}
               onOpenMpesaModal={() => handleOpenMpesa()}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
@@ -1389,7 +1419,7 @@ export default function App() {
 
           {(currentTab === 'arrears' || (currentTab as string) === 'defaulters-receipts') && (
             <ArrearsView
-              students={students}
+              students={loadedDataScope===dataScopeKey?students:[]}
               onRefreshStudents={refreshStudentsAndFees}
               onOpenMpesaWithStudent={handleOpenMpesa}
               onOpenSmsModal={handleOpenSms}
@@ -1399,7 +1429,7 @@ export default function App() {
           {currentTab === 'forwarded-payments' && (
             user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT].includes(user.role) ? (
               <ForwardedPaymentsView
-                students={students}
+                students={loadedDataScope===dataScopeKey?students:[]}
                 onRefreshStudents={refreshStudentsAndFees}
                 onNavigateTab={(tab) => setCurrentTab(tab as any)}
               />
@@ -1416,7 +1446,7 @@ export default function App() {
 
           {currentTab === 'student-fee-search' && (
             <StudentFeeCheckerView
-              students={students}
+              students={loadedDataScope===dataScopeKey?students:[]}
               onRefreshStudents={refreshStudentsAndFees}
             />
           )}
@@ -1428,6 +1458,7 @@ export default function App() {
 
           {currentTab === 'ediary' && <EDiaryView />}
 
+          {currentTab === 'staff-messages' && <StaffMessagesView />}
           {currentTab === 'announcements' && <AnnouncementsView />}
 
           {currentTab === 'visual-CBC' && <VisualCBCView />}
@@ -1519,12 +1550,12 @@ export default function App() {
           {currentTab === 'discipline' && <DisciplineClubsView />}
           {currentTab === 'inventory' && <InventoryManagementView />}
           {currentTab === 'occurrence-records' && <OccurrenceBookView />}
-          {currentTab === 'curriculum-tracker' && (
-            <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
-          )}
+          {currentTab === 'syllabus-coverage-plan' && <SyllabusCoveragePlanView onNavigateTab={tab=>setCurrentTab(tab as any)} />}
+          {currentTab === 'curriculum-tracker' && <CoverageTrackingView onNavigateTab={tab=>setCurrentTab(tab as any)} />}
           {currentTab === 'scheme-of-work-builder' && (
             <SchemeOfWorkBuilderView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+          </>}
           </Suspense>
         </main>
 
@@ -1553,19 +1584,19 @@ export default function App() {
 
       {/* Global Interactive Operational Modals */}
       <OnboardTeacherModal
-        isOpen={onboardTeacherModalOpen}
+        isOpen={onboardTeacherModalOpen && !isGuardian}
         onClose={() => setOnboardTeacherModalOpen(false)}
         onTeacherCreated={handleTeacherCreated}
         existingTeachers={teachers}
       />
 
       <RecordPaymentModal
-        isOpen={recordPaymentModalOpen}
+        isOpen={recordPaymentModalOpen && !isGuardian && loadedDataScope===dataScopeKey}
         onClose={() => {
           setRecordPaymentModalOpen(false);
           setSelectedStudentForPayment(undefined);
         }}
-        students={students}
+        students={loadedDataScope===dataScopeKey?students:[]}
         initialStudent={selectedStudentForPayment}
         onPaymentRecorded={handlePaymentRecorded}
         onArrearRecorded={refreshStudentsAndFees}
@@ -1578,7 +1609,7 @@ export default function App() {
           setForwardPaymentModalOpen(false);
           setSelectedStudentForPayment(undefined);
         }}
-        students={students}
+        students={loadedDataScope===dataScopeKey?students:[]}
         initialStudent={selectedStudentForPayment}
         onSubmitted={handleForwardPaymentSuccess}
       />
@@ -1586,7 +1617,7 @@ export default function App() {
       <CBCFormativeModal
         isOpen={CBCModalOpen}
         onClose={() => setCBCModalOpen(false)}
-        students={students}
+        students={loadedDataScope===dataScopeKey?students:[]}
         initialStudent={selectedStudentForCBC}
         onSave={handleSaveAssessment}
       />

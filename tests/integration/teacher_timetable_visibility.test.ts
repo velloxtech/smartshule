@@ -76,7 +76,95 @@ describe('Teacher timetable privacy across class, subject, stream and period',()
   expect((await get('access-options')).body.data.classes).toEqual([]);expect((await get('stream',{classRoomId:'g4',streamId:'alpha'})).status).toBe(403);
   expect((await get('stream',{classRoomId:'g4',streamId:'west'},admin)).status).toBe(200);expect((await get('teacher',{teacherId:'other-profile'},admin)).status).toBe(200);
  });
- it.each([['post','grid'],['put','grid'],['post','slots'],['delete','alpha-table/slots/alpha-me']])('keeps teacher timetable access read-only: %s %s',async(method,path)=>{
-  const req=(request(app) as any)[method]('/api/v1/timetables/'+path).set('Authorization',auth()).send({timetableId:'alpha-table',classRoomId:'g4',streamId:'alpha',academicYearId:'year',termId:'term',slots:[]});expect((await req).status).toBe(403);expect((await c.timetableRepository.findById('alpha-table'))!.slots).toHaveLength(2);
+ const write = (method: string, path: string, body: any = {}, actor = teacher) =>
+  (request(app) as any)[method]('/api/v1/timetables/' + path).set('Authorization', auth(actor)).send(body);
+ const grid = (overrides: any = {}) => ({schoolId: 'school', timetableId: 'alpha-table', classRoomId: 'g4', streamId: 'alpha', academicYearId: 'year', termId: 'term', slots: [], ...overrides});
+ it.each(['post', 'put'])('allows class teachers to change times and swap lessons atomically using %s', async method => {
+  // Keep the original grid consistent so clashes in other classes do not mask a swap.
+  const original = await c.timetableRepository.findById('alpha-table');
+  original!.updateGrid([], [], [slot('first', 'profile'), {...slot('second', 'other-profile', 'math'), periodNumber: 2, startTime: '10:00', endTime: '10:40'}]);
+  await c.timetableRepository.update(original!);
+  const slots = [
+   {...slot('first', 'profile'), periodNumber: 2, startTime: '11:00', endTime: '11:40'},
+   {...slot('second', 'other-profile', 'math'), periodNumber: 1, startTime: '12:00', endTime: '12:40'}
+  ];
+  const periods = slots.map(s => ({periodNumber: s.periodNumber, startTime: s.startTime, endTime: s.endTime}));
+  const r = await write(method, 'grid', grid({slots, periods}));
+  expect(r.status).toBe(200);
+  const saved = await get('stream', {classRoomId: 'g4', streamId: 'alpha'});
+  expect(saved.body.data.slots).toEqual(slots);
+  expect(saved.body.data.periods).toEqual(periods);
+ });
+ it('allows creating an assigned timetable and adding, updating and deleting its lessons', async () => {
+  const created = await write('post', '', {classRoomId: 'g4', streamId: 'alpha', academicYearId: 'year', termId: 'term'});
+  expect(created.status).toBe(201);expect(created.body.data.id).toBe('alpha-table');
+  const lesson = {...slot('ignored'), timetableId: 'alpha-table', dayOfWeek: 'TUESDAY', periodNumber: 3};
+  const added = await write('post', 'slots', lesson);
+  expect(added.status).toBe(200);expect(added.body.data.slots).toHaveLength(3);
+  const changed = await write('post', 'slots', {...lesson, startTime: '11:00', endTime: '11:40'});
+  expect(changed.status).toBe(200);expect(changed.body.data.slots).toHaveLength(3);
+  const savedSlot = changed.body.data.slots.find((s:any) => s.dayOfWeek === 'TUESDAY');
+  expect(savedSlot.startTime).toBe('11:00');
+  expect((await write('delete', 'alpha-table/slots/' + savedSlot.id)).status).toBe(200);
+  expect((await c.timetableRepository.findById('alpha-table'))!.slots).toHaveLength(2);
+ });
+ it('creates a new timetable for a class-teacher assignment in the selected future year', async () => {
+  await c.academicRepository.saveClassTeacherAssignment(ClassTeacherAssignment.create({schoolId:'school',academicYearId:'future-year',classRoomId:'g5',teacherId:'profile',effectiveFrom:'2027-01-01',isActive:true},'future-class'));
+  const r = await write('post', '', {classRoomId:'g5', academicYearId:'future-year', termId:'future-term'});
+  expect(r.status).toBe(201);expect(r.body.data).toMatchObject({schoolId:'school',academicYearId:'future-year',termId:'future-term',classRoomId:'g5'});
+ });
+ it.each([['west-table','g4','west'], ['g5-table','g5',''], ['g6-table','g6','']])('denies mutation of an unassigned or subject-only timetable %s', async (id,classRoomId,streamId) => {
+  const original = (await c.timetableRepository.findById(id))!.toJSON();
+  const body = grid({timetableId:id,classRoomId,streamId});
+  expect((await write('post','grid',body)).status).toBe(403);
+  expect((await write('put','grid',body)).status).toBe(403);
+  expect((await write('post','',{classRoomId,streamId,academicYearId:'year',termId:'term'})).status).toBe(403);
+  expect((await write('post','slots',{...slot('new'),...body})).status).toBe(403);
+  expect((await write('delete',id+'/slots/'+original.slots[0].id)).status).toBe(403);
+  expect((await c.timetableRepository.findById(id))!.toJSON()).toEqual(original);
+ });
+ it('denies expired assignments and foreign school IDs without changing stored lessons', async () => {
+  expect((await write('post','grid',grid({schoolId:'foreign'}))).status).toBe(403);
+  expect((await write('delete','foreign-table/slots/foreign-me')).status).toBe(403);
+  const duties = await c.academicRepository.findClassTeacherAssignments({teacherId:'profile'});
+  duties[0].deactivate('2020-02-01');await c.academicRepository.saveClassTeacherAssignment(duties[0]);
+  expect((await write('post','grid',grid())).status).toBe(403);
+  expect((await c.timetableRepository.findById('alpha-table'))!.slots).toHaveLength(2);
+ });
+ it('rejects forged timetable IDs even with an authorized class in the request', async () => {
+  const r = await write('post','grid',grid({timetableId:'west-table'}));
+  expect(r.status).toBe(400);
+  expect((await c.timetableRepository.findById('west-table'))!.slots).toHaveLength(2);
+ });
+ it('swaps occupied cells through the lesson editor and rejects a swap that causes a clash', async () => {
+  // Other timetables start on the same coordinates in the visibility fixtures.
+  for (const id of ['west-table','g5-table','g6-table','foreign-table']) {
+   const table = (await c.timetableRepository.findById(id))!;
+   table.updateGrid(undefined, undefined, []);await c.timetableRepository.update(table);
+  }
+  const table = (await c.timetableRepository.findById('alpha-table'))!;
+  table.updateGrid(undefined, undefined, [slot('first'), {...slot('second','other-profile','math'), periodNumber:2,startTime:'10:00',endTime:'10:40'}]);
+  await c.timetableRepository.update(table);
+  const moved = await write('post','slots',{...slot('first'),slotId:'first',timetableId:'alpha-table',periodNumber:2,startTime:'10:00',endTime:'10:40'});
+  expect(moved.status).toBe(200);
+  expect(moved.body.data.slots).toEqual(expect.arrayContaining([
+   expect.objectContaining({id:'first',periodNumber:2,startTime:'10:00',teacherId:'profile'}),
+   expect.objectContaining({id:'second',periodNumber:1,startTime:'09:00',teacherId:'other-profile'})
+  ]));
+  const otherTable = (await c.timetableRepository.findById('west-table'))!;
+  otherTable.updateGrid(undefined, undefined, [slot('elsewhere')]);await c.timetableRepository.update(otherTable);
+  const rejected = await write('post','slots',{...slot('first'),slotId:'first',timetableId:'alpha-table'});
+  expect(rejected.status).toBe(409);
+  expect((await c.timetableRepository.findById('alpha-table'))!.slots.find(s=>s.id==='first')!.periodNumber).toBe(2);
+ });
+ it('rejects overlapping lessons within the same timetable', async () => {
+  const slots = [slot('one'), {...slot('two'),periodNumber:2,startTime:'09:10',endTime:'09:50'}];
+  expect((await write('post','grid',grid({slots}))).status).toBe(409);
+ });
+ it('keeps clash detection for teacher edits, including different periods at overlapping times', async () => {
+  const conflict = {...slot('clash'),periodNumber: 4,startTime:'09:10',endTime:'09:50'};
+  expect((await write('post','grid',grid({slots:[conflict]}))).status).toBe(409);
+  expect((await write('post','slots',{...conflict,timetableId:'alpha-table'})).status).toBe(409);
+  expect((await c.timetableRepository.findById('alpha-table'))!.slots).toHaveLength(2);
  });
 });

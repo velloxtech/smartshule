@@ -121,6 +121,7 @@ const SAMPLE_CBC_TEMPLATES: Record<string, Partial<CurriculumTrackerWeekItem>[]>
 interface CurriculumTrackerViewProps {
   onNavigateTab?: (tab: string) => void;
   showSuiteSwitcher?: boolean;
+  initialTab?: 'planning' | 'tracking';
 }
 
 export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ onNavigateTab, showSuiteSwitcher = true }) => {
@@ -683,19 +684,95 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
     totalWeeks: 12, coveredWeeks: 0, inProgressWeeks: 0, pendingWeeks: 12, completionPercentage: 0, commentsCount: 0
   };
 
+  const totalWeeksCount = selectedTracker?.items?.length || selectedTracker?.totalWeeks || 12;
+  const coveredWeeksCount = selectedTracker?.items?.filter(w => w.isCovered || w.status === 'APPROVED').length || 0;
+  const inProgressWeeksCount = selectedTracker?.items?.filter(w => w.status === 'SUBMITTED' || w.status === 'IN_PROGRESS').length || 0;
+
+  const totalPlannedLessons = useMemo(() => {
+    if (!selectedTracker?.items?.length) return 0;
+    return selectedTracker.items.reduce((acc, item) => acc + (item.plannedLessons || 5), 0);
+  }, [selectedTracker]);
+
+  const totalTaughtLessons = useMemo(() => {
+    if (!selectedTracker?.items?.length) return 0;
+    return selectedTracker.items.reduce((acc, item) => {
+      if (item.isCovered || item.status === 'APPROVED') {
+        return acc + (item.lessonsTaught || item.plannedLessons || 5);
+      }
+      if (item.status === 'SUBMITTED' && item.lessonsTaught) {
+        return acc + item.lessonsTaught;
+      }
+      return acc;
+    }, 0);
+  }, [selectedTracker]);
+
+  const totalReflectionsCount = useMemo(() => {
+    if (!selectedTracker) return 0;
+    const logs = selectedTracker.dailyLogs || [];
+    return logs.filter(l => Boolean(l.reflection?.whatWentWell || l.reflection?.comprehensionLevel || l.reflection?.remedialPlan)).length;
+  }, [selectedTracker]);
+
+  const completionPercentage = useMemo(() => {
+    if (selectedTracker?.stats?.completionPercentage !== undefined) {
+      return selectedTracker.stats.completionPercentage;
+    }
+    if (totalWeeksCount > 0) {
+      return Math.round((coveredWeeksCount / totalWeeksCount) * 100);
+    }
+    return 0;
+  }, [selectedTracker, coveredWeeksCount, totalWeeksCount]);
+
+  const renderComprehensionBadge = (level?: LearnerComprehension) => {
+    switch (level) {
+      case 'EXCELLENT':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            Excellent (&gt;80%)
+          </span>
+        );
+      case 'GOOD':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Good (60-79%)
+          </span>
+        );
+      case 'AVERAGE':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+            Average (40-59%)
+          </span>
+        );
+      case 'NEEDS_REMEDIATION':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 inline-flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            Remedial Needed
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="w-full space-y-6 pb-12">
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
-            <span>Home</span><span>/</span><span>Curriculum & Timetable</span><span>/</span>
-            <span className="text-primary font-semibold">Syllabus Coverage Plan</span>
+            <span>Home</span><span>/</span><span>Operations</span><span>/</span>
+            <span className="text-primary font-semibold">Coverage Tracking</span>
           </div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight flex items-center gap-2 mt-1">
             <span className="material-symbols-outlined text-primary text-3xl">fact_check</span>
-            Syllabus Coverage Plan
+            Syllabus Coverage Tracking
           </h1>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            Track weekly curriculum delivery, confirm covered syllabus topics, and monitor completion progress.
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedTracker && (
@@ -752,6 +829,111 @@ export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ on
           )}
         </div>
       </div>
+
+      {/* OVERALL CURRICULUM PROGRESS BAR & 3-STEP INSTRUCTIONAL PIPELINE */}
+      {selectedTracker && (
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-5 shadow-xs space-y-4 no-print">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-2xl">trending_up</span>
+                <h2 className="text-base font-bold text-on-surface">Overall Curriculum Coverage Progress</h2>
+              </div>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                {selectedTracker.subjectName} · {selectedTracker.className} {selectedTracker.streamName ? `· ${selectedTracker.streamName}` : ''} · Whole Curriculum Term Progression
+              </p>
+            </div>
+            <div className="flex items-baseline gap-2 bg-surface px-3.5 py-1.5 rounded-xl border border-outline-variant/30">
+              <span className="text-2xl font-black text-primary">{completionPercentage}%</span>
+              <span className="text-xs font-bold text-on-surface-variant">Curriculum Covered</span>
+            </div>
+          </div>
+
+          {/* Large Visual Progress Bar */}
+          <div className="space-y-1.5">
+            <div
+              role="progressbar"
+              aria-label="Overall curriculum coverage progress"
+              aria-valuenow={completionPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-3.5 w-full bg-surface-container rounded-full overflow-hidden border border-outline-variant/30"
+            >
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[11px] text-on-surface-variant font-medium">
+              <span>Week 1 (Term Start)</span>
+              <span className="font-bold text-primary">
+                {coveredWeeksCount} of {totalWeeksCount} Weeks Covered · {totalTaughtLessons} of {totalPlannedLessons} Lessons Taught
+              </span>
+              <span>Week {totalWeeksCount} (Term Target)</span>
+            </div>
+          </div>
+
+          {/* 3-Step Process Summary Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-outline-variant/20">
+            {/* 1. Planned */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-outline-variant/30">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl">assignment</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">1. Planned</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                </div>
+                <div className="font-bold text-sm text-on-surface truncate">
+                  {totalPlannedLessons} Lessons Planned
+                </div>
+                <p className="text-[11px] text-on-surface-variant truncate">
+                  {totalWeeksCount} Weeks Instructional Scope
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Taught */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-outline-variant/30">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl">school</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">2. Taught</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                </div>
+                <div className="font-bold text-sm text-on-surface truncate">
+                  {totalTaughtLessons} Lessons Taught
+                </div>
+                <p className="text-[11px] text-on-surface-variant truncate">
+                  {coveredWeeksCount} Weeks Verified ({completionPercentage}%)
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Reflection */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-outline-variant/30">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl">psychology</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">3. Reflection</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                </div>
+                <div className="font-bold text-sm text-on-surface truncate">
+                  {totalReflectionsCount} Reflections Marked
+                </div>
+                <p className="text-[11px] text-on-surface-variant truncate">
+                  Comprehension & Remedial Tracked
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2 no-print">
         <button onClick={() => setActiveTab('weekly')} className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${activeTab === 'weekly' ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface'}`}>

@@ -1,3 +1,7 @@
+import {IStaffMessageRepository} from '../../core/ports/repositories/IStaffMessageRepository';
+import {InMemoryStaffMessageRepository} from './in-memory/InMemoryStaffMessageRepository';
+import {PostgresStaffMessageRepository, STAFF_MESSAGE_SCHEMA} from './postgres/PostgresStaffMessageRepository';
+import {MongoStaffMessageRepository} from './mongodb/MongoStaffMessageRepository';
 import { IBiometricCredentialRepository } from '../../core/ports/repositories/IBiometricCredentialRepository';
 import { InMemoryBiometricCredentialRepository } from './in-memory/InMemoryBiometricCredentialRepository';
 import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiometricCredentialRepository';
@@ -119,6 +123,7 @@ import { InMemoryParentConsentRepository } from './in-memory/InMemoryParentConse
 import { PostgresParentConsentRepository } from './postgres/PostgresParentConsentRepository';
 
 export interface RepositoryBundle {
+  staffMessageRepository?: IStaffMessageRepository;
   planningRepository?: PlanningRepository;
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
@@ -166,6 +171,7 @@ export class DatabaseFactory {
 
       return {
         userRepository: new MongoUserRepository(),
+        staffMessageRepository: new MongoStaffMessageRepository(),
         studentRepository: new MongoStudentRepository(),
         deletedStudentRepository: new MongoDeletedStudentRepository(),
         teacherRepository: new MongoTeacherRepository(),
@@ -243,6 +249,7 @@ export class DatabaseFactory {
       try {
         // Auto-create all tables on start
         await PostgresDatabaseInitializer.initializeSchema(pool);
+        await pool.query(STAFF_MESSAGE_SCHEMA);
         console.log('[Database] PostgreSQL connected and tables initialized successfully.');
       } catch (err: any) {
         if (err?.code === '28P01') {
@@ -260,6 +267,7 @@ export class DatabaseFactory {
 
       return {
         userRepository: new PostgresUserRepository(pool),
+        staffMessageRepository: new PostgresStaffMessageRepository(pool),
         studentRepository: new PostgresStudentRepository(pool),
         deletedStudentRepository: new PostgresDeletedStudentRepository(pool),
         teacherRepository: new PostgresTeacherRepository(pool),
@@ -297,6 +305,7 @@ export class DatabaseFactory {
     console.log('[Database] Initializing In-Memory Database Adapters.');
     return {
       userRepository: new InMemoryUserRepository(),
+      staffMessageRepository: new InMemoryStaffMessageRepository(),
       studentRepository: new InMemoryStudentRepository(),
       deletedStudentRepository: new InMemoryDeletedStudentRepository(),
       teacherRepository: new InMemoryTeacherRepository(),

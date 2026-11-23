@@ -392,9 +392,10 @@ export class PayrollController {
     try {
       const user = req.user as any;
       const payrollId = req.params.id as string;
-      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      const ipAddress = req.ip || req.socket?.remoteAddress;
       const userAgent = req.headers['user-agent'];
 
+      const body = z.object({statement:z.string().trim().min(10).max(5000).optional(),method:z.enum(['PORTAL_AUTH','DIGITAL_SIGNATURE']).default('PORTAL_AUTH'),signature:z.string().trim().min(1).max(1000000).optional(),expectedAmountPaid:z.number().finite().nonnegative().optional(),expectedPaymentReference:z.string().max(200).optional()}).parse(req.body);
       const result = await this.payrollUseCases.acknowledgeSalaryReceipt(
         payrollId,
         {
@@ -404,7 +405,7 @@ export class PayrollController {
           email: user.email
         },
         {
-          ...req.body,
+          ...body,
           ipAddress,
           userAgent
         }
@@ -419,7 +420,7 @@ export class PayrollController {
     try {
       const user = req.user as any;
       const payrollId = req.params.id as string;
-      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      const ipAddress = req.ip || req.socket?.remoteAddress;
 
       const result = await this.payrollUseCases.disputeSalaryPayment(
         payrollId,

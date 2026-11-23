@@ -254,8 +254,15 @@ export class CurriculumPlanUseCases {
       if(dto.specificLearningOutcomes.some(outcome=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Use outcomes from the approved scheme lesson. Submit curriculum changes through the scheme review process.');
       if(entry.archivedAt)throw new ValidationError('This scheme entry is archived. Select an eligible slot.');
       if(!slot || slot.date!==dto.lessonDate || (dto.lessonTime && dto.lessonTime!==`${slot.startTime}-${slot.endTime}`))throw new ValidationError('This scheme slot is cancelled or the lesson date/time does not match.');
-      dto={...dto,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
+      const minute=(time:string)=>{const match=/^(\d{2}):(\d{2})$/.exec(time);return match&&Number(match[1])<24&&Number(match[2])<60?Number(match[1])*60+Number(match[2]):NaN;};
+      const scheduledDuration=minute(slot.endTime)-minute(slot.startTime);
+      if(!Number.isSafeInteger(scheduledDuration)||scheduledDuration<=0)throw new ValidationError('The timetable lesson must have valid start and end times.');
+      if(dto.durationMinutes!==undefined&&dto.durationMinutes!==scheduledDuration)throw new ValidationError(`Lesson duration must match the ${scheduledDuration}-minute timetable period.`);
+      dto={...dto,durationMinutes:scheduledDuration,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
     }
+    const duration=dto.durationMinutes??dto.steps?.reduce((sum,step)=>sum+step.durationMinutes,0);
+    if(!Number.isSafeInteger(duration)||(duration ?? 0)<=0||!dto.steps?.length||dto.steps.some(step=>!Number.isSafeInteger(step.durationMinutes)||step.durationMinutes<=0||!step.teacherActivities?.trim()||!step.learnerActivities?.trim())||dto.steps.reduce((sum,step)=>sum+step.durationMinutes,0)!==duration)throw new ValidationError('Complete each lesson stage and ensure stage times add up to the scheduled lesson duration.');
+    dto={...dto,durationMinutes:duration};
     if(actor?.role==='TEACHER')dto={...dto,teacherId:actor.userId};
     const lessonPlan = LessonPlan.create(
       {
