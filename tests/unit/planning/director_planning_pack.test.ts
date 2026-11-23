@@ -39,6 +39,19 @@ it('derives a 35-minute lesson from the timetable and rejects wrong durations or
  await expect(c.curriculumUseCases.createLessonPlan({...input,steps:[{...input.steps[0],durationMinutes:30}]},teacher)).rejects.toThrow(/stage/);
  const plan=await c.curriculumUseCases.createLessonPlan(input,teacher);expect(plan.durationMinutes).toBe(35);expect(plan.weekNumber).toBe(1);
 });
+it('saves a shorter lesson within a 45-minute period and validates its chosen duration and stages',async()=>{
+ const weekly=await approvedScheme(),lesson=weekly.weeks[0].lessons[0];
+ const timetable=(await c.timetableRepository.findByClass(scope.classRoomId))[0];
+ const grid=timetable.toJSON();
+ timetable.updateGrid(grid.periods,grid.days,grid.slots.map(slot=>({...slot,endTime:'09:45'})));
+ await c.timetableRepository.update(timetable);
+ const input={...planInput(lesson),lessonTime:'09:00-09:45',durationMinutes:30,steps:[{stepNumber:1,stepTitle:'Development',durationMinutes:30,teacherActivities:'Model',learnerActivities:'Compare'}]};
+ for(const durationMinutes of [0,-1,1.5,46])await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes},teacher)).rejects.toThrow(/duration/);
+ await expect(c.curriculumUseCases.createLessonPlan({...input,steps:[{...input.steps[0],durationMinutes:25}]},teacher)).rejects.toThrow(/stage/);
+ const plan=await c.curriculumUseCases.createLessonPlan(input,teacher);
+ expect(plan).toMatchObject({durationMinutes:30,lessonTime:'09:00-09:45',lessonDate:lesson.date});
+ expect((await c.lessonPlanRepository.findById(plan.id))!.toJSON().durationMinutes).toBe(30);
+});
 it('keeps reported work separate from verified work, counts delayed teaching and deduplicates repeated outcomes',async()=>{
  const weekly=await approvedScheme();const lessons=weekly.weeks.flatMap((week:any)=>week.lessons);
  for(const lesson of lessons){

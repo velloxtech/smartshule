@@ -265,11 +265,12 @@ export class CurriculumPlanUseCases {
       const minute=(time:string)=>{const match=/^(\d{2}):(\d{2})$/.exec(time);return match&&Number(match[1])<24&&Number(match[2])<60?Number(match[1])*60+Number(match[2]):NaN;};
       const scheduledDuration=minute(slot.endTime)-minute(slot.startTime);
       if(!Number.isSafeInteger(scheduledDuration)||scheduledDuration<=0)throw new ValidationError('The timetable lesson must have valid start and end times.');
-      if(dto.durationMinutes!==undefined&&dto.durationMinutes!==scheduledDuration)throw new ValidationError(`Lesson duration must match the ${scheduledDuration}-minute timetable period.`);
-      dto={...dto,durationMinutes:scheduledDuration,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
+      const chosenDuration=dto.durationMinutes??scheduledDuration;
+      if(!Number.isSafeInteger(chosenDuration)||chosenDuration<=0||chosenDuration>scheduledDuration)throw new ValidationError(`Choose a lesson duration from 1 to ${scheduledDuration} minutes within the timetable period.`);
+      dto={...dto,durationMinutes:chosenDuration,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
     }
     const duration=dto.durationMinutes??dto.steps?.reduce((sum,step)=>sum+step.durationMinutes,0);
-    if(!Number.isSafeInteger(duration)||(duration ?? 0)<=0||!dto.steps?.length||dto.steps.some(step=>!Number.isSafeInteger(step.durationMinutes)||step.durationMinutes<=0||!step.teacherActivities?.trim()||!step.learnerActivities?.trim())||dto.steps.reduce((sum,step)=>sum+step.durationMinutes,0)!==duration)throw new ValidationError('Complete each lesson stage and ensure stage times add up to the scheduled lesson duration.');
+    if(!Number.isSafeInteger(duration)||(duration ?? 0)<=0||!dto.steps?.length||dto.steps.some(step=>!Number.isSafeInteger(step.durationMinutes)||step.durationMinutes<=0||!step.teacherActivities?.trim()||!step.learnerActivities?.trim())||dto.steps.reduce((sum,step)=>sum+step.durationMinutes,0)!==duration)throw new ValidationError('Complete each lesson stage and ensure stage times add up to the chosen lesson duration.');
     dto={...dto,durationMinutes:duration};
     if(actor?.role==='TEACHER')dto={...dto,teacherId:actor.userId};
     else if (hasAdministrativeAccess(actor?.role) && scheme?.teacherId) dto={...dto,teacherId:scheme.teacherId};
