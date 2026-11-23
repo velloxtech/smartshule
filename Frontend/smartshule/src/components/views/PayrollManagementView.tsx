@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { PayrollRecord, StaffLeave, SchoolInfo } from '../../types';
 
 export interface StaffMember {
@@ -65,6 +66,9 @@ export const getStaffDisplayId = (
 };
 
 export const PayrollManagementView: React.FC = () => {
+  const {user}=useAuth();
+  const canResolveDisputes=['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','BURSAR','ACCOUNTANT'].includes(user?.role||'');
+  const [resolvingDispute,setResolvingDispute]=useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'payroll' | 'reconciliation' | 'leaves'>('payroll');
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([]);
   const [leaves, setLeaves] = useState<StaffLeave[]>([]);
@@ -154,6 +158,17 @@ export const PayrollManagementView: React.FC = () => {
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const resolveDispute = async()=>{
+    if(!selectedAckDossier||resolvingDispute)return;
+    const remarks=window.prompt('Describe how accounts checked and resolved this discrepancy. The employee must still acknowledge receipt.');
+    if(remarks===null)return;
+    if(remarks.trim().length<5){showNotification('Enter at least five characters explaining the review.');return;}
+    setResolvingDispute(true);
+    try{await apiService.resolveSalaryDispute(selectedAckDossier.id,remarks.trim());setSelectedAckDossier(null);await loadData();showNotification('Discrepancy reviewed. The employee can now acknowledge receipt.');}
+    catch(error:any){showNotification(error.message||'The discrepancy review could not be saved.');}
+    finally{setResolvingDispute(false);}
   };
 
   const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
@@ -3215,6 +3230,7 @@ export const PayrollManagementView: React.FC = () => {
                 <div className="text-[10px] text-rose-800 font-mono">
                   Reported on: {selectedAckDossier.disputedAt ? new Date(selectedAckDossier.disputedAt).toLocaleString() : 'Recently'}
                 </div>
+                {canResolveDisputes&&<button type="button" disabled={resolvingDispute} onClick={()=>void resolveDispute()} className="ui-button ui-button-primary disabled:opacity-50">{resolvingDispute?'Saving review…':'Resolve discrepancy'}</button>}
               </div>
             ) : (
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">

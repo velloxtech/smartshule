@@ -534,6 +534,14 @@ describe('SmartShule Parental Consent & Teacher Salary Payment Acknowledgement S
       expect(partial.acknowledgementStatus).toBe('AWAITING_ACKNOWLEDGEMENT');
     });
 
+    test('legacy reversed payrolls cannot expose an active receipt or acknowledgement action',async()=>{
+      const reversed=PayrollRecord.create({...paidPayroll1.toJSON(),status:'APPROVED',amountPaid:0,balance:paidPayroll1.netSalary,acknowledgementStatus:'ACKNOWLEDGED',acknowledgedAt:new Date('2026-10-01'),acknowledgementSignature:'Historical signature'},'legacy-reversed');
+      await payrollRepo.savePayroll(reversed);
+      expect(reversed.acknowledgementStatus).toBe('UNACKNOWLEDGED');
+      const record=(await payrollUseCases.getMySalaryRecords({userId:teacherUser1.id,role:UserRole.TEACHER,schoolId})).find(row=>row.id==='legacy-reversed');
+      expect(record).toMatchObject({isPaid:false,canAcknowledge:false,acknowledgementStatus:'UNACKNOWLEDGED'});
+    });
+
     test('2a. Teacher can only view their own salary records, not records of other teachers', async () => {
       const records1 = await payrollUseCases.getMySalaryRecords({
         userId: teacherUser1.id,

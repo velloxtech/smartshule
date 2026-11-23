@@ -12,6 +12,8 @@ import { SystemLog } from '../../core/domain/system-log/SystemLog';
 import { UserRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../../core/domain/shared/Errors';
 
+const PAYROLL_READ_ROLES = [UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.BURSAR,UserRole.ACCOUNTANT];
+
 export interface UserContext {
   userId: string;
   role: UserRole | string;
@@ -297,9 +299,11 @@ export class PayrollUseCases {
     return payrolls.map(p => p.toJSON());
   }
 
-  public async getPayrollById(id: string): Promise<any> {
+  public async getPayrollById(id: string, requestingUser?: UserContext): Promise<any> {
     const p = await this.payrollRepository.findPayrollById(id);
     if (!p) throw new NotFoundError('Payroll record not found.');
+    this.assertPayrollSchool(p.schoolId,requestingUser);
+    await this.assertPayrollReader(p.teacherId,requestingUser);
     return p.toJSON();
   }
 
@@ -311,6 +315,7 @@ export class PayrollUseCases {
 
     const p = await this.payrollRepository.findPayrollById(id);
     if (!p) throw new NotFoundError('Payroll record not found.');
+    this.assertPayrollSchool(p.schoolId,requestingUser);
     if (p.status === 'PAID') {
       throw new ValidationError('Cannot approve an already paid payroll record.');
     }
@@ -696,19 +701,30 @@ export class PayrollUseCases {
     };
   }
 
-  public async getTeacherPayrolls(teacherId: string): Promise<any[]> {
+  public async getTeacherPayrolls(teacherId: string, requestingUser?: UserContext): Promise<any[]> {
+    await this.assertPayrollReader(teacherId,requestingUser);
     const payrolls = await this.payrollRepository.findPayrollsByTeacher(teacherId);
-    return payrolls.map(p => p.toJSON());
+    return payrolls.filter(p=>!requestingUser||p.schoolId===requestingUser.schoolId).map(p => p.toJSON());
   }
 
-  public async deletePayroll(id: string): Promise<boolean> {
+  public async deletePayroll(id: string, requestingUser?: UserContext): Promise<boolean> {
     const p = await this.payrollRepository.findPayrollById(id);
     if (!p) throw new NotFoundError('Payroll record not found.');
+    this.assertPayrollSchool(p.schoolId,requestingUser);
+    if (requestingUser && ![UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN].includes(requestingUser.role as UserRole)) throw new ForbiddenError('Only school administrators can delete payroll records.');
+    if (p.amountPaid > 0 || ['PAID','PARTIALLY_PAID'].includes(p.status)) throw new ValidationError('Reverse recorded salary payments before deleting payroll.');
     await this.payrollRepository.deletePayroll(id);
     return true;
   }
 
-  public async applyLeave(dto: ApplyLeaveDTO): Promise<StaffLeave> {
+  public async applyLeave(dto: ApplyLeaveDTO, requestingUser?: UserContext): Promise<StaffLeave> {
+    this.assertPayrollSchool(dto.schoolId,requestingUser);
+    await this.assertPayrollReader(dto.teacherId,requestingUser);
+    if(requestingUser){
+      const profile=await this.teacherRepository.findById(dto.teacherId)||await this.teacherRepository.findByUserId(dto.teacherId);
+      const owner=await this.userRepository.findById(profile?.userId||dto.teacherId);
+      if(!owner||owner.schoolId!==requestingUser.schoolId)throw new ForbiddenError('Staff school access denied.');
+    }
     let teacherName = dto.teacherName || 'Faculty Teacher';
     try {
       const teacher = await this.teacherRepository.findById(dto.teacherId);
@@ -766,25 +782,39 @@ export class PayrollUseCases {
     return leave;
   }
 
-  public async listLeaves(schoolId?: string, teacherId?: string): Promise<any[]> {
+  public async listLeaves(schoolId?: string, teacherId?: string, requestingUser?: UserContext): Promise<any[]> {
+    if(requestingUser){
+      this.assertPayrollSchool(schoolId||requestingUser.schoolId||'',requestingUser);
+      schoolId=requestingUser.schoolId;
+      if(!PAYROLL_READ_ROLES.includes(requestingUser.role as UserRole)){
+        const owners=await this.salaryOwnerIds(requestingUser);
+        if(teacherId&&!owners.has(teacherId))throw new ForbiddenError('You can only view your own leave applications.');
+        const rows=(await Promise.all([...owners].map(id=>this.payrollRepository.findLeavesByTeacher(id)))).flat();
+        return [...new Map(rows.filter(row=>row.schoolId===schoolId).map(row=>[row.id,row])).values()].map(row=>row.toJSON());
+      }
+    }
     let leaves: StaffLeave[];
     if (teacherId) {
       leaves = await this.payrollRepository.findLeavesByTeacher(teacherId);
     } else {
       leaves = await this.payrollRepository.findAllLeaves(schoolId);
     }
-    return leaves.map(l => l.toJSON());
+    return leaves.filter(leave=>!schoolId||leave.schoolId===schoolId).map(l => l.toJSON());
   }
 
   public async reviewLeave(
     leaveId: string,
     action: 'APPROVE' | 'REJECT',
     approverName: string,
-    remarks?: string
+    remarks?: string,
+    requestingUser?: UserContext
   ): Promise<any> {
     const leave = await this.payrollRepository.findLeaveById(leaveId);
     if (!leave) throw new NotFoundError('Leave application not found.');
 
+    this.assertPayrollSchool(leave.schoolId,requestingUser);
+    if(requestingUser&&!PAYROLL_READ_ROLES.includes(requestingUser.role as UserRole))throw new ForbiddenError('Only authorized staff can review leave applications.');
+    if(action!=='APPROVE'&&action!=='REJECT')throw new ValidationError('Choose APPROVE or REJECT.');
     if (action === 'APPROVE') {
       leave.approve(approverName, remarks);
     } else {
@@ -833,6 +863,16 @@ export class PayrollUseCases {
       draftCount,
       pendingCount
     };
+  }
+
+  private assertPayrollSchool(schoolId: string, user?: UserContext) {
+    if(user&&(!user.schoolId||schoolId!==user.schoolId))throw new ForbiddenError('School payroll access denied.');
+  }
+  private async assertPayrollReader(teacherId:string,user?:UserContext) {
+    if(!user)return;
+    if(!user.schoolId)throw new ForbiddenError('A school-scoped account is required.');
+    if(PAYROLL_READ_ROLES.includes(user.role as UserRole))return;
+    if(!(await this.salaryOwnerIds(user)).has(teacherId))throw new ForbiddenError('You can only view your own salary and leave records.');
   }
 
   private async salaryOwnerIds(user: UserContext): Promise<Set<string>> {
@@ -1111,6 +1151,22 @@ export class PayrollUseCases {
         disputeReason: payroll.disputeReason
       }
     };
+  }
+
+  public async resolveSalaryDispute(id:string, user:UserContext, remarks:string) {
+    if(!user?.userId||![UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.BURSAR,UserRole.ACCOUNTANT].includes(user.role as UserRole)) throw new ForbiddenError('Only authorized accounts staff can resolve salary discrepancies.');
+    if(typeof remarks!=='string'||remarks.trim().length<5||remarks.trim().length>2000) throw new ValidationError('Enter review remarks of 5 to 2,000 characters.');
+    const payroll=await this.payrollRepository.findPayrollById(id);
+    if(!payroll)throw new NotFoundError('Payroll Record',id);
+    this.assertPayrollSchool(payroll.schoolId,user);
+    if(payroll.acknowledgementStatus!=='UNDER_REVIEW')throw new ValidationError('Only a disputed salary payment can be reviewed.');
+    payroll.resolveSalaryDispute();
+    await this.payrollRepository.updatePayroll(payroll);
+    if(this.systemLogRepository){
+      try{await this.systemLogRepository.create(SystemLog.create({schoolId:payroll.schoolId,level:'AUDIT',category:'FINANCE',action:'SALARY_DISPUTE_RESOLVED',actorUserId:user.userId,actorRole:user.role,details:`Accounts reviewed salary discrepancy for ${payroll.teacherName} (${payroll.month}). Employee acknowledgement is still required.`,metadata:{payrollId:id,disputeReason:payroll.disputeReason,remarks:remarks.trim(),amountPaid:payroll.amountPaid}},IdGenerator.generate()));}
+      catch(error){console.error('[Payroll] Dispute review audit could not be saved:',error);}
+    }
+    return {success:true,message:'Discrepancy reviewed. The employee can now confirm receipt.',data:payroll.toJSON()};
   }
 
   /**

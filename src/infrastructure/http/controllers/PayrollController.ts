@@ -133,9 +133,9 @@ export class PayrollController {
     }
   };
 
-  public getPayroll = async (req: Request, res: Response, next: NextFunction) => {
+  public getPayroll = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const payroll = await this.payrollUseCases.getPayrollById(req.params.id as string);
+      const payroll = await this.payrollUseCases.getPayrollById(req.params.id as string,req.user);
       return res.status(200).json({
         success: true,
         data: payroll
@@ -282,7 +282,7 @@ export class PayrollController {
 
   public deletePayroll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.payrollUseCases.deletePayroll(req.params.id as string);
+      await this.payrollUseCases.deletePayroll(req.params.id as string,(req as AuthenticatedRequest).user);
       return res.status(200).json({
         success: true,
         message: 'Payroll record deleted successfully'
@@ -292,9 +292,9 @@ export class PayrollController {
     }
   };
 
-  public getTeacherPayrolls = async (req: Request, res: Response, next: NextFunction) => {
+  public getTeacherPayrolls = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const payrolls = await this.payrollUseCases.getTeacherPayrolls(req.params.teacherId as string);
+      const payrolls = await this.payrollUseCases.getTeacherPayrolls(req.params.teacherId as string,req.user);
       return res.status(200).json({
         success: true,
         data: payrolls
@@ -310,7 +310,7 @@ export class PayrollController {
       const leave = await this.payrollUseCases.applyLeave({
         ...req.body,
         schoolId
-      });
+      },req.user);
       return res.status(201).json({
         success: true,
         message: 'Leave application submitted successfully',
@@ -325,7 +325,7 @@ export class PayrollController {
     try {
       const teacherId = req.query.teacherId as string | undefined;
       const schoolId = req.user?.schoolId;
-      const leaves = await this.payrollUseCases.listLeaves(schoolId, teacherId);
+      const leaves = await this.payrollUseCases.listLeaves(schoolId, teacherId,req.user);
       return res.status(200).json({
         success: true,
         count: leaves.length,
@@ -343,7 +343,8 @@ export class PayrollController {
         req.params.id as string,
         req.body.action,
         approverName,
-        req.body.remarks
+        req.body.remarks,
+        req.user
       );
       return res.status(200).json({
         success: true,
@@ -453,5 +454,12 @@ export class PayrollController {
     } catch (err) {
       next(err);
     }
+  };
+
+  public resolveSalaryDispute = async (req:AuthenticatedRequest,res:Response,next:NextFunction) => {
+    try {
+      const body=z.object({remarks:z.string().trim().min(5).max(2000)}).strict().parse(req.body);
+      res.status(200).json(await this.payrollUseCases.resolveSalaryDispute(String(req.params.id),req.user!,body.remarks));
+    }catch(error){next(error);}
   };
 }

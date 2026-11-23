@@ -646,6 +646,8 @@ describe('SmartShule — Automatic Fee Credit / Overpayment Utilization (Scenari
       'grd-15'
     );
     await guardianRepo.save(guardian);
+    student.addGuardian(guardian.id);
+    await studentRepo.update(student);
 
     // Run auto-reconciliation
     await feeUseCases.autoReconcileStudentFeeCredits(student.id);

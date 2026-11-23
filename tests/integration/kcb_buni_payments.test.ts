@@ -105,14 +105,16 @@ describe('KCB Buni API Platform Integration Tests', () => {
       checkoutRequestId = res.body.data.checkoutRequestId;
     });
 
-    it('queries transaction status via KCB Buni API', async () => {
+    it('keeps an unconfirmed STK request pending without creating a receipt', async () => {
       const res = await request(app)
         .get(`/api/v1/finance/kcb-buni/status/${checkoutRequestId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.receiptNumber).toBeDefined();
+      expect(res.body.data.success).toBe(false);
+      expect(res.body.data.status).toBe('PENDING');
+      expect(res.body.data.receiptNumber).toBeUndefined();
     });
 
     it('processes KCB Buni callback and records payment into invoice', async () => {

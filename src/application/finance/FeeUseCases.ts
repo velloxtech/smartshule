@@ -3399,12 +3399,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     // 1. Check if transaction has ALREADY been recorded in the database via callback
     const schoolId = this.financeSchool(requestingUser);
     const allPayments = await this.feeRepository.findPayments({schoolId});
-    const foundPayment = allPayments.find(
-      p => (p.notes && p.notes.includes(checkoutRequestId)) || p.transactionReference === checkoutRequestId
+    const matchingPayments = allPayments.filter(
+      p => (p.notes?.match(/CheckoutReq:\s*(\S+)/)?.[1] === checkoutRequestId) || p.transactionReference === checkoutRequestId
     );
+    const foundPayment = matchingPayments.find(p=>p.status===PaymentStatus.COMPLETED)||matchingPayments[0];
 
     if (foundPayment) {
       await this.assertStudentFinanceAccess(foundPayment.studentId,requestingUser);
+      if(foundPayment.status!==PaymentStatus.COMPLETED)return {success:false,status:foundPayment.status,message:foundPayment.status===PaymentStatus.REVERSED?'This payment was reversed.':'This payment has not been confirmed.'};
       const invoice = foundPayment.invoiceId ? await this.feeRepository.findInvoiceById(foundPayment.invoiceId) : null;
       return {
         success: true,
@@ -3424,44 +3426,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       if (!invoice) throw new ForbiddenError('Transaction access cannot be verified.');
       await this.assertStudentFinanceAccess(invoice.studentId,requestingUser);
     }
-    const statusResult = await this.kcbBuniGateway.queryTransactionStatus(checkoutRequestId);
-
-    // Settle pending transaction if confirmed successful and not yet recorded
-    if (statusResult.success && statusResult.receiptNumber) {
-      const pending = this.pendingKcbTransactions.get(checkoutRequestId);
-      const existingPayment = await this.feeRepository.findPaymentByReference(statusResult.receiptNumber);
-
-      if (pending && !existingPayment) {
-        const invoice = await this.feeRepository.findInvoiceById(pending.invoiceId);
-        const receiptNumber = `REC-KCB-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-
-        const payment = Payment.create(
-          {
-            schoolId: invoice ? invoice.schoolId : 'school-001',
-            invoiceId: pending.invoiceId,
-            studentId: pending.studentId,
-            receiptNumber,
-            amount: pending.amount,
-            paymentMethod: PaymentMethod.KCB_BUNI,
-            transactionReference: statusResult.receiptNumber,
-            paymentDate: new Date().toISOString().split('T')[0],
-            recordedByUserId: 'usr-kcb-buni-status-query',
-            status: PaymentStatus.COMPLETED,
-            notes: `KCB Buni Status Query Confirmation. CheckoutReq: ${checkoutRequestId}`
-          },
-          IdGenerator.generate()
-        );
-
-        if (invoice) {
-          invoice.recordPayment(pending.amount);
-          await this.feeRepository.updateInvoice(invoice);
-        }
-        await this.feeRepository.savePayment(payment);
-        this.pendingKcbTransactions.delete(checkoutRequestId);
-      }
-    }
-
-    return statusResult;
+    // Polling is read-only. Only the authenticated callback or recorded bank payment
+    // may settle an invoice; a gateway status response is not a ledger receipt.
+    return {success:false,status:'PENDING',message:'Awaiting confirmed payment from the bank. No payment has been recorded yet.'};
   }
 
   // 9. KCB Buni Configuration for Client Portal

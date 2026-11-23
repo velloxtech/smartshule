@@ -1306,6 +1306,7 @@ export function createApiRouter(container: AppContainer): Router {
   payrollRouter.get('/my-salary', authMiddleware, payrollController.getMySalary);
   payrollRouter.post('/:id/acknowledge', authMiddleware, payrollController.acknowledgeSalary);
   payrollRouter.post('/:id/dispute', authMiddleware, payrollController.disputeSalary);
+  payrollRouter.post('/:id/dispute/resolve', authMiddleware, allowedPayrollDisburseRoles, payrollController.resolveSalaryDispute);
   payrollRouter.get('/', authMiddleware, allowedPayrollViewRoles, payrollController.listPayrolls);
   payrollRouter.get('/:id', authMiddleware, allowedPayrollViewRoles, payrollController.getPayroll);
   payrollRouter.post('/generate', authMiddleware, allowedPayrollAdminRoles, validateBody(GeneratePayrollSchema), payrollController.generateMonthly);

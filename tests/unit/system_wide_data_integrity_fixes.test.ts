@@ -597,7 +597,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
     test('1. Teachers can see only their own salary records', async () => {
       const records = await payrollUseCases.getMySalaryRecords({
         userId: teacherUserId,
-        role: UserRole.TEACHER
+        role: UserRole.TEACHER, schoolId
       });
 
       expect(records.length).toBe(2);
@@ -605,7 +605,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
 
       const otherRecords = await payrollUseCases.getMySalaryRecords({
         userId: otherTeacherUserId,
-        role: UserRole.TEACHER
+        role: UserRole.TEACHER, schoolId
       });
       expect(otherRecords.length).toBe(0);
     });
@@ -614,7 +614,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       await expect(
         payrollUseCases.acknowledgeSalaryReceipt(unpaidPayrollId, {
           userId: teacherUserId,
-          role: UserRole.TEACHER
+          role: UserRole.TEACHER, schoolId
         }, {
           statement: 'I confirm receipt',
           signature: 'John Mwangi'
@@ -626,17 +626,17 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       await expect(
         payrollUseCases.acknowledgeSalaryReceipt(paidPayrollId, {
           userId: otherTeacherUserId, // Sarah attempting to acknowledge John's salary
-          role: UserRole.TEACHER
+          role: UserRole.TEACHER, schoolId
         }, {
           signature: 'Sarah Otieno'
         })
-      ).rejects.toThrow('Access denied: You are not authorized to view or acknowledge salary records belonging to another staff member.');
+      ).rejects.toThrow('Access denied: Salary records belong to another staff member or school.');
     });
 
     test('4. Valid digital acknowledgement records timestamp, statement, method, and signature', async () => {
       const res = await payrollUseCases.acknowledgeSalaryReceipt(paidPayrollId, {
         userId: teacherUserId,
-        role: UserRole.TEACHER
+        role: UserRole.TEACHER, schoolId
       }, {
         statement: 'I, John Mwangi, hereby acknowledge receipt of KES 46,132 for January 2026.',
         method: 'PORTAL_AUTH',
@@ -660,7 +660,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       // First acknowledgement succeeds
       await payrollUseCases.acknowledgeSalaryReceipt(paidPayrollId, {
         userId: teacherUserId,
-        role: UserRole.TEACHER
+        role: UserRole.TEACHER, schoolId
       }, {
         signature: 'John Mwangi'
       });
@@ -669,7 +669,7 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       await expect(
         payrollUseCases.acknowledgeSalaryReceipt(paidPayrollId, {
           userId: teacherUserId,
-          role: UserRole.TEACHER
+          role: UserRole.TEACHER, schoolId
         }, {
           signature: 'John Mwangi'
         })

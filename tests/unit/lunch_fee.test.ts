@@ -163,6 +163,7 @@ describe('Lunch Fee Domain & Use Cases Unit Tests', () => {
       userRepo = new InMemoryUserRepository();
       guardianRepo = new InMemoryGuardianRepository();
       useCases = new LunchFeeUseCases(lunchRepo, studentRepo, userRepo, guardianRepo);
+      await userRepo.save(User.create({schoolId:'school-001',firstName:'Parent',lastName:'Synthetic',role:UserRole.PARENT,status:UserStatus.ACTIVE,passwordHash:'synthetic'},'parent-01'));
 
       // Create test students
       testStudent1 = Student.create(

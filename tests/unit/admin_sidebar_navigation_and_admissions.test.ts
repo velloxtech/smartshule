@@ -98,11 +98,15 @@ describe('SmartShule Admin Portal Sidebar Navigation Redesign & Admissions Modul
       expect(adminItemIds).toContain('digital-signature');
     });
 
-    test('7. Subjects & Learning Areas is placed under CBE Competencies & Grading', () => {
+    test('7. Curriculum pages appear once in workflow order and grading stays separate', () => {
       const cbeMod = ALL_NAV_MODULES.find(m => m.id === 'cbe-grading');
       const cbeItemIds = cbeMod?.items.map(it => it.id) || [];
 
-      expect(cbeItemIds).toContain('learning-areas');
+      expect(cbeItemIds).not.toContain('learning-areas');
+      const workflow=['learning-areas','syllabus-coverage-plan','schemes-lesson-plans','lesson-plans','records-of-work','curriculum-tracker'];
+      const curriculum=ALL_NAV_MODULES.find(module=>module.id==='curriculum-timetable')!;
+      expect(curriculum.items.filter(item=>workflow.includes(item.id)).map(item=>item.id)).toEqual(workflow);
+      for(const page of workflow)expect(ALL_NAV_MODULES.flatMap(module=>module.items).filter(item=>item.id===page)).toHaveLength(1);
       expect(cbeItemIds).toContain('formative-assessments');
       expect(cbeItemIds).toContain('summative-assessments');
       expect(cbeItemIds).toContain('competencies-strands');

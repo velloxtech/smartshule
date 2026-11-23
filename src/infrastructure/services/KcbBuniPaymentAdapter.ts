@@ -271,9 +271,8 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
    */
   public async queryTransactionStatus(checkoutRequestId: string): Promise<{ success: boolean; receiptNumber?: string; message: string }> {
     return {
-      success: true,
-      receiptNumber: `KC${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-      message: `Transaction ${checkoutRequestId} status verified via KCB Buni.`
+      success: false,
+      message: `Transaction ${checkoutRequestId} is awaiting payment confirmation. No verified bank status query is configured.`
     };
   }
 

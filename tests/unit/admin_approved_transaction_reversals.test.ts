@@ -228,6 +228,9 @@ describe('SMARTSHULE FINANCE — Admin-Approved Transaction Reversal Workflow', 
       guardianId
     );
     await guardianRepo.save(g);
+    const learner = await studentRepo.findById(studentId);
+    learner!.addGuardian(g.id);
+    await studentRepo.update(learner!);
     return g;
   };
 

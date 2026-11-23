@@ -3892,6 +3892,7 @@ export const libraryApi = {
   getMySalary: async (): Promise<ApiResponse<any[]>> => {
     return apiFetch<ApiResponse<any[]>>('/payroll/my-salary');
   },
+  resolveSalaryDispute: (id:string,remarks:string):Promise<ApiResponse<PayrollRecord>> => apiFetch(`/payroll/${encodeURIComponent(id)}/dispute/resolve`,{method:'POST',body:JSON.stringify({remarks})}),
 
   acknowledgeSalary: async (
     id: string,

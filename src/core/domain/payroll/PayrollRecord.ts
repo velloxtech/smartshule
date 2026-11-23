@@ -147,6 +147,8 @@ export class PayrollRecord extends Entity<PayrollProps> {
   public get disputeReason(): string | undefined { return this._props.disputeReason; }
   public get disputedByUserId(): string | undefined { return this._props.disputedByUserId; }
   public get acknowledgementStatus(): 'UNACKNOWLEDGED' | 'AWAITING_ACKNOWLEDGEMENT' | 'ACKNOWLEDGED' | 'UNDER_REVIEW' {
+    // Old reversed records may still contain a historical signature; it is not a receipt for current funds.
+    if (!['PAID','PARTIALLY_PAID'].includes(this.status) || this.amountPaid <= 0) return 'UNACKNOWLEDGED';
     if (this._props.acknowledgementStatus) {
       if ((this._props.acknowledgementStatus as string) === 'DISPUTED') return 'UNDER_REVIEW';
       return this._props.acknowledgementStatus as any;
@@ -193,6 +195,13 @@ export class PayrollRecord extends Entity<PayrollProps> {
     this._props.disputedByUserId = userId;
     this._props.disputeReason = reason;
     this._props.acknowledgementStatus = 'UNDER_REVIEW';
+    this.touch();
+  }
+
+  public resolveSalaryDispute(): void {
+    if (this.acknowledgementStatus !== 'UNDER_REVIEW') throw new Error('Only a disputed salary payment can be reviewed.');
+    // Keep the original dispute as evidence; the employee must still confirm receipt.
+    this._props.acknowledgementStatus = 'AWAITING_ACKNOWLEDGEMENT';
     this.touch();
   }
 
