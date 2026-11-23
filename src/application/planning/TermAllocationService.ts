@@ -1,3 +1,4 @@
+import { canPrepareCurriculum } from '../shared/AdministrativeAccess';
 import {weeklyMonitoringRegister} from './WeeklyMonitoringRegister';
 import { assertWeeklyCoverage, selectWeeklySubmission } from './WeeklySchemePolicy';
 import type { AppContainer } from '../../infrastructure/container';
@@ -83,7 +84,7 @@ export class TermAllocationService {
 
   async submitCoverage(actor:AcademicActor,id:string,revision:number) {
     const scheme=await this.get(actor,id);this.revision(scheme,revision);
-    if(actor.role!=='TEACHER')throw new ForbiddenError('Only the assigned subject teacher can submit a coverage draft.');
+    if(!canPrepareCurriculum(actor.role))throw new ForbiddenError('Only the assigned subject teacher or a school administrator can submit a coverage draft.');
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     const state=scheme.planningState;if(!state||!state.allocations.some(a=>a.lessons>0))throw new ValidationError('Save at least one strand allocation before submitting this coverage draft.');
     if(state.locked||['SUBMITTED','APPROVED'].includes(state.coverageReviewStatus||''))throw new ConflictError('This coverage draft cannot be submitted in its current state.');
@@ -118,7 +119,7 @@ export class TermAllocationService {
   }
 
   async prepareWeekly(actor:AcademicActor,id:string,revision:number) {
-    if(actor.role!=='TEACHER')throw new ForbiddenError('Only the assigned subject teacher can create a weekly scheme.');
+    if(!canPrepareCurriculum(actor.role))throw new ForbiddenError('Only the assigned subject teacher or a school administrator can create a weekly scheme.');
     const scheme=await this.get(actor,id);this.revision(scheme,revision);
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     if(!scheme.planningState?.allocations.some(allocation=>allocation.lessons>0))throw new ValidationError('Save at least one syllabus coverage allocation before creating a weekly draft.');
@@ -174,7 +175,7 @@ export class TermAllocationService {
 
   private async editableWeekly(actor:AcademicActor,id:string,revision:number,requireApproval=true) {
     const scheme=await this.get(actor,id);this.revision(scheme,revision);
-    if(actor.role!=='TEACHER')throw new ForbiddenError('Only the assigned subject teacher can edit or submit the weekly scheme.');
+    if(!canPrepareCurriculum(actor.role))throw new ForbiddenError('Only the assigned subject teacher or a school administrator can edit or submit the weekly scheme.');
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     if(!scheme.planningState)throw new ValidationError('Save the syllabus coverage before weekly planning.');
     if(requireApproval&&scheme.planningState.coverageReviewStatus!=='APPROVED')throw new ValidationError('The syllabus coverage must be approved before submitting scheme lessons.');

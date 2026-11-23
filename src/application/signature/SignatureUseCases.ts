@@ -1,3 +1,4 @@
+import { hasAdministrativeAccess } from '../shared/AdministrativeAccess';
 import crypto from 'crypto';
 import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -500,8 +501,8 @@ export class SignatureUseCases {
     policyData: Partial<SigningPolicyProps> & { documentType: string }
   ): Promise<any> {
     const role = (userContext.role || '').toUpperCase();
-    if (role !== 'SUPER_ADMIN' && role !== 'DIRECTOR' && role !== 'HEAD_TEACHER') {
-      throw new ForbiddenError('Only Super Admin, Director, or Head Teacher can configure document signing policies.');
+    if (!hasAdministrativeAccess(role) && role !== 'DIRECTOR' && role !== 'HEAD_TEACHER') {
+      throw new ForbiddenError('Only school administrators, Director, or Head Teacher can configure document signing policies.');
     }
 
     let policy = await this.signatureRepo.findPolicyByDocumentType(policyData.documentType);

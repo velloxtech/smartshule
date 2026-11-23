@@ -60,7 +60,7 @@ export const VisualCBCView: React.FC = () => {
   const { user, activeViewMode, isStaffWithChildren } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
-  const isTeacher = effectiveRole === UserRole.TEACHER || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN;
+  const isTeacher = effectiveRole === UserRole.TEACHER || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN;
 
   const [activeTab, setActiveTab] = useState<'help_desk' | 'progress_gallery'>('help_desk');
   const [helpRequests, setHelpRequests] = useState<ParentHelpRequest[]>([]);

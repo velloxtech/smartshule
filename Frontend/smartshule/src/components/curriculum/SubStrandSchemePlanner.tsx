@@ -1,5 +1,5 @@
 import { SchemeApprovalActions } from './SchemeApprovalActions';
-import { canReviewCurriculum } from '../../utils/curriculumPermissions';
+import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculumPermissions';
 import React, { useEffect, useRef, useState } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -52,8 +52,8 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
   const canDraft = Boolean(scheme?.planningState?.allocations?.some((allocation: any) => allocation.lessons > 0));
   const approvedCoverage = scheme?.planningState?.coverageReviewStatus === 'APPROVED';
   const started = Boolean(scheme?.planningState?.weeklyPlanningStarted || scheme?.entries?.some((entry: any) => !entry.archivedAt));
-  const teacher = user?.role === 'TEACHER';
-  const editable = teacher && canDraft && (['DRAFT', 'REJECTED'].includes(scheme?.status) || (scheme?.status === 'APPROVED' && Array.isArray(scheme?.planningState?.approvedEntryIds)));
+  const canPrepare = canPrepareCurriculum(user?.role);
+  const editable = canPrepare && canDraft && (['DRAFT', 'REJECTED'].includes(scheme?.status) || (scheme?.status === 'APPROVED' && Array.isArray(scheme?.planningState?.approvedEntryIds)));
   const canReview = canReviewCurriculum(user?.role);
   const allLessons: any[] = weekly?.weeks?.flatMap((row: any) => row.lessons) || [];
   const groups: any[] = (scheme?.planningState?.allocations || []).filter((allocation: any) => allocation.lessons > 0).map((allocation: any) => {
@@ -120,14 +120,14 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
       <p>Save at least one syllabus coverage allocation first. Scheme drafts use that saved plan.</p>
       <button className="ui-button mt-3" onClick={() => onNavigateTab?.('curriculum-tracker')}>Open Syllabus Coverage</button>
     </div> : <>
-      {!approvedCoverage && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>You can complete and save scheme lessons now. The source coverage must be approved before scheme lessons can be submitted.</p>{teacher && ['DRAFT', 'REJECTED', undefined].includes(scheme.planningState.coverageReviewStatus) && <button className="ui-button mt-3" disabled={busy || dirty} onClick={() => request(async () => { await apiService.submitCoverageDraft(scheme.id, scheme.planningState.revision); await refresh(); setNotice('Source coverage submitted for approval. Your teaching-session drafts are retained.'); })}>Submit source coverage for approval</button>}</div>}
+      {!approvedCoverage && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>You can complete and save scheme lessons now. The source coverage must be approved before scheme lessons can be submitted.</p>{canPrepare && ['DRAFT', 'REJECTED', undefined].includes(scheme.planningState.coverageReviewStatus) && <button className="ui-button mt-3" disabled={busy || dirty} onClick={() => request(async () => { await apiService.submitCoverageDraft(scheme.id, scheme.planningState.revision); await refresh(); setNotice('Source coverage submitted for approval. Your teaching-session drafts are retained.'); })}>Submit source coverage for approval</button>}</div>}
       <details className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
         <summary className="cursor-pointer text-sm font-semibold">Source: saved syllabus coverage · {scheme.planningState.allocations.filter((item: any) => item.lessons > 0).length} allocations</summary>
         <p className="mt-2 text-sm text-on-surface-variant">The curriculum, order and lesson allocations come from the saved coverage plan. Change them through syllabus coverage review.</p>
         <ul className="mt-3 space-y-2">{scheme.planningState.allocations.filter((item: any) => item.lessons > 0).map((item: any) => <li key={item.subStrandId} className="rounded-lg border border-outline-variant/30 bg-surface p-3 text-sm">{[item.subStrandId, ...(item.combinedSubStrandIds || [])].map(id => catalogue.flatMap(strand => strand.subStrands).find(sub => sub.id === id)?.title || 'Saved curriculum item').join(' + ')} · {item.lessons} lessons</li>)}</ul>
       </details>
       {area.setupRequired && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{area.setupRequired}</p>}
-      {!started && teacher && <button className="ui-button ui-button-primary" disabled={busy || Boolean(area.setupRequired)} onClick={() => request(async () => {
+      {!started && canPrepare && <button className="ui-button ui-button-primary" disabled={busy || Boolean(area.setupRequired)} onClick={() => request(async () => {
         await apiService.schemePlanning(`${scheme.id}/weekly/prepare?${query}`, { method: 'POST', body: JSON.stringify({ revision: scheme.planningState.revision }) });
         await refresh(); setNotice('Sub-strand scheme draft created from your saved coverage. Lesson counts are pacing estimates, not completion limits.');
       })}>{embedded ? 'Add scheme lesson details' : 'Plan saved sub-strands'}</button>}
@@ -165,7 +165,7 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
           <div><h3 className="font-bold">{selected.entry.subStrandTitle} · Teaching session {lessons.findIndex((lesson: any) => lesson.entry?.id === entryId) + 1}</h3><p className="mt-1 text-sm">{selected.entry.strandTitle} / {selected.entry.subStrandTitle}</p></div>
           {Object.entries(fields).map(([key, label]) => <label key={key} className="block text-sm font-semibold">{label}<textarea aria-label={`Scheme ${label.toLowerCase()}`} className="ui-field mt-1 min-h-24 font-normal" disabled={!entryEditable || busy} value={content[key as keyof Content]} onChange={event => { setContent(old => ({ ...old, [key]: event.target.value })); setDirty(true); }} /></label>)}
           {entryEditable && <button className="ui-button ui-button-primary" disabled={busy || !dirty} onClick={saveLesson}>Save teaching session</button>}
-          {selectedApproved && teacher && !selected.lessonPlan && <button className="ui-button ui-button-primary" onClick={() => onNavigateTab?.('lesson-plans')}>Continue in Lesson Plans →</button>}
+          {selectedApproved && canPrepare && !selected.lessonPlan && <button className="ui-button ui-button-primary" onClick={() => onNavigateTab?.('lesson-plans')}>Continue in Lesson Plans →</button>}
           {selected.lessonPlan && <button className="ui-button" onClick={() => onNavigateTab?.('lesson-plans')}>Open lesson plans</button>}
         </div>}
       </>}

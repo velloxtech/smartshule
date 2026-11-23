@@ -314,7 +314,7 @@ export const DocumentSigningCenterView: React.FC = () => {
   const canManagePolicies = useMemo(() => {
     if (!user) return false;
     const r = (user.role || '').toUpperCase();
-    return r === 'SUPER_ADMIN' || r === 'HEAD_TEACHER' || r === 'DIRECTOR' || r === 'ADMIN';
+    return r === 'SUPER_ADMIN' || r === 'HEAD_TEACHER' || r === 'DIRECTOR' || r === 'ADMIN' || r === 'SCHOOL_ADMIN';
   }, [user]);
 
   return (

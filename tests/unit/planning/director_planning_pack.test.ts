@@ -85,3 +85,33 @@ it('approving one legacy work record counts one lesson in its own stream and del
  await c.recordOfWorkUseCases.deleteDiaryEntry(work.id,admin);saved=(await c.curriculumTrackerRepository.findById(tracker.id))!;
  expect(saved.getStats().approvedLessons).toBe(0);
 });
+
+// Administrators manage teaching plans without needing an employee teaching assignment.
+it.each([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].flatMap(role=>[ {role,weeklyEndpoint:false}, {role,weeklyEndpoint:true} ]))('allows $role to manage a teacher-owned curriculum workflow (weekly endpoint: $weeklyEndpoint)',async({role,weeklyEndpoint})=>{
+ const manager={...admin,role};
+ await calendar();await timetable();await start();
+ let p=await save();
+ p=await c.termAllocations.saveDraft(manager,scope,[{subStrandId:'director-sub',lessons:2}],p.scheme.planningState!.revision,p.scheme.id);
+ p=await c.termAllocations.submitCoverage(manager,p.scheme.id,p.scheme.planningState!.revision);
+ p=await c.termAllocations.reviewCoverage(manager,p.scheme.id,p.scheme.planningState!.revision,true,'Approved');
+ p=await c.termAllocations.prepareWeekly(manager,p.scheme.id,p.scheme.planningState!.revision);
+ for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(manager,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);
+ if(weeklyEndpoint) await c.termAllocations.submitWeekly(manager,p.scheme.id,p.scheme.planningState!.revision);
+ else await c.curriculumUseCases.submitSchemeForReview(p.scheme.id,manager);
+ await c.curriculumUseCases.reviewScheme(p.scheme.id,manager.userId,true,'Approved',manager);
+ const weekly=await c.termAllocations.weekly(manager,p.scheme.id);
+ expect(weekly.scheme.teacherId).toBe(teacher.userId);
+ const plan=await c.curriculumUseCases.createLessonPlan({...planInput(weekly.weeks[0].lessons[0]),teacherId:manager.userId},manager);
+ expect(plan.teacherId).toBe(teacher.userId);
+ const submitted=await c.curriculumUseCases.submitLessonPlanForReview(plan.id,manager);
+ expect(submitted.status).toBe('SUBMITTED');
+ await expect(c.termAllocations.prepareWeekly({...manager,schoolId:'other-school'},p.scheme.id,weekly.scheme.planningState!.revision)).rejects.toThrow();
+});
+
+it.each([UserRole.PARENT,UserRole.ACCOUNTANT,UserRole.STUDENT])('keeps %s out of private curriculum preparation',async(role)=>{
+ await calendar();await timetable();await start();const p=await save();
+ const outsider={...admin,role};
+ await expect(c.termAllocations.submitCoverage(outsider,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow();
+ await expect(c.termAllocations.prepareWeekly(outsider,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow();
+ await expect(c.curriculumUseCases.submitSchemeForReview(p.scheme.id,outsider)).rejects.toThrow();
+});

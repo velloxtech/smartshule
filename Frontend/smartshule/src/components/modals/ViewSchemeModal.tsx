@@ -1,5 +1,5 @@
 import { SchemeApprovalActions } from '../curriculum/SchemeApprovalActions';
-import { canReviewCurriculum } from '../../utils/curriculumPermissions';
+import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculumPermissions';
 import React, { useState, useEffect } from 'react';
 import {apiService} from '../../services/api';
 import {SchemeOfWorkDocument} from '../curriculum/SchemeOfWorkDocument';
@@ -45,7 +45,7 @@ export const ViewSchemeModal: React.FC<ViewSchemeModalProps> = ({
   const authorizedReviewer = canReviewCurriculum(user?.role);
   const close = () => { if (weeklyDirty && !window.confirm('Discard unsaved lesson details? Saved lessons will be retained.')) return; onClose(); };
   if (!scheme) return null;
-  const canEditScheme = Boolean(scheme.planningState && (user?.role === 'TEACHER' || authorizedReviewer));
+  const canEditScheme = Boolean(scheme.planningState && canPrepareCurriculum(user?.role));
 
   const inlinePlanner = editing && canEditScheme;
 

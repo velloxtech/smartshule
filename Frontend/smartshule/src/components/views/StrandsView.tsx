@@ -11,7 +11,7 @@ export const StrandsView: React.FC = () => {
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
-  const isAdmin = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER'].includes(user?.role || '');
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(user?.role || '');
   const canEdit = isAdmin || (user?.role === 'TEACHER' && editableAreaIds.includes(selectedAreaId));
   
   const strandRequest = useRef(0);

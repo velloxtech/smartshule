@@ -348,7 +348,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const canUserSign = useMemo(() => {
     if (!user || isParent) return false;
     const r = (user.role || '').toUpperCase();
-    return ['TEACHER', 'CLASS_TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN'].includes(r);
+    return ['TEACHER', 'CLASS_TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(r);
   }, [user, isParent]);
 
   const canonicalDocContent = useMemo(() => {

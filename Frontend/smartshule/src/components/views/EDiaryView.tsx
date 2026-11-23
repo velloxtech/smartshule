@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 export const EDiaryView: React.FC = () => {
   const { user, activeViewMode } = useAuth();
   const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT || activeViewMode === 'PARENT';
-  const isTeacher = !isGuardian && (user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN);
+  const isTeacher = !isGuardian && (user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ADMIN || user?.role === UserRole.SCHOOL_ADMIN);
 
   const [entries, setEntries] = useState<EDiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);

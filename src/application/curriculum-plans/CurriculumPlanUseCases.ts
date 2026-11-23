@@ -1,3 +1,4 @@
+import { canPrepareCurriculum, hasAdministrativeAccess } from '../shared/AdministrativeAccess';
 import { assertWeeklyCoverage, selectWeeklySubmission, weeklyReviewEntries } from '../planning/WeeklySchemePolicy';
 import { AcademicActor, TeacherAssignmentAccess, TeachingScope, sameTerm } from '../shared/TeacherAssignmentAccess';
 import { CalendarPlanningService } from '../planning/CalendarPlanningService';
@@ -172,7 +173,7 @@ export class CurriculumPlanUseCases {
     const scheme = await this.schemeRepository.findById(schemeId);
     if (!scheme) throw new NotFoundError('Scheme of Work', schemeId);
     await this.authorize(scheme.toJSON(),actor);
-    if (actor?.role !== 'TEACHER') throw new ForbiddenError('Only the assigned subject teacher can submit a scheme for review.');
+    if (!canPrepareCurriculum(actor?.role)) throw new ForbiddenError('Only the assigned subject teacher or a school administrator can submit a scheme for review.');
     if (![SchemeStatus.DRAFT, SchemeStatus.REJECTED].includes(scheme.status)) throw new ValidationError('Only a draft or returned scheme can be submitted.');
 
     if (scheme.entries.length === 0) {
@@ -264,6 +265,7 @@ export class CurriculumPlanUseCases {
     if(!Number.isSafeInteger(duration)||(duration ?? 0)<=0||!dto.steps?.length||dto.steps.some(step=>!Number.isSafeInteger(step.durationMinutes)||step.durationMinutes<=0||!step.teacherActivities?.trim()||!step.learnerActivities?.trim())||dto.steps.reduce((sum,step)=>sum+step.durationMinutes,0)!==duration)throw new ValidationError('Complete each lesson stage and ensure stage times add up to the scheduled lesson duration.');
     dto={...dto,durationMinutes:duration};
     if(actor?.role==='TEACHER')dto={...dto,teacherId:actor.userId};
+    else if (hasAdministrativeAccess(actor?.role) && scheme?.teacherId) dto={...dto,teacherId:scheme.teacherId};
     const lessonPlan = LessonPlan.create(
       {
         teacherId: dto.teacherId,
@@ -328,7 +330,7 @@ export class CurriculumPlanUseCases {
     const plan = await this.lessonPlanRepository.findById(lessonPlanId);
     if (!plan) throw new NotFoundError('Lesson Plan', lessonPlanId);
     await this.authorize(await this.planScope(plan), actor);
-    if (actor?.role !== 'TEACHER') throw new ForbiddenError('Only the assigned teacher can submit this lesson plan for review.');
+    if (!canPrepareCurriculum(actor?.role)) throw new ForbiddenError('Only the assigned teacher or a school administrator can submit this lesson plan for review.');
     if (![LessonPlanStatus.DRAFT, LessonPlanStatus.REJECTED, LessonPlanStatus.RECORDED].includes(plan.status)) {
       throw new ValidationError('Only a draft or returned lesson plan can be submitted.');
     }

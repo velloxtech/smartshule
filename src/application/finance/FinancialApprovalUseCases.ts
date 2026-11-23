@@ -1,3 +1,4 @@
+import { hasAdministrativeAccess } from '../shared/AdministrativeAccess';
 import * as crypto from 'crypto';
 import {
   FinancialApprovalRequest,
@@ -114,7 +115,8 @@ export class FinancialApprovalUseCases {
     // 2. Identify the designated verified administrator
     const allUsers = await this.userRepository.findAll();
     const authorizedAdmins = allUsers.filter(u =>
-      (u.role === UserRole.SUPER_ADMIN || u.role === UserRole.ADMIN) &&
+      hasAdministrativeAccess(u.role) &&
+      u.schoolId === dto.schoolId &&
       u.status === UserStatus.ACTIVE
     );
 
@@ -226,6 +228,10 @@ export class FinancialApprovalUseCases {
       throw new NotFoundError('FinancialApprovalRequest', dto.requestId);
     }
 
+    if (approverUser.schoolId && request.schoolId !== approverUser.schoolId) {
+      throw new ForbiddenError('Financial approval belongs to another school.');
+    }
+
     if (request.status === 'APPROVED') {
       throw new ConflictError('This financial approval request has already been executed.');
     }
@@ -241,7 +247,7 @@ export class FinancialApprovalUseCases {
     }
 
     // Role-based authorization: approver must have administrative authority
-    if (approverUser.role !== UserRole.SUPER_ADMIN && approverUser.role !== UserRole.ADMIN) {
+    if (!hasAdministrativeAccess(approverUser.role)) {
       throw new ForbiddenError('Only authorized system administrators can verify and authorize financial changes.');
     }
 
@@ -328,6 +334,10 @@ export class FinancialApprovalUseCases {
   public async rejectApproval(dto: RejectApprovalDTO, rejectingUser: UserContext) {
     const request = await this.approvalRepository.findById(dto.requestId);
     if (!request) throw new NotFoundError('FinancialApprovalRequest', dto.requestId);
+
+    if (!hasAdministrativeAccess(rejectingUser.role) || (rejectingUser.schoolId && request.schoolId !== rejectingUser.schoolId)) {
+      throw new ForbiddenError('Only administrators in this school can reject financial approvals.');
+    }
 
     if (request.status !== 'PENDING') {
       throw new ConflictError(`Request is already in '${request.status}' state and cannot be rejected.`);

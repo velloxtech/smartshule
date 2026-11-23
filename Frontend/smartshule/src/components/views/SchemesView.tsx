@@ -1,7 +1,7 @@
 import {loadDocumentSchool} from '../curriculum/SchoolDocumentHeader';
 import {schemeOfWorkPDF} from '../curriculum/SchemeOfWorkDocument';
 import { SchemeApprovalActions } from '../curriculum/SchemeApprovalActions';
-import { canReviewCurriculum } from '../../utils/curriculumPermissions';
+import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculumPermissions';
 import { LessonPlanDocument, lessonPlansPDF } from '../curriculum/LessonPlanDocument';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
@@ -293,7 +293,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       <span className="material-symbols-outlined text-[15px]">download</span>
                       <span>Download PDF</span>
                     </button>}
-                    {isTeacher && s.status === 'DRAFT' && s.entries?.some(entry => !entry.archivedAt) && (
+                    {canPrepareCurriculum(user?.role) && ['DRAFT', 'REJECTED'].includes(s.status) && s.entries?.some(entry => !entry.archivedAt) && (
                       <button
                         onClick={() => handleSubmitScheme(s.id)}
                         className="px-3 py-1.5 rounded-lg bg-primary text-xs font-semibold text-white hover:bg-primary-container transition-colors cursor-pointer"

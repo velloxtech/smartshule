@@ -343,6 +343,18 @@ describe('System-Wide Bug Fix and Data Integrity Verification (Issues 1 - 5)', (
       await feeRepo.savePayment(payment);
     });
 
+    test('school administrators receive and execute financial approvals with a second approver', async () => {
+      await userRepo.save(User.create({schoolId,email:'school-admin@example.test',phone:'+254700123456',firstName:'School',lastName:'Admin',passwordHash:'test-only',role:UserRole.SCHOOL_ADMIN,status:UserStatus.ACTIVE},'school-approver'));
+      const result = await approvalUseCases.requestApproval({schoolId,actionType:'PAYMENT_REVERSAL',targetRecordType:'PAYMENT',targetRecordId:paymentId,reason:'Correct payment recorded for wrong learner',preferredChannel:'SMS',approverUserId:'school-approver'}, {userId:'usr-cashier-001',role:UserRole.BURSAR,schoolId});
+      const code = mockSms.mock.calls[0][1].match(/\b\d{6}\b/)[0];
+      await expect(approvalUseCases.verifyAndExecute({requestId:result.requestId,code},{userId:'usr-cashier-001',role:UserRole.SCHOOL_ADMIN,schoolId})).rejects.toThrow(/own/);
+      await expect(approvalUseCases.verifyAndExecute({requestId:result.requestId,code},{userId:'school-approver',role:UserRole.SCHOOL_ADMIN,schoolId:'another-school'})).rejects.toThrow(/another school/);
+      await expect(approvalUseCases.rejectApproval({requestId:result.requestId,reason:'Decline'},{userId:'school-approver',role:UserRole.SCHOOL_ADMIN,schoolId:'another-school'})).rejects.toThrow(/this school/);
+      const executed = await approvalUseCases.verifyAndExecute({requestId:result.requestId,code},{userId:'school-approver',role:UserRole.SCHOOL_ADMIN,schoolId});
+      expect(executed.success).toBe(true);
+      expect((await feeRepo.findPaymentById(paymentId))!.status).toBe(PaymentStatus.FAILED);
+    });
+
     test('1. Financial modification request generates 5-minute single-use OTP sent to administrator', async () => {
       const res = await approvalUseCases.requestApproval({
         schoolId,

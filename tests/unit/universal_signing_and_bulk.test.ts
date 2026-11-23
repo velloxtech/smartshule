@@ -110,7 +110,13 @@ describe('Universal Document Signing & Bulk Signing Engine Tests', () => {
             requiresSignature: false
           }
         )
-      ).rejects.toThrow('Only Super Admin, Director, or Head Teacher can configure document signing policies');
+      ).rejects.toThrow('Only school administrators, Director, or Head Teacher can configure document signing policies');
+    });
+
+    it.each(['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN'])('allows %s to configure document signing policies',async(role)=>{
+      const policy=await useCases.configureSigningPolicy({userId:headteacherUser.id,role},{documentType:'REPORT_CARD',title:'Administrator configured report policy',requiredSignaturesCount:2});
+      expect(policy.title).toBe('Administrator configured report policy');
+      expect(policy.requiredSignaturesCount).toBe(2);
     });
 
     it('allows Head Teacher or Super Admin to update policy placement and properties', async () => {
