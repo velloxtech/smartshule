@@ -21,3 +21,9 @@ export const isApprovedSchemeEntry = (scheme: Pick<SchemeOfWork, 'status' | 'pla
   Boolean(entry.id && !entry.archivedAt && (scheme.planningState?.approvedEntryIds
     ? scheme.planningState.approvedEntryIds.includes(entry.id)
     : scheme.status === 'APPROVED'));
+
+export const isCompleteSchemeEntry = (entry?: SchemeEntry) =>
+  Boolean(entry && !entry.archivedAt && entry.strandTitle?.trim() && entry.subStrandTitle?.trim()
+    && entry.specificLearningOutcomes?.some(value => value.trim())
+    && entry.learningExperiences?.some(value => value.trim())
+    && entry.assessmentMethods?.some(value => value.trim()));

@@ -222,4 +222,15 @@ describe('teacher-paced scheme lesson ranges',()=>{
   expect(timeline.weeks[0].lessons).toHaveLength(4);
   expect(timeline.weeks[1].lessons).toHaveLength(5);
  });
+ it('submits only the selected completed lessons and retains the remaining lessons as drafts',async()=>{
+  await allocate(saved.slots.filter((slot:any)=>slot.weekNumber<=2).map((slot:any)=>slot.id));
+  const before=(await c.schemeOfWorkRepository.findById(saved.scheme.id))!;
+  const selected=before.entries.filter(entry=>!entry.archivedAt).slice(0,2).map(entry=>entry.id);
+  const submitted=await c.termAllocations.submitWeekly(teacher,saved.scheme.id,before.planningState!.revision,selected);
+  expect(submitted.scheme.planningState!.submittedEntryIds).toEqual(selected);
+  expect(submitted.scheme.entries.filter(entry=>!entry.archivedAt)).toHaveLength(10);
+  const reviewed=await c.curriculumUseCases.reviewScheme(saved.scheme.id,admin.userId,true,'Selected lessons verified',admin);
+  expect(reviewed.planningState!.approvedEntryIds).toEqual(selected);
+  expect(reviewed.entries.filter(entry=>!entry.archivedAt&&!reviewed.planningState!.approvedEntryIds!.includes(entry.id))).toHaveLength(8);
+ });
 });

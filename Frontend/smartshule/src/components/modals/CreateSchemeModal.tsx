@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {apiService, captureApiRequestScope} from '../../services/api';
+import {isCompleteSchemeEntry} from '../../utils/curriculumPermissions';
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
   const [week,setWeek]=useState(0),[firstLesson,setFirstLesson]=useState(1),[lastLesson,setLastLesson]=useState(1);
   const [loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [attempt,setAttempt]=useState(0);
+  const [reviewSelection,setReviewSelection]=useState<string[]>([]);
   const saveInProgress=useRef(false);
   const scheme=weekly?.scheme||description?.scheme;
   const approved=new Set<string>(scheme?.planningState?.approvedEntryIds||[]);
@@ -40,6 +42,9 @@ export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
   const range:any[]=(selectedWeek?.lessons||[]).filter((lesson:any)=>lesson.lessonNumber>=firstLesson&&lesson.lessonNumber<=lastLesson);
   const hasProtected=range.some(protectedLesson);
   const readOnly=Boolean(scheme&&!['DRAFT','REJECTED'].includes(scheme.status)&&!(scheme.status==='APPROVED'&&scheme.planningState?.approvedEntryIds));
+  const readyEntries=(scheme?.entries||[]).filter((entry:any)=>!approved.has(entry.id)&&isCompleteSchemeEntry(entry));
+  const selectedForReview=readyEntries.filter((entry:any)=>reviewSelection.includes(entry.id));
+  const canSubmit=Boolean(scheme?.planningState?.coverageReviewStatus==='APPROVED'&&!readOnly&&selectedForReview.length);
   const selectWeek=(row:any,ids:Set<string>=approved)=>{
     setWeek(row?.weekNumber||0);
     const lessons:any[]=row?.lessons||[];
@@ -72,7 +77,7 @@ export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
   useEffect(()=>{
     if(!isOpen||!sourceId)return;
     let live=true;const current=captureApiRequestScope();
-    setLoading(true);setError('');setNotice('');setDescription(undefined);setWeekly(undefined);setPartId('');setOutcomes([]);
+    setLoading(true);setError('');setNotice('');setDescription(undefined);setWeekly(undefined);setPartId('');setOutcomes([]);setReviewSelection([]);
     Promise.all([apiService.schemePlanning(`${sourceId}/allocations`),apiService.schemePlanning(`${sourceId}/weekly`)]).then(([saved,timeline])=>{
       if(!live||!current())return;
       setDescription(saved.data);setWeekly(timeline.data);
@@ -108,9 +113,24 @@ export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
     try{
       const response=await apiService.schemePlanning(`${sourceId}/sessions/allocate`,{method:'POST',body:JSON.stringify({revision:scheme.planningState.revision,subStrandId:partId,slotIds:range.map(lesson=>lesson.id),specificLearningOutcomes:outcomes,...Object.fromEntries(Object.keys(fields).map(key=>[key,content[key as keyof Content].split('\n').map(text=>text.trim()).filter(Boolean)]))})});
       setWeekly(response.data);setSources(old=>old.map(row=>row.id===sourceId?response.data.scheme:row));
+      const currentEntries=response.data.scheme.entries.filter((entry:any)=>!entry.archivedAt);
+      setReviewSelection(old=>old.filter(id=>currentEntries.some((entry:any)=>entry.id===id)));
       setNotice(`Saved Week ${week}, lessons ${firstLesson}–${lastLesson}. Continue this strand in any later week, or select another part. Unallocated lessons remain open.`);
       try{await onSchemeCreated(response.data.scheme);}catch{setNotice('Your lesson allocation was saved. Refresh the schemes list after closing this modal.');}
     }catch(reason:any){setError(reason.message||'Could not save the lesson allocation.');}
+    finally{saveInProgress.current=false;setSaving(false);}
+  };
+
+  const submitSelected=async()=>{
+    if(saveInProgress.current||loading||!scheme||scheme.id!==sourceId||!canSubmit)return;
+    saveInProgress.current=true;setSaving(true);setError('');setNotice('');
+    try{
+      const response=await apiService.schemePlanning(`${sourceId}/weekly/submit`,{method:'POST',body:JSON.stringify({revision:scheme.planningState.revision,entryIds:selectedForReview.map((entry:any)=>entry.id)})});
+      const updated=response.data.scheme;
+      setWeekly(old=>({...old,scheme:updated}));setSources(old=>old.map(row=>row.id===sourceId?updated:row));setReviewSelection([]);
+      setNotice(`Submitted ${selectedForReview.length} selected lessons for school leadership review. The remaining saved lessons are retained as drafts.`);
+      try{await onSchemeCreated(updated);}catch{setNotice('Your selected lessons were submitted. Refresh the schemes list after closing this modal.');}
+    }catch(reason:any){setError(reason.message||'The selected lessons could not be submitted.');}
     finally{saveInProgress.current=false;setSaving(false);}
   };
 
@@ -135,10 +155,16 @@ export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-2">{Object.entries(fields).map(([key,label])=><label key={key} className="text-sm font-semibold">{label}<textarea className="ui-field mt-1 min-h-24 w-full font-normal" disabled={saving||readOnly} value={content[key as keyof Content]} onChange={event=>setContent(old=>({...old,[key]:event.target.value}))}/></label>)}</div>
           <button type="button" className="ui-button ui-button-primary" disabled={loading||saving||readOnly||scheme.id!==sourceId||!range.length||!outcomes.length||hasProtected} onClick={save}>{saving?'Saving lessons…':`Allocate ${range.length} lessons · Week ${week}`}</button>
-          <section aria-label="Term lesson allocations" className="space-y-2"><h3 className="font-bold">Whole-term lesson map</h3><p className="text-xs text-on-surface-variant">Weeks stay available until the end of the timetable. The number of strands does not determine the number of weeks.</p>{weeks.map(row=><details key={row.weekNumber} className="rounded-xl border border-outline-variant/30 p-3" open={row.weekNumber===week}><summary className="cursor-pointer text-sm font-semibold">Week {row.weekNumber} · {row.startDate} – {row.endDate} · {row.lessons.filter((lesson:any)=>lesson.entry).length}/{row.lessons.length} lessons allocated</summary><ul className="mt-2 divide-y divide-outline-variant/20">{row.lessons.map((lesson:any)=><li key={lesson.id} className="py-2 text-sm"><strong>Lesson {lesson.lessonNumber}</strong> · {lesson.date} · {lesson.startTime}–{lesson.endTime}<p className="mt-1">{lesson.entry?`${lesson.entry.strandTitle} / ${lesson.entry.subStrandTitle}`:'Not allocated — available for later planning'}</p>{lesson.entry?.specificLearningOutcomes?.length>0&&<p className="mt-1 text-xs text-on-surface-variant">{lesson.entry.specificLearningOutcomes.join('; ')}</p>}{protectedLesson(lesson)&&<span className="text-xs text-emerald-800">Approved or linked teaching history retained</span>}</li>)}</ul></details>)}</section>
+          <section aria-label="Term lesson allocations" className="space-y-2"><h3 className="font-bold">Whole-term lesson map</h3>
+            <div className="space-y-2 rounded-xl border border-outline-variant/30 bg-surface p-3">
+              <p className="text-sm font-semibold">Select saved lessons to submit for review</p>
+              <p className="text-xs text-on-surface-variant">A lesson needs outcomes, learning experiences and assessment methods before it can be selected. Unsaved form changes are not submitted.</p>
+              <div className="flex flex-wrap gap-2"><button type="button" className="ui-button" disabled={saving||readOnly||!readyEntries.some((entry:any)=>entry.weekNumber===week)} onClick={()=>setReviewSelection(old=>[...new Set([...old,...readyEntries.filter((entry:any)=>entry.weekNumber===week).map((entry:any)=>entry.id)])])}>Select completed Week {week} lessons</button><button type="button" className="ui-button" disabled={saving||!reviewSelection.length} onClick={()=>setReviewSelection([])}>Clear selection</button></div>
+              {scheme.planningState.coverageReviewStatus!=='APPROVED'&&<p className="text-xs text-amber-900">The saved syllabus coverage must be approved before scheme lessons can be submitted.</p>}
+            </div><p className="text-xs text-on-surface-variant">Weeks stay available until the end of the timetable. The number of strands does not determine the number of weeks.</p>{weeks.map(row=><details key={row.weekNumber} className="rounded-xl border border-outline-variant/30 p-3" open={row.weekNumber===week}><summary className="cursor-pointer text-sm font-semibold">Week {row.weekNumber} · {row.startDate} – {row.endDate} · {row.lessons.filter((lesson:any)=>lesson.entry).length}/{row.lessons.length} lessons allocated</summary><ul className="mt-2 divide-y divide-outline-variant/20">{row.lessons.map((lesson:any)=><li key={lesson.id} className="py-2 text-sm"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" aria-label={`Select Week ${row.weekNumber} lesson ${lesson.lessonNumber} for review`} disabled={saving||readOnly||!lesson.entry||approved.has(lesson.entry.id)||!isCompleteSchemeEntry(lesson.entry)} checked={Boolean(lesson.entry&&reviewSelection.includes(lesson.entry.id))} onChange={event=>setReviewSelection(old=>event.target.checked?[...new Set([...old,lesson.entry.id])]:old.filter(id=>id!==lesson.entry.id))}/><span><strong>Lesson {lesson.lessonNumber}</strong> · {lesson.date}</span></label> · {lesson.startTime}–{lesson.endTime}<p className="mt-1">{lesson.entry?`${lesson.entry.strandTitle} / ${lesson.entry.subStrandTitle}`:'Not allocated — available for later planning'}</p>{lesson.entry?.specificLearningOutcomes?.length>0&&<p className="mt-1 text-xs text-on-surface-variant">{lesson.entry.specificLearningOutcomes.join('; ')}</p>}{protectedLesson(lesson)&&<span className="text-xs text-emerald-800">Approved or linked teaching history retained</span>}</li>)}</ul></details>)}</section>
         </>}
       </div>
-      <footer className="flex justify-end border-t border-outline-variant/30 p-4"><button type="button" className="ui-button" disabled={saving} onClick={close}>Done</button></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant/30 p-4"><p role="status" className="text-sm">{selectedForReview.length} completed lessons selected</p><div className="flex flex-wrap gap-2"><button type="button" className="ui-button" disabled={saving} onClick={close}>Done</button><button type="button" className="ui-button ui-button-primary" disabled={loading||saving||scheme?.id!==sourceId||!canSubmit} onClick={submitSelected}>{saving?'Please wait…':`Submit selected lessons for review (${selectedForReview.length})`}</button></div></footer>
     </section>
   </div>;
 }
