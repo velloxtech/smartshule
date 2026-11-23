@@ -147,3 +147,79 @@ it.each([UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN])('allows %s 
  expect(await c.lessonPlanRepository.findById(plan.id)).toBeNull();
  expect(await c.schemeOfWorkRepository.findById(weekly.scheme.id)).toBeNull();
 });
+
+describe('teacher-paced scheme lesson ranges',()=>{
+ let saved:any;
+ beforeEach(async()=>{
+  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:scope.academicYearId,name:'Term 3',termNumber:3,startDate:'2026-11-09',endDate:'2026-12-18',isCurrent:true},scope.termId));
+  await c.calendarPlanning.saveCalendar(admin,scope,{startDate:'2026-11-09',endDate:'2026-12-18',teachingDays:[1,2,3,4,5],exceptions:[],published:true},0);
+  await c.timetableRepository.save(Timetable.create({...scope,schoolId:admin.schoolId,isActive:true,slots:['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'].map(day=>({id:day,dayOfWeek:day as any,periodNumber:1,startTime:'09:00',endTime:'09:35',learningAreaId:scope.learningAreaId,isBreak:false,isLunch:false}))},'paced-timetable'));
+  for(let i=1;i<=3;i++){
+   const strandId=i===1?'director-strand':`paced-strand-${i}`;
+   const subId=i===1?'director-sub':`paced-sub-${i}`;
+   await c.CBCAssessmentRepository.saveStrand(Strand.create({learningAreaId:scope.learningAreaId,gradeLevel:CBCGradeLevel.GRADE_4,code:`S${i}`,title:`Strand ${i}`},strandId));
+   await c.CBCAssessmentRepository.saveSubStrand(SubStrand.create({strandId,code:`S${i}.1`,title:`Part ${i}`,specificLearningOutcomes:[`Outcome ${i}a`,`Outcome ${i}b`]},subId));
+  }
+  saved=await c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'director-sub',lessons:1},{subStrandId:'paced-sub-2',lessons:1},{subStrandId:'paced-sub-3',lessons:1}],0);
+  saved=await c.termAllocations.submitCoverage(teacher,saved.scheme.id,saved.scheme.planningState.revision);
+  saved=await c.termAllocations.reviewCoverage(admin,saved.scheme.id,saved.scheme.planningState.revision,true,'Approved curriculum');
+ });
+ const allocate=async(slots:string[],outcomes=['Outcome 1a'],sub='director-sub',actor=teacher)=>{
+  const current=(await c.schemeOfWorkRepository.findById(saved.scheme.id))!;
+  return c.termAllocations.allocateSessions(actor,saved.scheme.id,current.planningState!.revision,sub,slots,{...content,specificLearningOutcomes:outcomes});
+ };
+ it('keeps all six weeks for three strands and lets one part occupy five lessons and continue next week',async()=>{
+  const original=structuredClone(saved.scheme.planningState.allocations);
+  const slots=saved.slots;
+  let timeline=await allocate(slots.filter((slot:any)=>slot.weekNumber===1).map((slot:any)=>slot.id));
+  expect(timeline.weeks).toHaveLength(6);
+  expect(timeline.weeks[0].lessons.map((lesson:any)=>lesson.entry.specificLearningOutcomes)).toEqual(Array(5).fill(['Outcome 1a']));
+  expect(timeline.weeks.slice(1).every((week:any)=>week.lessons.every((lesson:any)=>!lesson.entry))).toBe(true);
+  timeline=await allocate(slots.filter((slot:any)=>slot.weekNumber===2).map((slot:any)=>slot.id),['Outcome 1b']);
+  expect(timeline.weeks[1].lessons.every((lesson:any)=>lesson.entry.subStrandId==='director-sub')).toBe(true);
+  expect(timeline.scheme.planningState!.allocations).toEqual(original);
+  // Other strands can be placed late in the term without filling every earlier week.
+  timeline=await allocate(slots.filter((slot:any)=>slot.weekNumber===5).slice(0,2).map((slot:any)=>slot.id),['Outcome 2a'],'paced-sub-2');
+  expect(timeline.weeks[4].lessons.filter((lesson:any)=>lesson.entry)).toHaveLength(2);
+  expect(timeline.weeks[2].lessons.every((lesson:any)=>!lesson.entry)).toBe(true);
+  expect(timeline.weeks[5].lessons.every((lesson:any)=>!lesson.entry)).toBe(true);
+ });
+ it('supports lesson 2–4 only and retains a replaced draft in history',async()=>{
+  const slots=saved.slots.filter((slot:any)=>slot.weekNumber===1&&slot.lessonNumber>=2&&slot.lessonNumber<=4).map((slot:any)=>slot.id);
+  let timeline=await allocate(slots);
+  expect(timeline.weeks[0].lessons.map((lesson:any)=>Boolean(lesson.entry))).toEqual([false,true,true,true,false]);
+  const old=timeline.weeks[0].lessons[1].entry!.id;
+  timeline=await allocate([slots[0]],['Outcome 1b']);
+  expect(timeline.scheme.entries.find(entry=>entry.id===old)!.archivedAt).toBeTruthy();
+  expect(timeline.weeks[0].lessons[1].entry!.specificLearningOutcomes).toEqual(['Outcome 1b']);
+ });
+ it('rejects forged slots, duplicate periods, outcomes outside the saved coverage and cross-school access',async()=>{
+  const slot=saved.slots[0].id;
+  await expect(allocate(['not-a-timetable-period'])).rejects.toThrow('eligible teaching periods');
+  await expect(allocate([slot,slot])).rejects.toThrow('once');
+  await expect(allocate([slot],['Invented outcome'])).rejects.toThrow('saved syllabus');
+  await expect(allocate([slot],['Outcome 1a'],'unknown-sub')).rejects.toThrow('saved syllabus');
+  await expect(allocate([slot],['Outcome 1a'],'director-sub',{...teacher,schoolId:'another-school'})).rejects.toThrow();
+  await expect(c.termAllocations.allocateSessions(teacher,saved.scheme.id,0,'director-sub',[slot],content)).rejects.toThrow('reload');
+  expect((await c.schemeOfWorkRepository.findById(saved.scheme.id))!.entries).toHaveLength(0);
+ });
+ it('retains approved sessions and lessons already linked to teaching documents',async()=>{
+  let timeline=await allocate(saved.slots.filter((slot:any)=>slot.weekNumber===1).map((slot:any)=>slot.id));
+  const submitted=await c.termAllocations.submitWeekly(teacher,saved.scheme.id,timeline.scheme.planningState!.revision);
+  await c.curriculumUseCases.reviewScheme(saved.scheme.id,admin.userId,true,'Approved Week 1',admin);
+  await expect(allocate([saved.slots[0].id])).rejects.toThrow('Approved scheme lessons');
+  timeline=await allocate([saved.slots[5].id]);
+  const lesson=timeline.weeks[1].lessons[0];
+  const record=await c.recordOfWorkUseCases.createDiaryEntry({...scope,schoolId:teacher.schoolId,teacherId:teacher.userId,weekNumber:2,lessonDate:lesson.date,lessonPeriod:'1',strand:lesson.entry!.strandTitle,subStrand:lesson.entry!.subStrandTitle,lessonTopic:'Paced lesson',learningObjectives:'Outcome 1a',learningActivities:'Compare models',status:'DRAFT',planningLink:{schemeId:saved.scheme.id,schemeEntryId:lesson.entry!.id,slotId:lesson.id}},teacher);
+  await expect(allocate([saved.slots[5].id],['Outcome 1b'])).rejects.toThrow('Record of Work');
+  expect(await c.recordOfWorkRepository.findById(record.id)).not.toBeNull();
+  expect((await c.schemeOfWorkRepository.findById(saved.scheme.id))!.entries.some(entry=>entry.id===lesson.entry!.id&&!entry.archivedAt)).toBe(true);
+ });
+ it('excludes a holiday from the week instead of fabricating a fifth lesson',async()=>{
+  await c.calendarPlanning.saveCalendar(admin,scope,{startDate:'2026-11-09',endDate:'2026-12-18',teachingDays:[1,2,3,4,5],exceptions:[{date:'2026-11-11',kind:'HOLIDAY',reason:'School holiday'}],published:true},1);
+  await expect(allocate(['2026-11-11:p1'])).rejects.toThrow('eligible teaching periods');
+  const timeline=await c.termAllocations.weekly(teacher,saved.scheme.id);
+  expect(timeline.weeks[0].lessons).toHaveLength(4);
+  expect(timeline.weeks[1].lessons).toHaveLength(5);
+ });
+});

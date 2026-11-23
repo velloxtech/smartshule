@@ -7,12 +7,14 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
 import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
+import { CreateSchemeModal } from '../modals/CreateSchemeModal';
 import { ViewSchemeModal } from '../modals/ViewSchemeModal';
 import { useAuth } from '../../context/AuthContext';
 
 interface SchemesViewProps {
   onNavigateTab?: (tab: string) => void;
   initialTab?: 'schemes' | 'lesson-plans';
+  initialCreateOpen?: boolean;
 }
 
 const schemePeriodLabel = (scheme: SchemeOfWork) => {
@@ -22,7 +24,7 @@ const schemePeriodLabel = (scheme: SchemeOfWork) => {
   return `${term ? `Term ${term}` : scheme.termId} · ${year}`;
 };
 
-export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initialTab = 'schemes' }) => {
+export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initialTab = 'schemes', initialCreateOpen = false }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
   const isApprover = canReviewCurriculum(user?.role);
@@ -81,6 +83,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
 
   // Modals
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
+  const [isCreateSchemeOpen, setIsCreateSchemeOpen] = useState(initialCreateOpen);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
   const [selectedScheme, setSelectedScheme] = useState<SchemeOfWork | null>(null);
 
@@ -217,7 +220,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         <div className="flex items-center gap-2">
           {activeTab === 'schemes' ? (
             <button
-              onClick={() => onNavigateTab?.('scheme-of-work-builder')}
+              onClick={() => setIsCreateSchemeOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
@@ -252,7 +255,9 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
           {reviewSchemes.length > 0 && !visibleSchemes.length && <div className="rounded-xl bg-surface-container-low p-6 text-sm"><p>No schemes match your filters.</p><button className="ui-button mt-2" onClick={clearSchemeFilters}>Clear filters</button></div>}
           {reviewOnly && !pendingReviews.length && <p className="rounded-xl bg-surface-container-low p-4 text-sm">No scheme sessions are awaiting review.</p>}
           {savedSchemes.length > 0 ? (
-            visibleSchemes.map((s) => (
+            visibleSchemes.map((s) => {
+              const previewEntry=s.entries?.filter(entry=>!entry.archivedAt).sort((a,b)=>a.weekNumber-b.weekNumber||a.lessonNumber-b.lessonNumber)[0];
+              return (
               <div
                 key={s.id}
                 className="min-w-0 bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-xs border border-outline-variant/30 space-y-4"
@@ -289,24 +294,24 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     </span>
                   </div>
 
-                  {s.entries && s.entries[0] && (
+                  {previewEntry && (
                     <div className="space-y-1 pt-1">
                       <div className="text-xs text-on-surface font-semibold">
-                        Week {s.entries[0].weekNumber}, Lesson {s.entries[0].lessonNumber}: {s.entries[0].strandTitle} ({s.entries[0].subStrandTitle})
+                        Week {previewEntry.weekNumber}, Lesson {previewEntry.lessonNumber}: {previewEntry.strandTitle} ({previewEntry.subStrandTitle})
                       </div>
                       <p className="text-xs text-on-surface-variant italic bg-surface-container-low p-2 rounded">
-                        "{s.entries[0].specificLearningOutcomes?.[0] || 'Outcome defined'}"
+                        "{previewEntry.specificLearningOutcomes?.[0] || 'Outcome defined'}"
                       </p>
                       <div className="flex flex-wrap gap-2 text-[11px] text-outline pt-0.5">
-                        <span>Inquiry: {s.entries[0].keyInquiryQuestions?.[0]}</span>
+                        <span>Inquiry: {previewEntry.keyInquiryQuestions?.[0]}</span>
                         <span>·</span>
-                        <span>Assessment: {s.entries[0].assessmentMethods?.join(', ')}</span>
+                        <span>Assessment: {previewEntry.assessmentMethods?.join(', ')}</span>
                       </div>
                     </div>
                   )}
                   {s.planningState && (
                     <p className="pt-1 text-xs text-slate-600">
-                      Term draft: {s.planningState.allocations?.reduce((n, item) => n + (Number(item.lessons) || 0), 0) || 0} lessons allocated · {s.entries?.filter(entry => !entry.archivedAt).length || 0} scheduled lesson plans generated
+                      {s.entries?.filter(entry => !entry.archivedAt).length || 0} timetable lessons allocated · {s.planningState.allocations?.filter(item => Number(item.lessons) > 0).length || 0} saved syllabus items · Remaining periods stay open
                     </p>
                   )}
                   {s.status === 'DRAFT' && !s.entries?.some(entry => !entry.archivedAt) && (
@@ -363,7 +368,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                 </div>
                 {isApprover && <SchemeApprovalActions compact scheme={s} onReviewed={loadCurriculum} />}
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 space-y-2">
               <span className="material-symbols-outlined text-4xl text-outline">edit_calendar</span>
@@ -522,6 +528,11 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       )}
 
       {/* Modals */}
+      <CreateSchemeModal
+        isOpen={isCreateSchemeOpen}
+        onClose={() => setIsCreateSchemeOpen(false)}
+        onSchemeCreated={async () => { await loadCurriculum(); }}
+      />
       <CreateLessonPlanModal
         isOpen={isCreatePlanOpen}
         onClose={() => setIsCreatePlanOpen(false)}
@@ -543,5 +554,5 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   );
 };
 
-export function SchemesOfWorkView(props: {onNavigateTab?: (tab:string)=>void}) { return <SchemesView {...props} initialTab="schemes" />; }
+export function SchemesOfWorkView(props: {onNavigateTab?: (tab:string)=>void;initialCreateOpen?:boolean}) { return <SchemesView {...props} initialTab="schemes" />; }
 export function LessonPlansView(props: {onNavigateTab?: (tab:string)=>void}) { return <SchemesView {...props} initialTab="lesson-plans" />; }

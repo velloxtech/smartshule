@@ -27,6 +27,11 @@ export class CalendarPlanningController {
   return this.c.termAllocations.saveWeeklyLesson(a,String(req.params.id),String(req.params.entryId),body.revision,body);
  });
  continueSubStrand=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotId:z.string().min(1),reason:z.string().trim().min(3).max(1000)}).strict().parse(req.body);return this.c.termAllocations.continueSubStrand(a,String(req.params.id),body.revision,body.subStrandId,body.slotId,body.reason);});
+ allocateSessions=this.handle(async(req,a)=>{
+  const lines=z.array(z.string().max(10000)).max(100);
+  const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotIds:z.array(z.string().min(1)).min(1).max(500),specificLearningOutcomes:lines.min(1),keyInquiryQuestions:lines,learningExperiences:lines,learningResources:lines,assessmentMethods:lines}).strict().parse(req.body);
+  return this.c.termAllocations.allocateSessions(a,String(req.params.id),body.revision,body.subStrandId,body.slotIds,body);
+ });
  submitWeekly=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),entryIds:z.array(z.string().min(1)).min(1).max(500).optional()}).parse(req.body);return this.c.termAllocations.submitWeekly(a,String(req.params.id),body.revision,body.entryIds);});
  finalizeAllocation=this.handle(async(req,a)=>this.c.termAllocations.finalize(a,String(req.params.id),z.object({revision:z.number().int().min(0)}).parse(req.body).revision));
  reopenAllocation=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),reason:z.string().min(3).max(1000)}).parse(req.body);return this.c.termAllocations.reopen(a,String(req.params.id),body.revision,body.reason);});

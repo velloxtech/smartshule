@@ -1,549 +1,144 @@
-import React, { useState, useEffect } from 'react';
-import { apiService } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import { ClassRoom, StreamItem, BackendLearningArea, AcademicYear, AcademicTerm, BackendStrand, BackendSubStrand } from '../../types';
-import { matchGradeLevels } from '../../utils/formatters';
+import React, {useEffect, useRef, useState} from 'react';
+import {apiService, captureApiRequestScope} from '../../services/api';
 
-interface CreateSchemeModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSchemeCreated: (scheme: any) => void;
+  onSchemeCreated: (scheme: any) => void | Promise<void>;
 }
-
-export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
-  isOpen,
-  onClose,
-  onSchemeCreated,
-}) => {
-  const { user } = useAuth();
-
-  const [classes, setClasses] = useState<ClassRoom[]>([]);
-  const [selectedClassRoomId, setSelectedClassRoomId] = useState('');
-  const [streams, setStreams] = useState<StreamItem[]>([]);
-  const [selectedStreamId, setSelectedStreamId] = useState('');
-  const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
-  const [selectedLearningAreaId, setSelectedLearningAreaId] = useState('');
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
-  const [selectedYearId, setSelectedYearId] = useState('');
-  const [terms, setTerms] = useState<AcademicTerm[]>([]);
-  const [selectedTermId, setSelectedTermId] = useState('');
-
-  const [strands, setStrands] = useState<BackendStrand[]>([]);
-  const [selectedStrandId, setSelectedStrandId] = useState('');
-  const [strandTitle, setStrandTitle] = useState('');
-  const [isCustomStrand, setIsCustomStrand] = useState(false);
-  const [customStrandTitle, setCustomStrandTitle] = useState('');
-
-  const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
-  const [selectedSubStrandId, setSelectedSubStrandId] = useState('');
-  const [subStrandTitle, setSubStrandTitle] = useState('');
-  const [isCustomSubStrand, setIsCustomSubStrand] = useState(false);
-  const [customSubStrandTitle, setCustomSubStrandTitle] = useState('');
-
-  const [loadingStrands, setLoadingStrands] = useState(false);
-
-  const [title, setTitle] = useState('');
-  const [outcomes, setOutcomes] = useState('');
-  const [questions, setQuestions] = useState('');
-  const [experiences, setExperiences] = useState('');
-  const [resources, setResources] = useState('');
-  const [methods, setMethods] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const availableLearningAreas = React.useMemo(() => {
-    if (!selectedClassRoomId) return learningAreas;
-    const selectedClass = classes.find(c => c.id === selectedClassRoomId);
-    if (!selectedClass?.gradeLevel) return learningAreas;
-    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, selectedClass.gradeLevel));
-    return filtered.length > 0 ? filtered : learningAreas;
-  }, [learningAreas, selectedClassRoomId, classes]);
-
-  useEffect(() => {
-    if (availableLearningAreas.length > 0) {
-      if (!availableLearningAreas.some(la => la.id === selectedLearningAreaId)) {
-        setSelectedLearningAreaId(availableLearningAreas[0].id);
-      }
-    }
-  }, [availableLearningAreas, selectedLearningAreaId]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    async function loadData() {
-      try {
-        const [cRes, laRes, ctxRes, yrRes] = await Promise.all([
-          apiService.getClasses().catch(() => null),
-          apiService.getLearningAreas().catch(() => null),
-          apiService.getCurrentContext().catch(() => null),
-          apiService.getYears().catch(() => null),
-        ]);
-
-        if (cRes?.data && Array.isArray(cRes.data) && cRes.data.length > 0) {
-          setClasses(cRes.data);
-          setSelectedClassRoomId(cRes.data[0].id);
-        }
-
-        if (laRes?.data && Array.isArray(laRes.data) && laRes.data.length > 0) {
-          setLearningAreas(laRes.data);
-          setSelectedLearningAreaId(laRes.data[0].id);
-        }
-
-        if (yrRes?.data && Array.isArray(yrRes.data) && yrRes.data.length > 0) {
-          setAcademicYears(yrRes.data);
-          const currentYear = ctxRes?.data?.currentYear || yrRes.data.find((y: any) => y.isCurrent) || yrRes.data[0];
-          setSelectedYearId(currentYear.id);
-
-          const tRes = await apiService.getTerms(currentYear.id).catch(() => null);
-          if (tRes?.data && Array.isArray(tRes.data) && tRes.data.length > 0) {
-            setTerms(tRes.data);
-            const currentTerm = ctxRes?.data?.currentTerm || tRes.data.find((t: any) => t.isCurrent) || tRes.data[0];
-            setSelectedTermId(currentTerm.id);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load initial data', err);
-      }
-    }
-    loadData();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!selectedClassRoomId) {
-      setStreams([]);
-      setSelectedStreamId('');
-      return;
-    }
-    apiService.getStreamsByClass(selectedClassRoomId)
-      .then((res) => {
-        if (res?.success && res.data && res.data.length > 0) {
-          setStreams(res.data);
-          setSelectedStreamId(res.data[0].id);
-        } else {
-          setStreams([]);
-          setSelectedStreamId('');
-        }
-      }).catch(() => { setStreams([]); setSelectedStreamId(''); });
-  }, [selectedClassRoomId]);
-
-  const handleYearChange = async (yearId: string) => {
-    setSelectedYearId(yearId);
-    try {
-      const res = await apiService.getTerms(yearId);
-      if (res?.success && res.data && res.data.length > 0) {
-        setTerms(res.data);
-        setSelectedTermId(res.data[0].id);
-      } else {
-        setTerms([]);
-        setSelectedTermId('');
-      }
-    } catch {
-      setTerms([]);
-      setSelectedTermId('');
-    }
-  };
-
-  // SMART DB FETCHING: Fetch and filter Strands by the Class Grade
-  useEffect(() => {
-    if (!isOpen || !selectedLearningAreaId || !selectedClassRoomId) {
-      setStrands([]);
-      setSelectedStrandId('');
-      setStrandTitle('');
-      return;
-    }
-
-    const selectedClass = classes.find(c => c.id === selectedClassRoomId);
-    const classGradeFormat = selectedClass?.gradeLevel || '';
-
-    setLoadingStrands(true);
-    apiService.getStrandsByLearningArea(selectedLearningAreaId, classGradeFormat)
-      .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
-          const gradeStrands = res.data.filter((st: any) => matchGradeLevels(st.gradeLevel, classGradeFormat));
-          const effectiveStrands = gradeStrands.length > 0 ? gradeStrands : res.data;
-          
-          // Deduplicate
-          const seen = new Set<string>();
-          const uniqueStrands: BackendStrand[] = [];
-          for (const s of effectiveStrands) {
-            const k = (s.title || '').trim().toLowerCase();
-            if (!k || seen.has(k)) continue;
-            seen.add(k);
-            uniqueStrands.push(s);
-          }
-          setStrands(uniqueStrands);
-          
-          if (uniqueStrands.length > 0) {
-            setSelectedStrandId(uniqueStrands[0].id);
-            setStrandTitle(uniqueStrands[0].title);
-            setIsCustomStrand(false);
-          } else {
-            setSelectedStrandId('');
-            setStrandTitle('');
-            setIsCustomStrand(true);
-          }
-        } else {
-          setStrands([]);
-          setSelectedStrandId('');
-          setStrandTitle('');
-          setIsCustomStrand(true);
-        }
-      })
-      .catch(() => {
-        setStrands([]);
-        setSelectedStrandId('');
-        setStrandTitle('');
-        setIsCustomStrand(true);
-      })
-      .finally(() => setLoadingStrands(false));
-  }, [selectedLearningAreaId, selectedClassRoomId, classes, isOpen]);
-
-  useEffect(() => {
-    if (!selectedStrandId || !isOpen || isCustomStrand) {
-      setSubStrands([]);
-      setSelectedSubStrandId('');
-      setSubStrandTitle('');
-      if (isCustomStrand) setIsCustomSubStrand(true);
-      return;
-    }
-
-    apiService.getSubStrandsByStrand(selectedStrandId)
-      .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
-          const seen = new Set<string>();
-          const uniqueSubs: BackendSubStrand[] = [];
-          for (const sub of res.data) {
-            const sk = (sub.title || '').trim().toLowerCase();
-            if (!sk || seen.has(sk)) continue;
-            seen.add(sk);
-            uniqueSubs.push(sub);
-          }
-          setSubStrands(uniqueSubs);
-          if (uniqueSubs.length > 0) {
-            setSelectedSubStrandId(uniqueSubs[0].id);
-            setSubStrandTitle(uniqueSubs[0].title);
-            setIsCustomSubStrand(false);
-            if (uniqueSubs[0].specificLearningOutcomes?.length > 0 && !outcomes) {
-              setOutcomes(uniqueSubs[0].specificLearningOutcomes.join('\n'));
-            }
-          } else {
-            setIsCustomSubStrand(true);
-          }
-        } else {
-          setSubStrands([]);
-          setSelectedSubStrandId('');
-          setSubStrandTitle('');
-          setIsCustomSubStrand(true);
-        }
-      })
-      .catch(() => {
-        setSubStrands([]);
-        setSelectedSubStrandId('');
-        setSubStrandTitle('');
-        setIsCustomSubStrand(true);
-      });
-  }, [selectedStrandId, isOpen, isCustomStrand]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const teacherId = user?.id || '';
-    if (!teacherId) {
-      setError('Authenticated educator profile required to create scheme of work');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!selectedClassRoomId || !selectedLearningAreaId || !selectedYearId || !selectedTermId) {
-      setError('Please ensure class, learning area, year, and term are selected');
-      setIsLoading(false);
-      return;
-    }
-
-    const finalStrandTitle = (isCustomStrand || strands.length === 0 ? customStrandTitle : strandTitle) || strands.find(s => s.id === selectedStrandId)?.title || customStrandTitle;
-    const finalSubStrandTitle = (isCustomSubStrand || subStrands.length === 0 || isCustomStrand ? customSubStrandTitle : subStrandTitle) || subStrands.find(s => s.id === selectedSubStrandId)?.title || customSubStrandTitle;
-
-    if (!finalStrandTitle.trim() || !finalSubStrandTitle.trim()) {
-      setError('Curriculum Strand and Sub-strand are required');
-      setIsLoading(false);
-      return;
-    }
-
-    // Auto-persist custom strand/sub-strand to database so it is available across the entire school
-    if (isCustomStrand || strands.length === 0) {
-      const cls = classes.find(c => c.id === selectedClassRoomId);
-      const grade = cls?.gradeLevel || 'GRADE_7';
-      apiService.createStrand({
-        learningAreaId: selectedLearningAreaId,
-        gradeLevel: grade as any,
-        code: `STR-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-        title: finalStrandTitle.trim(),
-      }).then(res => {
-        if (res.success && res.data && !(res.data as any).proposalId && finalSubStrandTitle) {
-          apiService.createSubStrand({
-            strandId: res.data.id,
-            code: `${res.data.code}.1`,
-            title: finalSubStrandTitle.trim(),
-            specificLearningOutcomes: outcomes.split('\n').map(o => o.trim()).filter(Boolean)
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-    }
-
-    try {
-      const res = await apiService.createScheme({
-        teacherId,
-        learningAreaId: selectedLearningAreaId,
-        classRoomId: selectedClassRoomId,
-        streamId: selectedStreamId || undefined,
-        academicYearId: selectedYearId,
-        termId: selectedTermId,
-        title: title.trim() || `${learningAreas.find(la => la.id === selectedLearningAreaId)?.name} Scheme`,
-        entries: [
-          {
-            weekNumber: 1,
-            lessonNumber: 1,
-            strandId: isCustomStrand ? undefined : selectedStrandId || undefined,
-            strandTitle: finalStrandTitle.trim(),
-            subStrandId: isCustomSubStrand ? undefined : selectedSubStrandId || undefined,
-            subStrandTitle: finalSubStrandTitle.trim(),
-            specificLearningOutcomes: outcomes.split('\n').map((s) => s.trim()).filter(Boolean),
-            keyInquiryQuestions: questions.split('\n').map((s) => s.trim()).filter(Boolean),
-            learningExperiences: experiences.split('\n').map((s) => s.trim()).filter(Boolean),
-            learningResources: resources.split('\n').map((s) => s.trim()).filter(Boolean),
-            assessmentMethods: methods.split('\n').map((s) => s.trim()).filter(Boolean),
-            reflection: 'Scheme entry ready for syllabus progression tracking.',
-          },
-        ],
-      });
-
-      if (res.success && res.data) {
-        onSchemeCreated(res.data);
-        onClose();
-      } else {
-        setError(res.message || 'Failed to create scheme of work');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error creating scheme of work');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-primary text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold">
-              <span className="material-symbols-outlined text-[24px]">edit_calendar</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-base leading-tight">Create Scheme of Work</h3>
-              <p className="text-xs text-rose-100">KICD syllabus alignment · Weekly lesson breakdown</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1 overscroll-contain">
-          {error && <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-medium flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">error</span>{error}</div>}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Academic Year *</label>
-              <select value={selectedYearId} onChange={(e) => handleYearChange(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {academicYears.map((y) => <option key={y.id} value={y.id}>{y.name} {y.isCurrent ? '(Current)' : ''}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Term *</label>
-              <select value={selectedTermId} onChange={(e) => setSelectedTermId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Class *</label>
-              <select value={selectedClassRoomId} onChange={(e) => setSelectedClassRoomId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Stream</label>
-              <select value={selectedStreamId} onChange={(e) => setSelectedStreamId(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                <option value="">All Streams</option>
-                {streams.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Global Subject *</label>
-              <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {availableLearningAreas.map((la) => <option key={la.id} value={la.id}>{la.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Scheme of Work Title *</label>
-            <input type="text" required placeholder="e.g. Grade 7 Integrated Science - Term 1 Scheme" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant">Curriculum Strand *</label>
-                {strands.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomStrand(!isCustomStrand);
-                      if (!isCustomStrand) {
-                        setCustomStrandTitle(strandTitle || '');
-                      }
-                    }}
-                    className="text-[10px] text-primary hover:underline font-bold"
-                  >
-                    {isCustomStrand ? 'Select From List' : '+ Enter New'}
-                  </button>
-                )}
-              </div>
-              {loadingStrands ? (
-                <div className="p-2 text-xs text-on-surface-variant">Loading DB strands...</div>
-              ) : isCustomStrand || strands.length === 0 ? (
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter strand title (e.g. Numbers, Mechanics)..."
-                  value={customStrandTitle}
-                  onChange={(e) => {
-                    setCustomStrandTitle(e.target.value);
-                    setStrandTitle(e.target.value);
-                  }}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                />
-              ) : (
-                <select
-                  value={selectedStrandId}
-                  onChange={(e) => {
-                    if (e.target.value === '__custom__') {
-                      setIsCustomStrand(true);
-                      setCustomStrandTitle('');
-                      setStrandTitle('');
-                    } else {
-                      setSelectedStrandId(e.target.value);
-                      setStrandTitle(strands.find(s => s.id === e.target.value)?.title || '');
-                    }
-                  }}
-                  required
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
-                >
-                  {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
-                  <option value="__custom__">+ Enter Custom Strand...</option>
-                </select>
-              )}
-            </div>
-            
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant">Sub-strand *</label>
-                {subStrands.length > 0 && !isCustomStrand && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomSubStrand(!isCustomSubStrand);
-                      if (!isCustomSubStrand) {
-                        setCustomSubStrandTitle(subStrandTitle || '');
-                      }
-                    }}
-                    className="text-[10px] text-primary hover:underline font-bold"
-                  >
-                    {isCustomSubStrand ? 'Select From List' : '+ Enter New'}
-                  </button>
-                )}
-              </div>
-              {isCustomSubStrand || isCustomStrand || subStrands.length === 0 ? (
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter sub-strand title..."
-                  value={customSubStrandTitle}
-                  onChange={(e) => {
-                    setCustomSubStrandTitle(e.target.value);
-                    setSubStrandTitle(e.target.value);
-                  }}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                />
-              ) : (
-                <select
-                  value={selectedSubStrandId}
-                  onChange={(e) => {
-                    if (e.target.value === '__custom__') {
-                      setIsCustomSubStrand(true);
-                      setCustomSubStrandTitle('');
-                      setSubStrandTitle('');
-                    } else {
-                      setSelectedSubStrandId(e.target.value);
-                      const selected = subStrands.find(s => s.id === e.target.value);
-                      if (selected) {
-                        setSubStrandTitle(selected.title);
-                        setOutcomes(selected.specificLearningOutcomes?.join('\n') || '');
-                      }
-                    }
-                  }}
-                  required
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
-                >
-                  {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
-                  <option value="__custom__">+ Enter Custom Sub-strand...</option>
-                </select>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Specific Learning Outcomes *</label>
-            <textarea rows={3} required placeholder="Enter outcomes (one per line)..." value={outcomes} onChange={(e) => setOutcomes(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary leading-relaxed" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Key Inquiry Questions *</label>
-            <input type="text" required placeholder="e.g. How does a microscope magnify microscopic organisms?" value={questions} onChange={(e) => setQuestions(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Suggested Learning Experiences</label>
-            <input type="text" placeholder="e.g. Collaborative group practical" value={experiences} onChange={(e) => setExperiences(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Learning Resources</label>
-              <input type="text" placeholder="e.g. Microscopes, slides" value={resources} onChange={(e) => setResources(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Assessment Methods</label>
-              <input type="text" placeholder="e.g. Oral questioning, practical observation" value={methods} onChange={(e) => setMethods(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary" />
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20 mt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer transition-colors">Cancel</button>
-            <button type="submit" disabled={isLoading} className="px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-container shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
-              <span className="material-symbols-outlined text-[18px]">save</span>
-              <span>{isLoading ? 'Creating Scheme...' : 'Save Scheme of Work'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+const fields = {keyInquiryQuestions:'Key inquiry questions',learningExperiences:'Learning experiences',learningResources:'Learning resources',assessmentMethods:'Assessment methods'};
+type Content = Record<keyof typeof fields,string>;
+const emptyContent = ():Content => ({keyInquiryQuestions:'',learningExperiences:'',learningResources:'',assessmentMethods:''});
+const periodLabel=(scheme:any)=>{
+  const term=scheme.termId?.match(/(?:term)?[-_ ]?\d{4}[-_ ]?t?([1-3])$/i)?.[1]||scheme.termId?.match(/(?:term|t)[-_ ]?([1-3])$/i)?.[1];
+  return `${term?`Term ${term}`:'Saved term'} · ${scheme.academicYearId?.match(/\d{4}/)?.[0]||'Saved academic year'}`;
 };
+
+/** Allocate actual teaching periods from saved syllabus content, without week/strand coupling. */
+export function CreateSchemeModal({isOpen,onClose,onSchemeCreated}:Props){
+  const [sources,setSources]=useState<any[]>([]),[classes,setClasses]=useState<any[]>([]),[areas,setAreas]=useState<any[]>([]);
+  const [streams,setStreams]=useState<any[]>([]);
+  const [sourceId,setSourceId]=useState(''),[description,setDescription]=useState<any>(),[weekly,setWeekly]=useState<any>();
+  const [partId,setPartId]=useState(''),[outcomes,setOutcomes]=useState<string[]>([]),[content,setContent]=useState<Content>(emptyContent);
+  const [week,setWeek]=useState(0),[firstLesson,setFirstLesson]=useState(1),[lastLesson,setLastLesson]=useState(1);
+  const [loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const [attempt,setAttempt]=useState(0);
+  const saveInProgress=useRef(false);
+  const scheme=weekly?.scheme||description?.scheme;
+  const approved=new Set<string>(scheme?.planningState?.approvedEntryIds||[]);
+  const protectedLesson=(lesson:any)=>Boolean(approved.has(lesson.entry?.id)||lesson.lessonPlan||lesson.recordOfWorkStatus||lesson.recordsOfWork?.length);
+  const sourceLabel=(row:any)=>`${areas.find(area=>area.id===row.learningAreaId)?.name||'Saved learning area'} · ${classes.find(cls=>cls.id===row.classRoomId)?.name||row.title}${row.streamId?` · ${streams.find(stream=>stream.id===row.streamId)?.name||'Saved stream'}`:' · Whole class'} · ${periodLabel(row)}`;
+  const curriculum=(description?.catalogue||[]).flatMap((strand:any)=>strand.subStrands.map((sub:any)=>({strand,sub})));
+  const parts=(scheme?.planningState?.allocations||[]).filter((allocation:any)=>allocation.lessons>0).map((allocation:any)=>{
+    const items=[allocation.subStrandId,...(allocation.combinedSubStrandIds||[])].map(id=>curriculum.find((item:any)=>item.sub.id===id)).filter(Boolean);
+    return {allocation,items,label:items.map((item:any)=>`${item.strand.title} / ${item.sub.title}`).join(' + ')};
+  });
+  const part=parts.find((item:any)=>item.allocation.subStrandId===partId);
+  const allowedOutcomes=[...new Set<string>((part?.allocation.specificLearningOutcomes?.length?part.allocation.specificLearningOutcomes:part?.items.flatMap((item:any)=>item.sub.specificLearningOutcomes)||[]).map((text:string)=>text.trim()).filter(Boolean))];
+  const weeks:any[]=weekly?.weeks||[];
+  const selectedWeek=weeks.find(row=>row.weekNumber===week);
+  const range:any[]=(selectedWeek?.lessons||[]).filter((lesson:any)=>lesson.lessonNumber>=firstLesson&&lesson.lessonNumber<=lastLesson);
+  const hasProtected=range.some(protectedLesson);
+  const readOnly=Boolean(scheme&&!['DRAFT','REJECTED'].includes(scheme.status)&&!(scheme.status==='APPROVED'&&scheme.planningState?.approvedEntryIds));
+  const selectWeek=(row:any,ids:Set<string>=approved)=>{
+    setWeek(row?.weekNumber||0);
+    const lessons:any[]=row?.lessons||[];
+    const blocked=(lesson:any)=>ids.has(lesson.entry?.id)||lesson.lessonPlan||lesson.recordOfWorkStatus||lesson.recordsOfWork?.length;
+    const first=lessons.findIndex(lesson=>!blocked(lesson));
+    const available:any[]=[];
+    for(const lesson of first<0?lessons.slice(0,1):lessons.slice(first)){if(blocked(lesson)&&available.length)break;available.push(lesson);}
+    setFirstLesson(available[0]?.lessonNumber||1);setLastLesson(available[available.length-1]?.lessonNumber||1);
+  };
+
+  useEffect(()=>{
+    if(!isOpen)return;
+    let live=true;const current=captureApiRequestScope();
+    setLoading(true);setError('');setNotice('');setSources([]);setSourceId('');setDescription(undefined);setWeekly(undefined);setStreams([]);
+    Promise.all([apiService.getSchemes(),apiService.getClasses(),apiService.getLearningAreas(),apiService.getCurrentContext()]).then(async([schemes,cls,subjects,context])=>{
+      if(!live||!current())return;
+      if(!schemes.success||!cls.success||!subjects.success)throw new Error('The saved syllabus list could not be loaded.');
+      const available=(schemes.data||[]).filter((row:any)=>row.planningState?.allocations?.some((allocation:any)=>allocation.lessons>0));
+      available.sort((a:any,b:any)=>Number(b.termId===context.data?.currentTerm?.id)-Number(a.termId===context.data?.currentTerm?.id));
+      const streamClasses=[...new Set<string>(available.filter((row:any)=>row.streamId).map((row:any)=>row.classRoomId))];
+      const namedStreams=await Promise.all(streamClasses.map(classId=>apiService.getStreamsByClass(classId).then(result=>result.data||[]).catch(()=>[])));
+      if(!live||!current())return;
+      setStreams(namedStreams.flat());setSources(available);setClasses(cls.data||[]);setAreas(subjects.data||[]);
+      const editable=available.find((row:any)=>['DRAFT','REJECTED'].includes(row.status)||(row.status==='APPROVED'&&row.planningState?.approvedEntryIds));
+      setSourceId(editable?.id||available[0]?.id||'');
+    }).catch(reason=>{if(live&&current())setError(reason.message||'Could not load saved syllabus coverage.');}).finally(()=>{if(live&&current())setLoading(false);});
+    return()=>{live=false;};
+  },[isOpen,attempt]);
+
+  useEffect(()=>{
+    if(!isOpen||!sourceId)return;
+    let live=true;const current=captureApiRequestScope();
+    setLoading(true);setError('');setNotice('');setDescription(undefined);setWeekly(undefined);setPartId('');setOutcomes([]);
+    Promise.all([apiService.schemePlanning(`${sourceId}/allocations`),apiService.schemePlanning(`${sourceId}/weekly`)]).then(([saved,timeline])=>{
+      if(!live||!current())return;
+      setDescription(saved.data);setWeekly(timeline.data);
+      setPartId(saved.data.scheme.planningState?.allocations?.find((allocation:any)=>allocation.lessons>0)?.subStrandId||'');
+      const ids=new Set<string>(timeline.data.scheme.planningState?.approvedEntryIds||[]);
+      const first=timeline.data.weeks.find((row:any)=>row.lessons.some((lesson:any)=>!ids.has(lesson.entry?.id)&&!lesson.lessonPlan&&!lesson.recordOfWorkStatus))||timeline.data.weeks[0];
+      selectWeek(first,ids);
+    }).catch(reason=>{if(live&&current())setError(reason.message||'Could not load saved coverage and timetable periods.');}).finally(()=>{if(live&&current())setLoading(false);});
+    return()=>{live=false;};
+  },[isOpen,sourceId]);
+
+  useEffect(()=>{
+    if(!description||!partId)return;
+    const allocation=description.scheme.planningState.allocations.find((row:any)=>row.subStrandId===partId);
+    const selected=[partId,...(allocation?.combinedSubStrandIds||[])].map(id=>curriculum.find((item:any)=>item.sub.id===id)).filter(Boolean);
+    setOutcomes((allocation?.specificLearningOutcomes?.length?allocation.specificLearningOutcomes:selected.flatMap((item:any)=>item.sub.specificLearningOutcomes)).map((text:string)=>text.trim()).filter(Boolean));
+    setContent(Object.fromEntries(Object.keys(fields).map(key=>[key,(allocation?.[key]||(key==='learningExperiences'?selected.flatMap((item:any)=>item.sub.suggestedExperiences||[]):[])).join('\n')])) as Content);
+  },[partId,description]);
+
+  const close=()=>{if(!saveInProgress.current)onClose();};
+  useEffect(()=>{
+    if(!isOpen)return;
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close();}};
+    window.addEventListener('keydown',escape,true);
+    const previous=document.body.style.overflow;document.body.style.overflow='hidden';
+    return()=>{window.removeEventListener('keydown',escape,true);document.body.style.overflow=previous;};
+  },[isOpen,onClose]);
+
+  const save=async()=>{
+    if(saveInProgress.current||loading||!scheme||scheme.id!==sourceId||!part||!range.length||!outcomes.length||hasProtected||readOnly)return;
+    if(range.some(lesson=>lesson.entry)&&!window.confirm('Replace the draft allocation in these lessons? The previous draft will be retained in history. Approved lessons and teaching records cannot be replaced.'))return;
+    saveInProgress.current=true;setSaving(true);setError('');setNotice('');
+    try{
+      const response=await apiService.schemePlanning(`${sourceId}/sessions/allocate`,{method:'POST',body:JSON.stringify({revision:scheme.planningState.revision,subStrandId:partId,slotIds:range.map(lesson=>lesson.id),specificLearningOutcomes:outcomes,...Object.fromEntries(Object.keys(fields).map(key=>[key,content[key as keyof Content].split('\n').map(text=>text.trim()).filter(Boolean)]))})});
+      setWeekly(response.data);setSources(old=>old.map(row=>row.id===sourceId?response.data.scheme:row));
+      setNotice(`Saved Week ${week}, lessons ${firstLesson}–${lastLesson}. Continue this strand in any later week, or select another part. Unallocated lessons remain open.`);
+      try{await onSchemeCreated(response.data.scheme);}catch{setNotice('Your lesson allocation was saved. Refresh the schemes list after closing this modal.');}
+    }catch(reason:any){setError(reason.message||'Could not save the lesson allocation.');}
+    finally{saveInProgress.current=false;setSaving(false);}
+  };
+
+  if(!isOpen)return null;
+  return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm sm:p-5" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}>
+    <section role="dialog" aria-modal="true" aria-labelledby="create-scheme-title" className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-surface-container-lowest shadow-xl">
+      <header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-4 sm:p-5"><div><h2 id="create-scheme-title" className="text-xl font-bold">New Scheme of Work</h2><p className="mt-1 text-sm text-on-surface-variant">Load a planned syllabus, then decide what to teach in each timetable lesson. A strand can span several weeks.</p></div><button type="button" className="ui-button" disabled={saving} onClick={close} aria-label="Close scheme creator">✕</button></header>
+      <div className="space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-5">
+        {error&&<div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}<button className="ui-button ml-2" disabled={saving} onClick={()=>setAttempt(value=>value+1)}>Reload saved plans</button></div>}
+        {notice&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+        <label className="block text-sm font-semibold">Planned syllabus<select className="ui-field mt-2 w-full" value={sourceId} disabled={loading||saving} onChange={event=>setSourceId(event.target.value)}><option value="">Choose saved syllabus coverage</option>{sources.map(row=><option key={row.id} value={row.id}>{sourceLabel(row)} · {row.planningState.coverageReviewStatus||'DRAFT'}</option>)}</select></label>
+        {loading?<p role="status" className="rounded-xl bg-surface p-4 text-sm">Loading saved curriculum and timetable lessons…</p>:!sources.length?<p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">No saved syllabus coverage with lesson allocations is available. Save the syllabus under Syllabus Planning first, then return here. This modal does not create or replace syllabus coverage.</p>:scheme&&<>
+          {readOnly&&<p role="alert" className="rounded-xl bg-amber-50 p-3 text-sm">This scheme is awaiting review or locked. Use an editable draft, or ask leadership to return it before changing its lessons.</p>}
+          <p className="text-sm text-on-surface-variant">{sourceLabel(scheme)} · Syllabus: <strong>{scheme.planningState.coverageReviewStatus||'DRAFT'}</strong>. Draft lessons can be saved now; syllabus approval is required before submitting them for review.</p>
+          <label className="block text-sm font-semibold">Strand / sub-strand from the planned syllabus<select className="ui-field mt-2 w-full" value={partId} disabled={saving||readOnly} onChange={event=>{setPartId(event.target.value);setNotice('');}}>{parts.map((item:any)=><option key={item.allocation.subStrandId} value={item.allocation.subStrandId}>{item.label||'Saved curriculum item'}</option>)}</select></label>
+          <fieldset className="space-y-2 rounded-xl border border-outline-variant/30 p-4" disabled={saving||readOnly}><legend className="px-1 text-sm font-semibold">Which part will these lessons cover?</legend><p className="text-xs text-on-surface-variant">Select the saved outcomes for this lesson range. Cover other outcomes in later lessons or weeks.</p>{allowedOutcomes.map(outcome=><label key={outcome} className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={outcomes.includes(outcome)} onChange={event=>setOutcomes(old=>event.target.checked?[...old,outcome]:old.filter(value=>value!==outcome))}/><span>{outcome}</span></label>)}{!allowedOutcomes.length&&<p className="text-sm text-amber-800">This syllabus item has no published outcomes. Ask the curriculum administrator to complete it.</p>}</fieldset>
+          <fieldset disabled={saving||readOnly} className="space-y-3 rounded-xl border border-outline-variant/30 p-4"><legend className="px-1 text-sm font-semibold">Allocate timetable lessons</legend>
+            <div className="grid gap-3 sm:grid-cols-3"><label className="text-sm">Teaching week<select className="ui-field mt-1 w-full" value={week} onChange={event=>selectWeek(weeks.find(row=>row.weekNumber===Number(event.target.value)))}>{weeks.map(row=><option key={row.weekNumber} value={row.weekNumber}>Week {row.weekNumber} · {row.lessons.length} lessons</option>)}</select></label><label className="text-sm">From lesson<select className="ui-field mt-1 w-full" value={firstLesson} onChange={event=>{const value=Number(event.target.value);setFirstLesson(value);if(lastLesson<value)setLastLesson(value);}}>{selectedWeek?.lessons.map((lesson:any)=><option key={lesson.id} value={lesson.lessonNumber}>Lesson {lesson.lessonNumber} · {lesson.date}</option>)}</select></label><label className="text-sm">Through lesson<select className="ui-field mt-1 w-full" value={lastLesson} onChange={event=>setLastLesson(Number(event.target.value))}>{selectedWeek?.lessons.filter((lesson:any)=>lesson.lessonNumber>=firstLesson).map((lesson:any)=><option key={lesson.id} value={lesson.lessonNumber}>Lesson {lesson.lessonNumber} · {lesson.date}</option>)}</select></label></div>
+            <p className="text-sm">Week {week} has <strong>{selectedWeek?.lessons.length||0} actual subject lessons</strong>. Selected: <strong>{range.length} lessons</strong> ({range[0]?.date} – {range[range.length-1]?.date}).</p>
+            <p className="text-xs text-on-surface-variant">For five lessons a week, choose lessons 1–5 to spend the whole week on this part. Choose the same strand next week if more time is needed. Holidays and cancelled periods are excluded.</p>
+            {hasProtected&&<p role="alert" className="text-sm text-amber-900">This range includes an approved lesson or linked teaching document. Select other periods; existing teaching history is retained.</p>}
+          </fieldset>
+          <div className="grid gap-3 sm:grid-cols-2">{Object.entries(fields).map(([key,label])=><label key={key} className="text-sm font-semibold">{label}<textarea className="ui-field mt-1 min-h-24 w-full font-normal" disabled={saving||readOnly} value={content[key as keyof Content]} onChange={event=>setContent(old=>({...old,[key]:event.target.value}))}/></label>)}</div>
+          <button type="button" className="ui-button ui-button-primary" disabled={loading||saving||readOnly||scheme.id!==sourceId||!range.length||!outcomes.length||hasProtected} onClick={save}>{saving?'Saving lessons…':`Allocate ${range.length} lessons · Week ${week}`}</button>
+          <section aria-label="Term lesson allocations" className="space-y-2"><h3 className="font-bold">Whole-term lesson map</h3><p className="text-xs text-on-surface-variant">Weeks stay available until the end of the timetable. The number of strands does not determine the number of weeks.</p>{weeks.map(row=><details key={row.weekNumber} className="rounded-xl border border-outline-variant/30 p-3" open={row.weekNumber===week}><summary className="cursor-pointer text-sm font-semibold">Week {row.weekNumber} · {row.startDate} – {row.endDate} · {row.lessons.filter((lesson:any)=>lesson.entry).length}/{row.lessons.length} lessons allocated</summary><ul className="mt-2 divide-y divide-outline-variant/20">{row.lessons.map((lesson:any)=><li key={lesson.id} className="py-2 text-sm"><strong>Lesson {lesson.lessonNumber}</strong> · {lesson.date} · {lesson.startTime}–{lesson.endTime}<p className="mt-1">{lesson.entry?`${lesson.entry.strandTitle} / ${lesson.entry.subStrandTitle}`:'Not allocated — available for later planning'}</p>{lesson.entry?.specificLearningOutcomes?.length>0&&<p className="mt-1 text-xs text-on-surface-variant">{lesson.entry.specificLearningOutcomes.join('; ')}</p>}{protectedLesson(lesson)&&<span className="text-xs text-emerald-800">Approved or linked teaching history retained</span>}</li>)}</ul></details>)}</section>
+        </>}
+      </div>
+      <footer className="flex justify-end border-t border-outline-variant/30 p-4"><button type="button" className="ui-button" disabled={saving} onClick={close}>Done</button></footer>
+    </section>
+  </div>;
+}

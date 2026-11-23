@@ -1,5 +1,6 @@
 import React from 'react';
 import { WebSyllabusCoveragePlanView } from './WebSyllabusCoveragePlanView';
+import { SchemesOfWorkView } from './SchemesView';
 
 type PageProps = { onNavigateTab?: (tab: string) => void };
 
@@ -11,5 +12,5 @@ export function CoverageTrackingView(props: PageProps) {
   return <WebSyllabusCoveragePlanView {...props} mode="monitoring" />;
 }
 export function SchemeOfWorkBuilderView(props: PageProps) {
-  return <div className="space-y-4"><button type="button" className="ui-button" onClick={()=>props.onNavigateTab?.('schemes-lesson-plans')}>← Back to Schemes of Work</button><WebSyllabusCoveragePlanView {...props} mode="scheme-builder" /></div>;
+  return <SchemesOfWorkView {...props} initialCreateOpen />;
 }

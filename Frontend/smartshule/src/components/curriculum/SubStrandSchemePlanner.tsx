@@ -120,7 +120,7 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
     {showReviewActions && canReview && scheme && <SchemeApprovalActions scheme={scheme} onReviewed={async () => { await refresh(); }} />}
     {!canDraft ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
       <p>Save at least one syllabus coverage allocation first. Scheme drafts use that saved plan.</p>
-      <button className="ui-button mt-3" onClick={() => onNavigateTab?.('curriculum-tracker')}>Open Syllabus Coverage</button>
+      <button className="ui-button mt-3" onClick={() => onNavigateTab?.('syllabus-coverage-plan')}>Open Syllabus Coverage</button>
     </div> : <>
       {!approvedCoverage && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>You can complete and save scheme lessons now. The source coverage must be approved before scheme lessons can be submitted.</p>{canPrepare && ['DRAFT', 'REJECTED', undefined].includes(scheme.planningState.coverageReviewStatus) && <button className="ui-button mt-3" disabled={busy || dirty} onClick={() => request(async () => { await apiService.submitCoverageDraft(scheme.id, scheme.planningState.revision); await refresh(); setNotice('Source coverage submitted for approval. Your teaching-session drafts are retained.'); })}>Submit source coverage for approval</button>}</div>}
       <details className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">

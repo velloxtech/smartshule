@@ -530,6 +530,7 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.post('/schemes/:id/allocations/submit',authMiddleware,planningController.submitCoverage);
   curriculumRouter.post('/schemes/:id/allocations/review',authMiddleware,planningController.reviewCoverage);
   curriculumRouter.post('/schemes/:id/sessions/continue',authMiddleware,planningController.continueSubStrand);
+  curriculumRouter.post('/schemes/:id/sessions/allocate',authMiddleware,planningController.allocateSessions);
   curriculumRouter.post('/schemes/:id/weekly/prepare',authMiddleware,planningController.prepareWeekly);
   curriculumRouter.put('/schemes/:id/weekly/entries/:entryId',authMiddleware,planningController.saveWeeklyLesson);
   curriculumRouter.post('/schemes/:id/weekly/submit',authMiddleware,planningController.submitWeekly);

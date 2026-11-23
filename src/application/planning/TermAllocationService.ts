@@ -202,6 +202,45 @@ export class TermAllocationService {
     scheme.draft();await this.persist(scheme,revision,originalEntries);return this.describe(actor,scheme);
   }
 
+  /** Teachers choose real lesson periods, independently of strand order or week boundaries. */
+  async allocateSessions(actor:AcademicActor,id:string,revision:number,subStrandId:string,slotIds:string[],content:Pick<SchemeOfWorkEntry,'specificLearningOutcomes'|'keyInquiryQuestions'|'learningExperiences'|'learningResources'|'assessmentMethods'>) {
+    const scheme=await this.editableWeekly(actor,id,revision,false);
+    const state=scheme.planningState!;
+    const allocation=state.allocations.find(row=>row.subStrandId===subStrandId&&row.lessons>0);
+    if(!allocation)throw new ValidationError('Select curriculum included in this saved syllabus coverage.');
+    if(!slotIds.length||new Set(slotIds).size!==slotIds.length)throw new ValidationError('Select each teaching period once.');
+    const [schedule,catalogue,plans,work]=await Promise.all([
+      this.c.calendarPlanning.slots(actor,scheme.toJSON()),
+      this.catalogue(actor,scheme.toJSON()),
+      this.c.lessonPlanRepository.findAll({classRoomId:scheme.classRoomId,learningAreaId:scheme.learningAreaId,streamId:scheme.streamId}),
+      this.c.recordOfWorkRepository.find({schoolId:actor.schoolId,academicYearId:scheme.academicYearId}),
+    ]);
+    const slots=slotIds.map(slotId=>schedule.slots.find(slot=>slot.id===slotId));
+    if(slots.some(slot=>!slot))throw new ValidationError('Select eligible teaching periods from this subject’s current timetable.');
+    const curriculum=catalogue.flatMap(strand=>strand.subStrands.map(sub=>({strand,sub})));
+    const selected=[subStrandId,...(allocation.combinedSubStrandIds||[])].map(subId=>curriculum.find(item=>item.sub.id===subId));
+    if(selected.some(item=>!item))throw new ValidationError('The saved curriculum is no longer available. Ask the administrator to review it.');
+    const source=selected as NonNullable<typeof selected[number]>[];
+    const allowedOutcomes=allocation.specificLearningOutcomes?.length?allocation.specificLearningOutcomes:source.flatMap(item=>item.sub.specificLearningOutcomes);
+    const outcomes=[...new Set(content.specificLearningOutcomes.map(text=>text.trim()).filter(Boolean))];
+    if(!outcomes.length||outcomes.some(outcome=>!allowedOutcomes.some(allowed=>allowed.trim()===outcome)))throw new ValidationError('Choose the outcomes for this part from the saved syllabus coverage.');
+    const existing=scheme.entries.filter(entry=>!entry.archivedAt&&entry.slotId&&slotIds.includes(entry.slotId));
+    const approved=new Set(state.approvedEntryIds||[]);
+    if(existing.some(entry=>approved.has(entry.id)))throw new ConflictError('Approved scheme lessons cannot be replaced. Choose an unapproved teaching period.');
+    if(existing.some(entry=>plans.some(plan=>plan.toJSON().schemeOfWorkEntryId===entry.id)||work.some(record=>record.toJSON().planningLink?.schemeId===id&&record.toJSON().planningLink?.schemeEntryId===entry.id)))throw new ConflictError('A selected lesson already has a lesson plan or Record of Work. Retain its history and choose another period.');
+    const originalEntries=structuredClone(scheme.entries);
+    const replaced=new Set(existing.map(entry=>entry.id));
+    const now=new Date().toISOString();
+    const entries=scheme.entries.map(entry=>replaced.has(entry.id)?{...entry,archivedAt:now,archivedReason:'Replaced by an explicit teaching-period allocation; original draft retained.'}:entry);
+    const lines=(values:string[])=>values.map(value=>value.trim()).filter(Boolean);
+    for(const slot of slots){
+      entries.push({id:IdGenerator.generate(),slotId:slot!.id,weekNumber:slot!.weekNumber,lessonNumber:slot!.lessonNumber,scheduledDate:slot!.date,scheduledStartTime:slot!.startTime,scheduledEndTime:slot!.endTime,strandId:source[0].strand.id,strandTitle:[...new Set(source.map(item=>item.strand.title))].join(' + '),subStrandId,subStrandTitle:source.map(item=>item.sub.title).join(' + '),combinedSubStrandIds:allocation.combinedSubStrandIds,specificLearningOutcomes:outcomes,keyInquiryQuestions:lines(content.keyInquiryQuestions),learningExperiences:lines(content.learningExperiences),learningResources:lines(content.learningResources),assessmentMethods:lines(content.assessmentMethods)});
+    }
+    scheme.setPlanningState({...state,revision:revision+1,locked:false,weeklyPlanningStarted:true,submittedEntryIds:undefined,scheduleFingerprint:schedule.fingerprint,history:[...state.history,{at:now,actorId:actor.userId,action:'PACING_ADJUSTED',reason:`Allocated ${slots.length} selected teaching periods without changing source syllabus coverage.`,allocations:structuredClone(state.allocations),scheduleFingerprint:schedule.fingerprint}]},entries);
+    scheme.draft();await this.persist(scheme,revision,originalEntries);
+    return this.weekly(actor,id);
+  }
+
   async continueSubStrand(actor:AcademicActor,id:string,revision:number,subStrandId:string,slotId:string,reason:string) {
     const scheme=await this.editableWeekly(actor,id,revision,false);
     if(reason.trim().length<3)throw new ValidationError('Explain why this sub-strand needs another teaching session.');

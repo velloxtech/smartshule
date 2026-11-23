@@ -1176,7 +1176,7 @@ export default function App() {
                         setUploadMarksModalOpen(true);
                       }}
                       onOpenNewLessonPlan={() => setCurrentTab('lesson-plans')}
-                      onOpenNewScheme={() => setCurrentTab('scheme-of-work-builder')}
+                      onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
                       refreshTrigger={marksRefreshTrigger}
                     />
                   );
@@ -1694,7 +1694,7 @@ export default function App() {
       <CreateSchemeModal
         isOpen={createSchemeModalOpen}
         onClose={() => setCreateSchemeModalOpen(false)}
-        onSchemeCreated={() => {}}
+        onSchemeCreated={() => setMarksRefreshTrigger(value => value + 1)}
       />
 
       <AcademicTermsModal
