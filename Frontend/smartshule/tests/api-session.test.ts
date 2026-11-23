@@ -118,3 +118,21 @@ test('settling an aborted request does not remove a replacement request from ded
   newResponse.resolve(ok({ current: true }));
   assert.deepEqual(await duplicate, await replacement);
 });
+
+test('timeouts show a useful retry message instead of the browser AbortError', async () => {
+  const originalTimer = browser.setTimeout;
+  let expire!: () => void;
+  browser.setTimeout = ((callback: () => void) => { expire = callback; return 0; }) as any;
+  globalThis.fetch = async (_url, options) => new Promise((_resolve, reject) => {
+    options!.signal!.addEventListener('abort', () => reject(new DOMException('signal is aborted without reason', 'AbortError')));
+  });
+  try {
+    const pending = apiService.getTeachers();
+    const rejected = assert.rejects(pending, /Loading took too long.*try again/);
+    expire();
+    await rejected;
+    assert.equal(getStoredAuthToken(), 'staff-token');
+  } finally {
+    browser.setTimeout = originalTimer;
+  }
+});

@@ -303,7 +303,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     const controller = new AbortController();
     activeControllers.add(controller);
     const abort = () => controller.abort();
-    const timer = window.setTimeout(abort, 45000);
+    let timedOut = false;
+    const timer = window.setTimeout(() => { timedOut = true; controller.abort(); }, 45000);
     if (options.signal?.aborted) abort();
     options.signal?.addEventListener('abort', abort, { once: true });
     try {
@@ -349,6 +350,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
         apiCache.set(requestKey, { timestamp: Date.now(), data: json });
       }
       return json;
+    } catch (error) {
+      if (timedOut && isCurrentScope()) {
+        throw new Error('Loading took too long. Please check your connection and try again.');
+      }
+      throw error;
     } finally {
       activeControllers.delete(controller);
       window.clearTimeout(timer);

@@ -40,8 +40,29 @@ export function WebSyllabusCoveragePlanView({onNavigateTab,mode='coverage'}:{onN
  },[year,term]);
 
  const contextKey=[year,term,classId,stream].join(':');selectedContext.current=contextKey;
- const load=async()=>{if(!year||!term||!classId||selectedContext.current!==contextKey)return;const generation=++workspaceRequest.current;setLoading(true);const r=await apiService.planning(`workspace?${query()}`);if(generation!==workspaceRequest.current||selectedContext.current!==contextKey)return;setWorkspace(r.data);setCoverageMode(old=>old==='class'&&r.data.canViewClass?'class':admin||r.data.areas.some((a:any)=>a.canPlan)?'subjects':r.data.canViewClass?'class':'subjects');setLoading(false);const eligible=r.data.areas.filter((a:any)=>admin||a.canPlan);const choices=eligible.length?eligible:r.data.areas;const saved=rememberedPlanningScope(user);setAreaId(old=>choices.some((a:any)=>a.learningAreaId===old)?old:choices.find((a:any)=>a.learningAreaId===saved.learningAreaId)?.learningAreaId||choices[0]?.learningAreaId||'');setSequence(r.data.sequence?.data.learningAreaIds || r.data.areas.map((a:any)=>a.learningAreaId));setSequential(r.data.sequence?.data.enabled || false);setSequenceRevision(r.data.sequence?.revision || 0);};
- useEffect(()=>{++workspaceRequest.current;setWorkspace(undefined);setScreen('areas');load().catch(e=>{if(selectedContext.current===contextKey){setLoading(false);setError(e.message);}});},[year,term,classId,stream]);
+ const load=async()=>{
+  if(!year||!term||!classId||selectedContext.current!==contextKey)return;
+  const generation=++workspaceRequest.current;
+  const current=()=>generation===workspaceRequest.current&&selectedContext.current===contextKey;
+  setLoading(true);setError('');
+  try{
+   const r=await apiService.planning(`workspace?${query()}`);
+   if(!current())return;
+   setWorkspace(r.data);
+   setCoverageMode(old=>old==='class'&&r.data.canViewClass?'class':admin||r.data.areas.some((a:any)=>a.canPlan)?'subjects':r.data.canViewClass?'class':'subjects');
+   const eligible=r.data.areas.filter((a:any)=>admin||a.canPlan);
+   const choices=eligible.length?eligible:r.data.areas;
+   const saved=rememberedPlanningScope(user);
+   setAreaId(old=>choices.some((a:any)=>a.learningAreaId===old)?old:choices.find((a:any)=>a.learningAreaId===saved.learningAreaId)?.learningAreaId||choices[0]?.learningAreaId||'');
+   setSequence(r.data.sequence?.data.learningAreaIds || r.data.areas.map((a:any)=>a.learningAreaId));
+   setSequential(r.data.sequence?.data.enabled || false);setSequenceRevision(r.data.sequence?.revision || 0);
+  }catch(e:any){
+   if(!current())return;
+   setError(e.message||'Unable to load your learning areas. Please try again.');
+   throw e;
+  }finally{if(current())setLoading(false);}
+ };
+ useEffect(()=>{++workspaceRequest.current;setWorkspace(undefined);setScreen('areas');load().catch(()=>{});return()=>{++workspaceRequest.current;};},[year,term,classId,stream]);
  useEffect(()=>{if(workspace?.academicYearId===year&&workspace?.termId===term&&year&&term&&classId&&areaId)rememberPlanningScope(user,{academicYearId:year,termId:term,classRoomId:classId,streamId:stream,learningAreaId:areaId});},[year,term,classId,stream,areaId,workspace]);
  const area=workspace?.areas?.find((a:any)=>a.learningAreaId===areaId);
  const cls=classes.find(c=>c.id===classId);
@@ -57,7 +78,7 @@ export function WebSyllabusCoveragePlanView({onNavigateTab,mode='coverage'}:{onN
 
  {!admin&&optionsLoaded&&!classes.length&&<p role="alert" className="rounded-xl bg-amber-50 p-4">No class/stream assignment is active for this selected year and term. Ask the administrator to assign your class or subject with the correct effective dates; you cannot configure these duties yourself.</p>}
  {year&&!terms.length&&<p role="status" className="rounded-xl bg-amber-50 p-4">No term is available for this year yet. Ask the administrator to configure the academic terms and publish the School Calendar Plan.</p>}
- {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}{message&&<p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm">{message}</p>}
+ {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}{optionsLoaded&&classId&&<button className="ui-button ml-3" disabled={loading||busy} onClick={()=>call(load)}>Retry loading</button>}</div>}{message&&<p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm">{message}</p>}
  {screen==='areas'&&<section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-sm sm:p-6" aria-label="Planning context"><div className="mb-5"><p className="text-xs font-bold uppercase tracking-wider text-primary">Step 1</p><h2 className="mt-1 text-lg font-semibold text-on-surface">Choose your teaching context</h2><p className="mt-1 text-sm text-on-surface-variant">Select the term and class you are planning for. Only active assignments are available.</p></div><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
  <label className="text-xs font-semibold text-on-surface-variant">Academic year<select aria-label="Planning academic year" className={input+' mt-2'} value={year} onChange={e=>{setTerm('');setYear(e.target.value);}}>{years.map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></label>
  <label className="text-xs font-semibold text-on-surface-variant">Term<select aria-label="Term" className={input+' mt-2'} value={term} onChange={e=>setTerm(e.target.value)}>{terms.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>

@@ -1,3 +1,4 @@
+import { createPlanningReadContext } from '../../../application/planning/PlanningReadContext';
 import { weeklySchemeDoc, weeklySchemePDF, weeklyMonitoringDoc, weeklyMonitoringPDF } from '../exports/WeeklySchemeExport';
 import { Request,Response,NextFunction } from 'express';
 import { z } from 'zod';
@@ -80,37 +81,39 @@ export class CalendarPlanningController {
  archiveEntry=this.handle(async(req,a)=>this.c.curriculumUseCases.archiveCancelledEntry(String(req.params.id),String(req.params.entryId),a));
  rescheduleLesson=this.handle(async(req,a)=>this.c.curriculumUseCases.rescheduleLessonPlan(String(req.params.id),a));
  options=this.handle(async(req,a)=>{
-  const s=this.scope(req);await this.c.assignmentAccess.context(a,s);
-  const classes=await this.c.academicRepository.findAllClasses(a.schoolId);const result:any[]=[];
-  for(const cls of classes){const streams=await this.c.academicRepository.findStreamsByClass(cls.id);const contexts=[];
-   for(const stream of [undefined,...streams])if(await this.c.assignmentAccess.can(a,{...s,classRoomId:cls.id,streamId:stream?.id}))contexts.push({id:stream?.id || '',name:stream?.name || 'Whole class'});
+  const c=createPlanningReadContext(this.c);
+  const s=this.scope(req);await c.assignmentAccess.context(a,s);
+  const classes=await c.academicRepository.findAllClasses(a.schoolId);const result:any[]=[];
+  for(const cls of classes){const streams=await c.academicRepository.findStreamsByClass(cls.id);const contexts=[];
+   for(const stream of [undefined,...streams])if(await c.assignmentAccess.can(a,{...s,classRoomId:cls.id,streamId:stream?.id}))contexts.push({id:stream?.id || '',name:stream?.name || 'Whole class'});
    if(contexts.length)result.push({...cls.toJSON(),planningStreams:contexts});
   }return result;
  });
  workspace=this.handle(async(req,a)=>{
-  const s=this.scope(req);await this.c.assignmentAccess.assert(a,s);
-  const cls=await this.c.academicRepository.findClassById(s.classRoomId!);
-  const assigned=a.role==='TEACHER'?await this.c.assignmentAccess.assignments(a,s):null;
+  const c=createPlanningReadContext(this.c);
+  const s=this.scope(req);await c.assignmentAccess.assert(a,s);
+  const cls=await c.academicRepository.findClassById(s.classRoomId!);
+  const assigned=a.role==='TEACHER'?await c.assignmentAccess.assignments(a,s):null;
   const canViewClass=!assigned||assigned.classes.some(r=>r.classRoomId===s.classRoomId&&(!r.streamId||r.streamId===s.streamId));
-  const classSchemes=canViewClass?(await this.c.schemeOfWorkRepository.findAll({classRoomId:s.classRoomId,academicYearId:s.academicYearId})).filter(r=>sameTerm(r.termId,s.termId!)&&(r.streamId||'')===(s.streamId||'')):[];
-  const areas=await this.c.academicRepository.findAllLearningAreas({schoolId:a.schoolId,gradeLevel:cls!.gradeLevel});
-  const sequence=await this.c.calendarPlanning.sequence(a,s);const order:string[]=sequence?.data.learningAreaIds || [];
+  const classSchemes=canViewClass?(await c.schemeOfWorkRepository.findAll({classRoomId:s.classRoomId,academicYearId:s.academicYearId})).filter(r=>sameTerm(r.termId,s.termId!)&&(r.streamId||'')===(s.streamId||'')):[];
+  const areas=await c.academicRepository.findAllLearningAreas({schoolId:a.schoolId,gradeLevel:cls!.gradeLevel});
+  const sequence=await c.calendarPlanning.sequence(a,s);const order:string[]=sequence?.data.learningAreaIds || [];
   areas.sort((a,b)=>(order.indexOf(a.id)<0?999:order.indexOf(a.id))-(order.indexOf(b.id)<0?999:order.indexOf(b.id)));
-  const schemes=await this.c.curriculumUseCases.listSchemes({classRoomId:s.classRoomId,academicYearId:s.academicYearId,termId:s.termId},a);const result:any[]=[];
-  for(const area of areas){if(!await this.c.assignmentAccess.can(a,{...s,learningAreaId:area.id}))continue;
+  const schemes=await c.curriculumUseCases.listSchemes({classRoomId:s.classRoomId,academicYearId:s.academicYearId,termId:s.termId},a);const result:any[]=[];
+  for(const area of areas){if(!await c.assignmentAccess.can(a,{...s,learningAreaId:area.id}))continue;
    const areaScope={...s,learningAreaId:area.id};let canPlan=true;
-   try{await this.c.assignmentAccess.assertSubjectTeaching(a,areaScope);}catch(e){if(!(e instanceof ForbiddenError))throw e;canPlan=false;}
+   try{await c.assignmentAccess.assertSubjectTeaching(a,areaScope);}catch(e){if(!(e instanceof ForbiddenError))throw e;canPlan=false;}
    const latest=new Map<string,any>();
    for(const row of classSchemes.filter(r=>r.learningAreaId===area.id).sort((x,y)=>y.updatedAt.getTime()-x.updatedAt.getTime()))if(!latest.has(row.teacherId))latest.set(row.teacherId,row);
    const coverage=[];
    for(const row of latest.values()){
-    const teacher=await this.c.teacherRepository.findByUserId(row.teacherId)||await this.c.teacherRepository.findById(row.teacherId);
-    const user=teacher?await this.c.userRepository.findById(teacher.userId):null;
+    const teacher=await c.teacherRepository.findByUserId(row.teacherId)||await c.teacherRepository.findById(row.teacherId);
+    const user=teacher?await c.userRepository.findById(teacher.userId):null;
     const rowData=row.toJSON();let lessons:any[]=[];
     try{
-     const scheduled=await this.c.calendarPlanning.slots(a,rowData);
-     const plans=(await this.c.lessonPlanRepository.findAll({classRoomId:row.classRoomId,streamId:row.streamId,learningAreaId:row.learningAreaId})).map(p=>p.toJSON());
-     const work=(await this.c.recordOfWorkRepository.find({schoolId:a.schoolId,academicYearId:row.academicYearId,termId:row.termId})).map(r=>r.toJSON());
+     const scheduled=await c.calendarPlanning.slots(a,rowData);
+     const plans=(await c.lessonPlanRepository.findAll({classRoomId:row.classRoomId,streamId:row.streamId,learningAreaId:row.learningAreaId})).map(p=>p.toJSON());
+     const work=(await c.recordOfWorkRepository.find({schoolId:a.schoolId,academicYearId:row.academicYearId,termId:row.termId})).map(r=>r.toJSON());
      lessons=scheduled.slots.map(slot=>{
       const entry=rowData.entries.find((e:any)=>!e.archivedAt&&e.slotId===slot.id);
       const matching=plans.filter((p:any)=>entry&&p.schemeOfWorkEntryId===entry.id&&p.lessonDate===slot.date&&p.lessonTime===`${slot.startTime}-${slot.endTime}`);
@@ -123,9 +126,9 @@ export class CalendarPlanningController {
    }
    const scheme=canPlan?schemes.sort((a,b)=>Number(Boolean(b.planningState))-Number(Boolean(a.planningState))||new Date(b.updatedAt).getTime()-new Date(a.updatedAt).getTime()).find(r=>r.learningAreaId===area.id&&(r.streamId || '')===(s.streamId || '')):undefined;
    const common={learningAreaId:area.id,name:area.name,canPlan,canViewClass,coverage,schemeId:scheme?.id};
-   try{const status=await this.c.calendarPlanning.inspect(a,areaScope,scheme?.entries||[]);result.push({...common,scheme:status.locked?undefined:scheme,...status});}
-   catch(e:any){if(!(e instanceof ConflictError))throw e;let locked=false,lockReason;try{await this.c.calendarPlanning.assertUnlocked(a,areaScope);}catch(lock:any){if(!(lock instanceof ConflictError))throw lock;locked=true;lockReason=lock.message;}result.push({...common,scheme,setupRequired:e.message,locked,lockReason});}
-  }const lessonPlans=(await this.c.curriculumUseCases.listLessonPlans({classRoomId:s.classRoomId},a)).filter(p=>p.learningAreaId&&schemes.some(s=>s.entries.some(e=>e.id===p.schemeOfWorkEntryId)));
+   try{const status=await c.calendarPlanning.inspect(a,areaScope,scheme?.entries||[]);result.push({...common,scheme:status.locked?undefined:scheme,...status});}
+   catch(e:any){if(!(e instanceof ConflictError))throw e;let locked=false,lockReason;try{await c.calendarPlanning.assertUnlocked(a,areaScope);}catch(lock:any){if(!(lock instanceof ConflictError))throw lock;locked=true;lockReason=lock.message;}result.push({...common,scheme,setupRequired:e.message,locked,lockReason});}
+  }const lessonPlans=(await c.curriculumUseCases.listLessonPlans({classRoomId:s.classRoomId},a)).filter(p=>p.learningAreaId&&schemes.some(s=>s.entries.some(e=>e.id===p.schemeOfWorkEntryId)));
   const withConflicts=lessonPlans.map(plan=>{const source=schemes.find(r=>r.entries.some(e=>e.id===plan.schemeOfWorkEntryId));const entry=source?.entries.find(e=>e.id===plan.schemeOfWorkEntryId);const area=result.find(a=>a.learningAreaId===plan.learningAreaId);const slot=(area as any)?.slots?.find((s:any)=>s.id===entry?.slotId);return {...plan,needsRescheduling:!slot || slot.date!==plan.lessonDate || plan.lessonTime!==`${slot.startTime}-${slot.endTime}`};});
   return {classRoomId:s.classRoomId,streamId:s.streamId,academicYearId:s.academicYearId,termId:s.termId,areas:result,canViewClass,sequence,lessonPlans:withConflicts};
  });
