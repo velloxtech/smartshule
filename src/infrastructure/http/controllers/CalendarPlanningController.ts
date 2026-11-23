@@ -9,10 +9,12 @@ const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const calendarSchema=z.object({revision:z.number().int().min(0),calendar:z.object({guidedWorkflow:z.boolean().optional(),startDate:date,endDate:date,teachingDays:z.array(z.number().int().min(0).max(6)),extraTeachingDates:z.array(date).optional(),published:z.boolean(),exceptions:z.array(z.object({date,endDate:date.optional(),reason:z.string().min(1),kind:z.enum(['HOLIDAY','CLOSURE','ACTIVITY']),classRoomIds:z.array(z.string()).optional(),streamIds:z.array(z.string()).optional(),periodNumbers:z.array(z.number().int().positive()).optional(),startTime:z.string().regex(/^\d{2}:\d{2}$/).optional(),endTime:z.string().regex(/^\d{2}:\d{2}$/).optional()}))})});
 export class CalendarPlanningController {
  constructor(private c:AppContainer){}
+ pacing(req:Request){if(req.query.weeks===undefined&&req.query.lessonsPerWeek===undefined)return undefined;return z.object({weeks:z.coerce.number().int().min(1).max(52),lessonsPerWeek:z.coerce.number().int().min(1).max(50)}).parse(req.query);}
+
  scope(req:Request):TeachingScope {return {schoolId:(req as any).user.schoolId,academicYearId:String(req.query.academicYearId || ''),termId:String(req.query.termId || ''),classRoomId:req.query.classRoomId?String(req.query.classRoomId):undefined,streamId:req.query.streamId?String(req.query.streamId):undefined,learningAreaId:req.query.learningAreaId?String(req.query.learningAreaId):undefined};}
  handle=(fn:(req:Request,actor:AcademicActor)=>Promise<any>)=>async(req:Request,res:Response,next:NextFunction)=>{try{const data=await fn(req,(req as any).user);res.json({success:true,data});}catch(e){next(e);}};
  catalogue=this.handle(async(req,a)=>this.c.termAllocations.catalogue(a,this.scope(req)));
- allocation=this.handle(async(req,a)=>this.c.termAllocations.describe(a,await this.c.termAllocations.get(a,String(req.params.id))));
+ allocation=this.handle(async(req,a)=>this.c.termAllocations.describe(a,await this.c.termAllocations.get(a,String(req.params.id)),this.pacing(req)));
  saveAllocation=this.handle(async(req,a)=>{
   const strings=z.array(z.string().max(10000)).max(100);
   const body=z.object({schemeId:z.string().optional(),revision:z.number().int().min(0),allocations:z.array(z.object({subStrandId:z.string().min(1),combinedSubStrandIds:z.array(z.string().min(1)).max(100).optional(),lessons:z.number().int().min(0).max(10000),slotIds:z.array(z.string()).optional(),specificLearningOutcomes:strings.optional(),keyInquiryQuestions:strings.optional(),learningExperiences:strings.optional(),learningResources:strings.optional(),assessmentMethods:strings.optional()})).max(500)}).parse(req.body);
@@ -29,14 +31,14 @@ export class CalendarPlanningController {
  continueSubStrand=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotId:z.string().min(1),reason:z.string().trim().min(3).max(1000)}).strict().parse(req.body);return this.c.termAllocations.continueSubStrand(a,String(req.params.id),body.revision,body.subStrandId,body.slotId,body.reason);});
  allocateSessions=this.handle(async(req,a)=>{
   const lines=z.array(z.string().max(10000)).max(100);
-  const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotIds:z.array(z.string().min(1)).min(1).max(500),specificLearningOutcomes:lines.min(1),keyInquiryQuestions:lines,learningExperiences:lines,learningResources:lines,assessmentMethods:lines}).strict().parse(req.body);
-  return this.c.termAllocations.allocateSessions(a,String(req.params.id),body.revision,body.subStrandId,body.slotIds,body);
+  const body=z.object({revision:z.number().int().min(0),subStrandId:z.string().min(1),slotIds:z.array(z.string().min(1)).min(1).max(500),specificLearningOutcomes:lines.min(1),keyInquiryQuestions:lines,learningExperiences:lines,learningResources:lines,assessmentMethods:lines,pacing:z.object({weeks:z.number().int().min(1).max(52),lessonsPerWeek:z.number().int().min(1).max(50)}).optional()}).strict().parse(req.body);
+  return this.c.termAllocations.allocateSessions(a,String(req.params.id),body.revision,body.subStrandId,body.slotIds,body,body.pacing);
  });
  submitWeekly=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),entryIds:z.array(z.string().min(1)).min(1).max(500).optional()}).parse(req.body);return this.c.termAllocations.submitWeekly(a,String(req.params.id),body.revision,body.entryIds);});
  finalizeAllocation=this.handle(async(req,a)=>this.c.termAllocations.finalize(a,String(req.params.id),z.object({revision:z.number().int().min(0)}).parse(req.body).revision));
  reopenAllocation=this.handle(async(req,a)=>{const body=z.object({revision:z.number().int().min(0),reason:z.string().min(3).max(1000)}).parse(req.body);return this.c.termAllocations.reopen(a,String(req.params.id),body.revision,body.reason);});
  allocationHistory=this.handle(async(req,a)=>(await this.c.termAllocations.get(a,String(req.params.id))).planningState?.history||[]);
- weekly=this.handle(async(req,a)=>this.c.termAllocations.weekly(a,String(req.params.id)));
+ weekly=this.handle(async(req,a)=>this.c.termAllocations.weekly(a,String(req.params.id),this.pacing(req)));
  reflection=this.handle(async(req,a)=>this.c.curriculumUseCases.updateLessonPlanReflection(String(req.params.id),z.object({reflection:z.string().max(10000)}).parse(req.body).reflection,a));
  exportWeekly=async(req:Request,res:Response,next:NextFunction)=>{try{
   const format=z.enum(['pdf','doc']).parse(req.query.format);
@@ -69,7 +71,8 @@ export class CalendarPlanningController {
   const entry=source.entries.find((e:any)=>e.id===(body.schemeEntryId||plan?.schemeOfWorkEntryId));
   if(!entry||entry.archivedAt||(source.planningState?.approvedEntryIds?!source.planningState.approvedEntryIds.includes(entry.id):source.status!=='APPROVED'))throw new ValidationError('Leadership must approve this scheme lesson before teaching is recorded.');
   if(plan&&plan.schemeOfWorkEntryId!==entry.id)throw new ValidationError('Lesson plan and scheme entry must match.');
-  const scheduled=await this.c.calendarPlanning.slots(a,source);const slot=scheduled.slots.find(s=>s.id===entry.slotId);
+  const scheduled=await this.c.calendarPlanning.slots(a,source);
+  const slot=plan?scheduled.slots.find(s=>s.date===plan.lessonDate&&plan.lessonTime===`${s.startTime}-${s.endTime}`):scheduled.slots.find(s=>s.id===entry.slotId)||scheduled.slots.find(s=>s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber);
   if(!slot)throw new ValidationError('Reschedule the cancelled lesson before recording new work.');
   const actualDate=body.actualDate||slot.date;
   const period=await this.c.assignmentAccess.context(a,source);
@@ -131,10 +134,15 @@ export class CalendarPlanningController {
    }
    const scheme=canPlan?schemes.sort((a,b)=>Number(Boolean(b.planningState))-Number(Boolean(a.planningState))||new Date(b.updatedAt).getTime()-new Date(a.updatedAt).getTime()).find(r=>r.learningAreaId===area.id&&(r.streamId || '')===(s.streamId || '')):undefined;
    const common={learningAreaId:area.id,name:area.name,canPlan,canViewClass,coverage,schemeId:scheme?.id};
-   try{const status=await c.calendarPlanning.inspect(a,areaScope,scheme?.entries||[]);result.push({...common,scheme:status.locked?undefined:scheme,...status});}
+   try{const status=await c.calendarPlanning.inspect(a,areaScope,scheme?.entries||[],scheme?.planningState?.pacing);result.push({...common,scheme:status.locked?undefined:scheme,...status});}
    catch(e:any){if(!(e instanceof ConflictError))throw e;let locked=false,lockReason;try{await c.calendarPlanning.assertUnlocked(a,areaScope);}catch(lock:any){if(!(lock instanceof ConflictError))throw lock;locked=true;lockReason=lock.message;}result.push({...common,scheme,setupRequired:e.message,locked,lockReason});}
   }const lessonPlans=(await c.curriculumUseCases.listLessonPlans({classRoomId:s.classRoomId},a)).filter(p=>p.learningAreaId&&schemes.some(s=>s.entries.some(e=>e.id===p.schemeOfWorkEntryId)));
-  const withConflicts=lessonPlans.map(plan=>{const source=schemes.find(r=>r.entries.some(e=>e.id===plan.schemeOfWorkEntryId));const entry=source?.entries.find(e=>e.id===plan.schemeOfWorkEntryId);const area=result.find(a=>a.learningAreaId===plan.learningAreaId);const slot=(area as any)?.slots?.find((s:any)=>s.id===entry?.slotId);return {...plan,needsRescheduling:!slot || slot.date!==plan.lessonDate || plan.lessonTime!==`${slot.startTime}-${slot.endTime}`};});
+  const withConflicts=await Promise.all(lessonPlans.map(async plan=>{
+   let needsRescheduling=true;
+   try{const actual=await c.calendarPlanning.slots(a,{...s,learningAreaId:plan.learningAreaId});needsRescheduling=!actual.slots.some(slot=>slot.date===plan.lessonDate&&plan.lessonTime===`${slot.startTime}-${slot.endTime}`);}
+   catch(error){if(!(error instanceof ConflictError))throw error;}
+   return {...plan,needsRescheduling};
+  }));
   return {classRoomId:s.classRoomId,streamId:s.streamId,academicYearId:s.academicYearId,termId:s.termId,areas:result,canViewClass,sequence,lessonPlans:withConflicts};
  });
  slots=this.handle(async(req,a)=>{const s=this.scope(req);await this.c.assignmentAccess.assert(a,s);await this.c.calendarPlanning.assertUnlocked(a,s);return this.c.calendarPlanning.slots(a,s);});

@@ -40,7 +40,7 @@ it('reads the period and teacher assignments once while checking multiple subjec
  const result=await request('workspace');
  expect(result.areas.map((a:any)=>a.learningAreaId)).toEqual(['performance-area-0','performance-area-1','performance-area-2']);
  expect(result.areas.every((a:any)=>a.canPlan)).toBe(true);
- expect(result.areas.every((a:any)=>a.setupRequired.includes('Set up an active class/stream timetable'))).toBe(true);
+ expect(result.areas.every((a:any)=>!a.setupRequired&&a.slots.length>0)).toBe(true);
  for(const query of [year,classes,subjects,profile,timetable])expect(query).toHaveBeenCalledTimes(1);
  // A new HTTP request gets fresh authorization data, never the earlier cache.
  await request('workspace');

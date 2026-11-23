@@ -44,11 +44,13 @@ it('records explicit first use in Term 3 without creating placeholder schemes an
  const result=await request(app).post(url('start',{academicYearId:scope.academicYearId,termId:scope.termId})).set('Authorization',auth(admin)).send({decision:'FIRST_TERM',reason:'School starts SmartShule in third term',revision:0});expect(result.status).toBe(200);expect(result.body.data.data.decidedBy).toBe(admin.userId);
  expect(await c.schemeOfWorkRepository.findAll()).toHaveLength(0);expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('FIRST_TERM');expect((await save()).scheme.planningState?.allocations).toHaveLength(1);
 });
-it('saves and submits coverage before setup is complete but cannot invent scheduled scheme lessons',async()=>{
- let p=await save();expect(p.setupRequired).toBeTruthy();expect(p.scheme.entries).toEqual([]);
+it('prepares scheme lessons before calendar and timetable setup while keeping daily planning unavailable',async()=>{
+ let p=await save();expect(p.setupRequired).toBeUndefined();expect(p.slots.length).toBeGreaterThan(0);expect(p.scheme.entries).toEqual([]);
  p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);
  expect(p.scheme.planningState!.coverageReviewStatus).toBe('SUBMITTED');
- await expect(c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow();
+ p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);
+ expect(p.scheme.entries).toHaveLength(2);expect(p.scheme.entries.every(entry=>!entry.scheduledDate)).toBe(true);
+ await expect(c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow('coverage must be approved');
  await calendar();
  const state=await c.planningWorkflow.readiness(teacher,scope);
  expect(state.continuity.status).toBe('NEEDS_FIRST_TERM_DECISION');
@@ -109,7 +111,9 @@ it('prepares 2027 timetables without changing 2026 or activating the future year
  expect((await c.academicRepository.findCurrentYear(admin.schoolId))?.id).toBe(scope.academicYearId);
 });
 
+afterEach(()=>jest.useRealTimers());
 it('allows assigned teachers to prepare 2027 coverage while 2026 remains operational and its records are unfinished',async()=>{
+ jest.useFakeTimers({now:new Date('2026-11-16T10:00:00Z')});
  await start();await c.academicRepository.saveYear(AcademicYear.create({schoolId:admin.schoolId,name:'2027',startDate:'2027-01-01',endDate:'2027-12-31',isCurrent:false},'future-year'));
  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:'future-year',termNumber:1,name:'Term 1 2027',startDate:'2027-01-05',endDate:'2027-04-02',isCurrent:false},'future-term'));
  const future={...scope,academicYearId:'future-year',termId:'future-term'};

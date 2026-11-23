@@ -29,6 +29,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     await c.academicRepository.saveClass(ClassRoom.create({ schoolId: teacher.schoolId, name: 'Grade 3', gradeLevel: CBCGradeLevel.GRADE_3, educationLevel: EducationLevel.LOWER_PRIMARY }, scope.classRoomId));
     await c.academicRepository.saveLearningArea(LearningArea.create({ schoolId: teacher.schoolId, name: 'Mathematics', code: 'MATH', gradeLevel: CBCGradeLevel.GRADE_3, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false }, scope.learningAreaId));
     await c.userRepository.save(User.create({ email: 'weekly@example.test', firstName: 'Weekly', lastName: 'Teacher', role: UserRole.TEACHER, status: UserStatus.ACTIVE, schoolId: teacher.schoolId, passwordHash: 'test-only' }, teacher.userId));
+    await c.userRepository.save(User.create({ email: 'admin@example.test', firstName: 'Weekly', lastName: 'Admin', role: admin.role, status: UserStatus.ACTIVE, schoolId: admin.schoolId, passwordHash: 'test-only' }, admin.userId));
     await c.teacherRepository.save(Teacher.create({ userId: teacher.userId, employeeNumber: 'W1', specialization: [], assignedClassStreamIds: [] }, 'weekly-profile'));
     await c.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({ ...scope, teacherId: 'weekly-profile', role: 'SUBJECT_TEACHER', isActive: true, effectiveFrom: '2020-01-01' }, 'weekly-duty'));
     await c.CBCAssessmentRepository.saveStrand(Strand.create({ learningAreaId: scope.learningAreaId, gradeLevel: CBCGradeLevel.GRADE_3, code: 'N1', title: 'Numbers' }, 'weekly-strand'));
@@ -83,17 +84,18 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     await expect(c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, draft.scheme.entries[0].id, before.planningState!.revision, content)).rejects.toThrow('Planning changed');
   });
 
-  it('enforces ownership, school boundaries and teacher-only weekly writes', async () => {
+  it('enforces teacher ownership and school boundaries while allowing administrators to prepare schemes', async () => {
     const draft = await prepare(); const revision = draft.scheme.planningState!.revision;
     await expect(c.termAllocations.saveWeeklyLesson({ ...teacher, schoolId: 'another-school' }, draft.scheme.id, draft.scheme.entries[0].id, revision, content)).rejects.toThrow();
     await expect(c.termAllocations.saveWeeklyLesson({ ...teacher, userId: 'another-teacher' }, draft.scheme.id, draft.scheme.entries[0].id, revision, content)).rejects.toThrow();
-    await expect(c.termAllocations.saveWeeklyLesson(admin, draft.scheme.id, draft.scheme.entries[0].id, revision, content)).rejects.toThrow('Only the assigned subject teacher');
+    const saved = await c.termAllocations.saveWeeklyLesson(admin, draft.scheme.id, draft.scheme.entries[0].id, revision, content);
+    expect(saved.scheme.entries[0].assessmentMethods).toEqual(content.assessmentMethods);
   });
 
   it('submits completed weekly rows for approval and blocks lesson plans until the scheme is approved', async () => {
     let draft = await prepare();
     const lesson = draft.scheme.entries[0];
-    const payload = { teacherId: teacher.userId, ...scope, schemeOfWorkEntryId: lesson.id, lessonDate: lesson.scheduledDate!, lessonTime: '09:00-09:40', durationMinutes: 40, strand: lesson.strandTitle, subStrand: lesson.subStrandTitle, specificLearningOutcomes: content.specificLearningOutcomes, keyInquiryQuestions: [], coreCompetenciesAddressed: [], valuesAddressed: [], learningResources: [], steps: [] };
+    const payload = { teacherId: teacher.userId, ...scope, schemeOfWorkEntryId: lesson.id, lessonDate: lesson.scheduledDate!, lessonTime: '09:00-09:40', durationMinutes: 40, strand: lesson.strandTitle, subStrand: lesson.subStrandTitle, specificLearningOutcomes: content.specificLearningOutcomes, keyInquiryQuestions: [], coreCompetenciesAddressed: [], valuesAddressed: [], learningResources: [], steps: [{ stepNumber: 1, stepTitle: 'Development', durationMinutes: 40, teacherActivities: 'Model fractions', learnerActivities: 'Compare pieces' }] };
     await expect(c.curriculumUseCases.createLessonPlan(payload, teacher)).rejects.toThrow('approve the scheme of work');
     for (const entry of draft.scheme.entries) draft = await c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, entry.id, draft.scheme.planningState!.revision, content);
     const submitted = await c.termAllocations.submitWeekly(teacher, draft.scheme.id, draft.scheme.planningState!.revision);
@@ -111,7 +113,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(persistedPlan.assessmentMethods).toEqual(content.assessmentMethods);
     const weekly = await c.termAllocations.weekly(teacher, draft.scheme.id);
     expect(weekly.weeks[0].lessons[0].lessonPlan!.id).toBe(plan.id);
-    expect(weekly.weeks[0].lessons[0].statuses).toEqual({ planned: false, reported: false, taught: false, reflection: false });
+    expect(weekly.weeks[0].lessons[0].statuses).toEqual({ planned: true, reported: false, taught: false, reflection: false });
     const reopened = await c.termAllocations.reopen(teacher, draft.scheme.id, (await c.schemeOfWorkRepository.findById(draft.scheme.id))!.planningState!.revision, 'Review future coverage without changing the existing lesson');
     const resubmitted = await c.termAllocations.submitCoverage(teacher, draft.scheme.id, reopened.scheme.planningState!.revision);
     const reapproved = await c.termAllocations.reviewCoverage(admin, draft.scheme.id, resubmitted.scheme.planningState!.revision, true, 'Coverage retained');
@@ -174,7 +176,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     await c.curriculumUseCases.reviewScheme(draft.scheme.id, admin.userId, true, 'First lesson approved', admin);
     let current = (await c.schemeOfWorkRepository.findById(draft.scheme.id))!;
     expect(current.planningState!.approvedEntryIds).toEqual([first.id]);
-    const payload = (entry: typeof first) => ({ teacherId: teacher.userId, ...scope, schemeOfWorkEntryId: entry.id, lessonDate: entry.scheduledDate!, lessonTime: '09:00-09:40', durationMinutes: 40, strand: entry.strandTitle, subStrand: entry.subStrandTitle, specificLearningOutcomes: content.specificLearningOutcomes, keyInquiryQuestions: [], coreCompetenciesAddressed: [], valuesAddressed: [], learningResources: [], steps: [] });
+    const payload = (entry: typeof first) => ({ teacherId: teacher.userId, ...scope, schemeOfWorkEntryId: entry.id, lessonDate: entry.scheduledDate!, lessonTime: '09:00-09:40', durationMinutes: 40, strand: entry.strandTitle, subStrand: entry.subStrandTitle, specificLearningOutcomes: content.specificLearningOutcomes, keyInquiryQuestions: [], coreCompetenciesAddressed: [], valuesAddressed: [], learningResources: [], steps: [{ stepNumber: 1, stepTitle: 'Development', durationMinutes: 40, teacherActivities: 'Model fractions', learnerActivities: 'Compare pieces' }] });
     await expect(c.curriculumUseCases.createLessonPlan(payload(second), teacher)).rejects.toThrow('approve the scheme of work lesson');
     await expect(c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, first.id, current.planningState!.revision, content)).rejects.toThrow('already approved');
     draft = await c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, second.id, current.planningState!.revision, { ...content, assessmentMethods: ['Observe the second lesson'] });
@@ -262,6 +264,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
   it.each([UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER])('allows %s to approve both submitted coverage and the selected scheme sessions through HTTP', async role => {
     const app = createExpressApp(c);
     const reviewer = { userId: `reviewer-${role}`, role, schoolId: teacher.schoolId, email: 'reviewer@example.test' };
+    await c.userRepository.save(User.create({ email: reviewer.email, firstName: 'Weekly', lastName: 'Reviewer', role, status: UserStatus.ACTIVE, schoolId: reviewer.schoolId, passwordHash: 'test-only' }, reviewer.userId));
     const token = `Bearer ${c.tokenService.generateAccessToken(reviewer)}`;
     const saved = await saveCoverage();
     const pending = await c.termAllocations.submitCoverage(teacher, saved.scheme.id, saved.scheme.planningState!.revision);

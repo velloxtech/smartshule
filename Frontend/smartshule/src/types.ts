@@ -969,6 +969,7 @@ export interface SchemeOfWork {
   reviewRemarks?: string;
   createdAt?: string;
   planningState?: {
+    pacing?: {weeks:number;lessonsPerWeek:number};
     revision?: number;
     coverageReviewStatus?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
     submittedEntryIds?: string[];

@@ -234,3 +234,92 @@ describe('teacher-paced scheme lesson ranges',()=>{
   expect(reviewed.entries.filter(entry=>!entry.archivedAt&&!reviewed.planningState!.approvedEntryIds!.includes(entry.id))).toHaveLength(8);
  });
 });
+
+describe('schemes before school opens; daily lessons after timetable setup',()=>{
+ const futureScope={...scope,academicYearId:'future-year',termId:'future-term'};
+ const pacing={weeks:12,lessonsPerWeek:5};
+ let plan:any;
+ beforeEach(async()=>{
+  await c.academicRepository.saveYear(AcademicYear.create({schoolId:teacher.schoolId,name:'2027',startDate:'2027-01-01',endDate:'2027-12-31',isCurrent:false},futureScope.academicYearId));
+  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:futureScope.academicYearId,name:'Term 1',termNumber:1,startDate:'2027-01-04',endDate:'2027-03-26',isCurrent:false},futureScope.termId));
+  await c.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({...futureScope,schoolId:teacher.schoolId,teacherId:'director-profile',role:'SUBJECT_TEACHER',effectiveFrom:'2027-01-01',isActive:true},'future-duty'));
+  plan=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:3}],0);
+  plan=await c.termAllocations.submitCoverage(teacher,plan.scheme.id,plan.scheme.planningState.revision);
+  plan=await c.termAllocations.reviewCoverage(admin,plan.scheme.id,plan.scheme.planningState.revision,true,'Approved before opening');
+ });
+ async function approvedBeforeOpening(){
+  let weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w1:l1','scheme:w1:l2','scheme:w1:l3','scheme:w1:l4','scheme:w1:l5'],content,pacing);
+  expect(weekly.weeks).toHaveLength(12);
+  expect(weekly.weeks[0].lessons.every((lesson:any)=>lesson.entry&&!lesson.date)).toBe(true);
+  const selected=weekly.scheme.entries.filter(entry=>!entry.archivedAt).map(entry=>entry.id);
+  await c.termAllocations.submitWeekly(teacher,plan.scheme.id,weekly.scheme.planningState!.revision,selected);
+  await c.curriculumUseCases.reviewScheme(plan.scheme.id,admin.userId,true,'Scheme ready before opening',admin);
+  return c.termAllocations.weekly(teacher,plan.scheme.id);
+ }
+ it('saves and reviews syllabus estimates beyond grid capacity without a calendar or timetable',async()=>{
+  const reopened=await c.termAllocations.reopen(teacher,plan.scheme.id,plan.scheme.planningState.revision,'Revise syllabus pacing before opening');
+  let coverage=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:1000}],reopened.scheme.planningState!.revision,plan.scheme.id);
+  expect(coverage.setupRequired).toBeUndefined();
+  expect(coverage.progress.excess).toBeGreaterThan(0);
+  expect(coverage.scheme.entries).toEqual([]);
+  coverage=await c.termAllocations.submitCoverage(teacher,plan.scheme.id,coverage.scheme.planningState!.revision);
+  coverage=await c.termAllocations.reviewCoverage(admin,plan.scheme.id,coverage.scheme.planningState!.revision,true,'Pacing estimate reviewed');
+  expect(coverage.scheme.planningState!.coverageReviewStatus).toBe('APPROVED');
+  expect(coverage.scheme.planningState!.allocations[0].lessons).toBe(1000);
+  expect(coverage.setupRequired).toBeUndefined();
+ });
+ it('saves, submits and approves a future-term scheme without a calendar or timetable',async()=>{
+  const weekly=await approvedBeforeOpening();
+  expect(weekly.scheme.status).toBe('APPROVED');
+  expect(weekly.scheme.planningState!.pacing).toEqual(pacing);
+  expect(weekly.scheme.entries.filter(entry=>!entry.archivedAt)).toHaveLength(5);
+  expect(weekly.timetableSlots).toHaveLength(0);
+  expect(weekly.weeks.slice(1).every((week:any)=>week.lessons.every((lesson:any)=>!lesson.entry))).toBe(true);
+  await expect(c.calendarPlanning.slots(teacher,futureScope)).rejects.toThrow('publish the term calendar');
+ });
+ it('keeps daily lesson creation tied to a valid timetable and permits its date to differ from the scheme planning week',async()=>{
+  const weekly=await approvedBeforeOpening();
+  const lesson=weekly.weeks[0].lessons[0];
+  const input={...planInput(lesson),...futureScope,lessonDate:'2027-01-11',lessonTime:'09:00-09:35'};
+  await expect(c.curriculumUseCases.createLessonPlan(input,teacher)).rejects.toThrow('publish the term calendar');
+  await c.calendarPlanning.saveCalendar(admin,futureScope,{startDate:'2027-01-04',endDate:'2027-03-26',teachingDays:[1,2,3,4,5],exceptions:[],published:true},0);
+  await expect(c.curriculumUseCases.createLessonPlan(input,teacher)).rejects.toThrow('active class/stream timetable');
+  await c.timetableRepository.save(Timetable.create({...futureScope,schoolId:teacher.schoolId,isActive:true,slots:[{id:'future-period',dayOfWeek:'MONDAY',periodNumber:1,startTime:'09:00',endTime:'09:35',learningAreaId:scope.learningAreaId,isBreak:false,isLunch:false}]},'future-timetable'));
+  await expect(c.curriculumUseCases.createLessonPlan({...input,lessonDate:'2027-01-12'},teacher)).rejects.toThrow('active timetable');
+  await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes:40},teacher)).rejects.toThrow('duration');
+  const daily=await c.curriculumUseCases.createLessonPlan(input,teacher);
+  expect(daily).toMatchObject({lessonDate:'2027-01-11',weekNumber:2,lessonNumber:1,durationMinutes:35});
+  const unchanged=(await c.schemeOfWorkRepository.findById(plan.scheme.id))!;
+  expect(unchanged.entries.find(entry=>entry.id===lesson.entry.id)).toMatchObject({weekNumber:1,lessonNumber:1,slotId:'scheme:w1:l1'});
+  const refreshed=await c.termAllocations.weekly(teacher,plan.scheme.id);
+  expect(refreshed.weeks).toHaveLength(12);
+  expect(refreshed.weeks[0].lessons).toHaveLength(5);
+  expect(refreshed.weeks[0].lessons[0].lessonPlan.id).toBe(daily.id);
+  expect(refreshed.weeks[0].lessons[0].date).toBe('2027-01-11');
+ });
+ it('retains saved and approved lesson positions when the requested planning grid is too small',async()=>{
+  const weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w12:l5'],content,pacing);
+  await expect(c.termAllocations.allocateSessions(teacher,plan.scheme.id,weekly.scheme.planningState!.revision,'director-sub',['scheme:w1:l1'],content,{weeks:3,lessonsPerWeek:5})).rejects.toThrow('retain all existing');
+  expect((await c.schemeOfWorkRepository.findById(plan.scheme.id))!.entries.some(entry=>entry.weekNumber===12&&entry.lessonNumber===5&&!entry.archivedAt)).toBe(true);
+ });
+ it('can remove an unapproved scheme draft position without any timetable',async()=>{
+  const weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w1:l1','scheme:w1:l2'],content,pacing);
+  const removed=weekly.scheme.entries.find(entry=>entry.lessonNumber===1)!;
+  await c.curriculumUseCases.archiveCancelledEntry(plan.scheme.id,removed.id,teacher);
+  const stored=(await c.schemeOfWorkRepository.findById(plan.scheme.id))!;
+  expect(stored.entries.find(entry=>entry.id===removed.id)!.archivedAt).toBeTruthy();
+  expect(stored.entries.filter(entry=>!entry.archivedAt)).toHaveLength(1);
+  const remaining=stored.entries.find(entry=>!entry.archivedAt)!;
+  await c.termAllocations.submitWeekly(teacher,plan.scheme.id,stored.planningState!.revision,[remaining.id]);
+  await c.curriculumUseCases.reviewScheme(plan.scheme.id,admin.userId,true,'Remaining lesson approved',admin);
+  await expect(c.curriculumUseCases.archiveCancelledEntry(plan.scheme.id,remaining.id,teacher)).rejects.toThrow();
+ });
+ it('retains the chosen planning grid when syllabus estimates are edited',async()=>{
+  const weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w12:l5'],content,pacing);
+  const reopened=await c.termAllocations.reopen(teacher,plan.scheme.id,weekly.scheme.planningState!.revision,'Revise the source pacing estimate');
+  const updated=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:8}],reopened.scheme.planningState!.revision,plan.scheme.id);
+  expect(updated.scheme.planningState!.pacing).toEqual(pacing);
+  expect(updated.scheme.planningState!.weeklyPlanningStarted).toBe(true);
+  expect(updated.scheme.entries.some(entry=>entry.weekNumber===12&&entry.lessonNumber===5&&!entry.archivedAt)).toBe(true);
+ });
+});

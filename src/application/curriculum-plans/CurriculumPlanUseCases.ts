@@ -83,12 +83,14 @@ export class CurriculumPlanUseCases {
     return {...plan.toJSON(),academicYearId:source?.academicYearId || '__unverified__',termId:source?.termId || '__unverified__'};
   }
   private async validateEntries(scope: TeachingScope, entries: any[], actor?: AcademicActor, complete=false, partial=false) {
-    if(!this.planning || !actor || (!complete && entries.length === 0))return entries;
-    const scheduled=await this.planning.slots(actor,scope);
-    const eligible=partial?scheduled.slots.filter(slot=>entries.some(entry=>!entry.archivedAt&&entry.slotId===slot.id)):scheduled.slots;
-    const result=this.planning.validate(entries,eligible,complete);
-    if(result.conflicts.length || (complete && !result.complete)) throw new ValidationError(`Scheme requires exactly ${result.required} eligible lesson slots; ${result.missing.length} missing, ${result.conflicts.length} conflicts.`,result);
-    return entries.map(e=>{if(e.archivedAt)return e;const slot=scheduled.slots.find(s=>s.id===e.slotId)!;return {...e,scheduledDate:slot.date,scheduledStartTime:slot.startTime,scheduledEndTime:slot.endTime};});
+    const seen=new Set<string>();
+    for(const entry of entries.filter(row=>!row.archivedAt)){
+      if(!Number.isSafeInteger(entry.weekNumber)||entry.weekNumber<1||entry.weekNumber>52||!Number.isSafeInteger(entry.lessonNumber)||entry.lessonNumber<1||entry.lessonNumber>50)throw new ValidationError('Scheme lessons need valid planning week and lesson numbers.');
+      const position=`${entry.weekNumber}:${entry.lessonNumber}`;
+      if(seen.has(position))throw new ValidationError('Each scheme week and lesson position can be allocated once.');seen.add(position);
+      if(complete&&(!entry.strandTitle?.trim()||!entry.subStrandTitle?.trim()||!entry.specificLearningOutcomes?.some((value:string)=>value.trim())||!entry.learningExperiences?.some((value:string)=>value.trim())||!entry.assessmentMethods?.some((value:string)=>value.trim())))throw new ValidationError('Complete scheme outcomes, learning experiences and assessment methods before submitting.');
+    }
+    return entries;
   }
   // 1. Schemes of Work
   public async createSchemeOfWork(dto: CreateSchemeDTO, actor?: AcademicActor) {
@@ -156,7 +158,7 @@ export class CurriculumPlanUseCases {
     const original=scheme.entries.find(e=>e.id===entryId)!;
     if(scheme.planningState?.approvedEntryIds?.includes(entryId))throw new ValidationError('This scheme lesson is already approved. Retain its approved content.');
     const edited={...original,...changes,id:entryId,scheduledDate:undefined,scheduledStartTime:undefined,scheduledEndTime:undefined};
-    if(scheme.entries.some(e=>!e.archivedAt && e.id!==entryId && e.slotId===edited.slotId))throw new ValidationError('This lesson slot is already filled.');
+    if(scheme.entries.some(e=>!e.archivedAt && e.id!==entryId && ((e.weekNumber===edited.weekNumber&&e.lessonNumber===edited.lessonNumber)||(Boolean(edited.slotId)&&e.slotId===edited.slotId))))throw new ValidationError('This scheme lesson position is already filled.');
     const [checked]=await this.validateEntries(scheme.toJSON(),[edited],actor);
     scheme.updateEntry(entryId,checked);await this.schemeRepository.update(scheme);return scheme.toJSON();
   }
@@ -165,10 +167,11 @@ export class CurriculumPlanUseCases {
     await this.authorize(scheme.toJSON(),actor);
     await this.assertSchemeAllocationsEditable(scheme.toJSON());
     const entry=scheme.entries.find(e=>e.id===entryId);if(!entry)throw new NotFoundError('Scheme entry',entryId);
-    if(!actor||!this.planning)throw new ValidationError('A calendar is required.');
-    const scheduled=await this.planning.slots(actor,scheme.toJSON());
-    if(scheduled.slots.some(s=>s.id===entry.slotId))throw new ValidationError('Only cancelled slots can be archived. Reschedule eligible entries instead.');
-    scheme.updateEntry(entryId,{...entry,archivedAt:new Date().toISOString(),archivedReason:'Slot cancelled by calendar or timetable change.'});
+    if(scheme.planningState?.approvedEntryIds?.includes(entryId)||scheme.status===SchemeStatus.APPROVED)throw new ValidationError('Approved scheme lessons must be retained.');
+    const plans=await this.lessonPlanRepository.findAll({classRoomId:scheme.classRoomId});
+    const records=this.records?await this.records.find({schoolId:actor?.schoolId,classRoomId:scheme.classRoomId}):[];
+    if(plans.some(plan=>plan.toJSON().schemeOfWorkEntryId===entryId)||records.some(record=>record.toJSON().planningLink?.schemeEntryId===entryId))throw new ValidationError('A scheme lesson linked to a lesson plan or Record of Work must be retained.');
+    scheme.updateEntry(entryId,{...entry,archivedAt:new Date().toISOString(),archivedReason:'Draft scheme lesson removed from the planning grid; history retained.'});
     await this.schemeRepository.update(scheme);return scheme.toJSON();
   }
   public async submitSchemeForReview(schemeId: string, actor?: AcademicActor) {
@@ -252,11 +255,13 @@ export class CurriculumPlanUseCases {
       if(scheme.classRoomId!==dto.classRoomId || scheme.learningAreaId!==dto.learningAreaId || (scheme.streamId || '')!==(dto.streamId || ''))throw new ValidationError('Lesson and scheme scope must match.');
       const entry=scheme.entries.find(e=>e.id===dto.schemeOfWorkEntryId)!;
       const scheduled=await this.planning.slots(actor,scope);
-      const slot=scheduled.slots.find(s=>s.id===entry.slotId);
+      const matchingSlots=scheduled.slots.filter(slot=>slot.date===dto.lessonDate&&(!dto.lessonTime||dto.lessonTime===`${slot.startTime}-${slot.endTime}`));
+      if(matchingSlots.length>1)throw new ValidationError('Choose the exact timetable time for this daily lesson.');
+      const slot=matchingSlots[0];
       if(dto.strand.trim()!==entry.strandTitle.trim()||dto.subStrand.trim()!==entry.subStrandTitle.trim())throw new ValidationError('Lesson strand and sub-strand must match the schemed slot.');
       if(dto.specificLearningOutcomes.some(outcome=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Use outcomes from the approved scheme lesson. Submit curriculum changes through the scheme review process.');
       if(entry.archivedAt)throw new ValidationError('This scheme entry is archived. Select an eligible slot.');
-      if(!slot || slot.date!==dto.lessonDate || (dto.lessonTime && dto.lessonTime!==`${slot.startTime}-${slot.endTime}`))throw new ValidationError('This scheme slot is cancelled or the lesson date/time does not match.');
+      if(!slot)throw new ValidationError('Choose a lesson date and time matching this subject’s active timetable.');
       const minute=(time:string)=>{const match=/^(\d{2}):(\d{2})$/.exec(time);return match&&Number(match[1])<24&&Number(match[2])<60?Number(match[1])*60+Number(match[2]):NaN;};
       const scheduledDuration=minute(slot.endTime)-minute(slot.startTime);
       if(!Number.isSafeInteger(scheduledDuration)||scheduledDuration<=0)throw new ValidationError('The timetable lesson must have valid start and end times.');
@@ -371,7 +376,7 @@ export class CurriculumPlanUseCases {
     const scheme=(await this.schemeRepository.findAll()).find(s=>s.entries.some(e=>e.id===original.toJSON().schemeOfWorkEntryId));
     if(!scheme || !actor || !this.planning)throw new ValidationError('A linked scheme and published calendar are required.');
     const entry=scheme.entries.find(e=>e.id===original.toJSON().schemeOfWorkEntryId)!;
-    const slot=(await this.planning.slots(actor,scheme.toJSON())).slots.find(s=>s.id===entry.slotId);
+    const slot=(await this.planning.slots(actor,scheme.toJSON())).slots.find(s=>s.id===entry.slotId||(s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber));
     if(!slot)throw new ValidationError('Reschedule the scheme entry to an eligible slot first.');
     // Create a copy: taught records continue to reference the original lesson and its date.
     const props={...original.toJSON(),lessonDate:slot.date,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,status:LessonPlanStatus.DRAFT,submittedAt:undefined,reviewedByUserId:undefined,reviewedAt:undefined,reviewRemarks:undefined};

@@ -43,6 +43,7 @@ export interface PlanningChange {
   allocations: TermAllocation[]; scheduleFingerprint: string;
 }
 export interface SchemePlanningState {
+  pacing?: {weeks:number;lessonsPerWeek:number};
   revision: number; locked: boolean; allocations: TermAllocation[];
   scheduleFingerprint: string; history: PlanningChange[];
   weeklyPlanningStarted?: boolean;

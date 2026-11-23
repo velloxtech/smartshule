@@ -5,6 +5,8 @@ import { ISchemeOfWorkRepository } from '../../core/ports/repositories/ISchemeOf
 import { AcademicActor, TeachingScope, TeacherAssignmentAccess, sameTerm } from '../shared/TeacherAssignmentAccess';
 import { PlanningRepository } from './PlanningRepository';
 import { ConflictError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
+import { SchemeOfWorkEntry } from '../../core/domain/curriculum-plan/SchemeOfWork';
+export interface SchemePacing {weeks:number;lessonsPerWeek:number}
 export interface CalendarException { date:string; endDate?:string; reason:string; kind:'HOLIDAY'|'CLOSURE'|'ACTIVITY'; classRoomIds?:string[]; streamIds?:string[]; periodNumbers?:number[]; startTime?:string; endTime?:string }
 export interface TermCalendar { guidedWorkflow?:boolean; startDate:string; endDate:string; teachingDays:number[]; extraTeachingDates?:string[]; exceptions:CalendarException[]; published:boolean }
 export interface LessonSlot { id:string; date:string; periodNumber:number; startTime:string; endTime:string; weekNumber:number; lessonNumber:number }
@@ -32,6 +34,28 @@ export class CalendarPlanningService {
    if (!(e instanceof ConflictError) || !/^(An administrator must publish the term calendar|Set up an active class\/stream timetable|Resolve overlapping active timetables|No eligible lessons)/.test(e.message)) throw e;
    return {slots:[] as LessonSlot[],calendarRevision:0,fingerprint:'pending-schedule',setupRequired:e.message};
   }
+ }
+ /** Scheme weeks are teaching intentions. They require neither a published calendar nor a timetable. */
+ async schemeSchedule(actor:AcademicActor,s:TeachingScope,pacing?:SchemePacing,entries:SchemeOfWorkEntry[]=[]) {
+  await this.access.assert(actor,s);
+  const {term}=await this.access.context(actor,s);
+  if(!pacing){
+   // Keep existing dated schemes readable; an available timetable is only an initial suggestion.
+   try{const suggested=await this.slots(actor,s);if(entries.filter(entry=>!entry.archivedAt).every(entry=>suggested.slots.some(slot=>slot.weekNumber===entry.weekNumber&&slot.lessonNumber===entry.lessonNumber)))return {...suggested,pacing:undefined as SchemePacing|undefined,setupRequired:undefined as string|undefined};}
+   catch(e){if(!(e instanceof ConflictError))throw e;}
+  }
+  const active=entries.filter(entry=>!entry.archivedAt);
+  const first=day(term.startDate);first.setUTCDate(first.getUTCDate()-((first.getUTCDay()+6)%7));
+  const termWeeks=Math.max(1,Math.floor((day(term.endDate).getTime()-first.getTime())/604800000)+1);
+  const selected=pacing||{weeks:Math.max(termWeeks,...active.map(entry=>entry.weekNumber)),lessonsPerWeek:Math.max(5,...active.map(entry=>entry.lessonNumber))};
+  if(!Number.isSafeInteger(selected.weeks)||selected.weeks<1||selected.weeks>52||!Number.isSafeInteger(selected.lessonsPerWeek)||selected.lessonsPerWeek<1||selected.lessonsPerWeek>50)throw new ValidationError('Choose 1–52 planning weeks and 1–50 lessons per week.');
+  if(active.some(entry=>entry.weekNumber>selected.weeks||entry.lessonNumber>selected.lessonsPerWeek))throw new ConflictError('The planning grid must retain all existing scheme lessons. Increase its weeks or lessons per week.');
+  const slots:LessonSlot[]=[];
+  for(let week=1;week<=selected.weeks;week++)for(let lesson=1;lesson<=selected.lessonsPerWeek;lesson++){
+   const existing=active.find(entry=>entry.weekNumber===week&&entry.lessonNumber===lesson);
+   slots.push({id:existing?.slotId||`scheme:w${week}:l${lesson}`,weekNumber:week,lessonNumber:lesson,periodNumber:lesson,date:existing?.scheduledDate||'',startTime:existing?.scheduledStartTime||'',endTime:existing?.scheduledEndTime||''});
+  }
+  return {slots,pacing:selected,calendarRevision:0,fingerprint:`scheme:${selected.weeks}:${selected.lessonsPerWeek}`,setupRequired:undefined as string|undefined};
  }
  async slots(actor:AcademicActor,s:TeachingScope,checkAccess=true) {
   if(checkAccess)await this.access.assert(actor,s);
@@ -62,6 +86,20 @@ export class CalendarPlanningService {
  validate(entries:any[],slots:LessonSlot[],complete=false){entries=entries.filter(e=>!e.archivedAt);const ids=new Set<string>();const valid=new Map(slots.map(s=>[s.id,s]));const conflicts:any[]=[];for(const e of entries){const slot=valid.get(e.slotId);if(!slot)conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Slot cancelled, moved, or not linked; reschedule this entry.'});else if(e.weekNumber!==slot.weekNumber || e.lessonNumber!==slot.lessonNumber || e.scheduledDate && e.scheduledDate!==slot.date || e.scheduledStartTime && e.scheduledStartTime!==slot.startTime || e.scheduledEndTime && e.scheduledEndTime!==slot.endTime)conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Timetable or lesson numbering changed; reschedule this entry.'});else if(ids.has(e.slotId))conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Duplicate lesson slot.'});else if(complete&&(!e.strandTitle?.trim()||!e.subStrandTitle?.trim()||!e.specificLearningOutcomes?.some((x:string)=>x.trim())||!e.learningExperiences?.some((x:string)=>x.trim())||!e.assessmentMethods?.some((x:string)=>x.trim())))conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Lesson content is incomplete.'});ids.add(e.slotId);}
   const missing=slots.filter(s=>!ids.has(s.id));return {required:slots.length,filled:entries.filter(e=>valid.has(e.slotId)).length,missing,conflicts,complete:entries.length===slots.length&&!missing.length&&!conflicts.length};
  }
- async assertUnlocked(actor:AcademicActor,s:TeachingScope){if(actor.role!=='TEACHER')return;const seq=await this.repository.get(this.key('sequence',actor,s));if(!seq?.data.enabled)return;const index=seq.data.learningAreaIds.indexOf(s.learningAreaId);if(index<0)throw new ConflictError('This learning area is not in the configured planning sequence.');if(index===0)return;const previous=seq.data.learningAreaIds[index-1];const scheduled=await this.slots(actor,{...s,learningAreaId:previous},false);const schemes=await this.schemes.findAll({classRoomId:s.classRoomId,academicYearId:s.academicYearId});const applicable=schemes.filter(r=>r.learningAreaId===previous&&sameTerm(r.termId,s.termId!)&&(r.streamId || '')===(s.streamId || ''));const managed=applicable.filter(r=>r.planningState);const complete=(managed.length?managed:applicable).some(r=>(!r.planningState||r.planningState.locked)&&['SUBMITTED','APPROVED'].includes(r.status)&&this.validate(r.planningState?.approvedEntryIds?r.entries.filter(entry=>r.planningState!.approvedEntryIds!.includes(entry.id)||(r.status==='SUBMITTED'&&r.planningState!.submittedEntryIds?.includes(entry.id))):r.entries,scheduled.slots,true).complete);if(!complete)throw new ConflictError('Learning-area sequence: finish the preceding learning area’s required scheme sessions. This is not a previous-term requirement; the administrator can change the optional sequence.');}
- async inspect(actor:AcademicActor,s:TeachingScope,entries:any[]=[]){const scheduled=await this.slots(actor,s);let lockReason:string|undefined;try{await this.assertUnlocked(actor,s);}catch(e:any){lockReason=e.message;}return {...scheduled,...this.validate(entries,scheduled.slots,true),locked:Boolean(lockReason),lockReason};}
+ async assertUnlocked(actor:AcademicActor,s:TeachingScope){
+  if(actor.role!=='TEACHER')return;
+  const seq=await this.repository.get(this.key('sequence',actor,s));if(!seq?.data.enabled)return;
+  const index=seq.data.learningAreaIds.indexOf(s.learningAreaId);
+  if(index<0)throw new ConflictError('This learning area is not in the configured planning sequence.');if(index===0)return;
+  const previous=seq.data.learningAreaIds[index-1];
+  const schemes=await this.schemes.findAll({classRoomId:s.classRoomId,academicYearId:s.academicYearId});
+  const applicable=schemes.filter(row=>row.learningAreaId===previous&&sameTerm(row.termId,s.termId!)&&(row.streamId||'')===(s.streamId||''));
+  const complete=applicable.some(row=>{
+   if(!['SUBMITTED','APPROVED'].includes(row.status))return false;
+   const selected=row.planningState?.approvedEntryIds?row.entries.filter(entry=>row.planningState!.approvedEntryIds!.includes(entry.id)||(row.status==='SUBMITTED'&&row.planningState!.submittedEntryIds?.includes(entry.id))):row.entries;
+   return selected.some(entry=>!entry.archivedAt)&&selected.filter(entry=>!entry.archivedAt).every(entry=>entry.strandTitle?.trim()&&entry.subStrandTitle?.trim()&&entry.specificLearningOutcomes?.some(value=>value.trim())&&entry.learningExperiences?.some(value=>value.trim())&&entry.assessmentMethods?.some(value=>value.trim()));
+  });
+  if(!complete)throw new ConflictError('Learning-area sequence: complete and submit the preceding learning area’s scheme lessons. The administrator can change this optional sequence.');
+ }
+ async inspect(actor:AcademicActor,s:TeachingScope,entries:any[]=[],pacing?:SchemePacing){const scheduled=await this.schemeSchedule(actor,s,pacing,entries);let lockReason:string|undefined;try{await this.assertUnlocked(actor,s);}catch(e:any){lockReason=e.message;}return {...scheduled,...this.validate(entries,scheduled.slots,true),locked:Boolean(lockReason),lockReason};}
 }

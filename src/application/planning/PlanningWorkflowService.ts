@@ -56,7 +56,7 @@ export class PlanningWorkflowService {
  async readiness(a:AcademicActor,s:TeachingScope){
   await this.c.assignmentAccess.assert(a,s);const calendar=await this.c.calendarPlanning.calendar(a,s);const continuity=await this.continuity(a,s);
   const schedule=await this.c.calendarPlanning.draftSchedule(a,s);const scheme=await this.c.termAllocations.find(a,s);
-  const weekly=scheme&&!schedule.setupRequired?await this.c.termAllocations.weekly(a,scheme.id):null;
+  const weekly=scheme?await this.c.termAllocations.weekly(a,scheme.id):null;
   const lessons=weekly?.weeks.flatMap((w:any)=>w.lessons)||[];const approved=(e:any)=>scheme?.planningState?.approvedEntryIds?scheme.planningState.approvedEntryIds.includes(e?.id):scheme?.status==='APPROVED';
   let assignmentReady=true;try{await this.c.assignmentAccess.assertSubjectTeaching(a,s);}catch(e){if(!(e instanceof ForbiddenError))throw e;assignmentReady=false;}
   const catalogue=await this.c.CBCAssessmentRepository.findStrandsByLearningArea(s.learningAreaId!);
@@ -65,8 +65,8 @@ export class PlanningWorkflowService {
   if(!assignmentReady)action={label:'Ask the administrator to assign you this learning area for the selected class, stream and period',tab:'',owner:'Administrator'};
   else if(!publishedSubs.some(sub=>sub.specificLearningOutcomes.length))action={label:'Ask the curriculum administrator to publish this learning area’s strands, sub-strands and outcomes',tab:'',owner:'Curriculum administrator'};
   else if(scheme?.planningState?.coverageReviewStatus==='REJECTED'||scheme?.status==='REJECTED')action={label:'Review Admin Comments',tab:scheme?.planningState?.coverageReviewStatus==='REJECTED'?'curriculum-tracker':'scheme-of-work-builder',owner:'Teacher'};
-  else if(lessons.some((l:any)=>approved(l.entry)&&!l.recordOfWorkStatus&&l.date<=new Date().toISOString().slice(0,10)))action={label:'Record Work',tab:'records-of-work',owner:'Teacher'};
-  else if(lessons.some((l:any)=>approved(l.entry)&&!l.lessonPlan&&!l.recordOfWorkStatus))action={label:'Create Lesson Plan',tab:'lesson-plans',owner:'Teacher'};
+  else if(lessons.some((l:any)=>l.date&&approved(l.entry)&&!l.recordOfWorkStatus&&l.date<=new Date().toISOString().slice(0,10)))action={label:'Record Work',tab:'records-of-work',owner:'Teacher'};
+  else if(!schedule.setupRequired&&lessons.some((l:any)=>approved(l.entry)&&!l.lessonPlan&&!l.recordOfWorkStatus))action={label:'Create Lesson Plan',tab:'lesson-plans',owner:'Teacher'};
   else if(lessons.some((l:any)=>l.recordOfWorkStatus==='SUBMITTED')&&lessons.filter((l:any)=>approved(l.entry)).every((l:any)=>l.recordOfWorkStatus))action={label:'Records awaiting admin review — view reported progress',tab:'records-of-work',owner:'Administrator'};
   else if(lessons.length&&lessons.every((l:any)=>l.statuses.taught))action={label:'View confirmed syllabus coverage',tab:'curriculum-tracker',owner:'Teacher'};
   else if(scheme?.status==='SUBMITTED'&&!scheme.planningState?.approvedEntryIds?.length)action={label:'Scheme awaiting admin review',tab:'scheme-of-work-builder',owner:'Administrator'};
