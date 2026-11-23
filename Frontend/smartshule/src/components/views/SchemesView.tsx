@@ -37,17 +37,47 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [planClasses, setPlanClasses] = useState<any[]>([]);
   const [planAreas, setPlanAreas] = useState<any[]>([]);
+  const [metadataLoading, setMetadataLoading] = useState(true);
+  const [metadataError, setMetadataError] = useState('');
+  const [metadataAttempt, setMetadataAttempt] = useState(0);
+  const [schemeSearch, setSchemeSearch] = useState('');
+  const [schemeAreaFilter, setSchemeAreaFilter] = useState('');
+  const [schemeClassFilter, setSchemeClassFilter] = useState('');
+  const schemeAreaName = (scheme: SchemeOfWork) => planAreas.find(area => area.id === scheme.learningAreaId)?.name || (metadataLoading ? 'Loading learning area…' : 'Learning area unavailable');
+  const schemeClassName = (scheme: SchemeOfWork) => planClasses.find(cls => cls.id === scheme.classRoomId)?.name || (metadataLoading ? 'Loading class…' : 'Class unavailable');
   const planContext = { school: schoolInfo, classes: planClasses, areas: planAreas, schemes, teacher: teacherProfile ? {id:teacherProfile.id,userId:teacherProfile.userId||teacherProfile.user?.id||user?.userId||user?.id,name:teacherProfile.user?`${teacherProfile.user.firstName} ${teacherProfile.user.lastName}`:user?.fullName,registrationNumber:teacherProfile.tscNumber} : {userId:user?.userId||user?.id,name:user?.fullName} };
   useEffect(() => {
-    Promise.all([apiService.getSchool(), apiService.getClasses(), apiService.getLearningAreas()])
-      .then(async ([school, classes, areas]) => { setSchoolInfo(await loadDocumentSchool(school.data)); setPlanClasses(classes.data || []); setPlanAreas(areas.data || []); })
-      .catch(err => console.error('Lesson plan metadata could not be loaded', err));
-  }, []);
+    let live = true;
+    setMetadataLoading(true); setMetadataError('');
+    // Subject and class labels must not wait for the document logo to load.
+    Promise.allSettled([
+      apiService.getClasses().then(result => { if (!result.success) throw new Error('Classes unavailable'); if (live) setPlanClasses(result.data || []); }),
+      apiService.getLearningAreas().then(result => { if (!result.success) throw new Error('Learning areas unavailable'); if (live) setPlanAreas(result.data || []); }),
+    ]).then(results => {
+      if (!live) return;
+      if (results.some(result => result.status === 'rejected')) setMetadataError('Some learning area or class names could not be loaded.');
+      setMetadataLoading(false);
+    });
+    apiService.getSchool().then(async result => {
+      const school = await loadDocumentSchool(result.data);
+      if (live) setSchoolInfo(school);
+    }).catch(err => console.error('School document details could not be loaded', err));
+    return () => { live = false; };
+  }, [metadataAttempt]);
   const [loading, setLoading] = useState(true);
   const [reviewOnly, setReviewOnly] = useState(false);
   const [loadError, setLoadError] = useState('');
   const savedSchemes = schemes.filter(scheme => !scheme.planningState || scheme.planningState.weeklyPlanningStarted || scheme.entries?.some(entry=>!entry.archivedAt));
   const pendingReviews = savedSchemes.filter(scheme => scheme.status === 'SUBMITTED');
+  const reviewSchemes = reviewOnly ? pendingReviews : savedSchemes;
+  const filterAreaOptions = planAreas.filter(area => reviewSchemes.some(scheme => scheme.learningAreaId === area.id));
+  const filterClassOptions = planClasses.filter(cls => reviewSchemes.some(scheme => scheme.classRoomId === cls.id));
+  const search = schemeSearch.trim().toLocaleLowerCase();
+  const visibleSchemes = reviewSchemes.filter(scheme =>
+    (!schemeAreaFilter || scheme.learningAreaId === schemeAreaFilter) &&
+    (!schemeClassFilter || scheme.classRoomId === schemeClassFilter) &&
+    (!search || [scheme.title, schemeAreaName(scheme), schemeClassName(scheme), schemePeriodLabel(scheme), scheme.status].join(' ').toLocaleLowerCase().includes(search)));
+  const clearSchemeFilters = () => { setSchemeSearch(''); setSchemeAreaFilter(''); setSchemeClassFilter(''); };
 
   // Modals
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
@@ -210,14 +240,29 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         <div className="space-y-4">
           {loadError && <div role="alert" className="rounded-xl border border-error/30 bg-error-container p-4 text-sm text-on-error-container">{loadError}<button className="ui-button ml-3" onClick={loadCurriculum}>Retry loading schemes</button></div>}
           {isApprover && <div className="flex flex-wrap items-center gap-3"><button className="ui-button" aria-pressed={reviewOnly} onClick={() => setReviewOnly(!reviewOnly)}>{reviewOnly ? 'Show all schemes' : `Awaiting review (${pendingReviews.length})`}</button><p className="text-xs text-on-surface-variant">Review submitted scheme sessions here. Syllabus coverage plans are reviewed on Syllabus Planning.</p></div>}
+          {metadataError && <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{metadataError}<button className="ui-button ml-2" onClick={() => setMetadataAttempt(attempt => attempt + 1)}>Retry names</button></div>}
+          {savedSchemes.length > 0 && <section aria-label="Filter schemes" className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 space-y-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="text-xs font-semibold">Search schemes<input type="search" className="ui-field mt-1 w-full" value={schemeSearch} onChange={event => setSchemeSearch(event.target.value)} placeholder="Learning area, class, title or term" /></label>
+              <label className="text-xs font-semibold">Learning area<select className="ui-field mt-1 w-full" value={schemeAreaFilter} onChange={event => setSchemeAreaFilter(event.target.value)}><option value="">All learning areas</option>{filterAreaOptions.map(area => <option key={area.id} value={area.id}>{area.name}{area.gradeLevel ? ` · ${area.gradeLevel.replace(/_/g, ' ')}` : ''}</option>)}</select></label>
+              <label className="text-xs font-semibold">Class<select className="ui-field mt-1 w-full" value={schemeClassFilter} onChange={event => setSchemeClassFilter(event.target.value)}><option value="">All classes</option>{filterClassOptions.map(cls => <option key={cls.id} value={cls.id}>{cls.name}</option>)}</select></label>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><p role="status" className="text-xs text-on-surface-variant">Showing {visibleSchemes.length} of {reviewSchemes.length} {reviewOnly ? 'submitted schemes' : 'schemes'}</p>{(schemeSearch || schemeAreaFilter || schemeClassFilter) && <button className="ui-button" onClick={clearSchemeFilters}>Clear filters</button>}</div>
+          </section>}
+          {reviewSchemes.length > 0 && !visibleSchemes.length && <div className="rounded-xl bg-surface-container-low p-6 text-sm"><p>No schemes match your filters.</p><button className="ui-button mt-2" onClick={clearSchemeFilters}>Clear filters</button></div>}
           {reviewOnly && !pendingReviews.length && <p className="rounded-xl bg-surface-container-low p-4 text-sm">No scheme sessions are awaiting review.</p>}
           {savedSchemes.length > 0 ? (
-            (reviewOnly ? pendingReviews : savedSchemes).map((s) => (
+            visibleSchemes.map((s) => (
               <div
                 key={s.id}
                 className="min-w-0 bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-xs border border-outline-variant/30 space-y-4"
               >
                 <div className="min-w-0 space-y-1.5">
+                  <div className="mb-3 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Learning area</p>
+                    <h2 className="break-words text-lg font-bold text-on-surface">{schemeAreaName(s)}</h2>
+                    <p className="text-sm text-on-surface-variant">Class: <span className="font-semibold text-on-surface">{schemeClassName(s)}</span></p>
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="shrink-0 whitespace-nowrap font-bold text-xs text-success font-data-mono bg-success-container px-2 py-0.5 rounded">
                       {schemePeriodLabel(s)}
