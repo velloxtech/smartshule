@@ -12,8 +12,8 @@ export function lessonPlanSections(plan: LessonPlan, context: Context) {
   const boys = plan.rollBoys ?? roll?.boys;
   const girls = plan.rollGirls ?? roll?.girls;
   return {
-    metadata: [context.school?.name, context.classes?.find(c => c.id === plan.classRoomId)?.name,
-      context.areas?.find(a => a.id === plan.learningAreaId)?.name, plan.lessonDate,
+    metadata: [context.school?.name, plan.afterClassReport?.className||context.classes?.find(c => c.id === plan.classRoomId)?.name,
+      plan.afterClassReport?.learningAreaName||context.areas?.find(a => a.id === plan.learningAreaId)?.name, plan.lessonDate,
       plan.lessonTime ? `${plan.lessonTime} (${plan.durationMinutes} minutes)` : `${plan.durationMinutes} minutes`, boys == null || girls == null ? undefined : `${boys} boys, ${girls} girls; Total ${boys + girls}`].map(text),
     opening: [
       ['Week and Lesson Number', plan.weekNumber || entry ? `Week ${plan.weekNumber ?? entry?.weekNumber ?? 'Not recorded'}, Lesson ${plan.lessonNumber ?? entry?.lessonNumber ?? 'Not recorded'}` : undefined],
@@ -38,7 +38,7 @@ export function templateLessonSections(plan:LessonPlan,context:Context) {
     identity:[['Name',teacher?.name||''],['Reg. No.',teacher?.registrationNumber||''],['Grade',s.metadata[1]],['Learning area',s.metadata[2]],['Strand',plan.strand],['Sub-strand',plan.subStrand],['Date',plan.lessonDate],['Time',s.metadata[4]],['Roll',s.metadata[5]]],
     focus:[['Learning outcomes',text(plan.specificLearningOutcomes)],['Resources',s.resources],['Core competencies to be developed',text(plan.coreCompetenciesAddressed)],['Link to pertinent and contemporary issues (PCIs)',text(plan.pcis)],['Values to be developed',text(plan.valuesAddressed)],['Link to other learning areas',text(plan.otherLearningAreas)],['Key inquiry question',text(plan.keyInquiryQuestions)],['Learning experiences',s.opening.find(row=>row[0]==='Learning Experiences')?.[1]||''],['Assessment methods',s.opening.find(row=>row[0]==='Assessment Methods')?.[1]||'']],
     flow:(plan.steps||[]).map(step=>[`${step.stepTitle}\n${step.durationMinutes} minutes`,`Teacher: ${step.teacherActivities}\nLearners: ${step.learnerActivities}`,`${step.learningPoints||''}${step.assessmentCriterion?`\nAssessment: ${step.assessmentCriterion}`:''}`,step.resources||'']),
-    application:[['Suggested community service learning activities',plan.communityServiceActivities||''],['Suggested non-formal activity to support learning through application',plan.nonFormalActivity||''],['Extended activities',plan.extendedActivity||''],['Remarks / After-class reflection',plan.teacherSelfReflection||'']],
+    application:[['Suggested community service learning activities',plan.communityServiceActivities||''],['Suggested non-formal activity to support learning through application',plan.nonFormalActivity||''],['Extended activities',plan.extendedActivity||''],['Remarks / After-class reflection',plan.teacherSelfReflection||''],...(plan.afterClassReport?[['After-class teaching status',text(plan.afterClassReport.teachingStatus)],['Actual teaching / postponement date',plan.afterClassReport.actualDate],['Work covered / what happened',plan.afterClassReport.notes],['Outcomes actually covered',text(plan.afterClassReport.outcomesCovered)],['Remaining work / follow-up',plan.afterClassReport.remainingWork||''],['Report submitted',plan.afterClassReport.submittedAt]]:[])],
     rubric:plan.assessmentRubric?.length?plan.assessmentRubric.map(row=>[row.criterion,row.exceeds,row.meets,row.approaching,row.below]):Array.from({length:3},()=>['','','','','']),
   };
 }

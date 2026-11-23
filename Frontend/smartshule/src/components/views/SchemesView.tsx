@@ -1,3 +1,4 @@
+import {LessonAfterClassModal} from '../modals/LessonAfterClassModal';
 import {loadDocumentSchool} from '../curriculum/SchoolDocumentHeader';
 import {schemeOfWorkPDF} from '../curriculum/SchemeOfWorkDocument';
 import { SchemeApprovalActions } from '../curriculum/SchemeApprovalActions';
@@ -5,7 +6,7 @@ import { canReviewCurriculum, canPrepareCurriculum } from '../../utils/curriculu
 import { LessonPlanDocument, lessonPlansPDF } from '../curriculum/LessonPlanDocument';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
+import { SchemeOfWork, LessonPlan, RecordOfWork, UserRole } from '../../types';
 import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
 import { CreateSchemeModal } from '../modals/CreateSchemeModal';
 import { ViewSchemeModal } from '../modals/ViewSchemeModal';
@@ -34,6 +35,9 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
     if (onNavigateTab) onNavigateTab(tab === 'schemes' ? 'schemes-lesson-plans' : tab);
   };
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
+  const [afterClassPlan,setAfterClassPlan]=useState<LessonPlan|null>(null);
+  const [teachingRecords,setTeachingRecords]=useState<RecordOfWork[]>([]);
+  const workForPlan=(plan:LessonPlan)=>teachingRecords.find(record=>record.planningLink?.lessonPlanId===plan.id||record.reflectionData?.lessonPlanSnapshot?.id===plan.id);
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
@@ -118,13 +122,15 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
     setLoading(true); setLoadError('');
     try {
       const teacherFilter = isTeacher && teacherProfile?.id ? { teacherId: teacherProfile.id } : undefined;
-      const [sRes, lpRes] = await Promise.all([
+      const [sRes, lpRes, workRes] = await Promise.all([
         apiService.getSchemes(teacherFilter),
         apiService.getLessonPlans(teacherFilter).catch(() => null),
+        activeTab==='lesson-plans'?apiService.getRecordsOfWork():Promise.resolve(null),
       ]);
       if (!sRes?.success) throw new Error('Schemes could not be loaded.');
       setSchemes(sRes?.data || []);
       setLessonPlans(lpRes?.data || []);
+      setTeachingRecords(workRes?.data||[]);
     } catch (err: any) {
       setLoadError(err.message || 'Schemes could not be loaded. Please retry.');
       setSchemes([]);
@@ -213,7 +219,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             {activeTab === 'lesson-plans' ? 'Lesson Plans' : 'Schemes of Work'}
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {activeTab === 'lesson-plans' ? 'Prepare daily lesson activities and timing from approved scheme sessions.' : 'Create dated teaching sessions, submit schemes for review and manage saved schemes.'}
+            {activeTab === 'lesson-plans' ? 'Prepare lessons before class, then record teaching and reflections for admin review after class.' : 'Create dated teaching sessions, submit schemes for review and manage saved schemes.'}
           </p>
         </div>
 
@@ -463,7 +469,11 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                       <span className="material-symbols-outlined text-[16px]">visibility</span>
                       <span>View Details</span>
                     </button>
-                    <span className="text-xs text-emerald-800">Saved · ready to use; no approval required</span>
+                    {isApprover&&lp.status==='SUBMITTED'&&<div className="flex flex-wrap gap-2"><button type="button" className="ui-button ui-button-primary" onClick={()=>handleReviewLessonPlan(lp.id,true)}>Approve lesson plan</button><button type="button" className="ui-button" onClick={()=>handleReviewLessonPlan(lp.id,false)}>Return with comments</button></div>}
+                    {workForPlan(lp)&&<p className="text-xs font-semibold text-primary">{({COMPLETED:'Taught',PARTIAL:'Partly taught',POSTPONED:'Postponed',CANCELLED:'Cancelled'} as Record<string,string>)[(workForPlan(lp)?.reflectionData as any)?.teachingStatus]||'Teaching recorded'} · {workForPlan(lp)?.status==='APPROVED'?'Verified by admin':workForPlan(lp)?.status==='SUBMITTED'?'Submitted to admins':workForPlan(lp)?.status}</p>}
+                    {canPrepareCurriculum(user?.role)&&(!workForPlan(lp)||['DRAFT','RETURNED'].includes(workForPlan(lp)!.status))&&<button type="button" className="ui-button ui-button-primary" onClick={()=>setAfterClassPlan(lp)}>After class: record &amp; submit</button>}
+                    {workForPlan(lp)?.reflectionData?.lessonPlanSnapshot&&<button type="button" className="ui-button" onClick={()=>setSelectedPlan(workForPlan(lp)!.reflectionData!.lessonPlanSnapshot!)}>View saved after-class copy</button>}
+                    {!workForPlan(lp)&&<span className="text-xs text-on-surface-variant">Saved for teaching · record and submit your report after class</span>}
 
                   </div>
                 </div>
@@ -499,6 +509,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
             <div className="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
               <div className={`flex items-center gap-2 rounded-xl border p-3 text-xs ${selectedPlan.status === 'APPROVED' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : selectedPlan.status === 'REJECTED' ? 'border-rose-200 bg-rose-50 text-rose-800' : selectedPlan.status === 'SUBMITTED' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-surface text-slate-700'}`}><span className="material-symbols-outlined text-base">{selectedPlan.status === 'APPROVED' ? 'verified' : selectedPlan.status === 'SUBMITTED' ? 'pending_actions' : selectedPlan.status === 'REJECTED' ? 'edit_note' : 'draft'}</span><span><strong>{selectedPlan.status || 'DRAFT'}.</strong> {selectedPlan.status === 'APPROVED' ? 'The lesson is approved for teaching.' : selectedPlan.status === 'SUBMITTED' ? 'Awaiting school leadership review.' : selectedPlan.status === 'REJECTED' ? `Returned for changes: ${selectedPlan.reviewRemarks || 'See reviewer comments.'}` : 'Complete the plan and submit it for review.'}</span></div>
 
+              {selectedPlan.afterClassReport&&<p className="rounded-xl border p-3 text-xs">Saved after-class copy · submitted {selectedPlan.afterClassReport.submittedAt}. This copy is retained with the teaching record.</p>}
               <LessonPlanDocument plan={selectedPlan} context={planContext} />
             </div>
 
@@ -511,7 +522,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                 >
                   Close
                 </button>
-                <span className="text-xs text-emerald-800">Saved · ready to use; no approval required</span>
+                {!selectedPlan.afterClassReport&&canPrepareCurriculum(user?.role)&&(!workForPlan(selectedPlan)||['DRAFT','RETURNED'].includes(workForPlan(selectedPlan)!.status))&&<button type="button" className="ui-button ui-button-primary" onClick={()=>{setAfterClassPlan(selectedPlan);setSelectedPlan(null);}}>After class: record &amp; submit</button>}
+                {selectedPlan.afterClassReport&&<span className="text-xs text-on-surface-variant">Saved after-class copy</span>}
 
                 <button
                   onClick={() => downloadLessonPlanPDF(selectedPlan)}
@@ -527,6 +539,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
         </div>
       )}
 
+      {afterClassPlan&&<LessonAfterClassModal plan={afterClassPlan} record={workForPlan(afterClassPlan)} onClose={()=>setAfterClassPlan(null)} onSaved={loadCurriculum}/>}
       {/* Modals */}
       <CreateSchemeModal
         isOpen={isCreateSchemeOpen}

@@ -163,3 +163,62 @@ it('records postponement and reflection from syllabus tracking, then continues a
  expect(progress.coverageSummary).toMatchObject({confirmedOutcomes:1,confirmedPercent:100});
  expect(progress.scheme.entries.find((entry:any)=>entry.id===first.entry.id)).toEqual(before.scheme.entries.find((entry:any)=>entry.id===first.entry.id));
 });
+
+async function afterClassPlan(){
+ const weekly=await approvedScheme();const lesson=weekly.weeks[0].lessons[0];
+ const plan=await c.curriculumUseCases.createLessonPlan({...scope,teacherId:teacher.userId,schemeOfWorkEntryId:lesson.entry.id,lessonDate:lesson.date,lessonTime:`${lesson.startTime}-${lesson.endTime}`,durationMinutes:30,strand:'Numbers',subStrand:'Fractions',...content,coreCompetenciesAddressed:[],valuesAddressed:[],steps:[{stepNumber:1,stepTitle:'Development',durationMinutes:30,teacherActivities:'Model fractions',learnerActivities:'Compare paper models'}]},teacher);
+ return {weekly,lesson,plan,endpoint:`/api/v1/curriculum/lesson-plans/${plan.id}/after-class`,body:{teachingStatus:'COMPLETED',actualDate:lesson.date,outcomesCovered:content.specificLearningOutcomes,notes:'Compared concrete models in small groups',reflection:'Children improved with concrete models',remainingWork:'Revisit comparisons in warm-ups'}};
+}
+it('saves an after-class copy, submits the plan and work once, and retains that copy after later reflection changes',async()=>{
+ const {weekly,plan,endpoint,body}=await afterClassPlan();
+ const result=await request(app).post(endpoint).set('Authorization',auth()).send(body);
+ expect(result.status).toBe(200);
+ expect(result.body.data.record.status).toBe('SUBMITTED');
+ expect(result.body.data.lessonPlan).toMatchObject({status:'SUBMITTED',teacherSelfReflection:body.reflection});
+ const copy=result.body.data.savedCopy;
+ expect(copy).toMatchObject({id:plan.id,teacherSelfReflection:body.reflection,afterClassReport:{teachingStatus:'COMPLETED',notes:body.notes}});
+ expect((await c.termAllocations.weekly(teacher,weekly.scheme.id)).coverageSummary).toMatchObject({reportedOutcomes:1,confirmedOutcomes:0});
+ await c.curriculumUseCases.updateLessonPlanReflection(plan.id,'Later editable reflection',teacher);
+ expect((await c.recordOfWorkRepository.findById(result.body.data.record.id))!.toJSON().reflectionData?.lessonPlanSnapshot).toEqual(copy);
+ const retry=await request(app).post(endpoint).set('Authorization',auth()).send(body);
+ expect(retry.status).toBe(200);expect(retry.body.data.record.id).toBe(result.body.data.record.id);expect(retry.body.data.savedCopy).toEqual(copy);
+ expect((await c.recordOfWorkRepository.find({schoolId:admin.schoolId})).filter(r=>r.toJSON().planningLink?.lessonPlanId===plan.id)).toHaveLength(1);
+ const inbox=await request(app).get('/api/v1/curriculum/records-of-work?status=SUBMITTED').set('Authorization',auth(admin));
+ expect(inbox.status).toBe(200);expect(inbox.body.data.find((row:any)=>row.id===result.body.data.record.id).reflectionData.lessonPlanSnapshot).toEqual(copy);
+ await c.recordOfWorkUseCases.approveDiaryEntry(result.body.data.record.id,{remarks:'Verified learner work'},admin);
+ expect((await c.termAllocations.weekly(teacher,weekly.scheme.id)).coverageSummary.confirmedOutcomes).toBe(1);
+ await c.recordOfWorkUseCases.updateDiaryEntry(result.body.data.record.id,{reflectionData:{remainingWork:'Administrative follow-up'}},admin);
+ expect((await c.recordOfWorkRepository.findById(result.body.data.record.id))!.toJSON().reflectionData?.lessonPlanSnapshot).toEqual(copy);
+});
+it('submits an existing work draft with the after-class copy instead of creating another record',async()=>{
+ const {plan,endpoint,body}=await afterClassPlan();
+ const draft=await request(app).post(url('record-taught')).set('Authorization',auth()).send({lessonPlanId:plan.id,notes:body.notes});expect(draft.status).toBe(200);
+ const result=await request(app).post(endpoint).set('Authorization',auth()).send(body);
+ expect(result.status).toBe(200);expect(result.body.data.record.id).toBe(draft.body.data.id);expect(result.body.data.record.status).toBe('SUBMITTED');expect(result.body.data.savedCopy.id).toBe(plan.id);
+});
+it.each(['PARTIAL','POSTPONED'])('keeps %s after-class work unfinished without claiming taught outcomes',async teachingStatus=>{
+ const {weekly,endpoint,body}=await afterClassPlan();
+ const result=await request(app).post(endpoint).set('Authorization',auth()).send({...body,teachingStatus,outcomesCovered:[]});
+ expect(result.status).toBe(200);expect(result.body.data.record.status).toBe('SUBMITTED');
+ await c.recordOfWorkUseCases.approveDiaryEntry(result.body.data.record.id,{remarks:'Status acknowledged'},admin);
+ const progress=await c.termAllocations.weekly(teacher,weekly.scheme.id);expect(progress.coverageSummary).toMatchObject({reportedOutcomes:0,confirmedOutcomes:0});expect(progress.weeks[0].lessons[0].statuses.taught).toBe(false);
+});
+it('rejects future teaching, incomplete reflections and another teacher before saving after-class evidence',async()=>{
+ const {endpoint,body}=await afterClassPlan();
+ expect((await request(app).post(endpoint).set('Authorization',auth()).send({...body,actualDate:'2099-01-01'})).status).toBe(400);
+ expect((await request(app).post(endpoint).set('Authorization',auth()).send({...body,reflection:''})).status).toBe(400);
+ const other={...teacher,userId:'other-teacher',email:'other@example.test'};
+ await c.userRepository.save(User.create({schoolId:other.schoolId,email:other.email,firstName:'Other',lastName:'Teacher',passwordHash:'test-only',role:other.role,status:UserStatus.ACTIVE},other.userId));
+ expect((await request(app).post(endpoint).set('Authorization',auth(other)).send(body)).status).toBe(403);
+ expect(await c.recordOfWorkRepository.find({schoolId:admin.schoolId})).toHaveLength(0);
+});
+
+it('keeps the original after-class copy when an admin returns a report and the teacher resubmits a corrected copy',async()=>{
+ const {endpoint,body}=await afterClassPlan();
+ const first=await request(app).post(endpoint).set('Authorization',auth()).send(body);expect(first.status).toBe(200);
+ await c.recordOfWorkUseCases.returnDiaryEntry(first.body.data.record.id,{reason:'Clarify the follow-up practice'},admin);
+ const corrected=await request(app).post(endpoint).set('Authorization',auth()).send({...body,reflection:'Use concrete models and repeat guided practice',remainingWork:'Another guided session'});
+ expect(corrected.status).toBe(200);expect(corrected.body.data.record.id).toBe(first.body.data.record.id);expect(corrected.body.data.record.status).toBe('SUBMITTED');
+ expect(corrected.body.data.savedCopy.teacherSelfReflection).toBe('Use concrete models and repeat guided practice');
+ expect(corrected.body.data.record.reflectionData.lessonPlanSnapshotHistory).toEqual([first.body.data.savedCopy]);
+});

@@ -540,6 +540,7 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.get('/schemes/:id/weekly',authMiddleware,planningController.weekly);
   curriculumRouter.get('/schemes/:id/weekly/export',authMiddleware,planningController.exportWeekly);
   curriculumRouter.put('/lesson-plans/:id/reflection',authMiddleware,planningController.reflection);
+  curriculumRouter.post('/lesson-plans/:id/after-class',authMiddleware,planningController.afterClass);
   curriculumRouter.get('/planning/options',authMiddleware,planningController.options);
   curriculumRouter.get('/planning/workspace',authMiddleware,planningController.workspace);
   curriculumRouter.get('/planning/slots',authMiddleware,planningController.slots);

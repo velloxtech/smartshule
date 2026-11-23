@@ -4,6 +4,8 @@ export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'
 export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
 
 export interface RecordOfWorkReflection {
+  lessonPlanSnapshot?: Record<string,unknown>;
+  lessonPlanSnapshotHistory?: Record<string,unknown>[];
   teachingStatus?: 'COMPLETED'|'PARTIAL'|'POSTPONED'|'CANCELLED';
   outcomesCovered?: string[];
   remainingWork?: string;

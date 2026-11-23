@@ -1,3 +1,4 @@
+import {canPrepareCurriculum} from '../../../application/shared/AdministrativeAccess';
 import { createPlanningReadContext } from '../../../application/planning/PlanningReadContext';
 import { weeklySchemeDoc, weeklySchemePDF, weeklyMonitoringDoc, weeklyMonitoringPDF } from '../exports/WeeklySchemeExport';
 import { Request,Response,NextFunction } from 'express';
@@ -7,6 +8,7 @@ import { AcademicActor, TeachingScope, sameTerm } from '../../../application/sha
 import { ForbiddenError, ValidationError, ConflictError } from '../../../core/domain/shared/Errors';
 const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const calendarSchema=z.object({revision:z.number().int().min(0),calendar:z.object({guidedWorkflow:z.boolean().optional(),startDate:date,endDate:date,teachingDays:z.array(z.number().int().min(0).max(6)),extraTeachingDates:z.array(date).optional(),published:z.boolean(),exceptions:z.array(z.object({date,endDate:date.optional(),reason:z.string().min(1),kind:z.enum(['HOLIDAY','CLOSURE','ACTIVITY']),classRoomIds:z.array(z.string()).optional(),streamIds:z.array(z.string()).optional(),periodNumbers:z.array(z.number().int().positive()).optional(),startTime:z.string().regex(/^\d{2}:\d{2}$/).optional(),endTime:z.string().regex(/^\d{2}:\d{2}$/).optional()}))})});
+const teachingReportSchema=z.object({lessonPlanId:z.string().optional(),schemeId:z.string().optional(),schemeEntryId:z.string().optional(),notes:z.string().trim().min(3).max(10000),timetableSlotId:z.string().optional(),actualDate:date.optional(),teachingStatus:z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).default('COMPLETED'),outcomesCovered:z.array(z.string()).optional(),remainingWork:z.string().max(10000).optional(),reflection:z.string().max(10000).optional()});
 export class CalendarPlanningController {
  constructor(private c:AppContainer){}
  pacing(req:Request){if(req.query.weeks===undefined&&req.query.lessonsPerWeek===undefined)return undefined;return z.object({weeks:z.coerce.number().int().min(1).max(52),lessonsPerWeek:z.coerce.number().int().min(1).max(50)}).parse(req.query);}
@@ -61,8 +63,19 @@ export class CalendarPlanningController {
  saveCalendar=this.handle(async(req,a)=>{const body=calendarSchema.parse(req.body);return this.c.calendarPlanning.saveCalendar(a,this.scope(req),body.calendar,body.revision);});
  getSequence=this.handle(async(req,a)=>this.c.calendarPlanning.sequence(a,this.scope(req)));
  saveSequence=this.handle(async(req,a)=>{const data=z.object({revision:z.number().int().min(0),enabled:z.boolean(),learningAreaIds:z.array(z.string())}).parse(req.body);return this.c.calendarPlanning.saveSequence(a,this.scope(req),data,data.revision);});
- recordTaught=this.handle(async(req,a)=>{
-  const body=z.object({lessonPlanId:z.string().optional(),schemeId:z.string().optional(),schemeEntryId:z.string().optional(),notes:z.string().trim().min(3),timetableSlotId:z.string().optional(),actualDate:date.optional(),teachingStatus:z.enum(['COMPLETED','PARTIAL','POSTPONED','CANCELLED']).default('COMPLETED'),outcomesCovered:z.array(z.string()).optional(),remainingWork:z.string().optional(),reflection:z.string().optional()}).parse(req.body);
+ recordTaught=this.handle(async(req,a)=>this.recordTeaching(a,teachingReportSchema.parse(req.body)));
+ afterClass=this.handle(async(req,a)=>{
+  if(!canPrepareCurriculum(a.role))throw new ForbiddenError('Only the assigned teacher or a school administrator can submit an after-class report.');
+  const body=teachingReportSchema.omit({lessonPlanId:true,schemeId:true,schemeEntryId:true,timetableSlotId:true}).extend({reflection:z.string().trim().min(3).max(10000)}).strict().parse(req.body);
+  const id=String(req.params.id);
+  const record=await this.recordTeaching(a,{...body,lessonPlanId:id},true);
+  const copy=record.toJSON().reflectionData?.lessonPlanSnapshot;
+  const reflection=String(copy?.teacherSelfReflection||body.reflection);
+  let plan=await this.c.curriculumUseCases.updateLessonPlanReflection(id,reflection,a);
+  if(['DRAFT','REJECTED','RECORDED'].includes(plan.status))plan=await this.c.curriculumUseCases.submitLessonPlanForReview(id,a);
+  return {lessonPlan:plan,record:record.toJSON(),savedCopy:copy};
+ });
+ private async recordTeaching(a:AcademicActor,body:z.infer<typeof teachingReportSchema>,afterClass=false){
   const plan=body.lessonPlanId?await this.c.curriculumUseCases.getLessonPlanById(body.lessonPlanId,a):null;
   const rawSource=body.schemeId?await this.c.curriculumUseCases.getSchemeById(body.schemeId,a):(await this.c.schemeOfWorkRepository.findAll()).find(s=>s.entries.some(e=>e.id===plan?.schemeOfWorkEntryId));
   if(!rawSource)throw new ValidationError('Select an approved scheduled scheme lesson.');
@@ -78,14 +91,29 @@ export class CalendarPlanningController {
   const period=await this.c.assignmentAccess.context(a,source);
   if(actualDate<period.term.startDate||actualDate>period.term.endDate)throw new ValidationError('The actual teaching date must be within this academic term. Schedule later follow-up work in the appropriate period.');
   if(actualDate>new Date().toISOString().slice(0,10)||actualDate<slot.date)throw new ValidationError('Record actual teaching after the scheduled lesson, not in advance.');
-  const covered=body.outcomesCovered||(body.teachingStatus==='COMPLETED'?entry.specificLearningOutcomes:[]);
+  const expectedOutcomes=afterClass&&plan?plan.specificLearningOutcomes:entry.specificLearningOutcomes;
+  const covered=body.outcomesCovered||(body.teachingStatus==='COMPLETED'?expectedOutcomes:[]);
   if(['POSTPONED','CANCELLED'].includes(body.teachingStatus)&&covered.length)throw new ValidationError('Postponed or cancelled lessons cannot claim taught outcomes.');
   if(covered.some((outcome:string)=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Covered outcomes must come from the approved scheme lesson.');
-  if(body.teachingStatus==='COMPLETED'&&entry.specificLearningOutcomes.some((outcome:string)=>!covered.includes(outcome)))throw new ValidationError('Use PARTIAL when outcomes remain untaught.');
+  if(afterClass&&covered.some((outcome:string)=>!expectedOutcomes.includes(outcome)))throw new ValidationError('Report outcomes from this daily lesson plan.');
+  if(body.teachingStatus==='COMPLETED'&&expectedOutcomes.some((outcome:string)=>!covered.includes(outcome)))throw new ValidationError('Use PARTIAL when outcomes remain untaught.');
   const existing=await this.c.recordOfWorkRepository.find({schoolId:a.schoolId,academicYearId:source.academicYearId,termId:source.termId});
-  if(existing.some(r=>{const d=r.toJSON();return d.planningLink?.schemeId===source.id&&d.planningLink?.schemeEntryId===entry.id&&d.status!=='RETURNED';}))throw new ConflictError('This lesson already has a work record. Continue that record or teach another scheduled lesson.');
-  return this.c.recordOfWorkUseCases.createDiaryEntry({teacherId:plan?.teacherId||source.teacherId,schoolId:a.schoolId,classRoomId:source.classRoomId,streamId:source.streamId,learningAreaId:source.learningAreaId,academicYearId:source.academicYearId,termId:source.termId,weekNumber:slot.weekNumber,lessonDate:actualDate,lessonPeriod:String(slot.periodNumber),strand:entry.strandTitle,subStrand:entry.subStrandTitle,subStrandId:entry.subStrandId,lessonTopic:entry.subStrandTitle,learningObjectives:entry.specificLearningOutcomes.join('; '),learningActivities:body.notes,comments:body.notes,reflection:body.reflection,reflectionData:{teachingStatus:body.teachingStatus,outcomesCovered:covered,remainingWork:body.remainingWork},status:'DRAFT',planningLink:{lessonPlanId:plan?.id,schemeId:source.id,schemeEntryId:entry.id,slotId:slot.id}},a);
- });
+  const previous=existing.find(r=>{const d=r.toJSON();return d.planningLink?.schemeId===source.id&&d.planningLink?.schemeEntryId===entry.id&&(afterClass||d.status!=='RETURNED');});
+  const [classroom,learningArea]=afterClass?await Promise.all([this.c.academicRepository.findClassById(source.classRoomId),this.c.academicRepository.findLearningAreaById(source.learningAreaId)]):[null,null];
+  const snapshot=afterClass&&plan?JSON.parse(JSON.stringify({...plan,status:plan.status==='APPROVED'?'APPROVED':'SUBMITTED',teacherSelfReflection:body.reflection,afterClassReport:{className:classroom?.name,learningAreaName:learningArea?.name,teachingStatus:body.teachingStatus,outcomesCovered:covered,remainingWork:body.remainingWork,notes:body.notes,actualDate,submittedAt:new Date().toISOString()}})):undefined;
+  if(previous){
+   if(!afterClass)throw new ConflictError('This lesson already has a work record. Continue that record or teach another scheduled lesson.');
+   const old=previous.toJSON();
+   if(old.planningLink?.lessonPlanId&&old.planningLink.lessonPlanId!==plan?.id)throw new ConflictError('This teaching session is linked to another lesson plan. Retain the existing record.');
+   if(['SUBMITTED','APPROVED'].includes(old.status)){
+    if(old.reflectionData?.lessonPlanSnapshot?.id===plan?.id)return previous;
+    throw new ConflictError('A teaching record is already with the administrator. View that record instead of submitting another copy.');
+   }
+   await this.c.recordOfWorkUseCases.updateDiaryEntry(old.id,{lessonDate:actualDate,learningActivities:body.notes,comments:body.notes,reflection:body.reflection,reflectionData:{...old.reflectionData,teachingStatus:body.teachingStatus,outcomesCovered:covered,remainingWork:body.remainingWork,lessonPlanSnapshot:snapshot}},a);
+   return this.c.recordOfWorkUseCases.submitDiaryEntry(old.id,a);
+  }
+  return this.c.recordOfWorkUseCases.createDiaryEntry({teacherId:plan?.teacherId||source.teacherId,schoolId:a.schoolId,classRoomId:source.classRoomId,className:classroom?.name,streamId:source.streamId,learningAreaId:source.learningAreaId,subjectName:learningArea?.name,academicYearId:source.academicYearId,termId:source.termId,weekNumber:slot.weekNumber,lessonDate:actualDate,lessonPeriod:String(slot.periodNumber),strand:entry.strandTitle,subStrand:entry.subStrandTitle,subStrandId:entry.subStrandId,lessonTopic:entry.subStrandTitle,learningObjectives:entry.specificLearningOutcomes.join('; '),learningActivities:body.notes,comments:body.notes,reflection:body.reflection,reflectionData:{teachingStatus:body.teachingStatus,outcomesCovered:covered,remainingWork:body.remainingWork,lessonPlanSnapshot:snapshot},status:afterClass?'SUBMITTED':'DRAFT',planningLink:{lessonPlanId:plan?.id,schemeId:source.id,schemeEntryId:entry.id,slotId:slot.id}},a);
+ }
  archiveEntry=this.handle(async(req,a)=>this.c.curriculumUseCases.archiveCancelledEntry(String(req.params.id),String(req.params.entryId),a));
  rescheduleLesson=this.handle(async(req,a)=>this.c.curriculumUseCases.rescheduleLessonPlan(String(req.params.id),a));
  options=this.handle(async(req,a)=>{

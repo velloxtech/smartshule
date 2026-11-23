@@ -1721,6 +1721,8 @@ const coreApiService = {
     return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}`);
   },
 
+  saveLessonAfterClass: async (id:string,data:Record<string,unknown>):Promise<ApiResponse<any>> => apiFetch(`/curriculum/lesson-plans/${id}/after-class`,{method:'POST',body:JSON.stringify(data)}),
+
   deleteLessonPlan: async (id: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/curriculum/lesson-plans/${id}`, {
       method: 'DELETE',

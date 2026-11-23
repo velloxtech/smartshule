@@ -1017,6 +1017,7 @@ export interface LessonPlanStep {
 }
 
 export interface LessonPlan {
+  afterClassReport?: {className?:string;learningAreaName?:string;teachingStatus:string;outcomesCovered:string[];remainingWork?:string;notes:string;actualDate:string;submittedAt:string};
   otherLearningAreas?: string[];
   communityServiceActivities?: string;
   nonFormalActivity?: string;
@@ -1062,6 +1063,11 @@ export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'
 export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR' | 'NEEDS_REMEDIATION';
 
 export interface RecordOfWorkReflection {
+  teachingStatus?: 'COMPLETED'|'PARTIAL'|'POSTPONED'|'CANCELLED';
+  outcomesCovered?: string[];
+  remainingWork?: string;
+  lessonPlanSnapshot?: LessonPlan;
+  lessonPlanSnapshotHistory?: LessonPlan[];
   comprehensionLevel?: LearnerComprehension;
   whatWentWell?: string;
   challengesFaced?: string;
@@ -1074,6 +1080,7 @@ export interface RecordOfWorkReflection {
 }
 
 export interface RecordOfWork {
+  planningLink?: {lessonPlanId?:string;schemeId:string;schemeEntryId:string;slotId:string};
   id: string;
   schoolId?: string;
   teacherId?: string;

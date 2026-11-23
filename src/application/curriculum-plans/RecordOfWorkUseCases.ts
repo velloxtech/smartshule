@@ -354,8 +354,11 @@ export class RecordOfWorkUseCases {
     const targetStatus = dto.status || existing.status;
     if(targetStatus==='SUBMITTED'&&(dto.lessonDate||existing.lessonDate||'')>new Date().toISOString().slice(0,10))throw new ValidationError('Submit actual teaching records after the lesson, not in advance.');
 
+    const previousCopy=existing.reflectionData?.lessonPlanSnapshot;
+    const revisedCopy=existing.status==='RETURNED'&&dto.reflectionData?.lessonPlanSnapshot;
     const updatedProps: Partial<RecordOfWorkProps> = {
       ...dto,
+      ...(existing.reflectionData?.lessonPlanSnapshot?{reflectionData:{...existing.reflectionData,...dto.reflectionData,lessonPlanSnapshot:revisedCopy||previousCopy,lessonPlanSnapshotHistory:revisedCopy?[...(existing.reflectionData.lessonPlanSnapshotHistory||[]),previousCopy!]:existing.reflectionData.lessonPlanSnapshotHistory}}:{}),
       weekNumber: dto.weekNumber !== undefined ? dto.weekNumber : existing.weekNumber,
       status: targetStatus,
       submittedAt: targetStatus === 'SUBMITTED' ? (existing.submittedAt || new Date()) : existing.submittedAt,
