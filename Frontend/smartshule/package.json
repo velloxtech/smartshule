@@ -27,7 +27,8 @@
     "electron:build:mac": "npm run build && electron-builder --mac --config electron-builder.json",
     "electron:pack": "npm run build && electron-builder --dir --config electron-builder.json",
     "test:runtime": "node --import tsx tests/runtime-recovery.test.ts",
-    "test:pages": "node tests/browser/portal-pages.test.cjs && node tests/browser/modal-transitions.test.cjs"
+    "test:pages": "node tests/browser/portal-pages.test.cjs && node tests/browser/modal-transitions.test.cjs",
+    "test:teaching-progress": "node --import tsx tests/teaching-progress.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^7.1.2",

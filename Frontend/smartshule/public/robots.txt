@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+
+Sitemap: https://smartshule-vg15.onrender.com/sitemap.xml

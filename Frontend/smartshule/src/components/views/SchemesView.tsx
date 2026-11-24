@@ -1,3 +1,4 @@
+import {TeachingProgressChecks} from '../curriculum/TeachingProgressChecks';
 import {LessonAfterClassModal} from '../modals/LessonAfterClassModal';
 import {loadDocumentSchool} from '../curriculum/SchoolDocumentHeader';
 import {schemeOfWorkPDF} from '../curriculum/SchemeOfWorkDocument';
@@ -438,6 +439,8 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
                     </div>
 
                   </div>
+
+                  <TeachingProgressChecks lessonPlan={lp} record={workForPlan(lp)}/>
 
                   <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
