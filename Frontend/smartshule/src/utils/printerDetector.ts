@@ -1,3 +1,5 @@
+import { safeStorage } from './safeStorage';
+
 /**
  * Grace Seeds School Receipt Printer Detection & Management Utility
  * Detects connected thermal POS receipt printers (WebUSB, WebSerial)
@@ -29,8 +31,8 @@ const THERMAL_PRINTER_VENDOR_IDS = [
 
 export async function detectReceiptPrinter(): Promise<PrinterDetectionResult> {
   // 1. Check if user configured this terminal as having a dedicated receipt printer
-  const manuallyConfigured = localStorage.getItem(PRINTER_MODE_STORAGE_KEY) === 'true';
-  const autoPrintPref = localStorage.getItem(AUTO_PRINT_STORAGE_KEY);
+  const manuallyConfigured = safeStorage.getItem(PRINTER_MODE_STORAGE_KEY) === 'true';
+  const autoPrintPref = safeStorage.getItem(AUTO_PRINT_STORAGE_KEY);
   const autoPrintEnabled = autoPrintPref !== null ? autoPrintPref === 'true' : true; // Default to ON for receipt printers
 
   // 2. Check WebUSB API for connected USB thermal receipt printers
@@ -95,13 +97,13 @@ export async function detectReceiptPrinter(): Promise<PrinterDetectionResult> {
 
 export function setReceiptPrinterWorkstationMode(enabled: boolean): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(PRINTER_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
+    safeStorage.setItem(PRINTER_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
   }
 }
 
 export function setReceiptAutoPrint(enabled: boolean): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(AUTO_PRINT_STORAGE_KEY, enabled ? 'true' : 'false');
+    safeStorage.setItem(AUTO_PRINT_STORAGE_KEY, enabled ? 'true' : 'false');
   }
 }
 

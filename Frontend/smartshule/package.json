@@ -26,7 +26,8 @@
     "electron:build:win": "npm run build && electron-builder --win --config electron-builder.json",
     "electron:build:mac": "npm run build && electron-builder --mac --config electron-builder.json",
     "electron:pack": "npm run build && electron-builder --dir --config electron-builder.json",
-    "test:runtime": "node --import tsx tests/runtime-recovery.test.ts"
+    "test:runtime": "node --import tsx tests/runtime-recovery.test.ts",
+    "test:pages": "node tests/browser/portal-pages.test.cjs && node tests/browser/modal-transitions.test.cjs"
   },
   "dependencies": {
     "@capacitor/app": "^7.1.2",

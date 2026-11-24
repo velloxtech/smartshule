@@ -14,12 +14,12 @@ export const ViewCurriculumTrackerModal: React.FC<ViewCurriculumTrackerModalProp
   onClose,
   onDownloadPDF,
 }) => {
-  if (!tracker) return null;
-
   const [activeTab, setActiveTab] = useState<'weeks' | 'dailyLogs'>('weeks');
   const [weekFilter, setWeekFilter] = useState<'ALL' | 'COVERED' | 'PENDING'>('ALL');
   const [selectedWeekDetail, setSelectedWeekDetail] = useState<CurriculumTrackerWeekItem | null>(null);
   const [selectedDailyLogDetail, setSelectedDailyLogDetail] = useState<CurriculumTrackerDailyLog | null>(null);
+
+  if (!tracker) return null;
 
   const weeks: CurriculumTrackerWeekItem[] = tracker.items || (tracker as any).weeks || [];
   const stats = tracker.stats;

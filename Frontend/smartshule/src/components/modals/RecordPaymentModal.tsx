@@ -405,8 +405,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
   }, [selectedStudentId, students]);
 
-  if (!isOpen) return null;
-
   const currentStudent = students.find((s) => s.id === selectedStudentId);
   const currentInvoice = invoices.find((i) => i.id === selectedInvoiceId);
 
@@ -495,6 +493,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       explanation
     };
   }, [invoices, numAmount]);
+
+  if (!isOpen) return null;
 
   // Calculations for Arrear
   const numArrear = Number(arrearAmount) || 0;

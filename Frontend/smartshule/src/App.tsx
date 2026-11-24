@@ -1106,7 +1106,7 @@ export default function App() {
 
         {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
-          <AppErrorBoundary resetKey={`${user?.id}:${effectiveRole}:${currentTab}`} onHome={()=>setCurrentTab('dashboard')}><Suspense key={`${user?.id}:${effectiveRole}`} fallback={<ViewLoadingSkeleton />}>
+          <AppErrorBoundary resetKey={`${user?.id}:${effectiveRole}:${currentTab}`} onHome={()=>setCurrentTab('dashboard')}><Suspense key={`${user?.id}:${effectiveRole}:${currentTab}`} fallback={<ViewLoadingSkeleton />}>
           {isTabPermitted(currentTab,effectiveRole) && <>
           {currentTab === 'dashboard' && (
             (() => {
@@ -1466,7 +1466,7 @@ export default function App() {
 
           {currentTab === 'cashflow-ledger' && <CashFlowLedgerView />}
           {currentTab === 'expenses-management' && <ExpensesView />}
-          {currentTab === 'financial-reports' && <FinancialReportsView />}
+          {(currentTab === 'financial-reports' || currentTab === 'capitation-income') && <FinancialReportsView />}
           {currentTab === 'payroll' && <PayrollManagementView />}
 
           {currentTab === 'ediary' && <EDiaryView />}
