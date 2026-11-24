@@ -33,24 +33,25 @@ beforeEach(async()=>{
 import {weeklyMonitoringRegister} from '../../../src/application/planning/WeeklyMonitoringRegister';
 import {weeklyMonitoringPDF,weeklySchemePDF,weeklyMonitoringDoc} from '../../../src/infrastructure/http/exports/WeeklySchemeExport';
 const planInput=(lesson:any)=>({...scope,teacherId:teacher.userId,schemeOfWorkEntryId:lesson.entry.id,lessonDate:lesson.date,lessonTime:`${lesson.startTime}-${lesson.endTime}`,strand:'Numbers',subStrand:'Fractions',...content,coreCompetenciesAddressed:[],valuesAddressed:[],steps:[{stepNumber:1,stepTitle:'Development',durationMinutes:35,teacherActivities:'Model',learnerActivities:'Compare'}]});
-it('derives a 35-minute lesson from the timetable and rejects wrong durations or incomplete stages',async()=>{
+it('uses the chosen lesson duration and validates complete stages independently of timetable length',async()=>{
  const weekly=await approvedScheme(),lesson=weekly.weeks[0].lessons[0],input=planInput(lesson);
  await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes:40},teacher)).rejects.toThrow(/duration/);
- await expect(c.curriculumUseCases.createLessonPlan({...input,steps:[{...input.steps[0],durationMinutes:30}]},teacher)).rejects.toThrow(/stage/);
+ await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes:35,steps:[{...input.steps[0],durationMinutes:30}]},teacher)).rejects.toThrow(/stage/);
  const plan=await c.curriculumUseCases.createLessonPlan(input,teacher);expect(plan.durationMinutes).toBe(35);expect(plan.weekNumber).toBe(1);
 });
-it('saves a shorter lesson within a 45-minute period and validates its chosen duration and stages',async()=>{
+it('saves teacher-chosen timing and validates durations and stages without a timetable cap',async()=>{
  const weekly=await approvedScheme(),lesson=weekly.weeks[0].lessons[0];
  const timetable=(await c.timetableRepository.findByClass(scope.classRoomId))[0];
  const grid=timetable.toJSON();
  timetable.updateGrid(grid.periods,grid.days,grid.slots.map(slot=>({...slot,endTime:'09:45'})));
  await c.timetableRepository.update(timetable);
  const input={...planInput(lesson),lessonTime:'09:00-09:45',durationMinutes:30,steps:[{stepNumber:1,stepTitle:'Development',durationMinutes:30,teacherActivities:'Model',learnerActivities:'Compare'}]};
- for(const durationMinutes of [0,-1,1.5,46])await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes},teacher)).rejects.toThrow(/duration/);
+ for(const durationMinutes of [0,-1,1.5])await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes},teacher)).rejects.toThrow(/duration/);
  await expect(c.curriculumUseCases.createLessonPlan({...input,steps:[{...input.steps[0],durationMinutes:25}]},teacher)).rejects.toThrow(/stage/);
  const plan=await c.curriculumUseCases.createLessonPlan(input,teacher);
  expect(plan).toMatchObject({durationMinutes:30,lessonTime:'09:00-09:45',lessonDate:lesson.date});
  expect((await c.lessonPlanRepository.findById(plan.id))!.toJSON().durationMinutes).toBe(30);
+ const independent=await c.curriculumUseCases.createLessonPlan({...input,lessonTime:'10:00-11:00',durationMinutes:50,steps:[{...input.steps[0],durationMinutes:50}]},teacher);expect(independent.durationMinutes).toBe(50);
 });
 it('keeps reported work separate from verified work, counts delayed teaching and deduplicates repeated outcomes',async()=>{
  const weekly=await approvedScheme();const lessons=weekly.weeks.flatMap((week:any)=>week.lessons);
@@ -248,7 +249,7 @@ describe('teacher-paced scheme lesson ranges',()=>{
  });
 });
 
-describe('schemes before school opens; daily lessons after timetable setup',()=>{
+describe('schemes and daily lessons with optional timetable suggestions',()=>{
  const futureScope={...scope,academicYearId:'future-year',termId:'future-term'};
  const pacing={weeks:12,lessonsPerWeek:5};
  let plan:any;
@@ -290,15 +291,18 @@ describe('schemes before school opens; daily lessons after timetable setup',()=>
   expect(weekly.weeks.slice(1).every((week:any)=>week.lessons.every((lesson:any)=>!lesson.entry))).toBe(true);
   await expect(c.calendarPlanning.slots(teacher,futureScope)).rejects.toThrow('publish the term calendar');
  });
- it('keeps daily lesson creation tied to a valid timetable and permits its date to differ from the scheme planning week',async()=>{
+ it('prepares daily lessons without setup and fetches optional timetable suggestions without constraining chosen dates',async()=>{
   const weekly=await approvedBeforeOpening();
   const lesson=weekly.weeks[0].lessons[0];
   const input={...planInput(lesson),...futureScope,lessonDate:'2027-01-11',lessonTime:'09:00-09:35'};
-  await expect(c.curriculumUseCases.createLessonPlan(input,teacher)).rejects.toThrow('publish the term calendar');
+  const beforeSetup=await c.curriculumUseCases.createLessonPlan({...input,lessonDate:'2027-01-12',lessonTime:'10:00-10:35'},teacher);
+  expect(beforeSetup.lessonDate).toBe('2027-01-12');
   await c.calendarPlanning.saveCalendar(admin,futureScope,{startDate:'2027-01-04',endDate:'2027-03-26',teachingDays:[1,2,3,4,5],exceptions:[],published:true},0);
-  await expect(c.curriculumUseCases.createLessonPlan(input,teacher)).rejects.toThrow('active class/stream timetable');
+  expect((await c.calendarPlanning.lessonSuggestions(teacher,futureScope)).slots).toEqual([]);
   await c.timetableRepository.save(Timetable.create({...futureScope,schoolId:teacher.schoolId,isActive:true,slots:[{id:'future-period',dayOfWeek:'MONDAY',periodNumber:1,startTime:'09:00',endTime:'09:35',learningAreaId:scope.learningAreaId,isBreak:false,isLunch:false}]},'future-timetable'));
-  await expect(c.curriculumUseCases.createLessonPlan({...input,lessonDate:'2027-01-12'},teacher)).rejects.toThrow('active timetable');
+  expect((await c.calendarPlanning.lessonSuggestions(teacher,futureScope)).slots.length).toBeGreaterThan(0);
+  await expect(c.curriculumUseCases.createLessonPlan({...input,lessonDate:'2027-03-99'},teacher)).rejects.toThrow('valid lesson date');
+  await expect(c.curriculumUseCases.createLessonPlan({...input,lessonTime:'25:00-26:00'},teacher)).rejects.toThrow('lesson time');
   await expect(c.curriculumUseCases.createLessonPlan({...input,durationMinutes:40},teacher)).rejects.toThrow('duration');
   const daily=await c.curriculumUseCases.createLessonPlan(input,teacher);
   expect(daily).toMatchObject({lessonDate:'2027-01-11',weekNumber:2,lessonNumber:1,durationMinutes:35});

@@ -57,12 +57,16 @@ export class CalendarPlanningService {
   }
   return {slots,pacing:selected,calendarRevision:0,fingerprint:`scheme:${selected.weeks}:${selected.lessonsPerWeek}`,setupRequired:undefined as string|undefined};
  }
- async slots(actor:AcademicActor,s:TeachingScope,checkAccess=true) {
+ async lessonSuggestions(actor:AcademicActor,s:TeachingScope){
+  try{return {...await this.slots(actor,s,true,false),timetableHint:undefined as string|undefined};}
+  catch(error){if(!(error instanceof ConflictError))throw error;return {slots:[] as LessonSlot[],calendarRevision:0,fingerprint:'manual-lesson-planning',timetableHint:'No matching timetable suggestions are available. Enter the lesson date, time and duration yourself.'};}
+ }
+ async slots(actor:AcademicActor,s:TeachingScope,checkAccess=true,requirePublishedCalendar=true) {
   if(checkAccess)await this.access.assert(actor,s);
   const {term}=await this.access.context(actor,s);
   const config=await this.repository.get(this.key('calendar',actor,s));
-  if(!config?.data.published)throw new ConflictError('An administrator must publish the term calendar before planning.');
-  const calendar={...config.data,startDate:term.startDate,endDate:term.endDate} as TermCalendar;
+  if(requirePublishedCalendar&&!config?.data.published)throw new ConflictError('An administrator must publish the term calendar before planning.');
+  const calendar={teachingDays:[0,1,2,3,4,5,6],exceptions:[],...config?.data,startDate:term.startDate,endDate:term.endDate} as TermCalendar;
   const all=(await this.timetables.findByClass(s.classRoomId!)).filter(t=>t.schoolId===actor.schoolId&&t.academicYearId===s.academicYearId&&sameTerm(t.termId,s.termId!)&&t.isActive);
   const exact=all.filter(t=>(t.streamId || '')===(s.streamId || ''));
   const candidates=exact.length?exact:all.filter(t=>!t.streamId);
@@ -81,7 +85,7 @@ export class CalendarPlanningService {
    }
   }
   if(!result.length)throw new ConflictError('No eligible lessons: assign this learning area to teaching periods in the timetable.');
-  return {slots:result,calendarRevision:config.revision,fingerprint:createHash('sha256').update(JSON.stringify([config.revision,term.startDate,term.endDate,timetable.toJSON()])).digest('hex')};
+  return {slots:result,calendarRevision:config?.revision||0,fingerprint:createHash('sha256').update(JSON.stringify([config?.revision||0,term.startDate,term.endDate,timetable.toJSON()])).digest('hex')};
  }
  validate(entries:any[],slots:LessonSlot[],complete=false){entries=entries.filter(e=>!e.archivedAt);const ids=new Set<string>();const valid=new Map(slots.map(s=>[s.id,s]));const conflicts:any[]=[];for(const e of entries){const slot=valid.get(e.slotId);if(!slot)conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Slot cancelled, moved, or not linked; reschedule this entry.'});else if(e.weekNumber!==slot.weekNumber || e.lessonNumber!==slot.lessonNumber || e.scheduledDate && e.scheduledDate!==slot.date || e.scheduledStartTime && e.scheduledStartTime!==slot.startTime || e.scheduledEndTime && e.scheduledEndTime!==slot.endTime)conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Timetable or lesson numbering changed; reschedule this entry.'});else if(ids.has(e.slotId))conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Duplicate lesson slot.'});else if(complete&&(!e.strandTitle?.trim()||!e.subStrandTitle?.trim()||!e.specificLearningOutcomes?.some((x:string)=>x.trim())||!e.learningExperiences?.some((x:string)=>x.trim())||!e.assessmentMethods?.some((x:string)=>x.trim())))conflicts.push({entryId:e.id,slotId:e.slotId,reason:'Lesson content is incomplete.'});ids.add(e.slotId);}
   const missing=slots.filter(s=>!ids.has(s.id));return {required:slots.length,filled:entries.filter(e=>valid.has(e.slotId)).length,missing,conflicts,complete:entries.length===slots.length&&!missing.length&&!conflicts.length};

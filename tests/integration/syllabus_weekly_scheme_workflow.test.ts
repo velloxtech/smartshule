@@ -163,7 +163,8 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
       const res: any = { json: resolve };
       new CalendarPlanningController(c).workspace(req, res, reject);
     });
-    expect(result.data.areas[0].coverage[0].lessons[0].statuses).toEqual({ planned: false, reported: false, taught: false, reflection: false });
+    expect(result.data.areas[0].coverage[0].lessons).toEqual([]);
+    expect(result.data.areas[0].coverage[0].plannedLessons).toBe(0);
   });
 
   it('submits and approves one completed lesson while preserving unfinished work and earlier approvals', async () => {

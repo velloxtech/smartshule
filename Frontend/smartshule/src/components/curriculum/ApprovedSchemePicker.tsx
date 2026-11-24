@@ -70,7 +70,7 @@ export function ApprovedSchemePicker({ onSelect, onOpenSchemes }: Props) {
   const chosenPeriod=actualPeriods.find(period=>period.id===periodId);
   const selectSession = () => {
     const session=chosenSession,period=chosenPeriod;
-    if(!session||!period)return;
+    if(!session)return;
     const scheme = schedule.scheme as SchemeOfWork;
     if (session.lessonPlan || !isApprovedSchemeEntry(scheme, session.entry)) return;
     onSelect({
@@ -81,10 +81,10 @@ export function ApprovedSchemePicker({ onSelect, onOpenSchemes }: Props) {
       learningAreaId: scheme.learningAreaId,
       academicYearId: scheme.academicYearId,
       termId: scheme.termId,
-      lessonDate: period.date,
-      lessonTime: `${period.startTime}-${period.endTime}`,
-      weekNumber: period.weekNumber,
-      lessonNumber: period.lessonNumber,
+      lessonDate: period?.date||schedule.termStartDate||'',
+      lessonTime: period?`${period.startTime}-${period.endTime}`:'',
+      weekNumber: period?.weekNumber||session.weekNumber,
+      lessonNumber: period?.lessonNumber||session.lessonNumber,
       className: schedule.className,
       streamName: schedule.streamName,
       learningAreaName: schedule.learningAreaName,
@@ -103,7 +103,7 @@ export function ApprovedSchemePicker({ onSelect, onOpenSchemes }: Props) {
       </button>)}</div>
       {!visible.length && <p className="text-sm text-on-surface-variant">No approved schemes match your search.</p>}
       {current && <section aria-label="Approved teaching sessions" className="space-y-3 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
-        <h4 className="font-bold">{schedule?.learningAreaName || current.title} · Approved teaching sessions</h4><p className="text-xs text-on-surface-variant">Choose approved scheme content, then bind the daily lesson to an actual timetable date and period. Sessions with an existing lesson plan are marked below.</p>
+        <h4 className="font-bold">{schedule?.learningAreaName || current.title} · Approved teaching sessions</h4><p className="text-xs text-on-surface-variant">Choose approved scheme content. Fetch a suggested timetable period or enter your own date, time and duration in the lesson form. Sessions with an existing lesson plan are marked below.</p>
         {loadingSessions ? <p role="status" className="text-sm">Loading current teaching sessions…</p> : sessionError ? <div role="alert" className="text-sm text-on-error-container">{sessionError}<button type="button" className="ui-button mt-2" onClick={() => chooseScheme(current)}>Retry teaching sessions</button></div> : !sessions.length ? <p className="text-sm text-on-surface-variant">No approved scheme lessons are available. Open the scheme to review its approval status.</p> : <>
           <p className="text-xs text-on-surface-variant">{schedule?.className} {schedule?.streamName ? `· ${schedule.streamName}` : ''}</p>
           <label className="block text-xs font-semibold text-on-surface-variant">Sub-strand<select aria-label="Approved session sub-strand" className="ui-field mt-1" value={subStrand} onChange={event => setSubStrand(event.target.value)}><option value="">All approved sub-strands</option>{Array.from(new Set<string>(sessions.map(session => session.entry.subStrandId || session.entry.subStrandTitle))).map(id => <option key={id} value={id}>{sessions.find(session => (session.entry.subStrandId || session.entry.subStrandTitle) === id)?.entry.subStrandTitle}</option>)}</select></label>
@@ -112,7 +112,8 @@ export function ApprovedSchemePicker({ onSelect, onOpenSchemes }: Props) {
           </button>)}</div>
           {chosenSession&&<div className="space-y-3 rounded-xl border border-primary/30 bg-surface p-4">
             <p className="text-sm font-semibold">Daily lesson: {chosenSession.entry.subStrandTitle}</p>
-            {actualPeriods.length?<><label className="block text-sm">Actual timetable date and period<select className="ui-field mt-1 w-full" value={periodId} onChange={event=>setPeriodId(event.target.value)}><option value="">Choose a teaching period</option>{actualPeriods.map(period=><option key={period.id} value={period.id}>{period.date} · {period.startTime}–{period.endTime}</option>)}</select></label><button type="button" className="ui-button ui-button-primary" disabled={!chosenPeriod} onClick={selectSession}>Use content and timetable period</button></>:<p role="alert" className="text-sm text-amber-900">{schedule.timetableSetupRequired||'Set up the subject timetable before preparing a daily lesson plan.'} Your approved scheme remains saved.</p>}
+            {actualPeriods.length?<label className="block text-sm">Suggested timetable date and period (optional)<select className="ui-field mt-1 w-full" value={periodId} onChange={event=>setPeriodId(event.target.value)}><option value="">I will enter the lesson details myself</option>{actualPeriods.map(period=><option key={period.id} value={period.id}>{period.date} · {period.startTime}–{period.endTime}</option>)}</select></label>:<p className="text-sm text-on-surface-variant">No matching timetable suggestions were found. Enter the date, time and duration in the lesson form.</p>}
+            <button type="button" className="ui-button ui-button-primary" onClick={selectSession}>{chosenPeriod?'Use content & suggested period':'Use content & enter teaching details'}</button>
           </div>}
         </>}
       </section>}

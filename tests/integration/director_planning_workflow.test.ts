@@ -222,3 +222,22 @@ it('keeps the original after-class copy when an admin returns a report and the t
  expect(corrected.body.data.savedCopy.teacherSelfReflection).toBe('Use concrete models and repeat guided practice');
  expect(corrected.body.data.record.reflectionData.lessonPlanSnapshotHistory).toEqual([first.body.data.savedCopy]);
 });
+
+it('fetches optional timetable suggestions and saves manual lesson and after-class details when setup is absent',async()=>{
+ const weekly=await approvedScheme();
+ await c.timetableRepository.delete('director-timetable');
+ await c.calendarPlanning.saveCalendar(admin,scope,{startDate:'2026-11-09',endDate:'2026-11-20',teachingDays:[1,2,3,4,5],exceptions:[],published:false},1);
+ const first=weekly.weeks[0].lessons[0];
+ const input={...scope,teacherId:teacher.userId,schemeOfWorkEntryId:first.entry.id,lessonDate:'2026-11-14',lessonTime:'10:00-10:25',durationMinutes:25,strand:'Numbers',subStrand:'Fractions',...content,coreCompetenciesAddressed:[],valuesAddressed:[],steps:[{stepNumber:1,stepTitle:'Practice',durationMinutes:25,teacherActivities:'Model',learnerActivities:'Compare'}]};
+ const plan=await c.curriculumUseCases.createLessonPlan(input,teacher);expect(plan.lessonDate).toBe('2026-11-14');
+ const result=await request(app).post(`/api/v1/curriculum/lesson-plans/${plan.id}/after-class`).set('Authorization',auth()).send({teachingStatus:'COMPLETED',actualDate:'2026-11-14',outcomesCovered:content.specificLearningOutcomes,notes:'Compared paper models in a catch-up session',reflection:'More time with models helped'});
+ expect(result.status).toBe(200);expect(result.body.data.record.status).toBe('SUBMITTED');expect(result.body.data.record.planningLink.slotId).toMatch(/^manual:/);expect(result.body.data.savedCopy.lessonTime).toBe('10:00-10:25');
+ const progress=await c.termAllocations.weekly(teacher,weekly.scheme.id);expect(progress.weeks[0].lessons[0].date).toBe('2026-11-14');expect(progress.coverageSummary.reportedOutcomes).toBe(1);
+ await c.recordOfWorkUseCases.approveDiaryEntry(result.body.data.record.id,{remarks:'Manual teaching evidence verified'},admin);
+ const workspace=await request(app).get(url('workspace')).set('Authorization',auth(admin));expect(workspace.status).toBe(200);expect(workspace.body.data.areas[0].coverage[0].lessons.find((lesson:any)=>lesson.date==='2026-11-14').statuses).toMatchObject({taught:true,reflection:true});
+});
+it('fetches subject timetable periods as suggestions even before the school calendar is published',async()=>{
+ await timetable();
+ const suggestions=await c.calendarPlanning.lessonSuggestions(teacher,scope);
+ expect(suggestions.slots.map(slot=>slot.date)).toEqual(['2026-11-09','2026-11-16']);
+});

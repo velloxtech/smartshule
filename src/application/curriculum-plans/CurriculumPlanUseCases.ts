@@ -254,20 +254,19 @@ export class CurriculumPlanUseCases {
       await this.authorize(scheme.toJSON(),actor);
       if(scheme.classRoomId!==dto.classRoomId || scheme.learningAreaId!==dto.learningAreaId || (scheme.streamId || '')!==(dto.streamId || ''))throw new ValidationError('Lesson and scheme scope must match.');
       const entry=scheme.entries.find(e=>e.id===dto.schemeOfWorkEntryId)!;
-      const scheduled=await this.planning.slots(actor,scope);
-      const matchingSlots=scheduled.slots.filter(slot=>slot.date===dto.lessonDate&&(!dto.lessonTime||dto.lessonTime===`${slot.startTime}-${slot.endTime}`));
-      if(matchingSlots.length>1)throw new ValidationError('Choose the exact timetable time for this daily lesson.');
-      const slot=matchingSlots[0];
+      const scheduled=await this.planning.lessonSuggestions(actor,scope);
+      const {term}=await this.planning.access.context(actor,scope);
+      const selectedDate=new Date(`${dto.lessonDate}T00:00:00Z`);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(dto.lessonDate)||!Number.isFinite(selectedDate.getTime())||selectedDate.toISOString().slice(0,10)!==dto.lessonDate||dto.lessonDate<term.startDate||dto.lessonDate>term.endDate)throw new ValidationError('Choose a valid lesson date within the selected academic term.');
+      const time=dto.lessonTime?.trim().replace(/[–—]/g,'-');
+      if(time&&!/^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/.test(time))throw new ValidationError('Enter lesson time as HH:MM-HH:MM.');
+      if(time&&time.slice(0,5)>=time.slice(6))throw new ValidationError('Lesson end time must be after its start time.');
+      const slot=scheduled.slots.find(slot=>slot.date===dto.lessonDate&&time===`${slot.startTime}-${slot.endTime}`);
       if(dto.strand.trim()!==entry.strandTitle.trim()||dto.subStrand.trim()!==entry.subStrandTitle.trim())throw new ValidationError('Lesson strand and sub-strand must match the schemed slot.');
       if(dto.specificLearningOutcomes.some(outcome=>!entry.specificLearningOutcomes.includes(outcome)))throw new ValidationError('Use outcomes from the approved scheme lesson. Submit curriculum changes through the scheme review process.');
       if(entry.archivedAt)throw new ValidationError('This scheme entry is archived. Select an eligible slot.');
-      if(!slot)throw new ValidationError('Choose a lesson date and time matching this subject’s active timetable.');
-      const minute=(time:string)=>{const match=/^(\d{2}):(\d{2})$/.exec(time);return match&&Number(match[1])<24&&Number(match[2])<60?Number(match[1])*60+Number(match[2]):NaN;};
-      const scheduledDuration=minute(slot.endTime)-minute(slot.startTime);
-      if(!Number.isSafeInteger(scheduledDuration)||scheduledDuration<=0)throw new ValidationError('The timetable lesson must have valid start and end times.');
-      const chosenDuration=dto.durationMinutes??scheduledDuration;
-      if(!Number.isSafeInteger(chosenDuration)||chosenDuration<=0||chosenDuration>scheduledDuration)throw new ValidationError(`Choose a lesson duration from 1 to ${scheduledDuration} minutes within the timetable period.`);
-      dto={...dto,durationMinutes:chosenDuration,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber};
+      const anchor=new Date(`${term.startDate}T00:00:00Z`);anchor.setUTCDate(anchor.getUTCDate()-((anchor.getUTCDay()+6)%7));
+      dto={...dto,lessonTime:time||undefined,weekNumber:slot?.weekNumber||Math.floor((selectedDate.getTime()-anchor.getTime())/604800000)+1,lessonNumber:slot?.lessonNumber||dto.lessonNumber||entry.lessonNumber};
     }
     const duration=dto.durationMinutes??dto.steps?.reduce((sum,step)=>sum+step.durationMinutes,0);
     if(!Number.isSafeInteger(duration)||(duration ?? 0)<=0||!dto.steps?.length||dto.steps.some(step=>!Number.isSafeInteger(step.durationMinutes)||step.durationMinutes<=0||!step.teacherActivities?.trim()||!step.learnerActivities?.trim())||dto.steps.reduce((sum,step)=>sum+step.durationMinutes,0)!==duration)throw new ValidationError('Complete each lesson stage and ensure stage times add up to the chosen lesson duration.');
@@ -377,10 +376,9 @@ export class CurriculumPlanUseCases {
     const scheme=(await this.schemeRepository.findAll()).find(s=>s.entries.some(e=>e.id===original.toJSON().schemeOfWorkEntryId));
     if(!scheme || !actor || !this.planning)throw new ValidationError('A linked scheme and published calendar are required.');
     const entry=scheme.entries.find(e=>e.id===original.toJSON().schemeOfWorkEntryId)!;
-    const slot=(await this.planning.slots(actor,scheme.toJSON())).slots.find(s=>s.id===entry.slotId||(s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber));
-    if(!slot)throw new ValidationError('Reschedule the scheme entry to an eligible slot first.');
+    const slot=(await this.planning.lessonSuggestions(actor,scheme.toJSON())).slots.find(s=>s.id===entry.slotId||(s.weekNumber===entry.weekNumber&&s.lessonNumber===entry.lessonNumber));
     // Create a copy: taught records continue to reference the original lesson and its date.
-    const props={...original.toJSON(),lessonDate:slot.date,lessonTime:`${slot.startTime}-${slot.endTime}`,weekNumber:slot.weekNumber,lessonNumber:slot.lessonNumber,status:LessonPlanStatus.DRAFT,submittedAt:undefined,reviewedByUserId:undefined,reviewedAt:undefined,reviewRemarks:undefined};
+    const props={...original.toJSON(),lessonDate:slot?.date||original.toJSON().lessonDate,lessonTime:slot?`${slot.startTime}-${slot.endTime}`:original.toJSON().lessonTime,weekNumber:slot?.weekNumber||original.toJSON().weekNumber,lessonNumber:slot?.lessonNumber||original.toJSON().lessonNumber,status:LessonPlanStatus.DRAFT,submittedAt:undefined,reviewedByUserId:undefined,reviewedAt:undefined,reviewRemarks:undefined};
     const copy=LessonPlan.create(props,IdGenerator.generate());await this.lessonPlanRepository.save(copy);return copy.toJSON();
   }
   public async listLessonPlans(filters: LessonPlanFilterCriteria = {}, actor?: AcademicActor) {
