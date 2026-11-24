@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { isPackagedClient } from '../../utils/runtime';
-import { LearnerProfileModal } from '../modals/LearnerProfileModal';
+const LearnerProfileModal=lazy(()=>import('../modals/LearnerProfileModal').then(module=>({default:module.LearnerProfileModal})));
 import type { TeacherAuthorizedContext } from '../../services/api';
 import { apiService, captureApiRequestScope } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
-import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
+const EditTeacherProfileModal=lazy(()=>import('../modals/EditTeacherProfileModal').then(module=>({default:module.EditTeacherProfileModal})));
 import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
 import {teacherDashboardCohorts} from '../../utils/teacherDashboardCohorts';
@@ -283,6 +281,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       alert('No learners available in this roster to download.');
       return;
     }
+    const pdfModules=await Promise.all([import('jspdf'),import('jspdf-autotable')]).catch(()=>null);
+    if(!pdfModules){alert('Could not load PDF export. Check your connection and try again.');return;}
+    const [{default:jsPDF},{default:autoTable}]=pdfModules;
     const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const schoolName = schoolInfo?.name || 'Grace Seeds School';
@@ -932,16 +933,16 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
       </>}
 
-      {web && <LearnerProfileModal isOpen={Boolean(profileStudent)} student={profileStudent} onClose={()=>setProfileStudent(null)} onGradeStudent={onOpenUploadMarks} />}
+      <Suspense fallback={<p role="status">Opening profile…</p>}>{web && profileStudent && <LearnerProfileModal isOpen={Boolean(profileStudent)} student={profileStudent} onClose={()=>setProfileStudent(null)} onGradeStudent={onOpenUploadMarks} />}
       {/* Edit Profile Modal */}
-      <EditTeacherProfileModal
+      {isEditProfileOpen && <EditTeacherProfileModal
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
         teacherProfile={teacherProfile}
         onProfileUpdated={(updated) => {
           setTeacherProfile(updated);
         }}
-      />
+      />}</Suspense>
     </div>
   );
 };

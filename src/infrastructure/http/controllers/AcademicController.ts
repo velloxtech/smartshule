@@ -442,7 +442,7 @@ export class AcademicController {
 
   public deactivateSubjectTeacherAssignment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { effectiveTo } = req.body;
+      const { effectiveTo } = req.body || {};
       const assignment = await this.academicUseCases.deactivateSubjectTeacherAssignment(
         req.params.id as string,
         effectiveTo,

@@ -105,6 +105,7 @@ export function createExpressApp(container: AppContainer): Express {
   // Root Service Overview Endpoint
   app.get('/', (req: Request, res: Response, next) => {
     if (frontendDist) {
+      res.setHeader('Cache-Control','no-store');
       return res.sendFile(path.join(frontendDist, 'index.html'));
     }
     return res.status(200).json({
@@ -181,10 +182,22 @@ export function createExpressApp(container: AppContainer): Express {
 
   // Serve Frontend production build if dist exists
   if (frontendDist) {
-    app.use(express.static(frontendDist));
+    app.use(express.static(frontendDist,{
+      index:false,
+      setHeaders(res,file){
+        if(path.dirname(file)===path.join(frontendDist,'assets'))res.setHeader('Cache-Control','public, max-age=31536000, immutable');
+        else res.setHeader('Cache-Control','no-cache');
+      },
+    }));
+    // A deleted deployment chunk must be a real 404, never the SPA HTML document.
+    app.use((req:Request,res:Response,next)=>{
+      if(req.path.includes('/assets/')||/\.(?:js|css|map)$/.test(req.path))return res.status(404).set('Cache-Control','no-store').type('text/plain').send('This application file is no longer available. Reload the portal for the latest version.');
+      next();
+    });
     app.use((req: Request, res: Response, next) => {
       if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/uploads')) {
-        return res.sendFile(path.join(frontendDist, 'index.html'));
+        res.setHeader('Cache-Control','no-store');
+      return res.sendFile(path.join(frontendDist, 'index.html'));
       }
       next();
     });

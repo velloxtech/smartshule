@@ -38,10 +38,13 @@ export default defineConfig(() => {
       },
     },
     build: {
+      target: ['chrome90', 'safari14', 'firefox90', 'edge90'],
+      manifest:true,
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if(id.includes('commonjsHelpers')||id.includes('preload-helper'))return 'runtime-helpers';
             if (id.includes('node_modules')) {
               if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('jspdf-autotable')) {
                 return 'pdf-vendor';
@@ -55,7 +58,7 @@ export default defineConfig(() => {
               if (id.includes('@google/genai')) {
                 return 'genai-vendor';
               }
-              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+              if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
                 return 'react-vendor';
               }
             }

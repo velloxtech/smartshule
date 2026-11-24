@@ -1,13 +1,15 @@
-import React from 'react';
+import React,{useEffect,useState} from 'react';
 
 export const ViewLoadingSkeleton: React.FC<{ title?: string }> = ({ title = 'Loading Module...' }) => {
+  const [slow,setSlow]=useState(false);
+  useEffect(()=>{setSlow(false);const timer=window.setTimeout(()=>setSlow(true),15000);return()=>window.clearTimeout(timer);},[title]);
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-pulse">
+    <div role="status" aria-live="polite" className="min-w-0 p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-pulse motion-reduce:animate-none"><p className="text-sm font-semibold text-on-surface">{title}</p>{slow&&<div className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 text-sm"><p>This is taking longer than usual. Check your connection or reload the portal.</p><button type="button" className="ui-button mt-3" onClick={()=>window.location.reload()}>Reload portal</button></div>}
       {/* Top Header Bar Skeleton */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-surface-container-lowest dark:bg-slate-900 p-6 rounded-2xl border border-outline-variant/30 dark:border-slate-800 shadow-xs">
         <div className="space-y-2">
           <div className="h-7 w-48 bg-surface-container dark:bg-slate-800 rounded-lg"></div>
-          <div className="h-4 w-72 bg-surface-container-low dark:bg-slate-800/60 rounded-md"></div>
+          <div className="h-4 w-72 max-w-full bg-surface-container-low dark:bg-slate-800/60 rounded-md"></div>
         </div>
         <div className="flex gap-3">
           <div className="h-10 w-28 bg-surface-container dark:bg-slate-800 rounded-xl"></div>

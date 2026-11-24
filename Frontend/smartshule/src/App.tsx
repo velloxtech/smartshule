@@ -1,4 +1,4 @@
-import {SchoolCalendarPlanView} from './components/views/SchoolCalendarPlanView';
+import {AppErrorBoundary} from './components/common/AppErrorBoundary';
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -11,12 +11,13 @@ import { isTabPermitted } from './utils/rbac';
 import { resolveStreamName, resolveGradeName, resolveTeacherAssignedClasses } from './utils/formatters';
 import { ViewLoadingSkeleton } from './components/common/ViewLoadingSkeleton';
 
+const SchoolCalendarPlanView=lazy(()=>import('./components/views/SchoolCalendarPlanView').then(module=>({default:module.SchoolCalendarPlanView})));
 // Public & Auth Views (Immediate eager loading)
-import { LandingPage } from './components/landing/LandingPage';
+const LandingPage=lazy(()=>import('./components/landing/LandingPage').then(module=>({default:module.LandingPage})));
 import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-import { DashboardView } from './components/views/DashboardView';
+const DashboardView=lazy(()=>import('./components/views/DashboardView').then(module=>({default:module.DashboardView})));
 
 // Route-Level Code Splitting (Lazy loaded views)
 const SuperAdminDashboardView = lazy(() => import('./components/views/SuperAdminDashboardView').then(m => ({ default: m.SuperAdminDashboardView })));
@@ -86,20 +87,20 @@ const TeacherSalaryAcknowledgementView = lazy(() => import('./components/views/T
 const StaffMessagesView = lazy(() => import('./components/views/StaffMessagesView').then(m => ({default:m.StaffMessagesView})));
 
 // Modals
-import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
-import { ForwardPaymentModal } from './components/modals/ForwardPaymentModal';
-import { CBCFormativeModal } from './components/modals/CBCFormativeModal';
-import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
-import { SendSmsModal } from './components/modals/SendSmsModal';
-import { ExportReportModal } from './components/modals/ExportReportModal';
-import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
-import { UploadMarksModal } from './components/modals/UploadMarksModal';
-import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal';
-import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
-import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
-import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+const RecordPaymentModal=lazy(()=>import('./components/modals/RecordPaymentModal').then(module=>({default:module.RecordPaymentModal})));
+const ForwardPaymentModal=lazy(()=>import('./components/modals/ForwardPaymentModal').then(module=>({default:module.ForwardPaymentModal})));
+const CBCFormativeModal=lazy(()=>import('./components/modals/CBCFormativeModal').then(module=>({default:module.CBCFormativeModal})));
+const AdmitLearnerModal=lazy(()=>import('./components/modals/AdmitLearnerModal').then(module=>({default:module.AdmitLearnerModal})));
+const SendSmsModal=lazy(()=>import('./components/modals/SendSmsModal').then(module=>({default:module.SendSmsModal})));
+const ExportReportModal=lazy(()=>import('./components/modals/ExportReportModal').then(module=>({default:module.ExportReportModal})));
+const OnboardTeacherModal=lazy(()=>import('./components/modals/OnboardTeacherModal').then(module=>({default:module.OnboardTeacherModal})));
+const UploadMarksModal=lazy(()=>import('./components/modals/UploadMarksModal').then(module=>({default:module.UploadMarksModal})));
+const CreateLessonPlanModal=lazy(()=>import('./components/modals/CreateLessonPlanModal').then(module=>({default:module.CreateLessonPlanModal})));
+const CreateSchemeModal=lazy(()=>import('./components/modals/CreateSchemeModal').then(module=>({default:module.CreateSchemeModal})));
+const AcademicTermsModal=lazy(()=>import('./components/modals/AcademicTermsModal').then(module=>({default:module.AcademicTermsModal})));
+const ChangePasswordModal=lazy(()=>import('./components/modals/ChangePasswordModal').then(module=>({default:module.ChangePasswordModal})));
 import { ChangePasswordPage } from './components/auth/ChangePasswordPage';
-import { BiometricDevicesModal } from './components/modals/BiometricDevicesModal';
+const BiometricDevicesModal=lazy(()=>import('./components/modals/BiometricDevicesModal').then(module=>({default:module.BiometricDevicesModal})));
 import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
@@ -940,6 +941,8 @@ export default function App() {
     }
   };
 
+  if(isLoading&&appView!=='login')return <ViewLoadingSkeleton title="Restoring your session…"/>;
+
   // Render Public Landing Page
   if (appView === 'landing') {
     return (
@@ -1103,7 +1106,7 @@ export default function App() {
 
         {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
-          <Suspense key={`${user?.id}:${effectiveRole}`} fallback={<ViewLoadingSkeleton />}>
+          <AppErrorBoundary resetKey={`${user?.id}:${effectiveRole}:${currentTab}`} onHome={()=>setCurrentTab('dashboard')}><Suspense key={`${user?.id}:${effectiveRole}`} fallback={<ViewLoadingSkeleton />}>
           {isTabPermitted(currentTab,effectiveRole) && <>
           {currentTab === 'dashboard' && (
             (() => {
@@ -1566,7 +1569,7 @@ export default function App() {
             <SchemeOfWorkBuilderView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
           </>}
-          </Suspense>
+          </Suspense></AppErrorBoundary>
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}
@@ -1592,15 +1595,16 @@ export default function App() {
         </footer>
       </div>
 
+      <Suspense fallback={<ViewLoadingSkeleton title="Opening form…"/>}>
       {/* Global Interactive Operational Modals */}
-      <OnboardTeacherModal
+      {(onboardTeacherModalOpen && !isGuardian) && <OnboardTeacherModal
         isOpen={onboardTeacherModalOpen && !isGuardian}
         onClose={() => setOnboardTeacherModalOpen(false)}
         onTeacherCreated={handleTeacherCreated}
         existingTeachers={teachers}
-      />
+      />}
 
-      <RecordPaymentModal
+      {(recordPaymentModalOpen && !isGuardian && loadedDataScope===dataScopeKey) && <RecordPaymentModal
         isOpen={recordPaymentModalOpen && !isGuardian && loadedDataScope===dataScopeKey}
         onClose={() => {
           setRecordPaymentModalOpen(false);
@@ -1611,9 +1615,9 @@ export default function App() {
         onPaymentRecorded={handlePaymentRecorded}
         onArrearRecorded={refreshStudentsAndFees}
         onRefreshStudents={refreshStudentsAndFees}
-      />
+      />}
 
-      <ForwardPaymentModal
+      {(forwardPaymentModalOpen) && <ForwardPaymentModal
         isOpen={forwardPaymentModalOpen}
         onClose={() => {
           setForwardPaymentModalOpen(false);
@@ -1622,35 +1626,35 @@ export default function App() {
         students={loadedDataScope===dataScopeKey?students:[]}
         initialStudent={selectedStudentForPayment}
         onSubmitted={handleForwardPaymentSuccess}
-      />
+      />}
 
-      <CBCFormativeModal
+      {(CBCModalOpen) && <CBCFormativeModal
         isOpen={CBCModalOpen}
         onClose={() => setCBCModalOpen(false)}
         students={loadedDataScope===dataScopeKey?students:[]}
         initialStudent={selectedStudentForCBC}
         onSave={handleSaveAssessment}
-      />
+      />}
 
-      <AdmitLearnerModal
+      {(admitModalOpen) && <AdmitLearnerModal
         isOpen={admitModalOpen}
         onClose={() => setAdmitModalOpen(false)}
         onAdmit={handleAdmitStudent}
         existingStudents={students}
-      />
+      />}
 
-      <SendSmsModal
+      {(smsModalOpen) && <SendSmsModal
         isOpen={smsModalOpen}
         onClose={() => setSmsModalOpen(false)}
         defaultTarget={smsTarget}
-      />
+      />}
 
-      <ExportReportModal
+      {(exportReportModalOpen) && <ExportReportModal
         isOpen={exportReportModalOpen}
         onClose={() => setExportReportModalOpen(false)}
-      />
+      />}
 
-      <UploadMarksModal
+      {(uploadMarksModalOpen) && <UploadMarksModal
         isOpen={uploadMarksModalOpen}
         onClose={() => {
           setUploadMarksModalOpen(false);
@@ -1663,7 +1667,7 @@ export default function App() {
         }}
         initialStudent={uploadMarksInitialStudent}
         initialAssessmentType={uploadMarksInitialType}
-      />
+      />}
 
       {toastNotification && (
         <div className="fixed top-5 right-5 z-[9999] max-w-md bg-white border border-emerald-500 rounded-2xl p-4 shadow-2xl flex items-center gap-3 animate-slide-up transition-all">
@@ -1685,19 +1689,19 @@ export default function App() {
         </div>
       )}
 
-      <CreateLessonPlanModal
+      {(createLessonPlanModalOpen) && <CreateLessonPlanModal
         isOpen={createLessonPlanModalOpen}
         onClose={() => setCreateLessonPlanModalOpen(false)}
         onPlanCreated={() => {}}
-      />
+      />}
 
-      <CreateSchemeModal
+      {(createSchemeModalOpen) && <CreateSchemeModal
         isOpen={createSchemeModalOpen}
         onClose={() => setCreateSchemeModalOpen(false)}
         onSchemeCreated={() => setMarksRefreshTrigger(value => value + 1)}
-      />
+      />}
 
-      <AcademicTermsModal
+      {(academicTermsModalOpen) && <AcademicTermsModal
         isOpen={academicTermsModalOpen}
         onClose={() => setAcademicTermsModalOpen(false)}
         academicContext={currentContext}
@@ -1719,23 +1723,24 @@ export default function App() {
           user?.role === UserRole.HEAD_TEACHER
         }
         userRole={user?.role}
-      />
+      />}
 
       
-      <BiometricDevicesModal
+      {(biometricModalOpen) && <BiometricDevicesModal
         isOpen={biometricModalOpen}
         onClose={() => setBiometricModalOpen(false)}
-      />
+      />}
 
-      <ChangePasswordModal
+      {(changePasswordModalOpen) && <ChangePasswordModal
         isOpen={changePasswordModalOpen}
         isForced={false}
         onClose={() => setChangePasswordModalOpen(false)}
         onSuccessCallback={() => {
           setChangePasswordModalOpen(false);
         }}
-      />
+      />}
 
+      </Suspense>
       {/* Global Regulatory & Legal Compliance Modals */}
       <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
       <LegalModal

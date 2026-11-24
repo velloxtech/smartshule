@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { FeeBannerConfig, EDiaryEntry } from '../../types';
-import { EditStudentModal } from '../modals/EditStudentModal';
-import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
-import { ReceiptViewModal } from '../modals/ReceiptViewModal';
-import { FeeCreditReceiptModal } from '../modals/FeeCreditReceiptModal';
+const EditStudentModal=lazy(()=>import('../modals/EditStudentModal').then(module=>({default:module.EditStudentModal})));
+const ForwardPaymentModal=lazy(()=>import('../modals/ForwardPaymentModal').then(module=>({default:module.ForwardPaymentModal})));
+const ReceiptViewModal=lazy(()=>import('../modals/ReceiptViewModal').then(module=>({default:module.ReceiptViewModal})));
+const FeeCreditReceiptModal=lazy(()=>import('../modals/FeeCreditReceiptModal').then(module=>({default:module.FeeCreditReceiptModal})));
 import { FeeCreditUtilizationReceiptPayload } from '../../types';
 import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 

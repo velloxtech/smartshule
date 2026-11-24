@@ -1,3 +1,4 @@
+import {safeStorage} from '../utils/safeStorage';
 import type {StaffContact,StaffMessage,StaffInbox,StaffMessagePage} from '../types';
 import {
   AuthResponse,
@@ -161,37 +162,37 @@ const API_BASE_URL = resolveApiBaseUrl();
 
 export const getApiBaseUrl = (): string => API_BASE_URL;
 
-let authToken: string | null = localStorage.getItem('smartshule_token') || null;
+let authToken: string | null = safeStorage.getItem('smartshule_token') || null;
 
 export const setAuthToken = (token: string | null) => {
   if (token !== authToken) resetApiRequestScope();
   authToken = token;
   if (token) {
-    localStorage.setItem('smartshule_token', token);
+    safeStorage.setItem('smartshule_token', token);
   } else {
-    localStorage.removeItem('smartshule_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('authToken');
+    safeStorage.removeItem('smartshule_token');
+    safeStorage.removeItem('token');
+    safeStorage.removeItem('authToken');
   }
 };
 
 export const getStoredAuthToken = (): string | null => {
   if (authToken) return authToken;
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined') {
     return (
-      localStorage.getItem('smartshule_token') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('authToken')
+      safeStorage.getItem('smartshule_token') ||
+      safeStorage.getItem('token') ||
+      safeStorage.getItem('authToken')
     );
   }
   return null;
 };
 
 export const getDeviceFingerprint = (): string => {
-  if (typeof window === 'undefined' || !window.localStorage) {
+  if (typeof window === 'undefined') {
     return 'WEB-CLIENT';
   }
-  let fp = localStorage.getItem('smartshule_device_fingerprint');
+  let fp = safeStorage.getItem('smartshule_device_fingerprint');
   if (!fp) {
     try {
       const screenSpec = `${window.screen?.width || 0}x${window.screen?.height || 0}x${window.screen?.colorDepth || 24}`;
@@ -204,7 +205,7 @@ export const getDeviceFingerprint = (): string => {
       }
       const randomNonce = Math.random().toString(36).substring(2, 8).toUpperCase();
       fp = `DEV-${Math.abs(hash).toString(16).toUpperCase()}-${randomNonce}`;
-      localStorage.setItem('smartshule_device_fingerprint', fp);
+      safeStorage.setItem('smartshule_device_fingerprint', fp);
     } catch {
       fp = `DEV-${Date.now().toString(16).toUpperCase()}`;
     }
@@ -216,7 +217,7 @@ const getHeaders = () => {
   const token = getStoredAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Portal-View': localStorage.getItem('smartshule_active_view_mode') === 'PARENT' ? 'PARENT' : 'STAFF',
+    'X-Portal-View': safeStorage.getItem('smartshule_active_view_mode') === 'PARENT' ? 'PARENT' : 'STAFF',
     'X-Device-Fingerprint': getDeviceFingerprint(),
   };
   if (token) {
@@ -246,8 +247,8 @@ export function captureApiRequestScope(): () => boolean {
 }
 
 export function setApiPortalView(mode: 'STAFF' | 'PARENT') {
-  const previous = localStorage.getItem('smartshule_active_view_mode') || 'STAFF';
-  localStorage.setItem('smartshule_active_view_mode', mode);
+  const previous = safeStorage.getItem('smartshule_active_view_mode') || 'STAFF';
+  safeStorage.setItem('smartshule_active_view_mode', mode);
   if (previous !== mode) resetApiRequestScope();
 }
 
@@ -268,7 +269,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const headers = getHeaders();
   const isCurrentScope = captureApiRequestScope();
-  const requestKey = `${getStoredAuthToken()}::${localStorage.getItem('smartshule_active_view_mode') || 'STAFF'}::${url}`;
+  const requestKey = `${getStoredAuthToken()}::${safeStorage.getItem('smartshule_active_view_mode') || 'STAFF'}::${url}`;
 
   // On any mutating request, clear relevant cache so user never sees stale data
   if (method !== 'GET') {
@@ -3613,7 +3614,7 @@ const coreApiService = {
 
 const getStoredConcerns = (): ConcernRecord[] => {
   try {
-    const data = localStorage.getItem('smartshule_concerns') || localStorage.getItem('smartshule_complaints');
+    const data = safeStorage.getItem('smartshule_concerns') || safeStorage.getItem('smartshule_complaints');
     if (data) return JSON.parse(data);
   } catch {}
   return [];
@@ -3622,8 +3623,8 @@ const getStoredComplaints = getStoredConcerns;
 
 const saveStoredConcerns = (items: ConcernRecord[]) => {
   try {
-    localStorage.setItem('smartshule_concerns', JSON.stringify(items));
-    localStorage.setItem('smartshule_complaints', JSON.stringify(items));
+    safeStorage.setItem('smartshule_concerns', JSON.stringify(items));
+    safeStorage.setItem('smartshule_complaints', JSON.stringify(items));
   } catch {}
 };
 const saveStoredComplaints = saveStoredConcerns;
