@@ -12,7 +12,7 @@ The Render service is in Oregon and the configured Supabase pooler is in eu-west
 
 - Reuse identical ordinary PostgreSQL reads while producing one GET response. Concurrent authorization/use-case reads share the same query. Responses and user accounts never share this cache. Writes invalidate request snapshots, locks/functions bypass it, failures are evicted, snapshots are capped, and each caller receives isolated row data.
 - Retry a transient dropped connection only for an ordinary table read. Never silently repeat a write whose commit outcome is uncertain.
-- Build nine non-unique indexes concurrently, without blocking normal writes: case-insensitive email, normalized phone, report-card term/stream, lesson teacher/date and class/date and scheme-entry, scheme class/term and teacher/term, and payment school/date.
+- Build nine non-unique indexes concurrently, without blocking normal writes: case-insensitive email, normalized phone, report-card term/stream, lesson teacher/date and class/date and scheme-entry, scheme class/term and teacher/term, and payment school/date. Maintenance runs in the background, never gates HTTP readiness, and repairs an invalid index left by an interrupted concurrent build.
 - Apply all declared lesson-plan filters in parameterized SQL. Existing use-case and transport authorization still run.
 - Fetch guardian contacts for the selected learners, batch user lookups in learner/staff lists and staff inboxes, retain absent-contact results, and remove an unused fee-structure read.
 - Process each broadsheet stream's assessment subset and use lookup maps for learning-area aliases and fallback matches, preserving score and ranking rules.

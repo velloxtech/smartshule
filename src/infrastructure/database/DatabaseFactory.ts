@@ -9,7 +9,7 @@ import { PlanningRepository, PostgresPlanningRepository } from '../../applicatio
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
 import { reuseRequestRead, retryTransientRead } from './RequestReadCache';
-import { ensurePerformanceIndexes } from './postgres/PostgresPerformanceIndexes';
+import { startPerformanceIndexMaintenance } from './postgres/PostgresPerformanceIndexes';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
 
 import {
@@ -237,7 +237,7 @@ export class DatabaseFactory {
         // Auto-create all tables on start
         await PostgresDatabaseInitializer.initializeSchema(pool);
         await pool.query(STAFF_MESSAGE_SCHEMA);
-        await ensurePerformanceIndexes(pool);
+        startPerformanceIndexMaintenance(pool);
         console.log('[Database] PostgreSQL connected and tables initialized successfully.');
       } catch (err: any) {
         if (err?.code === '28P01') {
