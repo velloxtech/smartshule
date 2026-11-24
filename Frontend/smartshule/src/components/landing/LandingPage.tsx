@@ -446,6 +446,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <div className="relative max-w-7xl mx-auto px-6 lg:px-12 py-20 grid lg:grid-cols-2 gap-12 items-center w-full">
               <div>
+                <p className="mb-4 text-sm font-semibold tracking-wide text-white/90">Grace Seeds School · Kisian, Kisumu</p>
                 <h1 style={{ fontFamily: 'Fraunces, serif' }} className="text-5xl lg:text-6xl font-bold text-white leading-[1.08] mb-5">
                   The Future<br />
                   <em className="text-[#f5c84a] not-italic">Begins Here</em>
