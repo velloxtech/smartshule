@@ -1005,7 +1005,7 @@ export class BroadsheetUseCases {
     let allLearningAreas: any[];
 
     if (ctx) {
-      summatives = ctx.allSummatives;
+      summatives = students.flatMap(student => ctx.summativesByStudent.get(student.id) || []);
       reportCardsByStudent = ctx.reportCardsByStudent;
       allLearningAreas = ctx.allLearningAreas;
     } else {
@@ -1038,15 +1038,19 @@ export class BroadsheetUseCases {
 
     summatives = assessmentResults(summatives.map(s => typeof s.toJSON === 'function' ? s.toJSON() : s));
     const summativeMap = new Map<string, any>();
+    const canonicalFallback = new Map<string, any>();
+    const areaAliases = new Map<string, any>();
+    for (const area of allLearningAreas) {
+      for (const alias of [area.id, area.code, area.name]) {
+        if (alias && !areaAliases.has(alias.toLowerCase())) areaAliases.set(alias.toLowerCase(), area);
+      }
+    }
     for (const s of summatives) {
+      const fallbackKey = `${s.studentId}_${this.getSubjectCanonicalKey(s.learningAreaId)}`;
+      if (!canonicalFallback.has(fallbackKey)) canonicalFallback.set(fallbackKey, s);
       summativeMap.set(`${s.studentId}_${s.learningAreaId}`, s);
       summativeMap.set(`${s.studentId}_${s.learningAreaId.toLowerCase()}`, s);
-      const laMatch = allLearningAreas.find(
-        a => a.id === s.learningAreaId ||
-             a.id.toLowerCase() === s.learningAreaId.toLowerCase() ||
-             (a.code && a.code.toLowerCase() === s.learningAreaId.toLowerCase()) ||
-             a.name.toLowerCase() === s.learningAreaId.toLowerCase()
-      );
+      const laMatch = areaAliases.get(s.learningAreaId.toLowerCase());
       if (laMatch) {
         if (laMatch.code) {
           summativeMap.set(`${s.studentId}_${laMatch.code}`, s);
@@ -1082,15 +1086,7 @@ export class BroadsheetUseCases {
           }
         }
         if (!s) {
-          for (const summ of summatives) {
-            if (summ.studentId === student.id) {
-              const summKey = this.getSubjectCanonicalKey(summ.learningAreaId);
-              if (summKey === laKey) {
-                s = summ;
-                break;
-              }
-            }
-          }
+          s = canonicalFallback.get(`${student.id}_${laKey}`);
         }
 
         const rcScore = rc?.props.learningAreaAssessments?.find((e: any) => {

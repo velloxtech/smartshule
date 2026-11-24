@@ -1700,6 +1700,12 @@ export class PostgresDatabaseInitializer {
 export class PostgresUserRepository implements IUserRepository {
   constructor(private pool: Pool) {}
 
+  public async findByIds(ids: string[]): Promise<User[]> {
+    if (!ids.length) return [];
+    const res = await this.pool.query('SELECT * FROM users WHERE id = ANY($1::text[])', [[...new Set(ids)]]);
+    return res.rows.map(r => this.mapRow(r));
+  }
+
   private mapRow(r: any): User {
     return User.create({
       email: r.email,
@@ -2250,6 +2256,14 @@ export class PostgresTeacherRepository implements ITeacherRepository {
 
 export class PostgresGuardianRepository implements IGuardianRepository {
   constructor(private pool: Pool) {}
+  public async findForStudents(studentIds: string[], guardianIds: string[]): Promise<Guardian[]> {
+    if (!studentIds.length && !guardianIds.length) return [];
+    const res = await this.pool.query(
+      'SELECT * FROM guardians WHERE id = ANY($1::text[]) OR student_ids ?| $2::text[]',
+      [[...new Set(guardianIds)], [...new Set(studentIds)]]
+    );
+    return res.rows.map(r => this.mapRow(r));
+  }
   private mapRow(r: any): Guardian {
     return Guardian.create({
       userId: r.user_id,
@@ -3334,7 +3348,20 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: LessonPlanFilterCriteria): Promise<LessonPlan[]> {
-    const res = await this.pool.query('SELECT * FROM lesson_plans');
+    const clauses: string[] = [];
+    const params: string[] = [];
+    const add = (column: string, value: string | undefined, operator = '=') => {
+      if (value === undefined || value === '') return;
+      params.push(value);
+      clauses.push(`${column} ${operator} $${params.length}`);
+    };
+    add('teacher_id', filters?.teacherId);
+    add('learning_area_id', filters?.learningAreaId);
+    add('classroom_id', filters?.classRoomId);
+    add('stream_id', filters?.streamId);
+    add('lesson_date', filters?.startDate, '>=');
+    add('lesson_date', filters?.endDate, '<=');
+    const res = await this.pool.query('SELECT * FROM lesson_plans' + (clauses.length ? ' WHERE ' + clauses.join(' AND ') : ''), params);
     return res.rows.map(r => LessonPlan.create({
       ...(r.lesson_details || {}),
       teacherId: r.teacher_id,

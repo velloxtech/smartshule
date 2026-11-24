@@ -11,6 +11,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import { createAccountabilityMiddleware } from './middlewares/accountabilityMiddleware';
 import { createOptionalAuthMiddleware } from './middlewares/authMiddleware';
 import { generalApiLimiter } from './middlewares/rateLimiter';
+import { requestReadCache } from '../database/RequestReadCache';
 
 export function createExpressApp(container: AppContainer): Express {
   const app = express();
@@ -178,7 +179,7 @@ export function createExpressApp(container: AppContainer): Express {
   });
 
   // Register API Routes with General API Rate Limiter
-  app.use('/api/v1', createOptionalAuthMiddleware(container.tokenService), generalApiLimiter, createApiRouter(container));
+  app.use('/api/v1', requestReadCache, createOptionalAuthMiddleware(container.tokenService), generalApiLimiter, createApiRouter(container));
 
   // Serve Frontend production build if dist exists
   if (frontendDist) {

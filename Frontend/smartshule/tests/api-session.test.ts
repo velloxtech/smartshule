@@ -136,3 +136,25 @@ test('timeouts show a useful retry message instead of the browser AbortError', a
     browser.setTimeout = originalTimer;
   }
 });
+
+test('saving metadata prevents an earlier GET from repopulating cache or swallowing the fresh GET', async () => {
+  const oldResponse = deferred<Response>();
+  const freshResponse = deferred<Response>();
+  let reads = 0;
+  globalThis.fetch = async (_url, options) => {
+    if (options?.method === 'POST') return ok({ saved: true });
+    return ++reads === 1 ? oldResponse.promise : freshResponse.promise;
+  };
+  const old = apiService.getSchool();
+  await apiService.setupSchool({ name: 'Updated school' } as any);
+  const fresh = apiService.getSchool();
+  assert.equal(reads, 2);
+  oldResponse.resolve(ok({ name: 'Old school' }));
+  await old;
+  const duplicate = apiService.getSchool();
+  assert.equal(reads, 2);
+  freshResponse.resolve(ok({ name: 'Updated school' }));
+  assert.deepEqual(await duplicate, await fresh);
+  await apiService.getSchool();
+  assert.equal(reads, 2);
+});

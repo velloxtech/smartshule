@@ -8,7 +8,7 @@ import {
   NavItemDef,
 } from '../utils/rbac';
 import { onboardingService } from '../services/onboardingService';
-import { apiService } from '../services/api';
+import { apiService, captureApiRequestScope } from '../services/api';
 
 interface SidebarProps {
   currentTab: TabType;
@@ -76,41 +76,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Periodic count synchronization for badges
   useEffect(() => {
+    let live = true;
+    let inFlight = false;
+    const isCurrentScope = captureApiRequestScope();
     const updateCounts = async () => {
-      setPendingOnboardingsCount(onboardingService.getPendingCount());
-      setPendingSlotsCount(onboardingService.getPendingSlotsCount());
+      if (!live || document.hidden || inFlight || !isCurrentScope()) return;
+      inFlight = true;
+      try {
+        setPendingOnboardingsCount(onboardingService.getPendingCount());
+        setPendingSlotsCount(onboardingService.getPendingSlotsCount());
 
-      const canCheckFinance = effectiveRole && [
-        UserRole.SUPER_ADMIN,
-        UserRole.ADMIN,
-        UserRole.SCHOOL_ADMIN,
-        UserRole.BURSAR,
-        UserRole.ACCOUNTANT,
-      ].includes(effectiveRole);
+        const canCheckFinance = effectiveRole && [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ].includes(effectiveRole);
 
-      if (canCheckFinance) {
-        try {
-          const res = await apiService.getForwardedTransactions();
-          if (res?.success && Array.isArray(res.data)) {
-            const pending = res.data.filter((tx: any) => tx.status === 'PENDING').length;
-            setPendingForwardedCount(pending);
-          }
-        } catch {}
-      }
+        if (canCheckFinance) {
+          try {
+            const res = await apiService.getForwardedTransactions();
+            if (live && isCurrentScope() && res?.success && Array.isArray(res.data)) {
+              const pending = res.data.filter((tx: any) => tx.status === 'PENDING').length;
+              setPendingForwardedCount(pending);
+            }
+          } catch {}
+        }
+      } finally { inFlight = false; }
     };
 
     updateCounts();
     if (typeof window !== 'undefined') {
       window.addEventListener('smartshule_onboarding_updated', updateCounts);
+      document.addEventListener('visibilitychange', updateCounts);
     }
-    const interval = setInterval(updateCounts, 5000);
+    const interval = setInterval(updateCounts, 30000);
     return () => {
+      live = false;
       if (typeof window !== 'undefined') {
         window.removeEventListener('smartshule_onboarding_updated', updateCounts);
+        document.removeEventListener('visibilitychange', updateCounts);
       }
       clearInterval(interval);
     };
-  }, [effectiveRole]);
+  }, [effectiveRole, user?.id]);
 
   const handleToggleModule = (modId: string) => {
     setExpandedModuleId((curr) => {

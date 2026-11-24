@@ -14,6 +14,7 @@ export interface ITeacherRepository {
 }
 
 export interface IGuardianRepository {
+  findForStudents?(studentIds: string[], guardianIds: string[]): Promise<Guardian[]>;
   findById(id: string): Promise<Guardian | null>;
   findByUserId(userId: string): Promise<Guardian | null>;
   findByStudentId(studentId: string): Promise<Guardian[]>;

@@ -1,4 +1,5 @@
 import { ITeacherRepository, IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { loadUsersByIds } from '../shared/LoadUsersByIds';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
@@ -706,9 +707,10 @@ export class TeacherUseCases {
 
   public async listTeachers(filters?: { schoolId?: string }) {
     const teachers = await this.teacherRepository.findAll();
+    const users = await loadUsersByIds(this.userRepository, teachers.map(t => t.userId));
     const results = await Promise.all(
       teachers.map(async (t: any) => {
-        const u = await this.userRepository.findById(t.userId);
+        const u = users.get(t.userId);
         return {
           ...t.toJSON(),
           name: u ? u.fullName : undefined,

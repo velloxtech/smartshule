@@ -114,7 +114,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
   useEffect(() => {
     if (!autoRefreshEnabled) return;
     const interval = setInterval(() => {
-      fetchRoster(true);
+      if (!document.hidden) fetchRoster(true);
     }, 25000);
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, fetchRoster]);

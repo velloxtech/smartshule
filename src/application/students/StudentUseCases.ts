@@ -1,4 +1,5 @@
 import {TeacherAssignmentAccess} from '../shared/TeacherAssignmentAccess';
+import { loadUsersByIds } from '../shared/LoadUsersByIds';
 import { assessmentResults } from '../../core/domain/cbc/AssessmentScore';
 import { releasePreviousClassTeacherDuty } from '../shared/ClassTeacherAssignmentPolicy';
 import { IStudentRepository, StudentFilterCriteria } from '../../core/ports/repositories/IStudentRepository';
@@ -1210,7 +1211,9 @@ export class StudentUseCases {
 
     if (students.length === 0) return [];
 
-    const allGuardians = await this.guardianRepository.findAll();
+    const allGuardians = this.guardianRepository.findForStudents
+      ? await this.guardianRepository.findForStudents(students.map(s => s.id), students.flatMap(s => s.guardianIds || []))
+      : await this.guardianRepository.findAll();
     const guardianMap = new Map<string, any>();
     const studentToGuardiansMap = new Map<string, any[]>();
 
@@ -1226,8 +1229,9 @@ export class StudentUseCases {
 
     const userCache = new Map<string, any>();
     try {
-      const usersList = await this.userRepository.findAll();
-      for (const u of usersList) {
+      const usersList = await loadUsersByIds(this.userRepository, allGuardians.map(g => g.userId));
+      for (const guardian of allGuardians) userCache.set(guardian.userId, null);
+      for (const u of usersList.values()) {
         userCache.set(u.id, u.toJSON());
       }
     } catch {}
@@ -1260,16 +1264,10 @@ export class StudentUseCases {
 
     // Load fee balances for students if fee repository is available
     const studentFeeMap = new Map<string, { balance: number; billed: number; paid: number; priorArrears: number }>();
-    let feeStructures: any[] = [];
-    let currentTermNum = 1;
     let currentTermId = '';
 
     if (this.feeRepository) {
       try {
-        try {
-          feeStructures = await this.feeRepository.findAllFeeStructures();
-        } catch {}
-
         if (this.academicRepository) {
           try {
             const activeYear = await this.academicRepository.findCurrentYear();
@@ -1278,7 +1276,6 @@ export class StudentUseCases {
               const activeTerm = terms.find(t => t.isCurrent) || terms[0];
               if (activeTerm) {
                 currentTermId = activeTerm.id;
-                currentTermNum = Number(activeTerm.termNumber) || (activeTerm.id.includes('2') ? 2 : activeTerm.id.includes('3') ? 3 : 1);
               }
             }
           } catch {}

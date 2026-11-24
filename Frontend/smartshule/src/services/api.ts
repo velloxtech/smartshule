@@ -229,6 +229,8 @@ const getHeaders = () => {
 const inFlightRequests = new Map<string, Promise<any>>();
 const apiCache = new Map<string, { timestamp: number; data: any }>();
 const CACHE_TTL_MS = 30_000; // 30 seconds for static metadata
+const MAX_CACHED_RESPONSES = 100;
+let dataRevision = 0;
 let requestGeneration = 0;
 const activeControllers = new Set<AbortController>();
 
@@ -253,6 +255,9 @@ export function setApiPortalView(mode: 'STAFF' | 'PARENT') {
 }
 
 export function clearApiCache(endpointPrefix?: string) {
+  dataRevision++;
+  // A post-save GET must not attach to an older request that began before the save.
+  inFlightRequests.clear();
   if (!endpointPrefix) {
     apiCache.clear();
   } else {
@@ -269,6 +274,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const headers = getHeaders();
   const isCurrentScope = captureApiRequestScope();
+  const readRevision = dataRevision;
   const requestKey = `${getStoredAuthToken()}::${safeStorage.getItem('smartshule_active_view_mode') || 'STAFF'}::${url}`;
 
   // On any mutating request, clear relevant cache so user never sees stale data
@@ -282,6 +288,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     endpoint.includes('/academics/classes') ||
     endpoint.includes('/academics/streams') ||
     endpoint.includes('/academics/learning-areas') ||
+    endpoint.includes('/academics/school') ||
     endpoint.includes('/schools')
   );
 
@@ -347,7 +354,10 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
       const json = await res.json();
       if (!isCurrentScope()) throw new DOMException('Account or portal changed', 'AbortError');
-      if (isCacheable) {
+      if (isCacheable && readRevision === dataRevision) {
+        if (apiCache.size >= MAX_CACHED_RESPONSES) {
+          apiCache.delete(apiCache.keys().next().value!);
+        }
         apiCache.set(requestKey, { timestamp: Date.now(), data: json });
       }
       return json;
@@ -360,7 +370,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       activeControllers.delete(controller);
       window.clearTimeout(timer);
       options.signal?.removeEventListener('abort', abort);
-      if (method === 'GET' && isCurrentScope()) {
+      if (method !== 'GET' && isCurrentScope()) clearApiCache();
+      if (method === 'GET' && isCurrentScope() && readRevision === dataRevision) {
         inFlightRequests.delete(requestKey);
       }
     }

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
@@ -13,23 +14,24 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
   let app: Express;
   let container: AppContainer;
 
+  const fixturePassword = randomUUID();
   const schoolId = 'school-001';
   const academicYearId = 'year-2026';
   const termId = 'term-2026-3';
 
-  let raelToken: string;
-  let vivianToken: string;
+  let parentAToken: string;
+  let parentBToken: string;
 
-  // Exact IDs from confirmed production database
-  const RAEL_USER_ID = 'usr-pp1-07';
-  const RAEL_GUARDIAN_ID = 'grd-pp1-07';
-  const EDWIN_STUDENT_ID = 'std-pp1-07';
-  const EDWIN_ADM_NO = '0108';
+  // Synthetic identities only; no production account or child data.
+  const PARENT_A_USER_ID = 'fixture-parent-a-user';
+  const PARENT_A_GUARDIAN_ID = 'fixture-parent-a-guardian';
+  const CHILD_A_STUDENT_ID = 'fixture-child-a';
+  const CHILD_A_ADM_NO = '9001';
 
-  const VIVIAN_USER_ID = 'user-guardian-023';
-  const VIVIAN_GUARDIAN_ID = 'guardian-g3-023';
-  const DENZEL_STUDENT_ID = 'student-g3-013';
-  const DENZEL_ADM_NO = '0027';
+  const PARENT_B_USER_ID = 'fixture-parent-b-user';
+  const PARENT_B_GUARDIAN_ID = 'fixture-parent-b-guardian';
+  const CHILD_B_STUDENT_ID = 'fixture-child-b';
+  const CHILD_B_ADM_NO = '9002';
 
   beforeAll(async () => {
     container = new AppContainer();
@@ -59,114 +61,114 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
     const g3Stream = Stream.create({ classRoomId: g3Class.id, name: 'Main', capacity: 35 }, 'stream-g3-main');
     await container.academicRepository.saveStream(g3Stream);
 
-    // 3. User & Guardian for Rael Nandi (Headteacher with enrolled child in PP1)
-    const raelUser = User.create({
-      email: 'raelnandi7@gmail.com',
-      passwordHash: await container.passwordHasher.hash('Headteacher@123'),
-      firstName: 'Rael',
-      lastName: 'Nandi',
+    // 3. User & Guardian for ParentA Fixture (Headteacher with enrolled child in PP1)
+    const parentAUser = User.create({
+      email: 'fixture-parent-a@example.test',
+      passwordHash: await container.passwordHasher.hash(fixturePassword),
+      firstName: 'ParentA',
+      lastName: 'Fixture',
       role: UserRole.HEAD_TEACHER,
-      phone: '+254707632495',
+      phone: '+12025550101',
       schoolId,
       status: UserStatus.ACTIVE
-    }, RAEL_USER_ID);
-    await container.userRepository.save(raelUser);
+    }, PARENT_A_USER_ID);
+    await container.userRepository.save(parentAUser);
 
-    // Replicate the exact tainted production DB state where grd-pp1-07.student_ids had Denzel Ted
-    const raelGuardian = Guardian.create({
-      userId: RAEL_USER_ID,
+    // Seed stale reverse links to prove they never grant family access.
+    const parentAGuardian = Guardian.create({
+      userId: PARENT_A_USER_ID,
       relationship: GuardianRelationship.MOTHER,
-      emergencyContact: '+254707632495',
-      studentIds: [EDWIN_STUDENT_ID, DENZEL_STUDENT_ID, 'student-pp1-007']
-    }, RAEL_GUARDIAN_ID);
-    await container.guardianRepository.save(raelGuardian);
+      emergencyContact: '+12025550101',
+      studentIds: [CHILD_A_STUDENT_ID, CHILD_B_STUDENT_ID, 'fixture-unlinked-child']
+    }, PARENT_A_GUARDIAN_ID);
+    await container.guardianRepository.save(parentAGuardian);
 
-    // 4. User & Guardian for Vivian Phenia (Parent with child in Grade 3)
-    const vivianUser = User.create({
-      email: 'vivian.phena.013@parents.smartshule.ac.ke',
-      passwordHash: await container.passwordHasher.hash('Vivian@123'),
-      firstName: 'Vivian',
-      lastName: 'Phenia',
+    // 4. User & Guardian for ParentB Fixture (Parent with child in Grade 3)
+    const parentBUser = User.create({
+      email: 'fixture-parent-b@example.test',
+      passwordHash: await container.passwordHasher.hash(fixturePassword),
+      firstName: 'ParentB',
+      lastName: 'Fixture',
       role: UserRole.GUARDIAN,
-      phone: '0742139589',
+      phone: '+12025550102',
       schoolId,
       status: UserStatus.ACTIVE
-    }, VIVIAN_USER_ID);
-    await container.userRepository.save(vivianUser);
+    }, PARENT_B_USER_ID);
+    await container.userRepository.save(parentBUser);
 
-    const vivianGuardian = Guardian.create({
-      userId: VIVIAN_USER_ID,
-      nationalId: 'ID-139589',
+    const parentBGuardian = Guardian.create({
+      userId: PARENT_B_USER_ID,
+      nationalId: 'FIXTURE-ID-2',
       relationship: GuardianRelationship.MOTHER,
-      emergencyContact: '0742139589',
-      studentIds: [DENZEL_STUDENT_ID]
-    }, VIVIAN_GUARDIAN_ID);
-    await container.guardianRepository.save(vivianGuardian);
+      emergencyContact: '+12025550102',
+      studentIds: [CHILD_B_STUDENT_ID]
+    }, PARENT_B_GUARDIAN_ID);
+    await container.guardianRepository.save(parentBGuardian);
 
-    // 5. Learners: Edwin Bright (PP1) and Denzel Ted (Grade 3)
+    // 5. Learners: ChildA Fixture (PP1) and ChildB Fixture (Grade 3)
     // Authoritative relationship: students.guardian_ids
-    const edwinStudent = Student.create({
-      admissionNumber: EDWIN_ADM_NO,
-      firstName: 'Edwin',
-      lastName: 'Bright',
-      dateOfBirth: '2021-04-12',
+    const childAStudent = Student.create({
+      admissionNumber: CHILD_A_ADM_NO,
+      firstName: 'ChildA',
+      lastName: 'Fixture',
+      dateOfBirth: '2021-01-01',
       gender: StudentGender.MALE,
       gradeLevel: CBCGradeLevel.PP1,
       classroomId: pp1Class.id,
       streamId: pp1Stream.id,
       schoolId,
       academicYearId,
-      guardianIds: [RAEL_GUARDIAN_ID], // Strictly belongs to Rael Nandi
+      guardianIds: [PARENT_A_GUARDIAN_ID], // Strictly belongs to ParentA Fixture
       status: StudentStatus.ACTIVE
-    }, EDWIN_STUDENT_ID);
-    await container.studentRepository.save(edwinStudent);
+    }, CHILD_A_STUDENT_ID);
+    await container.studentRepository.save(childAStudent);
 
-    const denzelStudent = Student.create({
-      admissionNumber: DENZEL_ADM_NO,
-      firstName: 'DENZEL',
-      lastName: 'TED',
-      dateOfBirth: '2017-03-29',
+    const childBStudent = Student.create({
+      admissionNumber: CHILD_B_ADM_NO,
+      firstName: 'CHILD_B',
+      lastName: 'FIXTURE',
+      dateOfBirth: '2017-01-01',
       gender: StudentGender.MALE,
       gradeLevel: CBCGradeLevel.GRADE_3,
       classroomId: g3Class.id,
       streamId: g3Stream.id,
       schoolId,
       academicYearId,
-      guardianIds: [VIVIAN_GUARDIAN_ID], // Strictly belongs to Vivian Phenia
+      guardianIds: [PARENT_B_GUARDIAN_ID], // Strictly belongs to ParentB Fixture
       status: StudentStatus.ACTIVE
-    }, DENZEL_STUDENT_ID);
-    await container.studentRepository.save(denzelStudent);
+    }, CHILD_B_STUDENT_ID);
+    await container.studentRepository.save(childBStudent);
 
     // 6. Generate authentic access tokens
-    const raelLogin = await request(app)
+    const parentALogin = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'raelnandi7@gmail.com', password: 'Headteacher@123' });
-    expect(raelLogin.status).toBe(200);
-    raelToken = raelLogin.body.data.accessToken;
+      .send({ email: 'fixture-parent-a@example.test', password: fixturePassword });
+    expect(parentALogin.status).toBe(200);
+    parentAToken = parentALogin.body.data.accessToken;
 
-    const vivianLogin = await request(app)
+    const parentBLogin = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'vivian.phena.013@parents.smartshule.ac.ke', password: 'Vivian@123' });
-    expect(vivianLogin.status).toBe(200);
-    vivianToken = vivianLogin.body.data.accessToken;
+      .send({ email: 'fixture-parent-b@example.test', password: fixturePassword });
+    expect(parentBLogin.status).toBe(200);
+    parentBToken = parentBLogin.body.data.accessToken;
   });
 
   // ==========================================
-  // Test A — Rael: Headteacher + Parent
+  // Test A — ParentA: Headteacher + Parent
   // ==========================================
-  describe('Test A — Rael Nandi: Dual Headteacher and Guardian Access', () => {
+  describe('Test A — ParentA Fixture: Dual Headteacher and Guardian Access', () => {
     it('preserves Headteacher administrative endpoints access', async () => {
       const res = await request(app)
         .get('/api/v1/analytics/dashboard')
-        .set('Authorization', `Bearer ${raelToken}`);
+        .set('Authorization', `Bearer ${parentAToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
 
-    it('returns ONLY Edwin Bright (Adm 0108) in the Parent portal and EXCLUDES Denzel Ted', async () => {
+    it('returns ONLY ChildA Fixture (Adm 9001) in the Parent portal and EXCLUDES ChildB Fixture', async () => {
       const res = await request(app)
         .get('/api/v1/students/guardian/me')
-        .set('Authorization', `Bearer ${raelToken}`);
+        .set('Authorization', `Bearer ${parentAToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -175,34 +177,34 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       expect(Array.isArray(children)).toBe(true);
       expect(children.length).toBe(1);
 
-      // Must be Edwin Bright
-      expect(children[0].id).toBe(EDWIN_STUDENT_ID);
-      expect(children[0].admissionNumber).toBe(EDWIN_ADM_NO);
-      expect(children[0].firstName).toBe('Edwin');
-      expect(children[0].lastName).toBe('Bright');
+      // Must be ChildA Fixture
+      expect(children[0].id).toBe(CHILD_A_STUDENT_ID);
+      expect(children[0].admissionNumber).toBe(CHILD_A_ADM_NO);
+      expect(children[0].firstName).toBe('ChildA');
+      expect(children[0].lastName).toBe('Fixture');
 
-      // Crucial: Denzel Ted must NEVER appear
-      const denzelFound = children.find((c: any) => c.id === DENZEL_STUDENT_ID || c.admissionNumber === DENZEL_ADM_NO);
-      expect(denzelFound).toBeUndefined();
+      // Crucial: ChildB Fixture must NEVER appear
+      const childBFound = children.find((c: any) => c.id === CHILD_B_STUDENT_ID || c.admissionNumber === CHILD_B_ADM_NO);
+      expect(childBFound).toBeUndefined();
     });
 
-    it('purges spurious studentIds from Rael guardian record automatically', async () => {
-      const updatedGuardian = await container.guardianRepository.findById(RAEL_GUARDIAN_ID);
+    it('does not rewrite guardian links during a parent portal read', async () => {
+      const updatedGuardian = await container.guardianRepository.findById(PARENT_A_GUARDIAN_ID);
       expect(updatedGuardian).not.toBeNull();
-      expect(updatedGuardian!.studentIds).toContain(EDWIN_STUDENT_ID);
-      expect(updatedGuardian!.studentIds).not.toContain(DENZEL_STUDENT_ID);
-      expect(updatedGuardian!.studentIds).not.toContain('student-pp1-007');
+      // The preceding portal assertion verifies only learner-side links grant access.
+      // GET requests must not silently modify the stale reverse-link fixture.
+      expect(updatedGuardian!.studentIds).toEqual([CHILD_A_STUDENT_ID, CHILD_B_STUDENT_ID, 'fixture-unlinked-child']);
     });
   });
 
   // ==========================================
-  // Test B — Vivian: Guardian Access
+  // Test B — ParentB: Guardian Access
   // ==========================================
-  describe('Test B — Vivian Phenia: Guardian Access', () => {
-    it('returns ONLY Denzel Ted (Adm 0027) in the Parent portal and EXCLUDES Edwin Bright', async () => {
+  describe('Test B — ParentB Fixture: Guardian Access', () => {
+    it('returns ONLY ChildB Fixture (Adm 9002) in the Parent portal and EXCLUDES ChildA Fixture', async () => {
       const res = await request(app)
         .get('/api/v1/students/guardian/me')
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -211,15 +213,15 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       expect(Array.isArray(children)).toBe(true);
       expect(children.length).toBe(1);
 
-      // Must be Denzel Ted
-      expect(children[0].id).toBe(DENZEL_STUDENT_ID);
-      expect(children[0].admissionNumber).toBe(DENZEL_ADM_NO);
-      expect(children[0].firstName).toBe('DENZEL');
-      expect(children[0].lastName).toBe('TED');
+      // Must be ChildB Fixture
+      expect(children[0].id).toBe(CHILD_B_STUDENT_ID);
+      expect(children[0].admissionNumber).toBe(CHILD_B_ADM_NO);
+      expect(children[0].firstName).toBe('CHILD_B');
+      expect(children[0].lastName).toBe('FIXTURE');
 
-      // Crucial: Edwin Bright must NEVER appear
-      const edwinFound = children.find((c: any) => c.id === EDWIN_STUDENT_ID || c.admissionNumber === EDWIN_ADM_NO);
-      expect(edwinFound).toBeUndefined();
+      // Crucial: ChildA Fixture must NEVER appear
+      const childAFound = children.find((c: any) => c.id === CHILD_A_STUDENT_ID || c.admissionNumber === CHILD_A_ADM_NO);
+      expect(childAFound).toBeUndefined();
     });
   });
 
@@ -227,10 +229,10 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
   // Test C — Unauthorized Student Access
   // ==========================================
   describe('Test C — Unauthorized Student Access Prevention', () => {
-    it('rejects Rael accessing Denzel through parent-facing student update route', async () => {
+    it('rejects ParentA accessing ChildB through parent-facing student update route', async () => {
       const res = await request(app)
-        .put(`/api/v1/students/guardian/students/${DENZEL_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${raelToken}`)
+        .put(`/api/v1/students/guardian/students/${CHILD_B_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentAToken}`)
         .send({ medicalConditions: 'Allergic to dust' });
 
       expect(res.status).toBe(403);
@@ -238,47 +240,47 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       expect(res.body.message).toMatch(/only permitted to update details for your registered child/i);
     });
 
-    it('rejects Vivian accessing Edwin through parent-facing student update route', async () => {
+    it('rejects ParentB accessing ChildA through parent-facing student update route', async () => {
       const res = await request(app)
-        .put(`/api/v1/students/guardian/students/${EDWIN_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`)
+        .put(`/api/v1/students/guardian/students/${CHILD_A_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`)
         .send({ medicalConditions: 'Asthma' });
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
     });
 
-    it('rejects Vivian inspecting Edwin details via GET /students/:id', async () => {
+    it('rejects ParentB inspecting ChildA details via GET /students/:id', async () => {
       const res = await request(app)
-        .get(`/api/v1/students/${EDWIN_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/students/${CHILD_A_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
     });
 
-    it('rejects Vivian inspecting Edwin fee statement via GET /finance/statements/:id', async () => {
+    it('rejects ParentB inspecting ChildA fee statement via GET /finance/statements/:id', async () => {
       const res = await request(app)
-        .get(`/api/v1/finance/statements/${EDWIN_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/finance/statements/${CHILD_A_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
     });
 
-    it('rejects Vivian inspecting Edwin attendance via GET /attendance/student/:id', async () => {
+    it('rejects ParentB inspecting ChildA attendance via GET /attendance/student/:id', async () => {
       const res = await request(app)
-        .get(`/api/v1/attendance/student/${EDWIN_STUDENT_ID}?termId=${termId}&academicYearId=${academicYearId}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/attendance/student/${CHILD_A_STUDENT_ID}?termId=${termId}&academicYearId=${academicYearId}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
     });
 
-    it('rejects Vivian inspecting Edwin report card via GET /CBC/report-cards', async () => {
+    it('rejects ParentB inspecting ChildA report card via GET /CBC/report-cards', async () => {
       const res = await request(app)
-        .get(`/api/v1/CBC/report-cards?studentId=${EDWIN_STUDENT_ID}&termId=${termId}&academicYearId=${academicYearId}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/CBC/report-cards?studentId=${CHILD_A_STUDENT_ID}&termId=${termId}&academicYearId=${academicYearId}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
@@ -292,12 +294,12 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
     it('returns all and only legitimately linked children for a parent with multiple kids', async () => {
       // Create multi-child parent
       const multiParentUser = User.create({
-        email: 'john.multi@parents.smartshule.ac.ke',
-        passwordHash: await container.passwordHasher.hash('Multi@123'),
-        firstName: 'John',
-        lastName: 'Otieno',
+        email: 'fixture-multi@example.test',
+        passwordHash: await container.passwordHasher.hash(fixturePassword),
+        firstName: 'FixtureThird',
+        lastName: 'Fixture',
         role: UserRole.GUARDIAN,
-        phone: '+254711223344',
+        phone: '+12025550103',
         schoolId,
         status: UserStatus.ACTIVE
       }, 'usr-multi-parent');
@@ -306,15 +308,15 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       const multiGuardian = Guardian.create({
         userId: 'usr-multi-parent',
         relationship: GuardianRelationship.FATHER,
-        emergencyContact: '+254711223344',
+        emergencyContact: '+12025550103',
         studentIds: ['child-multi-1', 'child-multi-2']
       }, 'grd-multi-parent');
       await container.guardianRepository.save(multiGuardian);
 
       const child1 = Student.create({
         admissionNumber: '0201',
-        firstName: 'Samuel',
-        lastName: 'Otieno',
+        firstName: 'FixtureSiblingA',
+        lastName: 'Fixture',
         dateOfBirth: '2019-01-01',
         gender: StudentGender.MALE,
         gradeLevel: CBCGradeLevel.GRADE_1,
@@ -327,9 +329,9 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
 
       const child2 = Student.create({
         admissionNumber: '0202',
-        firstName: 'Sarah',
-        lastName: 'Otieno',
-        dateOfBirth: '2017-06-15',
+        firstName: 'FixtureSiblingB',
+        lastName: 'Fixture',
+        dateOfBirth: '2017-01-01',
         gender: StudentGender.FEMALE,
         gradeLevel: CBCGradeLevel.GRADE_3,
         schoolId,
@@ -341,7 +343,7 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
 
       const loginRes = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: 'john.multi@parents.smartshule.ac.ke', password: 'Multi@123' });
+        .send({ email: 'fixture-multi@example.test', password: fixturePassword });
       expect(loginRes.status).toBe(200);
       const token = loginRes.body.data.accessToken;
 
@@ -355,8 +357,8 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       const kidIds = kids.map((k: any) => k.id);
       expect(kidIds).toContain('child-multi-1');
       expect(kidIds).toContain('child-multi-2');
-      expect(kidIds).not.toContain(EDWIN_STUDENT_ID);
-      expect(kidIds).not.toContain(DENZEL_STUDENT_ID);
+      expect(kidIds).not.toContain(CHILD_A_STUDENT_ID);
+      expect(kidIds).not.toContain(CHILD_B_STUDENT_ID);
     });
   });
 
@@ -368,21 +370,21 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
       // 1. In Staff context: broadsheet / management operations succeed
       const broadsheetRes = await request(app)
         .get('/api/v1/broadsheets/stream?streamId=stream-g3-main&termId=term-2026-3&academicYearId=year-2026')
-        .set('Authorization', `Bearer ${raelToken}`);
+        .set('Authorization', `Bearer ${parentAToken}`);
       expect(broadsheetRes.status).toBe(200);
 
-      // 2. In Parent context: guardian/me returns ONLY her child Edwin Bright
+      // 2. In Parent context: guardian/me returns ONLY her child ChildA Fixture
       const parentPortalRes = await request(app)
         .get('/api/v1/students/guardian/me')
-        .set('Authorization', `Bearer ${raelToken}`);
+        .set('Authorization', `Bearer ${parentAToken}`);
       expect(parentPortalRes.status).toBe(200);
       expect(parentPortalRes.body.data.children.length).toBe(1);
-      expect(parentPortalRes.body.data.children[0].id).toBe(EDWIN_STUDENT_ID);
+      expect(parentPortalRes.body.data.children[0].id).toBe(CHILD_A_STUDENT_ID);
 
       // 3. Repeating staff operations in the same session remains intact
       const analyticsRes = await request(app)
         .get('/api/v1/analytics/dashboard')
-        .set('Authorization', `Bearer ${raelToken}`);
+        .set('Authorization', `Bearer ${parentAToken}`);
       expect(analyticsRes.status).toBe(200);
     });
   });
@@ -392,27 +394,27 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
   // ==========================================
   describe('Test F — Session and Cache Isolation on Client Logout / Login', () => {
     it('ensures separate tokens and requests never leak cached identity between users', async () => {
-      // Request Rael's profile
-      const raelProfile = await request(app)
+      // Request ParentA's profile
+      const parentAProfile = await request(app)
         .get('/api/v1/auth/profile')
-        .set('Authorization', `Bearer ${raelToken}`);
-      expect(raelProfile.status).toBe(200);
-      expect(raelProfile.body.data.email).toBe('raelnandi7@gmail.com');
-      expect(raelProfile.body.data.enrolledChildIds).toEqual([EDWIN_STUDENT_ID]);
+        .set('Authorization', `Bearer ${parentAToken}`);
+      expect(parentAProfile.status).toBe(200);
+      expect(parentAProfile.body.data.email).toBe('fixture-parent-a@example.test');
+      expect(parentAProfile.body.data.enrolledChildIds).toEqual([CHILD_A_STUDENT_ID]);
 
-      // Request Vivian's profile
-      const vivianProfile = await request(app)
+      // Request ParentB's profile
+      const parentBProfile = await request(app)
         .get('/api/v1/auth/profile')
-        .set('Authorization', `Bearer ${vivianToken}`);
-      expect(vivianProfile.status).toBe(200);
-      expect(vivianProfile.body.data.email).toBe('vivian.phena.013@parents.smartshule.ac.ke');
-      expect(vivianProfile.body.data.enrolledChildIds).toEqual([DENZEL_STUDENT_ID]);
+        .set('Authorization', `Bearer ${parentBToken}`);
+      expect(parentBProfile.status).toBe(200);
+      expect(parentBProfile.body.data.email).toBe('fixture-parent-b@example.test');
+      expect(parentBProfile.body.data.enrolledChildIds).toEqual([CHILD_B_STUDENT_ID]);
 
-      // Re-verify Rael's portal data does not contain Vivian's child
-      const raelPortal = await request(app)
+      // Re-verify ParentA's portal data does not contain ParentB's child
+      const parentAPortal = await request(app)
         .get('/api/v1/students/guardian/me')
-        .set('Authorization', `Bearer ${raelToken}`);
-      expect(raelPortal.body.data.children.map((c: any) => c.id)).toEqual([EDWIN_STUDENT_ID]);
+        .set('Authorization', `Bearer ${parentAToken}`);
+      expect(parentAPortal.body.data.children.map((c: any) => c.id)).toEqual([CHILD_A_STUDENT_ID]);
     });
   });
 
@@ -421,32 +423,32 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
   // ==========================================
   describe('Test G — API Tampering and Spoofing Resistance', () => {
     it('ignores client-supplied guardianId parameter and enforces token user identity', async () => {
-      // Vivian attempts to pass Rael's guardianId as query parameter
+      // ParentB attempts to pass ParentA's guardianId as query parameter
       const res = await request(app)
-        .get(`/api/v1/students/guardian/me?guardianId=${RAEL_GUARDIAN_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/students/guardian/me?guardianId=${PARENT_A_GUARDIAN_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(200);
-      // Still only returns Vivian's child Denzel
+      // Still only returns ParentB's child ChildB
       expect(res.body.data.children.length).toBe(1);
-      expect(res.body.data.children[0].id).toBe(DENZEL_STUDENT_ID);
-      expect(res.body.data.guardian.id).toBe(VIVIAN_GUARDIAN_ID);
+      expect(res.body.data.children[0].id).toBe(CHILD_B_STUDENT_ID);
+      expect(res.body.data.guardian.id).toBe(PARENT_B_GUARDIAN_ID);
     });
 
     it('rejects updating guardian profile for another guardian ID in payload', async () => {
       const res = await request(app)
         .put('/api/v1/students/guardian/me')
-        .set('Authorization', `Bearer ${vivianToken}`)
+        .set('Authorization', `Bearer ${parentBToken}`)
         .send({
-          id: RAEL_GUARDIAN_ID,
-          emergencyContact: '0700000000',
+          id: PARENT_A_GUARDIAN_ID,
+          emergencyContact: '+12025550104',
           relationship: 'MOTHER'
         });
 
       expect(res.status).toBe(200);
-      // Verified that Rael's guardian profile was NOT modified
-      const raelGuardian = await container.guardianRepository.findById(RAEL_GUARDIAN_ID);
-      expect(raelGuardian!.emergencyContact).toBe('+254707632495');
+      // Verified that ParentA's guardian profile was NOT modified
+      const parentAGuardian = await container.guardianRepository.findById(PARENT_A_GUARDIAN_ID);
+      expect(parentAGuardian!.emergencyContact).toBe('+12025550101');
     });
   });
 
@@ -457,21 +459,21 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
     it('returns only linked child when Mobile app calls GET /students with parent authentication', async () => {
       const res = await request(app)
         .get('/api/v1/students')
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const students = res.body.data;
       expect(Array.isArray(students)).toBe(true);
       expect(students.length).toBe(1);
-      expect(students[0].id).toBe(DENZEL_STUDENT_ID);
-      expect(students[0].admissionNumber).toBe(DENZEL_ADM_NO);
+      expect(students[0].id).toBe(CHILD_B_STUDENT_ID);
+      expect(students[0].admissionNumber).toBe(CHILD_B_ADM_NO);
     });
 
     it('mobile app invoices query is isolated to guardian linked child', async () => {
       const res = await request(app)
-        .get(`/api/v1/finance/invoices?studentId=${DENZEL_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/finance/invoices?studentId=${CHILD_B_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -479,8 +481,8 @@ describe('SmartShule Critical Security: Headteacher Dual-Role Parent Data Isolat
 
     it('mobile app rejects querying invoices for unlinked student with 403 Forbidden', async () => {
       const res = await request(app)
-        .get(`/api/v1/finance/invoices?studentId=${EDWIN_STUDENT_ID}`)
-        .set('Authorization', `Bearer ${vivianToken}`);
+        .get(`/api/v1/finance/invoices?studentId=${CHILD_A_STUDENT_ID}`)
+        .set('Authorization', `Bearer ${parentBToken}`);
 
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);

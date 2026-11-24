@@ -2,6 +2,7 @@ import { User } from '../../domain/user/User';
 
 export interface IUserRepository {
   findById(id: string): Promise<User | null>;
+  findByIds?(ids: string[]): Promise<User[]>;
   findByEmail(email: string): Promise<User | null>;
   findByPhone(phone: string): Promise<User | null>;
   findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]>;

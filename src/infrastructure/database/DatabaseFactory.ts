@@ -8,6 +8,8 @@ import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiomet
 import { PlanningRepository, PostgresPlanningRepository } from '../../application/planning/PlanningRepository';
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
+import { reuseRequestRead, retryTransientRead } from './RequestReadCache';
+import { ensurePerformanceIndexes } from './postgres/PostgresPerformanceIndexes';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
 
 import {
@@ -225,31 +227,17 @@ export class DatabaseFactory {
         console.warn('[PostgreSQL Pool Warning] Background client event:', msg);
       });
 
-      // Wrap pool.query with transparent retry for transient socket drops from PgBouncer
+      // Reuse ordinary reads within a single GET response, including guard/use-case repeats.
       const originalQuery = pool.query.bind(pool);
       (pool as any).query = async function (text: any, params?: any) {
-        try {
-          return await originalQuery(text, params);
-        } catch (err: any) {
-          const isTransient =
-            err?.message?.includes('Connection terminated unexpectedly') ||
-            err?.message?.includes('closed') ||
-            err?.code === 'ECONNRESET' ||
-            err?.code === 'EPIPE' ||
-            err?.code === '57P01';
-
-          if (isTransient) {
-            // Re-attempt query immediately with a fresh socket
-            return await originalQuery(text, params);
-          }
-          throw err;
-        }
+        return reuseRequestRead(text, params, () => retryTransientRead(text, () => originalQuery(text, params)));
       };
       
       try {
         // Auto-create all tables on start
         await PostgresDatabaseInitializer.initializeSchema(pool);
         await pool.query(STAFF_MESSAGE_SCHEMA);
+        await ensurePerformanceIndexes(pool);
         console.log('[Database] PostgreSQL connected and tables initialized successfully.');
       } catch (err: any) {
         if (err?.code === '28P01') {

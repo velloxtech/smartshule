@@ -688,6 +688,9 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
     const unlinkedStudentId = 'student-unlinked-999';
 
     beforeAll(async () => {
+      // Role-account fixtures and learner fixtures are separate families. Establish
+      // the relationship explicitly; a demo identity must never imply child access.
+      await container.studentUseCases.linkGuardianToStudent('student-001', 'usr-parent-01');
       // Register an unlinked student belonging to another family
       const unlinkedStudent = Student.create(
         {
@@ -737,14 +740,12 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(unlinkedRes.body.error.message).toMatch(/Access denied/i);
     });
 
-    it('filters the daily roll-call register to linked children', async () => {
+    it('keeps the school-wide daily roll-call register restricted to staff', async () => {
       const res = await request(app)
         .get('/api/v1/attendance/daily?date=2026-09-20&type=DAILY_MORNING')
         .set('Authorization', `Bearer ${parentToken}`);
-      expect(res.status).toBe(200);
-      if (res.body.data) {
-        expect(res.body.data.entries.every((entry: any) => entry.studentId === 'student-001')).toBe(true);
-      }
+      expect(res.status).toBe(403);
+      expect(res.body.data).toBeUndefined();
     });
 
     it('denies parent from accessing another learner’s attendance record via GET /attendance/student/:id (403 Forbidden)', async () => {

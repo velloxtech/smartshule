@@ -1,3 +1,4 @@
+import { loadUsersByIds } from '../shared/LoadUsersByIds';
 import {IStaffMessageRepository} from '../../core/ports/repositories/IStaffMessageRepository';
 import {IUserRepository} from '../../core/ports/repositories/IUserRepository';
 import {User, UserRole, UserStatus} from '../../core/domain/user/User';
@@ -25,8 +26,10 @@ export class StaffMessagingUseCases {
   async inbox(actor: AcademicActor) {
     await this.actor(actor);
     const conversations = [];
-    for (const row of await this.repository.inbox(actor.schoolId!,actor.userId)) {
-      const peer = await this.users.findById(row.peerId);
+    const rows = await this.repository.inbox(actor.schoolId!,actor.userId);
+    const peers = await loadUsersByIds(this.users, rows.map(row => row.peerId));
+    for (const row of rows) {
+      const peer = peers.get(row.peerId);
       if (peer && peer.schoolId === actor.schoolId && STAFF_MESSAGING_ROLES.includes(peer.role)) conversations.push({...row,peer:this.contact(peer)});
     }
     return {conversations,unreadCount:conversations.reduce((sum,c) => sum+c.unreadCount,0)};
