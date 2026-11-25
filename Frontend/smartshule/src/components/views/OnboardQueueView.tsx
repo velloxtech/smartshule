@@ -477,57 +477,6 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
-      {/* Top Banner Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-container via-primary to-primary-container p-6 sm:p-8 text-white shadow-lg">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 text-white border border-white/30">
-                Admitted Learner Desk
-              </span>
-              <span className="flex items-center gap-1 text-xs text-amber-200 font-medium">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                Portal Live & Listening
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5">
-              <span>Learner Onboard Queue & Ratifications</span>
-            </h1>
-            <p className="mt-1 text-sm text-amber-100 max-w-xl">
-              Review submitted learner biodata, verify guardian KYC details, assign pure numeric admission numbers, and dispatch official admission letters.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 flex-wrap">
-            <button
-              onClick={loadData}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-bold transition-all cursor-pointer backdrop-blur-xs"
-            >
-              <span className="material-symbols-outlined text-[18px]">refresh</span>
-              <span>Refresh Queue</span>
-            </button>
-            {onNavigateTab && (
-              <>
-                <button
-                  onClick={() => onNavigateTab('slot-applications')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">event_available</span>
-                  <span>Slot Applications</span>
-                </button>
-                <button
-                  onClick={() => onNavigateTab('students-guardians')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-primary-container hover:bg-primary-fixed rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">group</span>
-                  <span>Active Learners Directory</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-amber-200 shadow-xs flex flex-col justify-between">

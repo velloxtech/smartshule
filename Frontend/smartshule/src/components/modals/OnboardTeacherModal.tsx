@@ -1045,14 +1045,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <h1 className="font-headline-lg text-headline-lg text-on-surface">
                 School Staff & Faculty Onboarding
               </h1>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
-                <span className="material-symbols-outlined text-[14px]">verified</span>
-                <span>Article 237 (TSC) & Chapter 6 Certified</span>
-              </span>
             </div>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Onboard teaching faculty and non-teaching personnel (Finance, Administration, Welfare, Logistics) into official school records.
-            </p>
           </div>
         </div>
 

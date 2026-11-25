@@ -917,9 +917,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             <span className="material-symbols-outlined text-[32px] text-rose-200">grid_on</span>
             <span>Summative Marksheet Matrix (Exams &amp; Tests)</span>
           </h1>
-          <p className="text-xs md:text-sm text-rose-100/90 mt-1 max-w-2xl leading-relaxed">
-            Side-by-side learner exam marksheet matrix: learners arranged in rows with subject initials in columns for quick terminal mark entry and performance tracking.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">

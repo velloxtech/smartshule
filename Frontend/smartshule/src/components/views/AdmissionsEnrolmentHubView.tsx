@@ -335,78 +335,80 @@ export const AdmissionsEnrolmentHubView: React.FC<AdmissionsEnrolmentHubViewProp
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Admissions Module Banner & Interactive Workflow Stepper */}
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-primary to-primary-container p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[28px] text-white">how_to_reg</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
-                  Admissions & Enrolment Management
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-xs text-rose-200">2027 Intake Open</span>
+      {/* Admissions Module Banner & Interactive Workflow Stepper (hidden on admissions-dashboard) */}
+      {currentSubTab !== 'admissions-dashboard' && (
+        <div className="rounded-2xl bg-gradient-to-r from-primary via-primary to-primary-container p-6 text-white shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[28px] text-white">how_to_reg</span>
               </div>
-              <h1 className="text-2xl font-black tracking-tight text-white mt-1">
-                Learner Admissions & Enrolment Pipeline
-              </h1>
-              <p className="text-xs text-rose-100 max-w-xl">
-                Prospective learner intake, application reviews, interviews, readiness assessments, offer letters, and official student registration.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30">
+                    Admissions & Enrolment Management
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-xs text-rose-200">2027 Intake Open</span>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight text-white mt-1">
+                  Learner Admissions & Enrolment Pipeline
+                </h1>
+                <p className="text-xs text-rose-100 max-w-xl">
+                  Prospective learner intake, application reviews, interviews, readiness assessments, offer letters, and official student registration.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNavigateTab('new-applications')}
+                className="px-3.5 py-2 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-rose-50 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <span>New Intake Form</span>
+              </button>
+              <button
+                onClick={() => setIsStationeryModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/30 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                <span>Requirements</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onNavigateTab('new-applications')}
-              className="px-3.5 py-2 rounded-xl bg-white text-primary font-bold text-xs shadow-md hover:bg-rose-50 flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>New Intake Form</span>
-            </button>
-            <button
-              onClick={() => setIsStationeryModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/30 flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">menu_book</span>
-              <span>Requirements</span>
-            </button>
+          {/* Workflow Pipeline Breadcrumbs */}
+          <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
+            <div className="flex items-center gap-1.5 min-w-max">
+              {PIPELINE_STEPS.map((step, idx) => {
+                const isActive = currentSubTab === step.id;
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => onNavigateTab(step.id as TabType)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-white text-primary font-bold shadow-sm'
+                        : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[15px]">{step.icon}</span>
+                    <span>{step.label}</span>
+                    {typeof step.count === 'number' && step.count > 0 && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-primary text-white' : 'bg-primary text-on-primary-fixed'
+                      }`}>
+                        {step.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-
-        {/* Workflow Pipeline Breadcrumbs */}
-        <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
-          <div className="flex items-center gap-1.5 min-w-max">
-            {PIPELINE_STEPS.map((step, idx) => {
-              const isActive = currentSubTab === step.id;
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => onNavigateTab(step.id as TabType)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-white text-primary font-bold shadow-sm'
-                      : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[15px]">{step.icon}</span>
-                  <span>{step.label}</span>
-                  {typeof step.count === 'number' && step.count > 0 && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-primary text-white' : 'bg-primary text-on-primary-fixed'
-                    }`}>
-                      {step.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Global Feedback Banner */}
       {feedback && (

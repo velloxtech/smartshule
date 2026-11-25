@@ -3,6 +3,28 @@ import { apiService, ClassTeacherAssignmentItem } from '../../services/api';
 import { ClassRoom, StreamItem, AcademicYear } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
+const formatEducationLevel = (level: string): string => {
+  if (!level) return '';
+  if (level.toUpperCase() === 'PRE_PRIMARY') return 'Pre-primary';
+  const spaced = level.replace(/_/g, ' ').toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+const getStreamDotColor = (streamName: string): string => {
+  const trimmed = (streamName || '').trim().toLowerCase();
+  if (trimmed && typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('color', trimmed)) {
+    return trimmed;
+  }
+  return '#7a1230';
+};
+
+const getTeacherInitials = (name: string): string => {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+};
+
 export const ClassesView: React.FC = () => {
   const { user } = useAuth();
   const canManageClasses = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(user?.role || '');
@@ -365,30 +387,36 @@ export const ClassesView: React.FC = () => {
                   ? `${singleTeacherObj.user.firstName} ${singleTeacherObj.user.lastName}`
                   : null);
 
+              const totalCapacity = streams.reduce((sum, s) => sum + (Number(s.capacity) || 0), 0);
+
               return (
                 <div
                   key={c.id}
-                  className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col justify-between hover:shadow-md transition-all"
+                  data-id={c.id}
+                  className="bg-white rounded-[16px] p-5 border border-[#eceef3] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_12px_rgba(16,24,40,0.04)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(16,24,40,0.08),0_2px_6px_rgba(16,24,40,0.05)] transition-all duration-200 flex flex-col justify-between min-w-0"
                 >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-success uppercase tracking-wider bg-success-container/40 px-2 py-0.5 rounded">
-                        {c.educationLevel.replace('_', ' ')}
+                  <div className="min-w-0">
+                    {/* Header */}
+                    <div>
+                      <span className="block text-[12px] font-medium text-[#7a1230] leading-4">
+                        {formatEducationLevel(c.educationLevel)}
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed text-xs font-semibold">
-                        {c.gradeLevel}
-                      </span>
+                      <h3 className="text-[22px] font-medium text-[#1f2430] leading-tight mt-1 truncate" title={c.name}>
+                        {c.name}
+                      </h3>
+                      <p className="text-[12px] text-[#6b7280] mt-1">
+                        {streams.length} {streams.length === 1 ? 'stream' : 'streams'} · {totalCapacity} capacity
+                      </p>
                     </div>
 
-                    <h3 className="font-headline-md text-lg font-bold text-on-surface mt-3">{c.name}</h3>
-                    <p className="text-xs text-on-surface-variant">
-                      {streams.length} Stream{streams.length !== 1 ? 's' : ''} Allocated
-                    </p>
+                    {/* Section Label */}
+                    <div className="mt-4 pt-3.5 border-t border-[#eceef3]">
+                      <div className="text-[12px] font-medium text-[#6b7280] mb-2.5">
+                        Streams and class teachers
+                      </div>
 
-                    <div className="mt-4 pt-3 border-t border-surface-container space-y-2 text-xs">
-                      <div className="font-semibold text-primary mb-1">Streams & Class Teachers:</div>
                       {streams.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           {streams.map((s) => {
                             const activeAssignment = getActiveAssignment(c.id, s.id);
                             const teacherObj = activeAssignment
@@ -407,148 +435,201 @@ export const ClassesView: React.FC = () => {
                             return (
                               <div
                                 key={s.id}
-                                className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/20 space-y-1.5"
+                                className="p-3 rounded-[12px] bg-[#f9fafb] border border-[#eceef3]"
                               >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-on-surface">Stream {s.name}</span>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-data-mono text-outline text-[11px]">
-                                      Cap: {s.capacity}
+                                <div className="flex items-center justify-between gap-2 min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span
+                                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: getStreamDotColor(s.name) }}
+                                      aria-hidden="true"
+                                    />
+                                    <span className="text-[13px] font-medium text-[#1f2430] truncate" title={s.name}>
+                                      {s.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="px-2 py-0.5 rounded-full bg-[#eceef3] text-[#6b7280] text-[11px] font-medium whitespace-nowrap">
+                                      Cap {s.capacity}
                                     </span>
                                     <button
+                                      type="button"
                                       onClick={() => handleDeleteStream(s.id, s.name, c.id)}
-                                      title="Delete Stream"
-                                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                      aria-label="Delete stream"
+                                      title="Delete stream"
+                                      className="min-w-[34px] min-h-[34px] flex items-center justify-center rounded-lg text-[#6b7280] hover:text-red-600 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors cursor-pointer"
                                     >
-                                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                                      <span className="material-symbols-outlined text-[16px]">delete</span>
                                     </button>
                                   </div>
                                 </div>
-                                <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-outline-variant/10">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="material-symbols-outlined text-[15px] text-primary shrink-0">
-                                      school
-                                    </span>
-                                    <span className="text-on-surface-variant font-medium shrink-0">Teacher:</span>
-                                    {teacherName ? (
-                                      <span className="font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[11px] truncate">
-                                        {teacherName}
-                                      </span>
-                                    ) : (
-                                      <span className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium text-[10px]">
-                                        Unassigned
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    {canManageClasses && (
-                                      <button
-                                        onClick={() =>
-                                          openAssignModal(
-                                            c.id,
-                                            c.name,
-                                            s.id,
-                                            s.name,
-                                            activeAssignment?.teacherId || s.classTeacherId
-                                          )
-                                        }
-                                        className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
-                                      >
-                                        {teacherName ? 'Reassign' : 'Assign'}
-                                      </button>
-                                    )}
+
+                                <div className="border-t border-dashed border-[#e5e7eb] my-2.5" />
+
+                                <div className="flex items-center justify-between gap-2.5 min-w-0">
+                                  {teacherName ? (
+                                    <>
+                                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                        <div
+                                          className="w-8 h-8 rounded-full bg-[#fbeef1] text-[#7a1230] text-[11px] font-semibold flex items-center justify-center shrink-0"
+                                          aria-hidden="true"
+                                        >
+                                          {getTeacherInitials(teacherName)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div
+                                            className="text-[13px] font-medium text-[#1f2430] truncate"
+                                            title={teacherName}
+                                          >
+                                            {teacherName}
+                                          </div>
+                                          <div className="text-[11px] text-[#6b7280]">Class teacher</div>
+                                        </div>
+                                      </div>
+                                      {canManageClasses && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openAssignModal(
+                                              c.id,
+                                              c.name,
+                                              s.id,
+                                              s.name,
+                                              activeAssignment?.teacherId || s.classTeacherId
+                                            )
+                                          }
+                                          className="px-2.5 py-1.5 rounded-lg border border-[#7a1230]/30 text-[#7a1230] text-[12px] font-medium hover:bg-[#fbeef1] hover:border-[#7a1230] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors shrink-0 cursor-pointer"
+                                        >
+                                          Reassign
+                                        </button>
+                                      )}
+                                    </>
+                                  ) : canManageClasses ? (
                                     <button
-                                      onClick={() => openHistoryModal(c.id, c.name, s.id, s.name)}
-                                      title="Assignment History"
-                                      className="p-0.5 text-outline hover:text-primary cursor-pointer"
+                                      type="button"
+                                      onClick={() =>
+                                        openAssignModal(
+                                          c.id,
+                                          c.name,
+                                          s.id,
+                                          s.name,
+                                          activeAssignment?.teacherId || s.classTeacherId
+                                        )
+                                      }
+                                      className="px-2.5 py-1.5 rounded-lg border border-[#7a1230]/30 text-[#7a1230] text-[12px] font-medium hover:bg-[#fbeef1] hover:border-[#7a1230] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors cursor-pointer"
                                     >
-                                      <span className="material-symbols-outlined text-[14px]">history</span>
+                                      Assign teacher
                                     </button>
-                                  </div>
+                                  ) : (
+                                    <span className="text-[12px] text-[#6b7280]">No class teacher assigned</span>
+                                  )}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
                       ) : (
-                        <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/20 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-700">Single Cohort</span>
-                            <span className="text-[10px] text-slate-400">Streams Optional</span>
+                        <div className="p-3 rounded-[12px] bg-[#f9fafb] border border-[#eceef3]">
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-[13px] font-medium text-[#1f2430]">Single Cohort</span>
+                            <span className="px-2 py-0.5 rounded-full bg-[#eceef3] text-[#6b7280] text-[11px] font-medium shrink-0">
+                              Streams optional
+                            </span>
                           </div>
-                          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-outline-variant/10">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="material-symbols-outlined text-[15px] text-primary shrink-0">
-                                school
-                              </span>
-                              <span className="text-on-surface-variant font-medium shrink-0">Class Teacher:</span>
-                              {singleTeacherName ? (
-                                <span className="font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[11px] truncate">
-                                  {singleTeacherName}
-                                </span>
-                              ) : (
-                                <span className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium text-[10px]">
-                                  Unassigned
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {canManageClasses && (
-                                <button
-                                  onClick={() =>
-                                    openAssignModal(
-                                      c.id,
-                                      c.name,
-                                      undefined,
-                                      undefined,
-                                      singleClassAssignment?.teacherId
-                                    )
-                                  }
-                                  className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
-                                >
-                                  {singleTeacherName ? 'Reassign' : 'Assign'}
-                                </button>
-                              )}
+
+                          <div className="border-t border-dashed border-[#e5e7eb] my-2.5" />
+
+                          <div className="flex items-center justify-between gap-2.5 min-w-0">
+                            {singleTeacherName ? (
+                              <>
+                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                  <div
+                                    className="w-8 h-8 rounded-full bg-[#fbeef1] text-[#7a1230] text-[11px] font-semibold flex items-center justify-center shrink-0"
+                                    aria-hidden="true"
+                                  >
+                                    {getTeacherInitials(singleTeacherName)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div
+                                      className="text-[13px] font-medium text-[#1f2430] truncate"
+                                      title={singleTeacherName}
+                                    >
+                                      {singleTeacherName}
+                                    </div>
+                                    <div className="text-[11px] text-[#6b7280]">Class teacher</div>
+                                  </div>
+                                </div>
+                                {canManageClasses && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openAssignModal(
+                                        c.id,
+                                        c.name,
+                                        undefined,
+                                        undefined,
+                                        singleClassAssignment?.teacherId
+                                      )
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg border border-[#7a1230]/30 text-[#7a1230] text-[12px] font-medium hover:bg-[#fbeef1] hover:border-[#7a1230] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors shrink-0 cursor-pointer"
+                                  >
+                                    Reassign
+                                  </button>
+                                )}
+                              </>
+                            ) : canManageClasses ? (
                               <button
-                                onClick={() => openHistoryModal(c.id, c.name, undefined, undefined)}
-                                title="Assignment History"
-                                className="p-0.5 text-outline hover:text-primary cursor-pointer"
+                                type="button"
+                                onClick={() =>
+                                  openAssignModal(
+                                    c.id,
+                                    c.name,
+                                    undefined,
+                                    undefined,
+                                    singleClassAssignment?.teacherId
+                                  )
+                                }
+                                className="px-2.5 py-1.5 rounded-lg border border-[#7a1230]/30 text-[#7a1230] text-[12px] font-medium hover:bg-[#fbeef1] hover:border-[#7a1230] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors cursor-pointer"
                               >
-                                <span className="material-symbols-outlined text-[14px]">history</span>
+                                Assign teacher
                               </button>
-                            </div>
+                            ) : (
+                              <span className="text-[12px] text-[#6b7280]">No class teacher assigned</span>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-surface-container flex justify-between items-center">
+                  {/* Footer */}
+                  <div className="mt-4 pt-3.5 border-t border-[#eceef3] flex items-center justify-between gap-2">
                     {canManageClasses ? (
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedClassId(c.id);
                           setIsAddStreamOpen(true);
                         }}
-                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#7a1230] hover:bg-[#5f0e26] text-white text-[12px] font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/50 transition-colors cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[14px]">add</span>
-                        <span>Add Stream</span>
+                        <span className="material-symbols-outlined text-[16px]">add</span>
+                        <span>Add stream</span>
                       </button>
-                    ) : <div />}
-                    <div className="flex items-center gap-2">
-                      {canManageClasses && (
-                        <button
-                          onClick={() => handleDeleteClass(c.id, c.name)}
-                          title="Delete Class"
-                          className="text-xs text-outline hover:text-error hover:bg-error/10 p-1 rounded transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">delete</span>
-                          <span>Delete</span>
-                        </button>
-                      )}
-                      <span className="text-[10px] text-outline font-data-mono">{c.id}</span>
-                    </div>
+                    ) : (
+                      <div />
+                    )}
+                    {canManageClasses && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClass(c.id, c.name)}
+                        aria-label="Delete class"
+                        title="Delete class"
+                        className="min-w-[34px] min-h-[34px] flex items-center justify-center rounded-lg text-[#6b7280] hover:text-red-600 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7a1230]/40 transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

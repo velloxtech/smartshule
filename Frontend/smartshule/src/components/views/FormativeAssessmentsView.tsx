@@ -222,33 +222,25 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-primary to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
         <div>
-          <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant mb-1">
-            <span>Academics</span>
-            <span>/</span>
-            <span>CBE Assessment System</span>
-            <span>/</span>
-            <span className="text-primary font-bold">Formative Assessments</span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-rose-200 uppercase tracking-wider mb-1">
+            <span className="material-symbols-outlined text-sm">school</span>
+            Academics / CBE Assessment System / Formative Assessments
           </div>
-          <h1 className="text-2xl font-black text-on-surface flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-primary text-[28px]">fact_check</span>
-            <span>Formative Assessments (Continuous CATs & SBAs)</span>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[32px] text-rose-200">fact_check</span>
+            <span>Formative Assessments (Continuous CATs &amp; SBAs)</span>
           </h1>
-          <p className="text-xs text-on-surface-variant mt-1 max-w-2xl leading-relaxed">
-            {isParent
-              ? 'Continuous classroom observation rubrics, CAT scores, and core competencies recorded by teachers for your child against KICD sub-strands.'
-              : 'Continuous Assessment Tests (CATs), classroom observation rubrics, practical tasks, and competency evaluations recorded against KICD sub-strands.'}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('summative-assessments')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
             >
-              <span className="material-symbols-outlined text-[18px] text-primary">military_tech</span>
+              <span className="material-symbols-outlined text-[18px]">military_tech</span>
               <span>Go to Summative Exams</span>
             </button>
           )}
@@ -256,7 +248,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
           {!isParent && (
             <button
               onClick={onOpenNewAssessment}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-container text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-rose-50 text-primary text-xs font-black rounded-xl shadow-lg transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
               <span>Record Formative Rubric (CAT)</span>

@@ -611,14 +611,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
               Faculty & Staff Management Registry
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed border border-primary text-on-primary-fixed text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[14px]">verified</span>
-              <span>Article 237 (TSC) & Chapter 6 Compliant</span>
-            </span>
           </div>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Teaching faculty and non-teaching operational personnel, stream allocations, profile records verification, and correction approvals.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

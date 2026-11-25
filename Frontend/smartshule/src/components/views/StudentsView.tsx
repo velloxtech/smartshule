@@ -227,14 +227,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
               CBE Learner Directory & Profiles
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[14px]">verified</span>
-              <span>Articles 53 & 54 Compliant</span>
-            </span>
           </div>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Ministry of Education NEMIS & Biometric verified student registry · Constitution of Kenya 2010
-          </p>
         </div>
 
         {!isTeacher && (
