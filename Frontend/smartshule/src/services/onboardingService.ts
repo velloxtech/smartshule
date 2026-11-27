@@ -447,6 +447,29 @@ Email: ${senderEmail}`,
     return updatedRecord;
   },
 
+  updateStatus: (
+    id: string,
+    action: string,
+    options?: { reviewerName?: string; reviewerRole?: string; notes?: string; assignedAdmNo?: string }
+  ) => {
+    if (action === 'APPROVED') {
+      return onboardingService.approveOnboarding(
+        id,
+        options?.reviewerName || 'Admissions Director',
+        options?.reviewerRole || 'Admissions Officer',
+        options?.notes,
+        options?.assignedAdmNo
+      );
+    } else {
+      return onboardingService.rejectOnboarding(
+        id,
+        options?.reviewerName || 'Admissions Director',
+        options?.reviewerRole || 'Admissions Officer',
+        options?.notes || 'Application declined.'
+      );
+    }
+  },
+
   scheduleStep: (
     id: string,
     details: {

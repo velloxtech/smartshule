@@ -752,6 +752,10 @@ const coreApiService = {
     });
   },
 
+  getTermsByYear: async (yearId: string): Promise<ApiResponse<AcademicTerm[]>> => {
+    return apiFetch<ApiResponse<AcademicTerm[]>>(`/academics/terms/by-year/${yearId}`);
+  },
+
   getTerms: async (yearId?: string): Promise<ApiResponse<AcademicTerm[]>> => {
     if (yearId) {
       return apiFetch<ApiResponse<AcademicTerm[]>>(`/academics/terms/by-year/${yearId}`);
@@ -880,7 +884,7 @@ const coreApiService = {
     name: string;
     code: string;
     gradeLevel: string;
-    educationLevel: string;
+    educationLevel?: string;
     isElective?: boolean;
     schoolId: string;
     teacherId?: string;
@@ -2342,7 +2346,7 @@ const coreApiService = {
     });
   },
 
-  previewCreditUtilization: async (data: { studentId: string; amountToApply?: number; schoolId?: string }): Promise<ApiResponse<any>> => {
+  previewCreditUtilization: async (data: { studentId: string; amount?: number; amountToApply?: number; schoolId?: string }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/credit-utilization/preview', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -2351,6 +2355,7 @@ const coreApiService = {
 
   adminInitiateCreditUtilization: async (data: {
     studentId: string;
+    amount?: number;
     amountToApply?: number;
     targetInvoiceId?: string;
     reason: string;

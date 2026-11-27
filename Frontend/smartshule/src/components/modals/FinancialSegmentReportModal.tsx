@@ -49,8 +49,8 @@ export const FinancialSegmentReportModal: React.FC<FinancialSegmentReportModalPr
   };
 
   // Placeholder data structures – adjust according to real API shape
-  const incomeSegments = analytics?.finance?.income || [];
-  const expenditureSegments = analytics?.finance?.expenditure || [];
+  const incomeSegments = (analytics?.finance as any)?.income || [];
+  const expenditureSegments = (analytics?.finance as any)?.expenditure || [];
 
   return isOpen ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">

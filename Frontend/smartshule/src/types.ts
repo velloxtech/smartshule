@@ -275,6 +275,8 @@ export interface AuthUser {
   guardianId?: string;
 }
 
+export type User = AuthUser;
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -308,7 +310,7 @@ export interface Student {
   firstName?: string;
   middleName?: string;
   lastName?: string;
-  gender: 'Boy' | 'Girl' | 'MALE' | 'FEMALE';
+  gender: 'Boy' | 'Girl' | 'Male' | 'Female' | 'MALE' | 'FEMALE';
   grade: string;
   stream: string;
   guardianName: string;
@@ -480,6 +482,7 @@ export interface TeacherCorrectionRequest {
 }
 
 export interface TeacherProfileData {
+  assignedClassId?: string;
   id: string;
   userId: string;
   tscNumber?: string;
@@ -1031,10 +1034,7 @@ export interface LessonPlan {
   nonFormalActivity?: string;
   assessmentRubric?: {criterion:string; exceeds:string; meets:string; approaching:string; below:string}[];
 
-  weekNumber?: number;
-  lessonNumber?: number;
   lessonTime?: string;
-  pcis?: string[];
 
   id: string;
   teacherId: string;
@@ -1064,6 +1064,19 @@ export interface LessonPlan {
   reviewedAt?: string;
   reviewRemarks?: string;
   createdAt?: string;
+  weekNumber?: number;
+  lessonNumber?: number;
+  sessionTitle?: string;
+  learnerNeeds?: string;
+  pcis?: string[];
+  safetyRequirements?: string;
+  introduction?: { durationMinutes?: number; activities?: string } | string;
+  sessionReview?: { durationMinutes?: number; activities?: string } | string;
+  institutionName?: string;
+  gradeLevel?: string;
+  className?: string;
+  learningAreaName?: string;
+  teacherName?: string;
 }
 
 export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
