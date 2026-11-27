@@ -1,4 +1,5 @@
 export type TabType =
+  | 'document-serialization'
   | 'dashboard'
   | 'slot-applications'
   | 'onboard-queue'
@@ -237,6 +238,7 @@ export enum UserRole {
   BURSAR = 'BURSAR',
   ACCOUNTANT = 'ACCOUNTANT',
   TEACHER = 'TEACHER',
+  CURRICULUM_TEACHER = 'CURRICULUM_TEACHER',
   PARENT = 'PARENT',
   GUARDIAN = 'GUARDIAN',
   STUDENT = 'STUDENT',
@@ -881,6 +883,8 @@ export interface BackendSummativeAssessment {
 }
 
 export interface CBCReportCardData {
+  documentSerial?: string;
+  documentHash?: string;
   id: string;
   studentId: string;
   studentName?: string;
@@ -953,6 +957,8 @@ export interface SchemeEntry {
 }
 
 export interface SchemeOfWork {
+  documentSerial?: string;
+  documentHash?: string;
   id: string;
   teacherId: string;
   learningAreaId: string;
@@ -971,7 +977,7 @@ export interface SchemeOfWork {
   planningState?: {
     pacing?: {weeks:number;lessonsPerWeek:number};
     revision?: number;
-    coverageReviewStatus?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+    coverageReviewStatus?: 'SAVED' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
     submittedEntryIds?: string[];
     approvedEntryIds?: string[];
     allocations?: Array<{ lessons: number }>;
@@ -1017,6 +1023,8 @@ export interface LessonPlanStep {
 }
 
 export interface LessonPlan {
+  documentSerial?: string;
+  documentHash?: string;
   afterClassReport?: {className?:string;learningAreaName?:string;teachingStatus:string;outcomesCovered:string[];remainingWork?:string;notes:string;actualDate:string;submittedAt:string};
   otherLearningAreas?: string[];
   communityServiceActivities?: string;
@@ -1080,6 +1088,8 @@ export interface RecordOfWorkReflection {
 }
 
 export interface RecordOfWork {
+  documentSerial?: string;
+  documentHash?: string;
   planningLink?: {lessonPlanId?:string;schemeId:string;schemeEntryId:string;slotId:string};
   id: string;
   schoolId?: string;

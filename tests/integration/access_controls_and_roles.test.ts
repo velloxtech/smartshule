@@ -5,7 +5,7 @@ import { UserRole } from '../../src/core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { setupTestFixtures, setupTestRoleAccounts, fixtureLessonPlanPayload, fixtureRecordPayload } from '../helpers/testFixtures';
 
-describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
+describe('Access Controls, 8 Role Accounts & Immediate-use Lesson Plans', () => {
   let app: any;
   let container: AppContainer;
 
@@ -222,9 +222,9 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   });
 
   // =================================================================
-  // 3. LESSON PLAN SUBMISSION & APPROVAL WORKFLOW
+  // 3. LESSON PLANS WITHOUT APPROVAL
   // =================================================================
-  describe('3. Lesson Plan Submission & Approval Workflow', () => {
+  describe('3. Lesson Plans Without Approval', () => {
     let lessonPlanId: string;
 
     it('allows a teacher to create a lesson plan with initial status DRAFT', async () => {
@@ -239,114 +239,18 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       lessonPlanId = res.body.data.id;
     });
 
-    it('allows a teacher to submit their lesson plan for review', async () => {
-      const res = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
-        .set('Authorization', `Bearer ${teacherToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('SUBMITTED');
+    it('keeps saved lesson plans usable without a separate approval', async () => {
+      const res=await request(app).post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`).set('Authorization',`Bearer ${teacherToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.message||res.body.error?.message||'').toContain('do not require approval');
+      const saved=await request(app).get(`/api/v1/curriculum/lesson-plans/${lessonPlanId}`).set('Authorization',`Bearer ${teacherToken}`);
+      expect(saved.status).toBe(200);expect(saved.body.data.status).toBe('DRAFT');
     });
-
-    it('denies approval from unauthorized roles (e.g. Bursar or Parent)', async () => {
-      const deniedTokens = [bursarToken, parentToken];
-
-      for (const token of deniedTokens) {
-        const res = await request(app)
-          .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
-          .set('Authorization', `Bearer ${token}`)
-          .send({
-            approved: true,
-            remarks: 'Illegal approval attempt'
-          });
-
-        expect(res.status).toBe(403);
+    it('rejects obsolete lesson-plan approval actions from leadership', async () => {
+      for(const token of [deputyToken,headTeacherToken,superAdminToken,adminToken]){
+        const res=await request(app).post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`).set('Authorization',`Bearer ${token}`).send({approved:true,remarks:'Obsolete approval'});
+        expect(res.status).toBe(400);
       }
-    });
-
-    it('allows Deputy Head Teacher to approve the submitted lesson plan', async () => {
-      const res = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
-        .set('Authorization', `Bearer ${deputyToken}`)
-        .send({
-          approved: true,
-          remarks: 'Approved by Deputy Head Teacher. Excellent CBC learner-centered activities.'
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('APPROVED');
-      expect(res.body.data.reviewRemarks).toContain('Deputy Head Teacher');
-    });
-
-    it('allows Head Teacher to return a newly submitted plan without reopening an approved plan', async () => {
-      const blocked = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
-        .set('Authorization', `Bearer ${teacherToken}`);
-      expect(blocked.status).toBe(400);
-      const draft = await request(app)
-        .post('/api/v1/curriculum/lesson-plans')
-        .set('Authorization', `Bearer ${teacherToken}`)
-        .send(await fixtureLessonPlanPayload(container));
-      expect(draft.status).toBe(201);
-      lessonPlanId = draft.body.data.id;
-      const submitted = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
-        .set('Authorization', `Bearer ${teacherToken}`);
-      expect(submitted.status).toBe(200);
-
-      const res = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
-        .set('Authorization', `Bearer ${headTeacherToken}`)
-        .send({
-          approved: false,
-          remarks: 'Please add more formative assessment rubrics for step 2.'
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.status).toBe('REJECTED');
-      expect(res.body.data.reviewRemarks).toContain('formative assessment rubrics');
-    });
-
-    it('allows Super Admin and Admin to review lesson plans as well', async () => {
-      const submitted = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
-        .set('Authorization', `Bearer ${teacherToken}`);
-      expect(submitted.status).toBe(200);
-      // Super Admin approval
-      const resSa = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
-        .set('Authorization', `Bearer ${superAdminToken}`)
-        .send({
-          approved: true,
-          remarks: 'Super Admin executive approval.'
-        });
-
-      expect(resSa.status).toBe(200);
-      expect(resSa.body.data.status).toBe('APPROVED');
-
-      // Admin approval
-      const adminDraft = await request(app)
-        .post('/api/v1/curriculum/lesson-plans')
-        .set('Authorization', `Bearer ${teacherToken}`)
-        .send(await fixtureLessonPlanPayload(container));
-      expect(adminDraft.status).toBe(201);
-      lessonPlanId = adminDraft.body.data.id;
-      const adminSubmitted = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/submit`)
-        .set('Authorization', `Bearer ${teacherToken}`);
-      expect(adminSubmitted.status).toBe(200);
-      const resAdmin = await request(app)
-        .post(`/api/v1/curriculum/lesson-plans/${lessonPlanId}/review`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          approved: true,
-          remarks: 'School Admin approval.'
-        });
-
-      expect(resAdmin.status).toBe(200);
-      expect(resAdmin.body.data.status).toBe('APPROVED');
     });
   });
 

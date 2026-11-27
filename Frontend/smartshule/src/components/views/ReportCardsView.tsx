@@ -1,3 +1,4 @@
+import {resolveReportDocumentSerial} from '../../utils/reportDocumentSerial';
 import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -115,6 +116,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [learningAreas, setLearningAreas] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [outputBusy, setOutputBusy] = useState(false);
+  const [outputError, setOutputError] = useState('');
 
   const { user, activeViewMode } = useAuth();
   const isParent =
@@ -762,7 +765,21 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const reportTitleBarText = `SUMMATIVE ASSESMENT REPORT TERM ${activeTermNumber || 3} ${currentYear?.name || currentYear?.year || 2026}`;
 
-  const buildReportCardPrintHTML = (termName: string, yearName: string) => {
+  const withReportSerial = async (output:(serial:string)=>void|Promise<void>) => {
+    if (!student || loading || outputBusy) return;
+    setOutputBusy(true); setOutputError('');
+    try {
+      const termId=selectedTermId||currentTerm?.id;
+      const yearId=currentYear?.id;
+      if(!termId||!yearId)throw new Error('Select an academic year and term before printing.');
+      const report=await resolveReportDocumentSerial(reportCardData,{studentId:student.id,termId,academicYearId:yearId},()=>apiService.getReportCard(student.id,termId,yearId));
+      setReportCardData(report);
+      await output(report.documentSerial!);
+    } catch(error:any) { setOutputError(error.message||'The report could not be prepared. Please try again.'); }
+    finally { setOutputBusy(false); }
+  };
+
+  const buildReportCardPrintHTML = (termName: string, yearName: string, serial: string) => {
     if (!student) return '';
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1035,6 +1052,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         ${reportTitleBarText}
       </div>
 
+      <div class="document-serial" style="font-size:8pt;font-weight:700;margin:0 0 6px;overflow-wrap:anywhere;">Document serial: ${serial}</div>
+
       <div class="student-info-box">
         <div class="bio-row ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'has-house' : 'no-house'}">
           <div><span class="label">Student Name:</span> <span class="val">${student?.name || 'N/A'}</span></div>
@@ -1159,12 +1178,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 </html>`;
   };
 
-  const handlePrint = () => {
+  const handlePrint = () => withReportSerial(serial => {
     if (!student) return;
     const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
     const termName = activeTerm?.name || 'Term 3';
     const yearName = resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id);
-    const htmlContent = buildReportCardPrintHTML(termName, yearName);
+    const htmlContent = buildReportCardPrintHTML(termName, yearName, serial);
 
     const oldFrame = document.getElementById('smartshule-print-frame');
     if (oldFrame && oldFrame.parentNode) {
@@ -1200,7 +1219,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     } else {
       window.print();
     }
-  };
+  });
 
   const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
     const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
@@ -1223,7 +1242,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     return null;
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => withReportSerial(async serial => {
     if (!student) return;
     const activeTerm = availableTerms.find((t) => t.id === selectedTermId) || currentTerm;
     const termName = activeTerm?.name || 'Term 3';
@@ -1264,7 +1283,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setTextColor(255, 255, 255);
     doc.text(reportTitleBarText, 105, curY + 4.5, { align: 'center' });
 
-    curY += 8.5;
+    curY += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Document serial: ${serial}`, 14, curY);
+    curY += 4;
 
     doc.setDrawColor(180, 190, 200);
     doc.setLineWidth(0.4);
@@ -1512,7 +1536,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.text('Official Summative Assessment Report', 196, footerY + 6, { align: 'right' });
 
     doc.save(`Grace_Seeds_School_Report_Card_${student?.admNo || 'learner'}_${(student?.name || 'learner').replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
-  };
+  });
 
   if (isParent && checkingClearance) {
     return (
@@ -1736,6 +1760,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handlePrint}
+              disabled={loading||outputBusy}
               className="px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Download or print report card with centered school logo"
             >
@@ -1745,6 +1770,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
             <button
               onClick={handleExportPDF}
+              disabled={loading||outputBusy}
               className="px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Download official CBC Report Card as PDF document"
             >
@@ -1764,6 +1790,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             )}
           </div>
         </div>
+
+        {outputError&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{outputError}</p>}
+        {outputBusy&&<p role="status" className="text-sm text-on-surface-variant">Preparing the registered report for download or print…</p>}
 
         {/* Search & Selection Strip */}
         <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3 shadow-xs flex flex-wrap items-center gap-3">
@@ -1913,6 +1942,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="w-full bg-[#1e293b] text-white py-1.5 px-3 text-center font-black tracking-wider text-xs sm:text-sm print:text-[9pt] uppercase my-2 rounded-xs shadow-xs">
             {reportTitleBarText}
           </div>
+
+          {reportCardData?.documentSerial&&<p className="mb-2 break-all text-xs font-semibold print:text-[8pt]">Document serial: {reportCardData.documentSerial}</p>}
 
           {/* Student Bio & Summary Box */}
           <div className="border border-gray-400 rounded-sm mb-3 text-xs print:text-[8pt] divide-y divide-gray-300">

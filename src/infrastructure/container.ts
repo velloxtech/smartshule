@@ -1,3 +1,4 @@
+import {DocumentRegistry, MemoryDocumentRegistry} from '../application/documents/DocumentRegistry';
 import {IStaffMessageRepository} from '../core/ports/repositories/IStaffMessageRepository';
 import {InMemoryStaffMessageRepository} from './database/in-memory/InMemoryStaffMessageRepository';
 import {StaffMessagingUseCases} from '../application/messaging/StaffMessagingUseCases';
@@ -159,6 +160,7 @@ export class AppContainer {
   public occurrenceRepository: IOccurrenceRepository;
   public curriculumTrackerRepository: ICurriculumTrackerRepository;
   public studentSponsorshipRepository: IStudentSponsorshipRepository;
+  public documentRegistry: DocumentRegistry;
   public signatureRepository: ISignatureRepository;
   public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
   public financialApprovalRepository: IFinancialApprovalRepository;
@@ -254,6 +256,7 @@ export class AppContainer {
       customRepositories?.curriculumTrackerRepository || new InMemoryCurriculumTrackerRepository();
     this.studentSponsorshipRepository =
       customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
+    this.documentRegistry = customRepositories?.documentRegistry || new MemoryDocumentRegistry();
     this.signatureRepository =
       customRepositories?.signatureRepository || new InMemorySignatureRepository();
     this.biometricCredentialRepository = customRepositories?.biometricCredentialRepository || new InMemoryBiometricCredentialRepository();

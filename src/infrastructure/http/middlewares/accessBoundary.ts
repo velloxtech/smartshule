@@ -55,6 +55,14 @@ export function createAccessBoundary(c:AppContainer) {
         if(req.method==='POST'&&path==='/auth/change-password')return next();
         throw new ForbiddenError('This function is restricted to authorized staff or guardians.');
       }
+      if(actor.role===UserRole.CURRICULUM_TEACHER){
+        const read=req.method==='GET';
+        const allowed=(read&&/^\/(curriculum(?:\/|$)|documents(?:\/|$)|academics\/(school|context|years|terms|classes|streams|learning-areas)(?:\/|$)|cbc\/(strands|sub-strands)(?:\/|$)|auth\/profile$)/.test(path)) ||
+          (req.method==='POST'&&/^\/curriculum\/(schemes\/[^/]+\/(review|weekly\/review)|records-of-work\/[^/]+\/(approve|return))$/.test(path)) ||
+          (req.method==='POST'&&path==='/auth/change-password');
+        if(!allowed)throw new ForbiddenError('Curriculum teachers can only view curriculum documents and approve schemes and records of work.');
+        return next();
+      }
       if(!parentRoles.includes(actor.role))return next();
       const read=req.method==='GET';
       const allowed =

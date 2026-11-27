@@ -201,7 +201,7 @@ export class CurriculumPlanUseCases {
   public async reviewScheme(schemeId: string, reviewerUserId: string, approved: boolean, remarks: string, actor?: AcademicActor) {
     const scheme = await this.schemeRepository.findById(schemeId);
     if (!scheme) throw new NotFoundError('Scheme of Work', schemeId);
-    if (!actor || !['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(actor.role)) throw new ForbiddenError('Only school leadership can review schemes of work.');
+    if (!actor || !['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER','CURRICULUM_TEACHER'].includes(actor.role)) throw new ForbiddenError('Only school leadership can review schemes of work.');
     await this.authorize(scheme.toJSON(),actor);
 
     if (scheme.status !== SchemeStatus.SUBMITTED) throw new ValidationError('Only submitted schemes can be reviewed.');
@@ -334,40 +334,11 @@ export class CurriculumPlanUseCases {
   }
 
   public async submitLessonPlanForReview(lessonPlanId: string, actor?: AcademicActor) {
-    const plan = await this.lessonPlanRepository.findById(lessonPlanId);
-    if (!plan) throw new NotFoundError('Lesson Plan', lessonPlanId);
-    await this.authorize(await this.planScope(plan), actor);
-    if (!canPrepareCurriculum(actor?.role)) throw new ForbiddenError('Only the assigned teacher or a school administrator can submit this lesson plan for review.');
-    if (![LessonPlanStatus.DRAFT, LessonPlanStatus.REJECTED, LessonPlanStatus.RECORDED].includes(plan.status)) {
-      throw new ValidationError('Only a draft or returned lesson plan can be submitted.');
-    }
-    plan.submit();
-    await this.lessonPlanRepository.update(plan);
-    return plan.toJSON();
+    throw new ValidationError('Lesson plans do not require approval. Save the lesson plan and continue teaching.');
   }
 
   public async reviewLessonPlan(lessonPlanId: string, reviewerUserId: string, approved: boolean, remarks: string, actor?: AcademicActor) {
-    const plan = await this.lessonPlanRepository.findById(lessonPlanId);
-    if (!plan) throw new NotFoundError('Lesson Plan', lessonPlanId);
-    const reviewerRoles = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'];
-    if (!actor || !reviewerRoles.includes(actor.role)) throw new ForbiddenError('Only school leadership can review lesson plans.');
-    await this.authorize(await this.planScope(plan), actor);
-    if (plan.status !== LessonPlanStatus.SUBMITTED) throw new ValidationError('Only submitted lesson plans can be reviewed.');
-    if (approved) {
-      const p = plan.toJSON();
-      const complete = Boolean(p.strand?.trim() && p.subStrand?.trim()
-        && p.specificLearningOutcomes?.some(x => x.trim())
-        && p.steps?.length
-        && p.steps.every(step => step.teacherActivities?.trim() && step.learnerActivities?.trim() && step.durationMinutes > 0)
-        && p.steps.reduce((sum, step) => sum + step.durationMinutes, 0) === p.durationMinutes);
-      if (!complete) throw new ValidationError('Complete the lesson outcomes and every teaching step before approval.');
-      plan.approve(reviewerUserId, remarks);
-    } else {
-      if (!remarks?.trim()) throw new ValidationError('Add comments explaining what the teacher should revise.');
-      plan.reject(reviewerUserId, remarks.trim());
-    }
-    await this.lessonPlanRepository.update(plan);
-    return plan.toJSON();
+    throw new ValidationError('Lesson plans do not require approval. Only schemes and records of work are reviewed.');
   }
 
   public async rescheduleLessonPlan(id:string,actor?:AcademicActor){

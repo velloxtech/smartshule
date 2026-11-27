@@ -119,7 +119,7 @@ export class RecordOfWorkUseCases {
   }
 
   private isSupervisoryRole(role?: string): boolean {
-    return ['HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(role || '');
+    return ['HEAD_TEACHER', 'CURRICULUM_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(role || '');
   }
 
   /**

@@ -498,6 +498,8 @@ export interface TeacherAuthorizedContext {
 }
 
 const coreApiService = {
+  getDocumentRegistry: () => apiFetch<ApiResponse<any[]>>('/documents/registry'),
+  verifyDocumentSerial: (serial:string) => apiFetch<ApiResponse<any>>(`/documents/verify/${encodeURIComponent(serial.trim())}`),
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
     try {

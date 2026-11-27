@@ -11,7 +11,7 @@ export const matchesTeachingCohort = (a: {classRoomId?: string; streamId?: strin
 /** Grades 1–3 class teachers teach every learning area in their own assigned cohort. */
 export const teachesAllLowerPrimaryAreas = (gradeLevel: string, duties: {classRoomId?: string; streamId?: string}[], classId: string, streamId?: string) =>
   ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(gradeLevel) && duties.some(duty => matchesTeachingCohort(duty, classId, streamId));
-const supervisors = ['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'];
+const supervisors = ['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER','CURRICULUM_TEACHER'];
 export class TeacherAssignmentAccess {
   constructor(private academic: IAcademicRepository, private teachers: ITeacherRepository) {}
   async context(actor: AcademicActor, scope: TeachingScope = {}) {

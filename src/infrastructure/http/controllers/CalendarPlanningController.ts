@@ -47,6 +47,8 @@ export class CalendarPlanningController {
   const monitoring=z.enum(['scheme','monitoring']).default('scheme').parse(req.query.view)==='monitoring';
   const data=await this.c.termAllocations.weekly((req as any).user,String(req.params.id));
   if(!monitoring&&data.scheme.status==='APPROVED'&&data.scheme.planningState?.approvedEntryIds){const approved=new Set(data.scheme.planningState.approvedEntryIds);data.weeks=data.weeks.map(week=>({...week,lessons:week.lessons.filter((lesson:any)=>approved.has(lesson.entry?.id))})).filter(week=>week.lessons.length);}
+  const issued=await this.c.documentRegistry.issue((req as any).user.schoolId,monitoring?'WEEKLY_MONITORING':'WEEKLY_SCHEME',{...data,id:data.scheme.id,title:monitoring?'Weekly Syllabus Monitoring Register':'Weekly Scheme of Work'});
+  (data as any).documentSerial=issued.serial;
   res.setHeader('Cache-Control','private, no-store');
   res.setHeader('Content-Disposition',`attachment; filename="${monitoring?'Weekly_Syllabus_Monitoring_Register':'Schemes_of_Work'}.${format==='doc'?'docx':format}"`);
   res.type(format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -71,8 +73,7 @@ export class CalendarPlanningController {
   const record=await this.recordTeaching(a,{...body,lessonPlanId:id},true);
   const copy=record.toJSON().reflectionData?.lessonPlanSnapshot;
   const reflection=String(copy?.teacherSelfReflection||body.reflection);
-  let plan=await this.c.curriculumUseCases.updateLessonPlanReflection(id,reflection,a);
-  if(['DRAFT','REJECTED','RECORDED'].includes(plan.status))plan=await this.c.curriculumUseCases.submitLessonPlanForReview(id,a);
+  const plan=await this.c.curriculumUseCases.updateLessonPlanReflection(id,reflection,a);
   return {lessonPlan:plan,record:record.toJSON(),savedCopy:copy};
  });
  private async recordTeaching(a:AcademicActor,body:z.infer<typeof teachingReportSchema>,afterClass=false){

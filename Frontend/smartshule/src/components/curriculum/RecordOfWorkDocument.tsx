@@ -16,7 +16,7 @@ export function recordDocumentRows(records:RecordOfWork[]) {
       'General remarks':structured?.generalRemarks,'Homework':structured?.homeworkGiven,
       'Absent learners':structured?.absentLearnersCount,'Learners present':structured?.totalLearnersPresent,
     }).filter(([,value])=>value!==undefined&&value!=='').map(([label,value])=>`${label}: ${value}`)].filter(Boolean).join('\n');
-    return [record.lessonDate || '',[record.strand,record.subStrand].filter(Boolean).join(' / ') || record.lessonTopic || '',record.learningActivities || record.strandAndWorkCovered || record.comments || '',reflection];
+    return [record.lessonDate || '',[record.strand,record.subStrand].filter(Boolean).join(' / ') || record.lessonTopic || '',[record.learningActivities || record.strandAndWorkCovered || record.comments || '',`Document serial: ${record.documentSerial||'Not issued'}`].filter(Boolean).join('\n'),reflection];
   });
 }
 function documentMetadata(record:RecordOfWork) {

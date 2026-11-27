@@ -4,13 +4,14 @@ import { SchemesOfWorkView } from './SchemesView';
 
 type PageProps = { onNavigateTab?: (tab: string) => void };
 
-// Use the same responsive workflow on the web, desktop and mobile apps.
-export function SyllabusCoveragePlanView(props: PageProps) {
-  return <WebSyllabusCoveragePlanView {...props} mode="coverage" />;
-}
-export function CoverageTrackingView(props: PageProps) {
-  return <WebSyllabusCoveragePlanView {...props} mode="monitoring" />;
-}
-export function SchemeOfWorkBuilderView(props: PageProps) {
-  return <SchemesOfWorkView {...props} initialCreateOpen />;
-}
+export const SyllabusCoveragePlanView = (props: PageProps) => (
+  <WebSyllabusCoveragePlanView {...props} mode="coverage" />
+);
+
+export const CoverageTrackingView = (props: PageProps) => (
+  <WebSyllabusCoveragePlanView {...props} mode="monitoring" />
+);
+
+export const SchemeOfWorkBuilderView = (props: PageProps) => (
+  <SchemesOfWorkView {...props} initialCreateOpen />
+);

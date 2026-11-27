@@ -49,7 +49,7 @@ export interface SchemePlanningState {
   weeklyPlanningStarted?: boolean;
   submittedEntryIds?: string[];
   approvedEntryIds?: string[];
-  coverageReviewStatus?: 'DRAFT'|'SUBMITTED'|'APPROVED'|'REJECTED';
+  coverageReviewStatus?: 'SAVED' | 'DRAFT'|'SUBMITTED'|'APPROVED'|'REJECTED';
   coverageReviewRemarks?: string;
   coverageReviewedByUserId?: string;
   coverageReviewedAt?: string;

@@ -39,30 +39,23 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
   });
 
   const saveCoverage = () => c.termAllocations.saveDraft(teacher, scope, [{ subStrandId: 'weekly-sub', lessons: 2 }], 0);
-  const approveCoverage = async () => {
-    const saved = await saveCoverage();
-    const submitted = await c.termAllocations.submitCoverage(teacher, saved.scheme.id, saved.scheme.planningState!.revision);
-    return c.termAllocations.reviewCoverage(admin, saved.scheme.id, submitted.scheme.planningState!.revision, true, 'Coverage approved');
-  };
+  const saveReadyCoverage = saveCoverage;
   const prepare = async () => {
-    const approved = await approveCoverage();
+    const approved = await saveReadyCoverage();
     return c.termAllocations.prepareWeekly(teacher, approved.scheme.id, approved.scheme.planningState!.revision);
   };
 
-  it('saves only coverage allocations and leaves weekly entries empty even after coverage approval', async () => {
-    const approved = await approveCoverage();
+  it('saves syllabus allocations ready for weekly preparation without an approval', async () => {
+    const approved = await saveReadyCoverage();
     expect(approved.scheme.entries).toEqual([]);
     expect(approved.scheme.status).toBe('DRAFT');
-    expect(approved.scheme.planningState!.coverageReviewStatus).toBe('APPROVED');
+    expect(approved.scheme.planningState!.coverageReviewStatus).toBe('SAVED');
     expect(approved.scheme.planningState!.weeklyPlanningStarted).toBeUndefined();
   });
 
-  it('allows draft preparation before coverage approval but requires approval before submission', async () => {
+  it('allows scheme preparation directly from saved coverage and still requires completed scheme content', async () => {
     const saved = await saveCoverage();
     const draft = await c.termAllocations.prepareWeekly(teacher, saved.scheme.id, 1);
-    await expect(c.termAllocations.submitWeekly(teacher, saved.scheme.id, 2)).rejects.toThrow('coverage must be approved');
-    await c.termAllocations.submitCoverage(teacher, saved.scheme.id, 2);
-    await c.termAllocations.reviewCoverage(admin, saved.scheme.id, 3, true, 'Approved');
     expect(draft.scheme.status).toBe('DRAFT');
     expect(draft.scheme.planningState!.locked).toBe(false);
     expect(draft.scheme.entries).toHaveLength(2);
@@ -70,7 +63,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     const weekly = await c.termAllocations.weekly(teacher, saved.scheme.id);
     expect(weekly.weeks).toHaveLength(2);
     expect(weekly.weeks.every(week => week.lessons.length === 1)).toBe(true);
-    await expect(c.termAllocations.submitWeekly(teacher, saved.scheme.id, 4)).rejects.toThrow('Complete at least one scheduled weekly lesson');
+    await expect(c.termAllocations.submitWeekly(teacher, saved.scheme.id, 2)).rejects.toThrow('Complete at least one scheduled weekly lesson');
   });
 
   it('saves one weekly lesson without changing coverage, other lessons, stable IDs or approval status', async () => {
@@ -80,7 +73,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(saved.scheme.entries[0]).toEqual({ ...before.entries[0], ...content });
     expect(saved.scheme.entries[1]).toEqual(before.entries[1]);
     expect(saved.scheme.planningState!.allocations).toEqual(before.planningState!.allocations);
-    expect(saved.scheme.planningState!.coverageReviewStatus).toBe('APPROVED');
+    expect(saved.scheme.planningState!.coverageReviewStatus).toBe('SAVED');
     await expect(c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, draft.scheme.entries[0].id, before.planningState!.revision, content)).rejects.toThrow('Planning changed');
   });
 
@@ -116,7 +109,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(weekly.weeks[0].lessons[0].statuses).toEqual({ planned: true, reported: false, taught: false, reflection: false });
     const reopened = await c.termAllocations.reopen(teacher, draft.scheme.id, (await c.schemeOfWorkRepository.findById(draft.scheme.id))!.planningState!.revision, 'Review future coverage without changing the existing lesson');
     const resubmitted = await c.termAllocations.submitCoverage(teacher, draft.scheme.id, reopened.scheme.planningState!.revision);
-    const reapproved = await c.termAllocations.reviewCoverage(admin, draft.scheme.id, resubmitted.scheme.planningState!.revision, true, 'Coverage retained');
+    const reapproved = resubmitted;
     await expect(c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, lesson.id, reapproved.scheme.planningState!.revision, content)).rejects.toThrow('already approved');
   });
 
@@ -130,7 +123,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     await c.curriculumUseCases.reviewScheme(draft.scheme.id, admin.userId, false, 'Add practical activities', admin);
     const revised = await c.termAllocations.saveWeeklyLesson(teacher, draft.scheme.id, ids[0], submitted.planningState!.revision, { ...content, learningExperiences: ['Compare real fraction pieces'] });
     expect(revised.scheme.entries.map(entry => entry.id)).toEqual(ids);
-    expect(revised.scheme.planningState!.coverageReviewStatus).toBe('APPROVED');
+    expect(revised.scheme.planningState!.coverageReviewStatus).toBe('SAVED');
     expect(revised.scheme.entries[1].learningExperiences).toEqual(content.learningExperiences);
     expect(revised.scheme.status).toBe('DRAFT');
   });
@@ -140,8 +133,8 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     const scheme = (await c.schemeOfWorkRepository.findById(draft.scheme.id))!;
     scheme.updateEntry(scheme.entries[0].id, { ...scheme.entries[0], subStrandId: 'outside-approved-coverage', ...content });
     await c.schemeOfWorkRepository.update(scheme);
-    await expect(c.curriculumUseCases.submitSchemeForReview(scheme.id, teacher)).rejects.toThrow('approved syllabus coverage');
-    await expect(c.termAllocations.submitWeekly(teacher, scheme.id, scheme.planningState!.revision)).rejects.toThrow('approved syllabus coverage');
+    await expect(c.curriculumUseCases.submitSchemeForReview(scheme.id, teacher)).rejects.toThrow('saved syllabus coverage');
+    await expect(c.termAllocations.submitWeekly(teacher, scheme.id, scheme.planningState!.revision)).rejects.toThrow('saved syllabus coverage');
   });
 
   it('retains the review path for historical schemes predating coverage-review metadata', async () => {
@@ -208,7 +201,7 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     await c.CBCAssessmentRepository.saveSubStrand(SubStrand.create({ strandId: 'weekly-strand', code: 'D1', title: 'Decimals', specificLearningOutcomes: ['Compare decimals'] }, 'later-sub'));
     const saved = await c.termAllocations.saveDraft(teacher, scope, [{ subStrandId: 'weekly-sub', lessons: 1 }, { subStrandId: 'later-sub', lessons: 1 }], 0);
     const submitted = await c.termAllocations.submitCoverage(teacher, saved.scheme.id, saved.scheme.planningState!.revision);
-    const approved = await c.termAllocations.reviewCoverage(admin, saved.scheme.id, submitted.scheme.planningState!.revision, true, 'Flexible pacing approved');
+    const approved = submitted;
     return c.termAllocations.prepareWeekly(teacher, approved.scheme.id, approved.scheme.planningState!.revision);
   };
 
@@ -262,16 +255,13 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(repeated.status).toBe(409);
   });
 
-  it.each([UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER])('allows %s to approve both submitted coverage and the selected scheme sessions through HTTP', async role => {
+  it.each([UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.CURRICULUM_TEACHER])('allows %s to approve selected scheme sessions through HTTP without syllabus approval', async role => {
     const app = createExpressApp(c);
     const reviewer = { userId: `reviewer-${role}`, role, schoolId: teacher.schoolId, email: 'reviewer@example.test' };
     await c.userRepository.save(User.create({ email: reviewer.email, firstName: 'Weekly', lastName: 'Reviewer', role, status: UserStatus.ACTIVE, schoolId: reviewer.schoolId, passwordHash: 'test-only' }, reviewer.userId));
     const token = `Bearer ${c.tokenService.generateAccessToken(reviewer)}`;
     const saved = await saveCoverage();
-    const pending = await c.termAllocations.submitCoverage(teacher, saved.scheme.id, saved.scheme.planningState!.revision);
-    const coverage = await request(app).post(`/api/v1/curriculum/schemes/${saved.scheme.id}/allocations/review?${query}`).set('Authorization', token).send({ revision: pending.scheme.planningState!.revision, approved: true, remarks: 'Coverage checked' });
-    expect(coverage.status).toBe(200);
-    let draft = await c.termAllocations.prepareWeekly(teacher, saved.scheme.id, coverage.body.data.scheme.planningState.revision);
+    let draft = await c.termAllocations.prepareWeekly(teacher, saved.scheme.id, saved.scheme.planningState!.revision);
     draft = await c.termAllocations.saveWeeklyLesson(teacher, saved.scheme.id, draft.scheme.entries[0].id, draft.scheme.planningState!.revision, content);
     await c.termAllocations.submitWeekly(teacher, saved.scheme.id, draft.scheme.planningState!.revision, [draft.scheme.entries[0].id]);
     const reviewed = await request(app).post(`/api/v1/curriculum/schemes/${saved.scheme.id}/review?${query}`).set('Authorization', token).send({ approved: true, remarks: 'Submitted session checked' });
@@ -299,4 +289,66 @@ describe('Saved syllabus coverage → weekly scheme → lesson plan', () => {
     expect(saved.status).toBe(200);
     expect(saved.body.data.scheme.entries[0].subStrandId).toBe('weekly-sub');
   });
+  const curriculumReviewer = async () => {
+    const reviewer={userId:'curriculum-reviewer',role:UserRole.CURRICULUM_TEACHER,schoolId:teacher.schoolId,email:'curriculum@example.test'};
+    await c.userRepository.save(User.create({...reviewer,firstName:'Curriculum',lastName:'Teacher',status:UserStatus.ACTIVE,passwordHash:'test-only'},reviewer.userId));
+    return `Bearer ${c.tokenService.generateAccessToken(reviewer)}`;
+  };
+
+  it('restricts curriculum teachers to document reads and scheme/record review actions',async()=>{
+    const token=await curriculumReviewer();const app=createExpressApp(c);const saved=await saveCoverage();
+    expect((await request(app).get(`/api/v1/curriculum/schemes?${query}`).set('Authorization',token)).status).toBe(200);
+    for(const path of ['/finance/payments','/auth/users','/students','/analytics/dashboard','/signatures/policies']){
+      expect((await request(app).get('/api/v1'+path).set('Authorization',token)).status).toBe(403);
+    }
+    expect((await request(app).delete(`/api/v1/curriculum/schemes/${saved.scheme.id}`).set('Authorization',token)).status).toBe(403);
+    expect((await request(app).put('/api/v1/curriculum/planning/allocations').set('Authorization',token).send({})).status).toBe(403);
+    expect((await request(app).post('/api/v1/auth/register').send({email:'self-reviewer@example.test',password:'StrongPass123!',firstName:'Self',lastName:'Reviewer',role:UserRole.CURRICULUM_TEACHER})).status).toBe(403);
+  });
+
+  it('serializes trusted document versions and retains the serial after the source is deleted',async()=>{
+    const token=await curriculumReviewer();const app=createExpressApp(c);const saved=await saveCoverage();
+    const path=`/api/v1/curriculum/schemes/${saved.scheme.id}?${query}`;
+    const first=await request(app).get(path).set('Authorization',token);
+    expect(first.status).toBe(200);const serial=first.body.data.documentSerial;expect(serial).toMatch(/^[0-9][A-Z][0-9]{2}[A-Z][0-9][A-Z][0-9]{2}$/);
+    const second=await request(app).get(path).set('Authorization',token);expect(second.body.data.documentSerial).toBe(serial);
+    const verified=await request(app).get(`/api/v1/documents/verify/${serial.toLowerCase()}`).set('Authorization',token);
+    expect(verified.body.data.registered).toBe(true);expect(verified.body.data.snapshot.id).toBe(saved.scheme.id);
+    expect((await request(app).get('/api/v1/documents/verify/SS-FORGED').set('Authorization',token)).body.data.registered).toBe(false);
+    await c.schemeOfWorkRepository.delete(saved.scheme.id);
+    expect((await request(app).get(`/api/v1/documents/verify/${serial}`).set('Authorization',token)).body.data.registered).toBe(true);
+    const list=await request(app).get('/api/v1/documents/registry').set('Authorization',token);expect(list.body.data.some((row:any)=>row.serial===serial)).toBe(true);
+    await request(app).delete(`/api/v1/documents/registry/${serial}`).set('Authorization',token);
+    expect((await c.documentRegistry.find(teacher.schoolId,serial))?.documentId).toBe(saved.scheme.id);
+    const other={userId:'other-reviewer',role:UserRole.CURRICULUM_TEACHER,schoolId:'other-school',email:'other@example.test'};
+    await c.userRepository.save(User.create({...other,firstName:'Other',lastName:'Teacher',status:UserStatus.ACTIVE,passwordHash:'test-only'},other.userId));
+    const otherToken=`Bearer ${c.tokenService.generateAccessToken(other)}`;
+    expect((await request(app).get(`/api/v1/documents/verify/${serial}`).set('Authorization',otherToken)).body.data.registered).toBe(false);
+  });
+
+  it('rejects obsolete lesson-plan and syllabus review actions',async()=>{
+    const app=createExpressApp(c);const token=`Bearer ${c.tokenService.generateAccessToken({...admin,email:'admin@example.test'})}`;
+    const saved=await saveCoverage();
+    const coverage=await request(app).post(`/api/v1/curriculum/schemes/${saved.scheme.id}/allocations/review?${query}`).set('Authorization',token).send({revision:saved.scheme.planningState!.revision,approved:true,remarks:'Obsolete approval'});
+    expect(coverage.status).toBe(400);
+    expect((await request(app).post('/api/v1/curriculum/lesson-plans/any/submit').set('Authorization',auth())).status).toBe(400);
+    expect((await request(app).post('/api/v1/curriculum/lesson-plans/any/review').set('Authorization',token).send({approved:true,remarks:'Obsolete approval'})).status).toBe(400);
+  });
+
+  it('delegates scheme and record approvals to curriculum teachers within the same school',async()=>{
+    await curriculumReviewer();
+    const reviewer={userId:'curriculum-reviewer',role:UserRole.CURRICULUM_TEACHER,schoolId:teacher.schoolId};
+    let draft=await prepare();
+    draft=await c.termAllocations.saveWeeklyLesson(teacher,draft.scheme.id,draft.scheme.entries[0].id,draft.scheme.planningState!.revision,content);
+    await c.termAllocations.submitWeekly(teacher,draft.scheme.id,draft.scheme.planningState!.revision,[draft.scheme.entries[0].id]);
+    await expect(c.curriculumUseCases.reviewScheme(draft.scheme.id,reviewer.userId,true,'Checked',{...reviewer,schoolId:'other-school'})).rejects.toThrow();
+    const approved=await c.curriculumUseCases.reviewScheme(draft.scheme.id,reviewer.userId,true,'Checked',reviewer);
+    expect(approved.status).toBe('APPROVED');
+    const record=await c.recordOfWorkUseCases.createDiaryEntry({...scope,teacherId:teacher.userId,weekNumber:1,lessonDate:'2026-11-09',lessonPeriod:'1',strand:'Numbers',subStrand:'Fractions',lessonTopic:'Compare fractions',learningActivities:'Compare models',status:'SUBMITTED'},teacher);
+    await expect(c.recordOfWorkUseCases.approveDiaryEntry(record.id,{},teacher)).rejects.toThrow();
+    await expect(c.recordOfWorkUseCases.approveDiaryEntry(record.id,{}, {...reviewer,schoolId:'other-school'})).rejects.toThrow('School access denied');
+    const verified=await c.recordOfWorkUseCases.approveDiaryEntry(record.id,{remarks:'Teaching checked'},reviewer);
+    expect(verified.status).toBe('APPROVED');expect(verified.toJSON().reviewedByUserId).toBe(reviewer.userId);
+  });
+
 });

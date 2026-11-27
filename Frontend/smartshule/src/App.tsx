@@ -1,3 +1,4 @@
+import {DocumentSerializationView} from './components/views/DocumentSerializationView';
 import {AppErrorBoundary} from './components/common/AppErrorBoundary';
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { App as CapApp } from '@capacitor/app';
@@ -246,7 +247,7 @@ export default function App() {
 
           // 3. Return to Dashboard if inside portal on a sub-tab
           if (appView === 'portal' && currentTab !== 'dashboard') {
-            setCurrentTab('dashboard');
+            setCurrentTab(effectiveRole===UserRole.CURRICULUM_TEACHER?'schemes-lesson-plans':'dashboard');
             return;
           }
 
@@ -497,6 +498,7 @@ export default function App() {
             }
           }
           if (schRes?.data) safeSetSchool(schRes.data);
+          if (effectiveRole === UserRole.CURRICULUM_TEACHER) return;
 
           if (isParentOnly) {
             try {
@@ -1009,18 +1011,44 @@ export default function App() {
     );
   }
 
-  // Render Standalone Archived Records Page
+  // Keep the archive in the same navigation shell as the school portal.
   if (appView === 'archive') {
+    const clearArchiveRoute = () => {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('view') === 'archive') url.searchParams.delete('view');
+      url.hash = '';
+      window.history.pushState(null, '', url.pathname + url.search);
+    };
+    const navigateFromArchive = (tab:TabType) => {
+      setMobileSidebarOpen(false);
+      if (tab === 'archived-records') return;
+      clearArchiveRoute();
+      if (tab === 'arrears') window.location.hash = '/arrears';
+      setCurrentTab(tab);
+      setAppView('portal');
+      window.scrollTo({top:0,behavior:'smooth'});
+    };
     return (
-      <StandaloneArchivedRecordsPage
-        onBackToPortal={() => {
-          setAppView('portal');
-          if (window.location.hash === '#/archive' || window.location.hash === '#/archived-records') {
-            window.history.pushState(null, '', window.location.pathname + window.location.search);
-          }
-        }}
-        onRefreshStudents={refreshStudentsAndFees}
-      />
+      <div className="min-h-screen bg-surface text-on-surface">
+        <div className="relative z-50 print:hidden"><Sidebar
+          currentTab="archived-records"
+          onSelectTab={navigateFromArchive}
+          mobileOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
+          onNavigateLanding={() => {clearArchiveRoute();setAppView('landing');}}
+          onOpenLegalModal={handleOpenLegalModal}
+          isCompact={isSidebarCompact}
+          onToggleCompact={handleToggleSidebarCompact}
+        /></div>
+        <div className={`min-w-0 transition-all duration-200 print:pl-0 ${isSidebarCompact ? 'lg:pl-20' : 'lg:pl-64'}`}>
+          <StandaloneArchivedRecordsPage
+            onBackToPortal={() => navigateFromArchive('dashboard')}
+            onRefreshStudents={refreshStudentsAndFees}
+            onToggleNavigation={() => setMobileSidebarOpen(true)}
+          />
+        </div>
+        <LegalModal isOpen={legalModalOpen} onClose={() => setLegalModalOpen(false)} initialTab={legalModalTab}/>
+      </div>
     );
   }
 
@@ -1547,6 +1575,7 @@ export default function App() {
           {currentTab === 'system-logs' && <SystemLogsView />}
           {currentTab === 'fee-deadline-banner' && <FeeDeadlineBannerManagementView />}
           {currentTab === 'sponsored-students' && <SponsoredStudentsView />}
+          {currentTab === 'document-serialization' && <DocumentSerializationView key={`${user?.id}:${user?.schoolId}:${effectiveRole}`} />}
           {currentTab === 'document-signing' && <DocumentSigningCenterView />}
           {currentTab === 'digital-signature' && <MyDigitalSignatureView />}
           {currentTab === 'teacher-profile' && <TeacherProfileView />}

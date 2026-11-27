@@ -1,3 +1,6 @@
+import {ForbiddenError} from '../../../core/domain/shared/Errors';
+import {AuthenticatedRequest} from '../middlewares/authMiddleware';
+import {documentSerialization} from '../middlewares/documentSerialization';
 import {requirePaymentWebhook} from '../middlewares/paymentWebhookAuth';
 import {createAccessBoundary,createFinanceAccessBoundary} from '../middlewares/accessBoundary';
 import {StaffMessagingController, SendStaffMessageSchema, ReadStaffMessagesSchema, BroadcastStaffMessageSchema} from '../controllers/StaffMessagingController';
@@ -265,6 +268,28 @@ export function createApiRouter(container: AppContainer): Router {
   },createAccessBoundary(container));
   router.use(['/curriculum','/curriculum-tracker','/curriculum-trackers','/syllabus-coverage','/students','/academics','/CBC','/attendance','/timetables','/broadsheets','/ediary','/clinic','/discipline','/library','/media','/occurrences','/occurrence-book','/analytics'],optionalAuthMiddleware,teacherAssignmentGuard(container));
 
+  // Generated reports and payment receipts share the permanent issuance register.
+  router.use(documentSerialization(container.documentRegistry));
+  const canReadSerialType=(role:UserRole,type:string)=>['SCHEME_OF_WORK','LESSON_PLAN','RECORD_OF_WORK','WEEKLY_SCHEME','WEEKLY_MONITORING'].includes(type)||[UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.BURSAR,UserRole.ACCOUNTANT].includes(role);
+  router.get('/documents/registry',authMiddleware,requireRoles(UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.CURRICULUM_TEACHER,UserRole.BURSAR,UserRole.ACCOUNTANT),async(req:AuthenticatedRequest,res,next)=>{
+    try { if(!req.user?.schoolId)throw new ForbiddenError('A school-scoped account is required.');
+      res.setHeader('Cache-Control','private, no-store');
+      const rows=await container.documentRegistry.list(req.user.schoolId);
+      res.json({success:true,data:rows.filter(row=>canReadSerialType(req.user!.role,row.documentType)).map(({snapshot,...row})=>row)});
+    }catch(error){next(error);}
+  });
+  router.get('/documents/verify/:serial',authMiddleware,async(req:AuthenticatedRequest,res,next)=>{
+    try { if(!req.user?.schoolId)throw new ForbiddenError('A school-scoped account is required.');
+      const row=await container.documentRegistry.find(req.user.schoolId,String(req.params.serial).trim().toUpperCase());
+      if(row&&req.user.role===UserRole.TEACHER&&canReadSerialType(req.user.role,row.documentType)){
+        const scope=row.snapshot.scheme||row.snapshot;
+        await container.assignmentAccess.assert(req.user,scope,true);
+      }
+      res.setHeader('Cache-Control','private, no-store');
+      res.json({success:true,data:row&&canReadSerialType(req.user!.role,row.documentType)?{registered:true,...row}:{registered:false,message:'Serial not found in this school’s issuance registry. Treat this document as unverified.'}});
+    }catch(error){next(error);}
+  });
+
   const staffMessaging = new StaffMessagingController(container.staffMessagingUseCases);
   const staffMessagesRouter = Router();
   staffMessagesRouter.use((_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next();});
@@ -512,6 +537,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 6. SCHEMES OF WORK & LESSON PLANS ROUTES
   // ==========================================
   const curriculumRouter = Router();
+  curriculumRouter.use(optionalAuthMiddleware,documentSerialization(container.documentRegistry));
   const planningController=new CalendarPlanningController(container);
   curriculumRouter.post('/lesson-plans/:id/reschedule',authMiddleware,planningController.rescheduleLesson);
   curriculumRouter.post('/planning/record-taught',authMiddleware,planningController.recordTaught);
@@ -553,7 +579,7 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.post('/schemes', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateSchemeSchema), curriculumController.createScheme);
   curriculumRouter.post('/schemes/:id/entries', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(AddSchemeEntrySchema), curriculumController.addSchemeEntry);
   curriculumRouter.post('/schemes/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), curriculumController.submitScheme);
-  curriculumRouter.post('/schemes/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewSchemeSchema), curriculumController.reviewScheme);
+  curriculumRouter.post('/schemes/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.CURRICULUM_TEACHER), validateBody(ReviewSchemeSchema), curriculumController.reviewScheme);
   curriculumRouter.get('/schemes', authMiddleware, curriculumController.listSchemes);
   curriculumRouter.get('/schemes/:id/export',authMiddleware,curriculumController.getSchemeById);
   curriculumRouter.get('/schemes/:id/print',authMiddleware,curriculumController.getSchemeById);
@@ -619,6 +645,7 @@ export function createApiRouter(container: AppContainer): Router {
     authMiddleware,
     requireRoles(
       UserRole.HEAD_TEACHER,
+      UserRole.CURRICULUM_TEACHER,
       UserRole.DEPUTY_HEAD_TEACHER,
       UserRole.ADMIN,
       UserRole.SCHOOL_ADMIN,
@@ -632,6 +659,7 @@ export function createApiRouter(container: AppContainer): Router {
     authMiddleware,
     requireRoles(
       UserRole.HEAD_TEACHER,
+      UserRole.CURRICULUM_TEACHER,
       UserRole.DEPUTY_HEAD_TEACHER,
       UserRole.ADMIN,
       UserRole.SCHOOL_ADMIN,

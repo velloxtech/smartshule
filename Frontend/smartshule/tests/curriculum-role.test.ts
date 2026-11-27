@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {getFilteredNavModules,isTabPermitted} from '../src/utils/rbac';
+import {UserRole} from '../src/types';
+const role=UserRole.CURRICULUM_TEACHER;
+for(const tab of ['schemes-lesson-plans','records-of-work','lesson-plans','syllabus-coverage-plan','document-serialization'] as const)assert.equal(isTabPermitted(tab,role),true);
+for(const tab of ['dashboard','users','teachers-staff','fee-collection','report-cards','document-signing'] as const)assert.equal(isTabPermitted(tab as any,role),false);
+const items=getFilteredNavModules(role).flatMap(module=>module.items);
+assert.ok(items.some(item=>item.id==='schemes-lesson-plans'));
+assert.ok(items.some(item=>item.id==='records-of-work'));
+assert.ok(items.every(item=>isTabPermitted(item.id,role)));
+console.log('Curriculum teacher navigation checks passed.');

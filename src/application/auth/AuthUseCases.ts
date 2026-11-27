@@ -93,6 +93,7 @@ export class AuthUseCases {
       UserRole.SCHOOL_ADMIN,
       UserRole.HEAD_TEACHER,
       UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.CURRICULUM_TEACHER,
       UserRole.BURSAR,
       UserRole.ACCOUNTANT,
       UserRole.TEACHER,

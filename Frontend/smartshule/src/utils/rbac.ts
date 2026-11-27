@@ -22,7 +22,12 @@ export interface NavGroupDef {
   items: NavItemDef[];
 }
 
+export const CURRICULUM_TEACHER_TABS: TabType[] = ['syllabus-coverage-plan','schemes-lesson-plans','scheme-of-work-builder','lesson-plans','records-of-work','document-serialization'];
+
 export const ALL_NAV_MODULES: NavModuleDef[] = [
+  {id:'document-verification',title:'Document Verification',icon:'verified_user',isStandalone:true,
+    allowedRoles:[UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.CURRICULUM_TEACHER,UserRole.TEACHER,UserRole.BURSAR,UserRole.ACCOUNTANT],
+    items:[{id:'document-serialization',label:'Document Serial Center',icon:'verified_user',allowedRoles:[UserRole.SUPER_ADMIN,UserRole.ADMIN,UserRole.SCHOOL_ADMIN,UserRole.HEAD_TEACHER,UserRole.DEPUTY_HEAD_TEACHER,UserRole.CURRICULUM_TEACHER,UserRole.TEACHER,UserRole.BURSAR,UserRole.ACCOUNTANT]}]},
   // 1. Dashboard (Standalone Top Item)
   {
     id: 'dashboard-module',
@@ -1070,6 +1075,13 @@ export function normalizeRoleAliases(role?: UserRole): UserRole[] {
 }
 
 export function getFilteredNavModules(role?: UserRole): NavModuleDef[] {
+  if(role===UserRole.CURRICULUM_TEACHER)return [{id:'curriculum-review',title:'Curriculum Documents & Approvals',icon:'fact_check',allowedRoles:[role],items:[
+    {id:'schemes-lesson-plans',label:'Scheme Approvals',icon:'fact_check',allowedRoles:[role]},
+    {id:'records-of-work',label:'Record Approvals',icon:'task_alt',allowedRoles:[role]},
+    {id:'syllabus-coverage-plan',label:'Syllabus Planning',icon:'calendar_month',allowedRoles:[role]},
+    {id:'lesson-plans',label:'Lesson Plans',icon:'menu_book',allowedRoles:[role]},
+    {id:'document-serialization',label:'Document Serial Center',icon:'verified_user',allowedRoles:[role]},
+  ]}];
   const activeRoles = normalizeRoleAliases(role || UserRole.SUPER_ADMIN);
   return ALL_NAV_MODULES.map((module) => {
     const isModuleAllowed = module.allowedRoles.some((r) => activeRoles.includes(r));
@@ -1099,6 +1111,7 @@ export function getFilteredNavSections(role?: UserRole): NavGroupDef[] {
 
 export function isTabPermitted(tab: TabType, role?: UserRole): boolean {
   if (!role) return false;
+  if(role===UserRole.CURRICULUM_TEACHER)return CURRICULUM_TEACHER_TABS.includes(tab);
 
   // Administrators and Super Admins have full access across the entire school platform
   if (

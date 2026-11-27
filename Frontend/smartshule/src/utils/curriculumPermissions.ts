@@ -6,6 +6,7 @@ export const curriculumReviewRoles: readonly UserRole[] = [
   UserRole.SCHOOL_ADMIN,
   UserRole.HEAD_TEACHER,
   UserRole.DEPUTY_HEAD_TEACHER,
+  UserRole.CURRICULUM_TEACHER,
 ];
 
 export const canManageCurriculum = (role?: UserRole | string) =>

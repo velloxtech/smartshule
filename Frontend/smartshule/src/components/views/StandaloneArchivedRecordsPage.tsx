@@ -8,6 +8,7 @@ import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 interface StandaloneArchivedRecordsPageProps {
   onBackToPortal: () => void;
   onRefreshStudents?: () => void | Promise<void>;
+  onToggleNavigation?: () => void;
 }
 
 type ArchiveSubTab = 'accounts' | 'learners' | 'finances' | 'academic' | 'attendance' | 'welfare';
@@ -15,6 +16,7 @@ type ArchiveSubTab = 'accounts' | 'learners' | 'finances' | 'academic' | 'attend
 export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPageProps> = ({
   onBackToPortal,
   onRefreshStudents,
+  onToggleNavigation,
 }) => {
   const { user: currentUser } = useAuth();
   const [archivedRecords, setArchivedRecords] = useState<DeletedStudentRecord[]>([]);
@@ -321,7 +323,8 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       <header className="sticky top-0 z-40 bg-primary text-white shadow-md border-b border-primary-container print:hidden">
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
           {/* Left Brand & Navigation Back */}
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            {onToggleNavigation&&<button type="button" onClick={onToggleNavigation} aria-label="Open navigation menu" aria-controls="main-sidebar" className="rounded-xl border border-white/20 bg-white/10 p-2 text-white hover:bg-white/20 lg:hidden"><span className="material-symbols-outlined">menu</span></button>}
             <button
               type="button"
               onClick={onBackToPortal}
@@ -329,7 +332,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
               className="inline-flex items-center gap-2 px-3.5 py-2 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white rounded-xl text-xs font-bold transition-all border border-white/20 cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-              <span>Back to Portal</span>
+              <span className="hidden sm:inline">Back to Portal</span>
             </button>
 
             <div className="h-6 w-px bg-white/20 hidden sm:block" />

@@ -32,7 +32,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       detectReceiptPrinter().then(setPrinterStatus);
-      if (initialReceipt) {
+      if (initialReceipt && !paymentId) {
         setReceipt(initialReceipt);
       } else if (paymentId) {
         setIsLoading(true);
@@ -187,6 +187,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
                     <span className="text-on-surface-variant font-semibold">Receipt Number:</span>
                     <span className="font-data-mono font-bold text-primary text-sm">
                       {receipt.receiptNumber || 'REC-OFFICIAL'}
+                      {receipt.documentSerial&&<small className="mt-1 block break-all text-[9px]">Document serial: {receipt.documentSerial}</small>}
                     </span>
                   </div>
                   <div className="flex justify-between">

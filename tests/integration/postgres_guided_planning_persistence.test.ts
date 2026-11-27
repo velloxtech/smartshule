@@ -46,7 +46,7 @@ const url=process.env.SMARTSHULE_REVIEW_DATABASE_URL;
   expect((await c.CBCAssessmentRepository.findStrandById(result.proposals[0].publishedId))?.title).toBe('Geometry');
  });
  it('retains returned scheme comments and approval metadata after PostgreSQL reload',async()=>{
-  let p=await c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'sub',lessons:1}],0);p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.reviewCoverage(admin,p.scheme.id,p.scheme.planningState!.revision,true,'Coverage validated');p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);
+  let p=await c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'sub',lessons:1}],0);p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);
   const e=p.scheme.entries[0];p=await c.termAllocations.saveWeeklyLesson(teacher,p.scheme.id,e.id,p.scheme.planningState!.revision,{specificLearningOutcomes:['Compare fractions'],keyInquiryQuestions:[],learningExperiences:['Compare'],learningResources:[],assessmentMethods:['Observation']});p=await c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision,[e.id]);
   await c.curriculumUseCases.reviewScheme(p.scheme.id,admin.userId,false,'Add learner support activities',admin);c=fresh();const restored=await c.schemeOfWorkRepository.findById(p.scheme.id);expect(restored?.reviewRemarks).toBe('Add learner support activities');expect(restored?.toJSON().reviewedByUserId).toBe(admin.userId);expect(restored?.status).toBe('REJECTED');
  });

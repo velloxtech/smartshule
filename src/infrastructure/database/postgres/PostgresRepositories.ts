@@ -1,3 +1,4 @@
+import {ensureDocumentRegistrySchema} from './PostgresDocumentRegistrySchema';
 import { Pool } from 'pg';
 import { ensurePlanningSchema } from './PostgresPlanningSchema';
 import { PhoneUtils } from '../../utils/PhoneUtils';
@@ -1411,6 +1412,7 @@ export class PostgresDatabaseInitializer {
 
     await pool.query(ddl);
     await ensurePlanningSchema(pool);
+    await ensureDocumentRegistrySchema(pool);
 
     // Schema migrations for lesson_plans status & reviews, nullability, and foreign key constraint fixes
     await pool.query(`

@@ -74,12 +74,11 @@ export class TermAllocationService {
     }
     this.revision(scheme,revision);
     if(scheme.planningState?.locked)throw new ConflictError('Plan Locked & Saved. Reopen the plan before editing allocations.');
-    if(['SUBMITTED','APPROVED'].includes(scheme.planningState?.coverageReviewStatus||''))throw new ConflictError('This coverage draft is with the reviewer or approved. Wait for it to be returned before editing.');
     await this.c.curriculumUseCases.assertSchemeAllocationsEditable(scheme.toJSON());
     const before=scheme.planningState;
     if(before?.pacing)scheduled=await this.c.calendarPlanning.schemeSchedule(actor,scope,before.pacing,scheme.entries);
     allocations=allocations.map(a=>({...a,carriedFrom:a.carriedFrom||before?.allocations.find(old=>old.subStrandId===a.subStrandId)?.carriedFrom}));
-    const state:SchemePlanningState={pacing:before?.pacing,weeklyPlanningStarted:before?.weeklyPlanningStarted,revision:revision+1,locked:false,allocations,scheduleFingerprint:scheduled.fingerprint,history:[...(before?.history||[]),{at:new Date().toISOString(),actorId:actor.userId,action:'DRAFT_SAVED',allocations:structuredClone(allocations),scheduleFingerprint:scheduled.fingerprint}],approvedEntryIds:before?.approvedEntryIds,coverageReviewStatus:'DRAFT',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined};
+    const state:SchemePlanningState={pacing:before?.pacing,weeklyPlanningStarted:before?.weeklyPlanningStarted,revision:revision+1,locked:false,allocations,scheduleFingerprint:scheduled.fingerprint,history:[...(before?.history||[]),{at:new Date().toISOString(),actorId:actor.userId,action:'DRAFT_SAVED',allocations:structuredClone(allocations),scheduleFingerprint:scheduled.fingerprint}],approvedEntryIds:before?.approvedEntryIds,coverageReviewStatus:'SAVED',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined};
     scheme.setPlanningState(state);scheme.draft();
     await this.persist(scheme,revision);
     return this.describe(actor,scheme);
@@ -90,18 +89,13 @@ export class TermAllocationService {
     if(!canPrepareCurriculum(actor.role))throw new ForbiddenError('Only the assigned subject teacher or a school administrator can submit a coverage draft.');
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     const state=scheme.planningState;if(!state||!state.allocations.some(a=>a.lessons>0))throw new ValidationError('Save at least one strand allocation before submitting this coverage draft.');
-    if(state.locked||['SUBMITTED','APPROVED'].includes(state.coverageReviewStatus||''))throw new ConflictError('This coverage draft cannot be submitted in its current state.');
-    scheme.setPlanningState({...state,revision:revision+1,coverageReviewStatus:'SUBMITTED',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined});
+    if(state.locked)throw new ConflictError('This coverage draft cannot be submitted in its current state.');
+    scheme.setPlanningState({...state,revision:revision+1,coverageReviewStatus:'SAVED',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined});
     await this.persist(scheme,revision);return this.describe(actor,scheme);
   }
 
   async reviewCoverage(actor:AcademicActor,id:string,revision:number,approved:boolean,remarks:string) {
-    const scheme=await this.get(actor,id);this.revision(scheme,revision);
-    if(!['SUPER_ADMIN','ADMIN','SCHOOL_ADMIN','HEAD_TEACHER','DEPUTY_HEAD_TEACHER'].includes(actor.role))throw new ForbiddenError('Only school leadership can review a coverage draft.');
-    const state=scheme.planningState;if(!state||state.coverageReviewStatus!=='SUBMITTED')throw new ValidationError('Only submitted coverage drafts can be reviewed.');
-    if(!approved&&!remarks.trim())throw new ValidationError('Add comments explaining what the teacher should change.');
-    scheme.setPlanningState({...state,revision:revision+1,coverageReviewStatus:approved?'APPROVED':'REJECTED',coverageReviewRemarks:remarks.trim(),coverageReviewedByUserId:actor.userId,coverageReviewedAt:new Date().toISOString()});
-    await this.persist(scheme,revision);return this.describe(actor,scheme);
+    throw new ValidationError('Syllabus planning does not require approval. Save the allocations and continue to the scheme of work.');
   }
 
   async describe(actor:AcademicActor,scheme:SchemeOfWork,pacing?:SchemePacing) {
@@ -139,7 +133,6 @@ export class TermAllocationService {
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     const state=scheme.planningState;
     if(!state)throw new ValidationError('Save term allocations first.');
-    if(submit&&state.coverageReviewStatus!=='APPROVED')throw new ValidationError('Submit the coverage draft and wait for school leadership approval before generating the scheme of work.');
     if(state.locked)throw new ConflictError('Plan is already locked.');
     if(state.approvedEntryIds?.length)throw new ConflictError('Approved scheme lessons must be retained. Continue planning the remaining draft lessons.');
     await this.c.curriculumUseCases.assertSchemeAllocationsEditable(scheme.toJSON());
@@ -181,7 +174,6 @@ export class TermAllocationService {
     if(!canPrepareCurriculum(actor.role))throw new ForbiddenError('Only the assigned subject teacher or a school administrator can edit or submit the weekly scheme.');
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     if(!scheme.planningState)throw new ValidationError('Save the syllabus coverage before weekly planning.');
-    if(requireApproval&&scheme.planningState.coverageReviewStatus!=='APPROVED')throw new ValidationError('The syllabus coverage must be approved before submitting scheme lessons.');
     if(!['DRAFT','REJECTED'].includes(scheme.status)&&!(scheme.status==='APPROVED'&&scheme.planningState?.approvedEntryIds))throw new ConflictError('Only draft, returned or remaining unapproved weekly lessons can be edited.');
     await this.c.calendarPlanning.assertUnlocked(actor,scheme.toJSON());
     return scheme;
@@ -298,10 +290,10 @@ export class TermAllocationService {
 
   async reopen(actor:AcademicActor,id:string,revision:number,reason:string) {
     const scheme=await this.get(actor,id);this.revision(scheme,revision);
-    const state=scheme.planningState;if(!state?.locked&&state?.coverageReviewStatus!=='APPROVED')throw new ConflictError('The plan is already editable.');
+    const state=scheme.planningState;if(!state?.locked)throw new ConflictError('The plan is already editable.');
     await this.c.assignmentAccess.assertSubjectTeaching(actor,scheme.toJSON());
     if(!reason.trim())throw new ValidationError('Record a reason for reopening this plan.');
-    scheme.setPlanningState({...state,revision:revision+1,locked:false,coverageReviewStatus:'DRAFT',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined,history:[...state.history,{at:new Date().toISOString(),actorId:actor.userId,action:'REOPENED',reason:reason.trim(),allocations:structuredClone(state.allocations),scheduleFingerprint:state.scheduleFingerprint}]});
+    scheme.setPlanningState({...state,revision:revision+1,locked:false,coverageReviewStatus:'SAVED',coverageReviewRemarks:undefined,coverageReviewedByUserId:undefined,coverageReviewedAt:undefined,history:[...state.history,{at:new Date().toISOString(),actorId:actor.userId,action:'REOPENED',reason:reason.trim(),allocations:structuredClone(state.allocations),scheduleFingerprint:state.scheduleFingerprint}]});
     scheme.draft();await this.persist(scheme,revision);return this.describe(actor,scheme);
   }
 

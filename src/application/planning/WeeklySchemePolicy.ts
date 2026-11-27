@@ -1,13 +1,12 @@
 import { SchemeOfWorkEntry, SchemePlanningState } from '../../core/domain/curriculum-plan/SchemeOfWork';
 import { ValidationError } from '../../core/domain/shared/Errors';
 
-/** A weekly scheme can refine teaching content, never replace its approved coverage selection. */
+/** A weekly scheme can refine teaching content, never replace its saved coverage selection. */
 export function assertWeeklyCoverage(state: SchemePlanningState, entries: SchemeOfWorkEntry[]) {
-  if (state.coverageReviewStatus !== 'APPROVED') throw new ValidationError('An approved syllabus coverage plan is required before submitting the weekly scheme.');
   for (const entry of entries.filter(row => !row.archivedAt)) {
     const allocation = state.allocations.find(row => row.subStrandId === entry.subStrandId);
     if (!allocation || JSON.stringify([...(allocation.combinedSubStrandIds || [])].sort()) !== JSON.stringify([...(entry.combinedSubStrandIds || [])].sort())) {
-      throw new ValidationError('Weekly lesson curriculum must come from the approved syllabus coverage.');
+      throw new ValidationError('Weekly lesson curriculum must come from the saved syllabus coverage.');
     }
   }
 }

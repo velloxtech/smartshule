@@ -21,7 +21,7 @@ const calendar=()=>c.calendarPlanning.saveCalendar(admin,scope,{guidedWorkflow:t
 const timetable=()=>c.timetableRepository.save(Timetable.create({...scope,schoolId:admin.schoolId,isActive:true,slots:[{id:'lesson',dayOfWeek:'MONDAY',periodNumber:1,startTime:'09:00',endTime:'09:40',learningAreaId:scope.learningAreaId,isBreak:false,isLunch:false}]},'director-timetable'));
 const start=()=>c.planningWorkflow.decide(admin,scope,'FIRST_TERM','First term using SmartShule, starting in Term 3',0);
 const save=()=>c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'director-sub',lessons:2}],0);
-async function approvedScheme(){await calendar();await timetable();await start();let p=await save();p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.reviewCoverage(admin,p.scheme.id,p.scheme.planningState!.revision,true,'Coverage approved');p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(teacher,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);p=await c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);await c.curriculumUseCases.reviewScheme(p.scheme.id,admin.userId,true,'Scheme approved',admin);return (await c.termAllocations.weekly(teacher,p.scheme.id));}
+async function approvedScheme(){await calendar();await timetable();await start();let p=await save();p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(teacher,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);p=await c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);await c.curriculumUseCases.reviewScheme(p.scheme.id,admin.userId,true,'Scheme approved',admin);return (await c.termAllocations.weekly(teacher,p.scheme.id));}
 beforeEach(async()=>{
  c=new AppContainer();app=createExpressApp(c);
  await c.academicRepository.saveYear(AcademicYear.create({schoolId:admin.schoolId,name:'2026',startDate:'2026-01-01',endDate:'2026-12-31',isCurrent:true},scope.academicYearId));
@@ -47,10 +47,10 @@ it('records explicit first use in Term 3 without creating placeholder schemes an
 it('prepares scheme lessons before calendar and timetable setup while keeping daily planning unavailable',async()=>{
  let p=await save();expect(p.setupRequired).toBeUndefined();expect(p.slots.length).toBeGreaterThan(0);expect(p.scheme.entries).toEqual([]);
  p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);
- expect(p.scheme.planningState!.coverageReviewStatus).toBe('SUBMITTED');
+ expect(p.scheme.planningState!.coverageReviewStatus).toBe('SAVED');
  p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);
  expect(p.scheme.entries).toHaveLength(2);expect(p.scheme.entries.every(entry=>!entry.scheduledDate)).toBe(true);
- await expect(c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow('coverage must be approved');
+ await expect(c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision)).rejects.toThrow('Complete at least one scheduled weekly lesson');
  await calendar();
  const state=await c.planningWorkflow.readiness(teacher,scope);
  expect(state.continuity.status).toBe('NEEDS_FIRST_TERM_DECISION');
@@ -84,7 +84,7 @@ it('carries unfinished work from an approved earlier term into a draft and prese
 it('allows drafting with missing prior records while retaining administrator resolution and genuine history',async()=>{
  await c.academicRepository.saveTerm(AcademicTerm.create({academicYearId:scope.academicYearId,name:'Term 2',termNumber:2,startDate:'2026-05-01',endDate:'2026-08-01',isCurrent:false},'director-term2'));
  await c.planningWorkflow.decide(admin,{...scope,termId:'director-term2'},'FIRST_TERM','School began in Term 2',0);await calendar();await timetable();
- expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('MISSING_PRIOR');const draft=await save();expect(draft.scheme.planningState?.coverageReviewStatus).toBe('DRAFT');expect((await c.planningWorkflow.readiness(teacher,scope)).nextAction.label).toBe('Continue Draft');
+ expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('MISSING_PRIOR');const draft=await save();expect(draft.scheme.planningState?.coverageReviewStatus).toBe('SAVED');expect((await c.planningWorkflow.readiness(teacher,scope)).nextAction.label).toBe('Continue Scheme of Work');
  await c.planningWorkflow.decide(admin,scope,'MISSING_PRIOR','Prior paper scheme was not captured; academic head reviewed curriculum restart',0);
  expect((await c.planningWorkflow.continuity(teacher,scope)).status).toBe('RESOLVED');expect((await c.schemeOfWorkRepository.findAll()).every(s=>s.termId===scope.termId)).toBe(true);
 });
@@ -174,7 +174,7 @@ it('saves an after-class copy, submits the plan and work once, and retains that 
  const result=await request(app).post(endpoint).set('Authorization',auth()).send(body);
  expect(result.status).toBe(200);
  expect(result.body.data.record.status).toBe('SUBMITTED');
- expect(result.body.data.lessonPlan).toMatchObject({status:'SUBMITTED',teacherSelfReflection:body.reflection});
+ expect(result.body.data.lessonPlan).toMatchObject({status:'DRAFT',teacherSelfReflection:body.reflection});
  const copy=result.body.data.savedCopy;
  expect(copy).toMatchObject({id:plan.id,teacherSelfReflection:body.reflection,afterClassReport:{teachingStatus:'COMPLETED',notes:body.notes}});
  expect((await c.termAllocations.weekly(teacher,weekly.scheme.id)).coverageSummary).toMatchObject({reportedOutcomes:1,confirmedOutcomes:0});

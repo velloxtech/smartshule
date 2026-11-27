@@ -46,7 +46,7 @@ export function LessonPlanDocument({plan,context}:{plan:LessonPlan;context:Conte
   const s=templateLessonSections(plan,context);
   const table=(head:string[],rows:string[][])=><div className="overflow-x-auto"><table className="w-full min-w-[650px] table-fixed border-collapse text-left text-sm"><thead><tr>{head.map(label=><th key={label} className="border border-primary bg-primary p-2 align-top font-bold text-white">{label}</th>)}</tr></thead><tbody>{rows.map((row,i)=><tr key={i}>{row.map((value,j)=><td key={j} className="min-h-10 whitespace-pre-wrap break-words border border-primary/50 p-2 align-top">{value}</td>)}</tr>)}</tbody></table></div>;
   return <article className="space-y-4 bg-white p-4 font-sans text-gray-950 sm:p-6" aria-label="CBC Lesson Plan document">
-    <SchoolDocumentHeader school={context.school} title="CBC Lesson Plan"/>
+    <SchoolDocumentHeader school={context.school} title="CBC Lesson Plan"/><p className="mb-2 text-xs">Document serial: {plan.documentSerial || 'Save and reopen to issue a serial'}</p>
     <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{s.identity.map(([label,value])=><div key={label} className="flex gap-2 text-sm"><dt className="font-bold">{label}:</dt><dd className="min-w-16 flex-1 whitespace-pre-wrap border-b border-dotted border-primary/50">{value}</dd></div>)}</dl>
     {s.focus.map(([label,value])=><section key={label}><h4 className="font-bold text-primary">{label}:</h4><p className="mt-1 min-h-7 whitespace-pre-wrap border-b border-dotted border-primary/40 pb-2 text-sm">{value}</p></section>)}
     <section><h4 className="mb-2 font-bold text-primary">Lesson flow</h4>{table(flowHead,s.flow)}</section>
@@ -59,7 +59,7 @@ export function lessonPlansPDF(plans:LessonPlan[],context:Context) {
   plans.forEach((plan,index)=>{
     if(index)doc.addPage();let y=drawSchoolDocumentHeader(doc,context.school,'CBC Lesson Plan');const s=templateLessonSections(plan,context);
     const table=(head:string[]|undefined,body:string[][])=>{autoTable(doc,{startY:y,head:head?[head]:undefined,body,theme:'grid',margin:{top:14,bottom:14,left:14,right:14},styles:{font:'helvetica',fontSize:9,cellPadding:2,overflow:'linebreak',lineColor:[122,18,40],lineWidth:0.15},headStyles:{fillColor:documentMaroon,textColor:[255,255,255],fontStyle:'bold'},rowPageBreak:'avoid'});y=(doc as any).lastAutoTable.finalY+4;};
-    table(undefined,s.identity);for(const row of s.focus)table([row[0]],[[row[1]]]);
+    table(undefined,[['Document serial',plan.documentSerial||'Not issued'],...s.identity]);for(const row of s.focus)table([row[0]],[[row[1]]]);
     table(flowHead,s.flow);for(const row of s.application)table([row[0]],[[row[1]]]);table(rubricHead,s.rubric);
   });return doc;
 }

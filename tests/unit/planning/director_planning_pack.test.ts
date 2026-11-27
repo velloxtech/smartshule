@@ -16,7 +16,7 @@ const calendar=()=>c.calendarPlanning.saveCalendar(admin,scope,{guidedWorkflow:t
 const timetable=()=>c.timetableRepository.save(Timetable.create({...scope,schoolId:admin.schoolId,isActive:true,slots:[{id:'lesson',dayOfWeek:'MONDAY',periodNumber:1,startTime:'09:00',endTime:'09:35',learningAreaId:scope.learningAreaId,isBreak:false,isLunch:false}]},'director-timetable'));
 const start=()=>c.planningWorkflow.decide(admin,scope,'FIRST_TERM','First term using SmartShule, starting in Term 3',0);
 const save=()=>c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'director-sub',lessons:2}],0);
-async function approvedScheme(){await calendar();await timetable();await start();let p=await save();p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.reviewCoverage(admin,p.scheme.id,p.scheme.planningState!.revision,true,'Coverage approved');p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(teacher,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);p=await c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);await c.curriculumUseCases.reviewScheme(p.scheme.id,admin.userId,true,'Scheme approved',admin);return (await c.termAllocations.weekly(teacher,p.scheme.id));}
+async function approvedScheme(){await calendar();await timetable();await start();let p=await save();p=await c.termAllocations.submitCoverage(teacher,p.scheme.id,p.scheme.planningState!.revision);p=await c.termAllocations.prepareWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(teacher,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);p=await c.termAllocations.submitWeekly(teacher,p.scheme.id,p.scheme.planningState!.revision);await c.curriculumUseCases.reviewScheme(p.scheme.id,admin.userId,true,'Scheme approved',admin);return (await c.termAllocations.weekly(teacher,p.scheme.id));}
 beforeEach(async()=>{
  c=new AppContainer();
  await c.academicRepository.saveYear(AcademicYear.create({schoolId:admin.schoolId,name:'2026',startDate:'2026-01-01',endDate:'2026-12-31',isCurrent:true},scope.academicYearId));
@@ -107,7 +107,7 @@ it.each([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].flatMap(ro
  let p=await save();
  p=await c.termAllocations.saveDraft(manager,scope,[{subStrandId:'director-sub',lessons:2}],p.scheme.planningState!.revision,p.scheme.id);
  p=await c.termAllocations.submitCoverage(manager,p.scheme.id,p.scheme.planningState!.revision);
- p=await c.termAllocations.reviewCoverage(manager,p.scheme.id,p.scheme.planningState!.revision,true,'Approved');
+
  p=await c.termAllocations.prepareWeekly(manager,p.scheme.id,p.scheme.planningState!.revision);
  for(const entry of p.scheme.entries)p=await c.termAllocations.saveWeeklyLesson(manager,p.scheme.id,entry.id,p.scheme.planningState!.revision,content);
  if(weeklyEndpoint) await c.termAllocations.submitWeekly(manager,p.scheme.id,p.scheme.planningState!.revision);
@@ -117,8 +117,8 @@ it.each([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].flatMap(ro
  expect(weekly.scheme.teacherId).toBe(teacher.userId);
  const plan=await c.curriculumUseCases.createLessonPlan({...planInput(weekly.weeks[0].lessons[0]),teacherId:manager.userId},manager);
  expect(plan.teacherId).toBe(teacher.userId);
- const submitted=await c.curriculumUseCases.submitLessonPlanForReview(plan.id,manager);
- expect(submitted.status).toBe('SUBMITTED');
+ await expect(c.curriculumUseCases.submitLessonPlanForReview(plan.id,manager)).rejects.toThrow('do not require approval');
+ expect(plan.status).toBe('DRAFT');
  await expect(c.termAllocations.prepareWeekly({...manager,schoolId:'other-school'},p.scheme.id,weekly.scheme.planningState!.revision)).rejects.toThrow();
 });
 
@@ -176,7 +176,7 @@ describe('teacher-paced scheme lesson ranges',()=>{
   }
   saved=await c.termAllocations.saveDraft(teacher,scope,[{subStrandId:'director-sub',lessons:1},{subStrandId:'paced-sub-2',lessons:1},{subStrandId:'paced-sub-3',lessons:1}],0);
   saved=await c.termAllocations.submitCoverage(teacher,saved.scheme.id,saved.scheme.planningState.revision);
-  saved=await c.termAllocations.reviewCoverage(admin,saved.scheme.id,saved.scheme.planningState.revision,true,'Approved curriculum');
+
  });
  const allocate=async(slots:string[],outcomes=['Outcome 1a'],sub='director-sub',actor=teacher)=>{
   const current=(await c.schemeOfWorkRepository.findById(saved.scheme.id))!;
@@ -259,7 +259,7 @@ describe('schemes and daily lessons with optional timetable suggestions',()=>{
   await c.academicRepository.saveSubjectTeacherAssignment(SubjectTeacherAssignment.create({...futureScope,schoolId:teacher.schoolId,teacherId:'director-profile',role:'SUBJECT_TEACHER',effectiveFrom:'2027-01-01',isActive:true},'future-duty'));
   plan=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:3}],0);
   plan=await c.termAllocations.submitCoverage(teacher,plan.scheme.id,plan.scheme.planningState.revision);
-  plan=await c.termAllocations.reviewCoverage(admin,plan.scheme.id,plan.scheme.planningState.revision,true,'Approved before opening');
+
  });
  async function approvedBeforeOpening(){
   let weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w1:l1','scheme:w1:l2','scheme:w1:l3','scheme:w1:l4','scheme:w1:l5'],content,pacing);
@@ -270,15 +270,15 @@ describe('schemes and daily lessons with optional timetable suggestions',()=>{
   await c.curriculumUseCases.reviewScheme(plan.scheme.id,admin.userId,true,'Scheme ready before opening',admin);
   return c.termAllocations.weekly(teacher,plan.scheme.id);
  }
- it('saves and reviews syllabus estimates beyond grid capacity without a calendar or timetable',async()=>{
-  const reopened=await c.termAllocations.reopen(teacher,plan.scheme.id,plan.scheme.planningState.revision,'Revise syllabus pacing before opening');
+ it('saves syllabus estimates beyond grid capacity without approval without a calendar or timetable',async()=>{
+  const reopened=plan;
   let coverage=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:1000}],reopened.scheme.planningState!.revision,plan.scheme.id);
   expect(coverage.setupRequired).toBeUndefined();
   expect(coverage.progress.excess).toBeGreaterThan(0);
   expect(coverage.scheme.entries).toEqual([]);
   coverage=await c.termAllocations.submitCoverage(teacher,plan.scheme.id,coverage.scheme.planningState!.revision);
-  coverage=await c.termAllocations.reviewCoverage(admin,plan.scheme.id,coverage.scheme.planningState!.revision,true,'Pacing estimate reviewed');
-  expect(coverage.scheme.planningState!.coverageReviewStatus).toBe('APPROVED');
+
+  expect(coverage.scheme.planningState!.coverageReviewStatus).toBe('SAVED');
   expect(coverage.scheme.planningState!.allocations[0].lessons).toBe(1000);
   expect(coverage.setupRequired).toBeUndefined();
  });
@@ -344,7 +344,7 @@ describe('schemes and daily lessons with optional timetable suggestions',()=>{
  });
  it('retains the chosen planning grid when syllabus estimates are edited',async()=>{
   const weekly=await c.termAllocations.allocateSessions(teacher,plan.scheme.id,plan.scheme.planningState.revision,'director-sub',['scheme:w12:l5'],content,pacing);
-  const reopened=await c.termAllocations.reopen(teacher,plan.scheme.id,weekly.scheme.planningState!.revision,'Revise the source pacing estimate');
+  const reopened=weekly;
   const updated=await c.termAllocations.saveDraft(teacher,futureScope,[{subStrandId:'director-sub',lessons:8}],reopened.scheme.planningState!.revision,plan.scheme.id);
   expect(updated.scheme.planningState!.pacing).toEqual(pacing);
   expect(updated.scheme.planningState!.weeklyPlanningStarted).toBe(true);

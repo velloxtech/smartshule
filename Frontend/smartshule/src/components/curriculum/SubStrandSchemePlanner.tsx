@@ -52,7 +52,7 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
   const query = new URLSearchParams(Object.entries(scope).filter(([, value]) => value !== undefined && value !== '') as [string, string][]).toString();
   const scheme = weekly?.scheme || area.scheme;
   const canDraft = Boolean(scheme?.planningState?.allocations?.some((allocation: any) => allocation.lessons > 0));
-  const approvedCoverage = scheme?.planningState?.coverageReviewStatus === 'APPROVED';
+  const approvedCoverage = Boolean(scheme?.planningState?.allocations?.length);
   const started = Boolean(scheme?.planningState?.weeklyPlanningStarted || scheme?.entries?.some((entry: any) => !entry.archivedAt));
   const canPrepare = canPrepareCurriculum(user?.role);
   const editable = canPrepare && canDraft && (['DRAFT', 'REJECTED'].includes(scheme?.status) || (scheme?.status === 'APPROVED' && Array.isArray(scheme?.planningState?.approvedEntryIds)));
@@ -124,10 +124,9 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
       <p>Save at least one syllabus coverage allocation first. Scheme drafts use that saved plan.</p>
       <button className="ui-button mt-3" onClick={() => onNavigateTab?.('syllabus-coverage-plan')}>Open Syllabus Coverage</button>
     </div> : <>
-      {!approvedCoverage && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p>You can complete and save scheme lessons now. The source coverage must be approved before scheme lessons can be submitted.</p>{canPrepare && ['DRAFT', 'REJECTED', undefined].includes(scheme.planningState.coverageReviewStatus) && <button className="ui-button mt-3" disabled={busy || dirty} onClick={() => request(async () => { await apiService.submitCoverageDraft(scheme.id, scheme.planningState.revision); await refresh(); setNotice('Source coverage submitted for approval. Your teaching-session drafts are retained.'); })}>Submit source coverage for approval</button>}</div>}
       <details className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
         <summary className="cursor-pointer text-sm font-semibold">Source: saved syllabus coverage · {scheme.planningState.allocations.filter((item: any) => item.lessons > 0).length} allocations</summary>
-        <p className="mt-2 text-sm text-on-surface-variant">The curriculum, order and lesson allocations come from the saved coverage plan. Change them through syllabus coverage review.</p>
+        <p className="mt-2 text-sm text-on-surface-variant">The curriculum, order and lesson allocations come from the saved coverage plan. Change them in Syllabus Planning.</p>
         <ul className="mt-3 space-y-2">{scheme.planningState.allocations.filter((item: any) => item.lessons > 0).map((item: any) => <li key={item.subStrandId} className="rounded-lg border border-outline-variant/30 bg-surface p-3 text-sm">{[item.subStrandId, ...(item.combinedSubStrandIds || [])].map(id => catalogue.flatMap(strand => strand.subStrands).find(sub => sub.id === id)?.title || 'Saved curriculum item').join(' + ')} · {item.lessons} lessons</li>)}</ul>
       </details>
       {area.setupRequired && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{area.setupRequired}</p>}
@@ -164,7 +163,7 @@ export function SubStrandSchemePlanner({ scope, area, className, streamName, ter
         </section>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{lessons.map((lesson: any, sessionIndex: number) => <button key={lesson.id} className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 text-left shadow-xs hover:border-primary disabled:opacity-60" disabled={busy || !lesson.entry} onClick={() => chooseLesson(lesson)}>
           <strong className="text-primary">Teaching session {sessionIndex + 1} · {lesson.date}</strong><p className="mt-1 text-xs text-on-surface-variant">Period {lesson.periodNumber} · {lesson.startTime}–{lesson.endTime}</p>
-          <p className="mt-2 text-xs font-semibold">{approvedIds.includes(lesson.entry?.id) ? 'Approved lesson' : scheme.planningState?.submittedEntryIds?.includes(lesson.entry?.id) && scheme.status === 'SUBMITTED' ? 'Submitted for review' : 'Draft lesson'}</p><p className="mt-3 font-semibold">{lesson.entry?.strandTitle || 'No saved coverage allocated'}</p><p className="text-sm text-on-surface-variant">{lesson.entry?.subStrandTitle || 'Update the coverage plan through its review process.'}</p>
+          <p className="mt-2 text-xs font-semibold">{approvedIds.includes(lesson.entry?.id) ? 'Approved lesson' : scheme.planningState?.submittedEntryIds?.includes(lesson.entry?.id) && scheme.status === 'SUBMITTED' ? 'Submitted for review' : 'Draft lesson'}</p><p className="mt-3 font-semibold">{lesson.entry?.strandTitle || 'No saved coverage allocated'}</p><p className="text-sm text-on-surface-variant">{lesson.entry?.subStrandTitle || 'Save the syllabus allocations to continue.'}</p>
         </button>)}</div>
         {selected && <div className="space-y-4 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5">
           <div><h3 className="font-bold">{selected.entry.subStrandTitle} · Teaching session {lessons.findIndex((lesson: any) => lesson.entry?.id === entryId) + 1}</h3><p className="mt-1 text-sm">{selected.entry.strandTitle} / {selected.entry.subStrandTitle}</p></div>

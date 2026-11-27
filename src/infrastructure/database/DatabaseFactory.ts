@@ -1,3 +1,5 @@
+import {DocumentRegistry} from '../../application/documents/DocumentRegistry';
+import {PostgresDocumentRegistry} from './postgres/PostgresDocumentRegistry';
 import {IStaffMessageRepository} from '../../core/ports/repositories/IStaffMessageRepository';
 import {InMemoryStaffMessageRepository} from './in-memory/InMemoryStaffMessageRepository';
 import {PostgresStaffMessageRepository, STAFF_MESSAGE_SCHEMA} from './postgres/PostgresStaffMessageRepository';
@@ -125,6 +127,7 @@ import { InMemoryParentConsentRepository } from './in-memory/InMemoryParentConse
 import { PostgresParentConsentRepository } from './postgres/PostgresParentConsentRepository';
 
 export interface RepositoryBundle {
+  documentRegistry?: DocumentRegistry;
   staffMessageRepository?: IStaffMessageRepository;
   planningRepository?: PlanningRepository;
   userRepository: IUserRepository;
@@ -281,6 +284,7 @@ export class DatabaseFactory {
         payrollRepository: new PostgresPayrollRepository(pool),
         inventoryRepository: new PostgresInventoryRepository(pool),
         signatureRepository: new PostgresSignatureRepository(pool),
+        documentRegistry: new PostgresDocumentRegistry(pool),
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
         financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
         ediaryRepository: new PostgresEDiaryRepository(pool),
