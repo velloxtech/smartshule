@@ -366,9 +366,6 @@ export const VisualCBCView: React.FC = () => {
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Visual Learning Evidence & Photo Q&A Desk
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Parents snap photos to ask teachers homefun questions, and teachers document hands-on CBE practical milestones
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

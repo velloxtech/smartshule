@@ -151,7 +151,7 @@ export default function FindUsPage({
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#f5c84a]" />
                 <span className="text-xs font-bold tracking-wider uppercase">
-                  Campus Details & Contacts
+                    School Details & Contacts
                 </span>
               </div>
               <span className="text-[#f5c84a] text-xs font-bold bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
@@ -178,7 +178,7 @@ export default function FindUsPage({
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
                       <Building className="w-3.5 h-3.5 text-[#e8a92a]" />
-                      <span>Main Campus & Admissions Desk</span>
+                      <span>  School & Admissions Desk</span>
                     </p>
                   </div>
                 </div>

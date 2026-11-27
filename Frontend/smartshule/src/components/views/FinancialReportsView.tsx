@@ -411,13 +411,6 @@ export const FinancialReportsView: React.FC = () => {
               Financial Reports & Accounts Statements
             </h1>
           </div>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Private school fee collections, operating cost centers, liquidity position, and financial statements
-          </p>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2.5 rounded-full text-xs font-bold bg-emerald-100 border border-emerald-300 text-emerald-900 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-            Private School Ledger & Accounts Reconciled
-          </div>
         </div>
 
         {/* Global Controls & Actions */}

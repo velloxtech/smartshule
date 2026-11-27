@@ -335,17 +335,9 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <span className="material-symbols-outlined text-[26px]">badge</span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
-                  {role === 'HEAD_TEACHER' ? 'Onboard Head Teacher' : isTeachingRole(role) ? 'Onboard CBE Teacher' : 'Onboard Staff Member'}
-                </h3>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                  {isTeachingRole(role) ? 'TSC & Chapter 6 Aligned' : 'Staff Onboarding'}
-                </span>
-              </div>
-              <p className="text-xs text-rose-100/90 mt-0.5">
-                {isTeachingRole(role) ? 'Teachers Service Commission Act · Constitution of Kenya (Article 237)' : 'School Staff Registry & RBAC System'}
-              </p>
+              <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
+                {role === 'HEAD_TEACHER' ? 'Onboard Head Teacher' : isTeachingRole(role) ? 'Onboard CBE Teacher' : 'Onboard Staff Member'}
+              </h3>
             </div>
           </div>
           {(!isPage || onClose) && (

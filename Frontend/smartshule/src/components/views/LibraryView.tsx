@@ -263,9 +263,6 @@ export const LibraryView: React.FC = () => {
                 CBE Integrated
               </span>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              Curriculum textbook inventory, learner borrowing check-outs, teacher resource allocation, and overdue tracking.
-            </p>
           </div>
         </div>
 

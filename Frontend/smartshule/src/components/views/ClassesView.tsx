@@ -393,7 +393,7 @@ export const ClassesView: React.FC = () => {
                 <div
                   key={c.id}
                   data-id={c.id}
-                  className="bg-white rounded-[16px] p-5 border border-[#eceef3] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_12px_rgba(16,24,40,0.04)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(16,24,40,0.08),0_2px_6px_rgba(16,24,40,0.05)] transition-all duration-200 flex flex-col justify-between min-w-0"
+                  className="bg-[#e2e8f0] rounded-[16px] p-5 border border-[#cbd5e1] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_12px_rgba(16,24,40,0.04)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(16,24,40,0.08),0_2px_6px_rgba(16,24,40,0.05)] transition-all duration-200 flex flex-col justify-between min-w-0"
                 >
                   <div className="min-w-0">
                     {/* Header */}
@@ -435,7 +435,7 @@ export const ClassesView: React.FC = () => {
                             return (
                               <div
                                 key={s.id}
-                                className="p-3 rounded-[12px] bg-[#f9fafb] border border-[#eceef3]"
+                                className="p-3 rounded-[12px] bg-white border border-[#eceef3]"
                               >
                                 <div className="flex items-center justify-between gap-2 min-w-0">
                                   <div className="flex items-center gap-2 min-w-0">
@@ -529,7 +529,7 @@ export const ClassesView: React.FC = () => {
                           })}
                         </div>
                       ) : (
-                        <div className="p-3 rounded-[12px] bg-[#f9fafb] border border-[#eceef3]">
+                        <div className="p-3 rounded-[12px] bg-white border border-[#eceef3]">
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-[13px] font-medium text-[#1f2430]">Single Cohort</span>
                             <span className="px-2 py-0.5 rounded-full bg-[#eceef3] text-[#6b7280] text-[11px] font-medium shrink-0">

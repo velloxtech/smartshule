@@ -253,9 +253,6 @@ export const ExpensesView: React.FC = () => {
               Money Out
             </span>
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Payment Voucher (PV) Management, Ministry Cost Center Accounting & Authorization Workflow
-          </p>
         </div>
 
         {/* Action Buttons */}

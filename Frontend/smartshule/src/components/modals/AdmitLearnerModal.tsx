@@ -470,17 +470,9 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 <span className="material-symbols-outlined text-[26px]">gavel</span>
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
-                    Admit New CBC Learner
-                  </h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                    Kenyan Constitution Aligned
-                  </span>
-                </div>
-                <p className="text-xs text-rose-100/90 mt-0.5">
-                  Articles 53 (Child Rights), 54 (Inclusion), 31 (Privacy) & Basic Education Act
-                </p>
+                <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
+                  Admit New CBC Learner
+                </h3>
               </div>
             </div>
             {(!isPage || onClose) && (
@@ -566,16 +558,6 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           {/* ================= STEP 1: IDENTITY & NATIONALITY ================= */}
           {currentStep === 1 && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-[20px] text-primary shrink-0 mt-0.5">
-                  badge
-                </span>
-                <div>
-                  <strong className="font-semibold block">Institutional Admission & Identity (Article 53(1)(a)):</strong>
-                  Every child has the right to a name and nationality. The school assigns the official admission number upon enrollment, and the birth certificate verifies nationality.
-                </div>
-              </div>
-
               {/* Optional Learner Passport Photo */}
               <div className="flex items-center gap-3 p-3 bg-surface border border-outline-variant/30 rounded-xl">
                 <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-variant/30 flex items-center justify-center font-bold text-on-surface-variant shrink-0 overflow-hidden">

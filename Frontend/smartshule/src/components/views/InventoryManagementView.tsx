@@ -527,9 +527,6 @@ export const InventoryManagementView: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
             Stores, Procurement & Accounts Payable
           </h1>
-          <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
-            Multi-stage purchasing with separation of duties, goods receipt verification (GRN), double-entry accounts payable, and tamper-evident stock movements.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

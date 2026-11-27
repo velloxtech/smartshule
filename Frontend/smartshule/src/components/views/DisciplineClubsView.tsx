@@ -206,9 +206,6 @@ export const DisciplineClubsView: React.FC = () => {
  CBE Core Values & Character Formation
  </div>
  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Clubs, Societies & Discipline Log</h1>
- <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
- Promoting holistic CBE competencies through scouting, STEM, drama, and positive behavior commendations and counseling.
- </p>
  </div>
 
  <div className="flex flex-wrap items-center gap-3">

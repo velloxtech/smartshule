@@ -357,9 +357,6 @@ export const SponsoredStudentsView: React.FC = () => {
               </span>
               <span>Fully Sponsored Students &amp; Scholarships Dossier</span>
             </h1>
-            <p className="text-sm sm:text-base text-rose-100/90 max-w-2xl leading-relaxed">
-              Confidential institutional management of learners on 100% full school sponsorship, Director benevolence subsidies, needy student bursaries, and staff waivers.
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">

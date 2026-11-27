@@ -74,7 +74,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
   const [loading, setLoading] = useState(true);
   const [reviewOnly, setReviewOnly] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const savedSchemes = schemes.filter(scheme => !scheme.planningState || scheme.planningState.weeklyPlanningStarted || scheme.entries?.some(entry=>!entry.archivedAt));
+  const savedSchemes = schemes.filter(scheme => !scheme.planningState || (scheme.planningState as any).weeklyPlanningStarted || scheme.entries?.some(entry=>!entry.archivedAt));
   const pendingReviews = savedSchemes.filter(scheme => scheme.status === 'SUBMITTED');
   const reviewSchemes = reviewOnly ? pendingReviews : savedSchemes;
   const filterAreaOptions = planAreas.filter(area => reviewSchemes.some(scheme => scheme.learningAreaId === area.id));
@@ -219,9 +219,6 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             {activeTab === 'lesson-plans' ? 'Lesson Plans' : 'Schemes of Work'}
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            {activeTab === 'lesson-plans' ? 'Prepare lessons before class, then record teaching and reflections for admin review after class.' : 'Create dated teaching sessions, submit schemes for review and manage saved schemes.'}
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -249,7 +246,7 @@ export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initial
       {activeTab === 'schemes' && (
         <div className="space-y-4">
           {loadError && <div role="alert" className="rounded-xl border border-error/30 bg-error-container p-4 text-sm text-on-error-container">{loadError}<button className="ui-button ml-3" onClick={loadCurriculum}>Retry loading schemes</button></div>}
-          {isApprover && <div className="flex flex-wrap items-center gap-3"><button className="ui-button" aria-pressed={reviewOnly} onClick={() => setReviewOnly(!reviewOnly)}>{reviewOnly ? 'Show all schemes' : `Awaiting review (${pendingReviews.length})`}</button><p className="text-xs text-on-surface-variant">Review submitted scheme sessions here. Syllabus coverage plans are reviewed on Syllabus Planning.</p></div>}
+          {isApprover && <div className="flex flex-wrap items-center gap-3"><button className="ui-button" aria-pressed={reviewOnly} onClick={() => setReviewOnly(!reviewOnly)}>{reviewOnly ? 'Show all schemes' : `Awaiting review (${pendingReviews.length})`}</button></div>}
           {metadataError && <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{metadataError}<button className="ui-button ml-2" onClick={() => setMetadataAttempt(attempt => attempt + 1)}>Retry names</button></div>}
           {savedSchemes.length > 0 && <section aria-label="Filter schemes" className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 space-y-3">
             <div className="grid gap-3 md:grid-cols-3">

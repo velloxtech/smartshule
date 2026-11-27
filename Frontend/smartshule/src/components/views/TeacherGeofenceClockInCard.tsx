@@ -291,13 +291,7 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
               <h2 className="text-base font-bold text-on-surface">
                 School Compound Geofence Clock-In
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-fixed text-on-primary-fixed border border-primary">
-                TSC Art. 237 Biometric
-              </span>
             </div>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Strict location verification: Educators must be physically inside the school compound perimeter to clock in.
-            </p>
           </div>
         </div>
 

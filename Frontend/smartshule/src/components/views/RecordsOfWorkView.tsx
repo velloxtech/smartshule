@@ -293,9 +293,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
             <span className="material-symbols-outlined text-primary text-3xl">menu_book</span>
             Records of Work
           </h1>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Track daily CBC curriculum delivery, lesson reflections, review submissions and official syllabus progression.
-          </p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
@@ -334,7 +331,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           <h3 className="text-2xl font-extrabold text-on-surface mt-1">
             {summary ? summary.totalLessons : records.length}
           </h3>
-          <p className="text-[11px] text-gray-400 mt-1">Across all registered classes</p>
         </div>
 
         <div className="bg-surface-container-lowest border border-primary/80 bg-gradient-to-br from-white to-primary-fixed/30 rounded-2xl p-4 shadow-xs">
@@ -347,7 +343,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
               {summary ? `${summary.approvedCount} approved` : '0 approved'}
             </span>
           </div>
-          <p className="text-[11px] text-emerald-700 mt-1">Drives Official CBC Progress</p>
         </div>
 
         <div className="bg-surface-container-lowest border border-primary/80 bg-gradient-to-br from-white to-primary-fixed/30 rounded-2xl p-4 shadow-xs">
@@ -362,7 +357,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
               </span>
             )}
           </div>
-          <p className="text-[11px] text-amber-700 mt-1">Awaiting supervisor endorsement</p>
         </div>
 
         <div className="bg-surface-container-lowest border border-rose-200/80 bg-gradient-to-br from-white to-rose-50/30 rounded-2xl p-4 shadow-xs">
@@ -370,7 +364,6 @@ export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigate
           <h3 className="text-2xl font-extrabold text-rose-900 mt-1">
             {summary ? summary.returnedCount : records.filter(r => r.status === 'RETURNED').length}
           </h3>
-          <p className="text-[11px] text-rose-700 mt-1">Requires teacher correction</p>
         </div>
       </div>
 

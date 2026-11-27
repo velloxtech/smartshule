@@ -308,9 +308,6 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
               Standalone Ledger
             </span>
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Manually add, adjust, and bulk-populate fee arrears and carried-forward opening balances for every student
-          </p>
         </div>
 
         {/* Header Action Buttons */}

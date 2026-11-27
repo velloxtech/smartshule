@@ -1195,7 +1195,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               aria-label="Close image preview"
             >
               <X className="w-5 h-5" />
-            </button>
+            </button>   
             <div className="relative flex-1 overflow-auto bg-black flex items-center justify-center min-h-[300px] p-2">
               <img
                 src={previewImage.src}

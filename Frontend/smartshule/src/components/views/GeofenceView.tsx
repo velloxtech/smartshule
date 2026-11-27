@@ -208,11 +208,6 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               School Compound Geofencing
             </h1>
-            <p className="text-sm text-rose-100 max-w-2xl leading-relaxed">
-              Real-time GPS perimeter boundary enforcement for faculty clock-in. Teachers
-              must be physically inside the school compound to clock in. Coordinates are
-              strictly maintained by the Super Administrator and School Director.
-            </p>
           </div>
 
           {/* Quick Actions */}
@@ -265,23 +260,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
             </p>
           </div>
         </div>
-      ) : (
-        <div className="p-4 rounded-xl bg-primary-fixed border border-primary text-on-primary-fixed flex items-start gap-3">
-          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">
-            verified_user
-          </span>
-          <div>
-            <h4 className="font-bold text-sm">
-              Director & Super Admin Coordinate Management Active
-            </h4>
-            <p className="text-xs mt-0.5 leading-relaxed text-on-primary-fixed">
-              You are authorized to configure the physical GPS perimeter of the school compound.
-              Teachers outside the {radiusMeters}m radius boundary will be strictly blocked from
-              clocking in.
-            </p>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* Top 4 KPI Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -404,9 +383,6 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
               <h3 className="font-bold text-base text-on-surface">
                 School Compound Coordinates
               </h3>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                Define the geographic center point and allowed radius for teacher biometric clock-in
-              </p>
             </div>
             {canEditCoordinates && (
               <button
@@ -468,9 +444,6 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                     className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container-low disabled:text-gray-500"
                   />
                 </div>
-                <span className="text-[10px] text-on-surface-variant mt-1 block">
-                  Range: -90.000000 to +90.000000
-                </span>
               </div>
 
               <div>
@@ -492,9 +465,6 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                     className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container-low disabled:text-gray-500"
                   />
                 </div>
-                <span className="text-[10px] text-on-surface-variant mt-1 block">
-                  Range: -180.000000 to +180.000000
-                </span>
               </div>
             </div>
 
@@ -533,12 +503,6 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 onChange={(e) => setRadiusMeters(Number(e.target.value))}
                 className="w-full accent-[#7a1228] cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
-                <span>50m (Compact School)</span>
-                <span>250m (Grace Seeds Default)</span>
-                <span>500m (Standard Compound)</span>
-                <span>2000m (Large Perimeter)</span>
-              </div>
             </div>
 
             {/* Compound Address */}
@@ -641,20 +605,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
             </div>
           </div>
 
-          {/* Haversine Metric Explanation Box */}
-          <div className="p-3.5 rounded-xl bg-surface-container-high/40 border border-outline-variant/20 text-xs space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-on-surface">
-              <span className="material-symbols-outlined text-rose-800 text-[16px]">
-                straighten
-              </span>
-              <span>Geodesic Boundary Enforcement</span>
-            </div>
-            <p className="text-[11px] text-on-surface-variant leading-relaxed">
-              Distances are computed using the Haversine Great-Circle metric across Earth&apos;s
-              curvature ($R = 6,371$ km). Clock-in attempts outside the {radiusMeters}m perimeter
-              are rejected both client-side and server-side with an HTTP 403 Forbidden.
-            </p>
-          </div>
+
 
           {/* Quick Metrics */}
           <div className="pt-4 border-t border-surface-container grid grid-cols-2 gap-3 text-xs">

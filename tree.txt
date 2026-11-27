@@ -1598,8 +1598,8 @@
 │   │   │   │   │   │   │   │   │   │   │   └── values-b+sr+Latn.xml
 │   │   │   │   │   │   │   │   │   │   ├── values-ca
 │   │   │   │   │   │   │   │   │   │   │   └── values-ca.xml
-│   │   │   │   │   │   │   │   │   │   ├── values-cs
-│   │   │   │   │   │   │   │   │   │   │   └── values-cs.xml
+│   │   │   │   │   │   │   │   │   │   ├── values-  School
+│   │   │   │   │   │   │   │   │   │   │   └── values-  School.xml
 │   │   │   │   │   │   │   │   │   │   ├── values-da
 │   │   │   │   │   │   │   │   │   │   │   └── values-da.xml
 │   │   │   │   │   │   │   │   │   │   ├── values-de
@@ -1949,7 +1949,7 @@
 │   │   │   │   │   │   │           ├── values-b+sr+Latn_values-b+sr+Latn.arsc.flat
 │   │   │   │   │   │   │           ├── values-bs_values-bs.arsc.flat
 │   │   │   │   │   │   │           ├── values-ca_values-ca.arsc.flat
-│   │   │   │   │   │   │           ├── values-cs_values-cs.arsc.flat
+│   │   │   │   │   │   │           ├── values-cs_values-  School.arsc.flat
 │   │   │   │   │   │   │           ├── values-da_values-da.arsc.flat
 │   │   │   │   │   │   │           ├── values-de_values-de.arsc.flat
 │   │   │   │   │   │   │           ├── values-el_values-el.arsc.flat
@@ -2067,7 +2067,7 @@
 │   │   │   │   │   │   │               │   ├── values-bs.json
 │   │   │   │   │   │   │               │   ├── values-b+sr+Latn.json
 │   │   │   │   │   │   │               │   ├── values-ca.json
-│   │   │   │   │   │   │               │   ├── values-cs.json
+│   │   │   │   │   │   │               │   ├── values-  School.json
 │   │   │   │   │   │   │               │   ├── values-da.json
 │   │   │   │   │   │   │               │   ├── values-de.json
 │   │   │   │   │   │   │               │   ├── values-el.json
@@ -2666,7 +2666,7 @@
 │   │   │   │   │   ├── bg.pak
 │   │   │   │   │   ├── bn.pak
 │   │   │   │   │   ├── ca.pak
-│   │   │   │   │   ├── cs.pak
+│   │   │   │   │   ├──   School.pak
 │   │   │   │   │   ├── da.pak
 │   │   │   │   │   ├── de.pak
 │   │   │   │   │   ├── el.pak
@@ -2758,7 +2758,7 @@
 │   │   │   │           │   │       │       │   └── locale.pak
 │   │   │   │           │   │       │       ├── chrome_100_percent.pak
 │   │   │   │           │   │       │       ├── chrome_200_percent.pak
-│   │   │   │           │   │       │       ├── cs.lproj
+│   │   │   │           │   │       │       ├──   School.lproj
 │   │   │   │           │   │       │       │   └── locale.pak
 │   │   │   │           │   │       │       ├── da.lproj
 │   │   │   │           │   │       │       │   └── locale.pak
@@ -2927,7 +2927,7 @@
 │   │   │   │               ├── bg.lproj
 │   │   │   │               ├── bn.lproj
 │   │   │   │               ├── ca.lproj
-│   │   │   │               ├── cs.lproj
+│   │   │   │               ├──   School.lproj
 │   │   │   │               ├── da.lproj
 │   │   │   │               ├── de.lproj
 │   │   │   │               ├── el.lproj
@@ -3008,7 +3008,7 @@
 │   │   │       │   ├── bg.pak
 │   │   │       │   ├── bn.pak
 │   │   │       │   ├── ca.pak
-│   │   │       │   ├── cs.pak
+│   │   │       │   ├──   School.pak
 │   │   │       │   ├── da.pak
 │   │   │       │   ├── de.pak
 │   │   │       │   ├── el.pak

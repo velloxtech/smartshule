@@ -253,9 +253,6 @@ export const ClinicManagementView: React.FC = () => {
  Learner Wellness & Health Center
  </div>
  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">School Infirmary & Clinic</h1>
- <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
- First aid triage, symptom assessments, prescription dispense tracking, emergency parent alerts, and student allergy profiles.
- </p>
  </div>
 
  <button

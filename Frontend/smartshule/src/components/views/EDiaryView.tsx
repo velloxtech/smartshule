@@ -327,11 +327,6 @@ export const EDiaryView: React.FC = () => {
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Daily Homefun &amp; Communication Diary (E-Diary)
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            {isGuardian
-              ? 'Review daily homefun activities, teacher remarks, requirements for tomorrow, and digitally sign off'
-              : 'Record daily homefun activities, learning area requirements, and review parent digital sign-offs'}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

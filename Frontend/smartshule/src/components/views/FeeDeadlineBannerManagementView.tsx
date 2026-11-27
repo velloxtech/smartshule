@@ -200,9 +200,6 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
               </span>
               <span>Parent Fee Banner &amp; Deadline Management</span>
             </h1>
-            <p className="text-sm sm:text-base text-rose-100/90 max-w-2xl leading-relaxed">
-              Set and update the prominent fee payment deadline, custom reminder memos, and official M-Pesa remittance instructions displayed directly across the Parent Portal.
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
@@ -309,9 +306,6 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       {isEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    When active, a prominent banner is rendered at the top of the Parent Dashboard.
-                  </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -349,9 +343,6 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       <div className="text-xs font-bold text-slate-900">
                         Defaulters Only (Recommended)
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Only displayed to parents who have an outstanding fee balance &gt; 0. Cleared parents see the &quot;Fees Cleared&quot; badge.
-                      </p>
                     </div>
                   </div>
 
@@ -374,9 +365,6 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
                       <div className="text-xs font-bold text-slate-900">
                         All Parents
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Display the deadline notice to every parent regardless of their current fee clearance status.
-                      </p>
                     </div>
                   </div>
                 </div>

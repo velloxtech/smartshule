@@ -1623,10 +1623,6 @@ export const TimetableView: React.FC = () => {
                 ))}
               </select>
             </div>
-
-            <span className="text-[11px] text-on-surface-variant font-data-mono hidden md:inline">
-              Grid: {days.length} Days (Rows) × {periods.length} Periods (Cols)
-            </span>
           </div>
         ) : (
           <div className="flex items-center gap-2">

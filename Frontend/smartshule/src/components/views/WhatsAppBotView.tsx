@@ -477,9 +477,6 @@ export const WhatsAppBotView: React.FC = () => {
               <span>100% Ban-Safe Channel</span>
             </span>
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Meta's official WhatsApp Business Platform with <strong>1,000 free monthly service conversations</strong>, zero risk of SIM bans, and instant CBC parent query automation
-          </p>
         </div>
 
         {/* Live Status Badge */}
@@ -509,9 +506,6 @@ export const WhatsAppBotView: React.FC = () => {
             <h2 className="text-lg font-bold leading-snug">
               Official Meta Channel · 1,000 Free Monthly Service Conversations
             </h2>
-            <p className="text-xs text-emerald-100/90 leading-relaxed">
-              Unlike unofficial libraries (Baileys/web scraping) which trigger permanent phone number bans by Meta, Grace Seeds School connects directly to Meta's authorized Graph API servers. Every month, your school receives <strong>1,000 free user-initiated service conversations</strong>, allowing parents to query fee statements, homework, attendance, and timetables at zero cost.
-            </p>
           </div>
 
           {/* 1,000 Free Conversations Meter */}

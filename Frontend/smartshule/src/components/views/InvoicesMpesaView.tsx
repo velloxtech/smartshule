@@ -278,11 +278,6 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             {isGuardian ? 'Parent Fee Ledger & Forward Payment Confirmation' : 'Student Invoicing & Payment Verification Ledger'}
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            {isGuardian
-              ? 'View official school invoices, pay directly via M-Pesa or Bank, and forward your payment confirmation message to the school for verification.'
-              : 'Manage fee invoices, manually record direct bank and cash payments, and verify payments forwarded by parents.'}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -478,9 +473,6 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               <h3 className="font-bold text-sm text-on-surface">
                 {isGuardian ? 'Child Term Invoices' : 'School Fee Invoices & Lifecycle Management'}
               </h3>
-              <p className="text-xs text-on-surface-variant">
-                Manage, draft, issue and track individual and bulk school invoices
-              </p>
             </div>
             <span className="text-xs text-on-surface-variant font-medium">
               Showing <strong className="text-on-surface">{filteredInvoices.length}</strong> of {invoices.length} billing records

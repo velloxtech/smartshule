@@ -25,7 +25,6 @@ export function TermClosingDateEditor({ term, onUpdated }: { term: AcademicTerm;
     <label className="block text-sm font-semibold text-on-surface">{term.name} closing date
       <input aria-label={`${term.name} closing date`} type="date" required value={date} min={term.startDate.slice(0, 10)} disabled={saving} onChange={e => { setDate(e.target.value); setMessage(''); setError(''); }} className="ui-field block mt-2" />
     </label>
-    <p className="text-xs text-on-surface-variant">Choose your preferred closing day. The teaching calendar and available lesson dates update automatically.</p>
     <button type="button" disabled={saving || !date || date === term.endDate.slice(0, 10)} onClick={save} className="ui-button ui-button-primary">{saving ? 'Saving…' : 'Save closing date'}</button>
     {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
     {message && <p role="status" className="text-sm text-emerald-800">{message}</p>}

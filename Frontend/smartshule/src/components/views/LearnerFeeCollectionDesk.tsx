@@ -553,9 +553,6 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
               <span className="material-symbols-outlined text-[24px] text-primary">point_of_sale</span>
               <span>Fee Collection & Cashier Desk</span>
             </h1>
-            <p className="text-xs text-on-surface-variant">
-              Search a learner, view their real-time ledger, record payment, and issue official receipts in one screen.
-            </p>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -839,25 +836,14 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
               </div>
             </div>
 
-            {/* Formula Explanation Banner */}
-            <div className="mt-3 px-3 py-1.5 rounded-lg bg-surface-container-high/50 border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-on-surface-variant gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-primary">calculate</span>
-                <span className="font-semibold text-on-surface">Formula:</span>
-                <span className="font-mono">
-                  Fees This Term (KSh {financials.feesThisTerm.toLocaleString()}) + Previous Balance (KSh{' '}
-                  {financials.previousBalance.toLocaleString()}) − Total Paid (KSh {financials.totalPaid.toLocaleString()}) ={' '}
-                  <strong className="text-on-surface font-mono">
-                    KSh {financials.outstandingBalance.toLocaleString()}
-                  </strong>
-                </span>
-              </div>
-              {financials.outstandingBalance === 0 && financials.overpaymentCredit > 0 && (
+            {/* Prepayment Credit Notice */}
+            {financials.outstandingBalance === 0 && financials.overpaymentCredit > 0 && (
+              <div className="mt-3 px-3 py-1.5 rounded-lg bg-surface-container-high/50 border border-outline-variant/20 flex items-center justify-between text-[11px] text-on-surface-variant gap-1">
                 <div className="font-bold text-on-primary-fixed">
                   Prepayment Credit Available: KSh {financials.overpaymentCredit.toLocaleString()}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* ACTION BUTTONS (DIRECTLY ON PAGE) */}
             <div className="mt-4 pt-4 border-t border-outline-variant/20 flex flex-wrap items-center gap-2.5">

@@ -356,9 +356,6 @@ export const FeeStructureView: React.FC = () => {
               {structures.length} Invoicing Schedules Active
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
-            Real-time fee structures stored in the database. Invoices generated for students dynamically pull from these records.
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

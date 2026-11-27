@@ -983,11 +983,6 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <div className="text-xs font-bold text-on-surface">
               {viewMode === 'cashier_desk' ? 'Fee Collection & Cashier Desk' : 'Full Student Finances & Fee Register'}
             </div>
-            <div className="text-[11px] text-on-surface-variant">
-              {viewMode === 'cashier_desk'
-                ? 'Search a learner, view fee position, record payment, and issue receipts'
-                : 'Comprehensive institutional accounting ledger with multi-column grid and PDF exports'}
-            </div>
           </div>
         </div>
 

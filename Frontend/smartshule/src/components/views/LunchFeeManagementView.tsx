@@ -809,9 +809,6 @@ export const LunchFeeManagementView: React.FC = () => {
             <span className="material-symbols-outlined text-3xl text-white">lunch_dining</span>
             Lunch Fee & Catering Fund Management
           </h1>
-          <p className="text-xs md:text-sm text-white/90 max-w-2xl">
-            Maintain learner dining rosters and track all catering expenditures with 100% financial accountability. Parents only view their enrolled children.
-          </p>
         </div>
 
         {/* Global Action Buttons */}

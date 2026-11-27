@@ -396,12 +396,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   {/* Desktop Compact Tooltip / Flyout Menu */}
                   {isCompact && !mobileOpen && hoveredModuleId === module.id && (
-                    <div className="absolute left-full top-0 ml-2 z-50 bg-surface-container-lowest border border-primary/25 shadow-2xl rounded-2xl p-2.5 min-w-[220px] max-w-[280px] animate-in fade-in slide-in-from-left-2 duration-150">
-                      <div className="px-2.5 py-1.5 mb-1.5 border-b border-slate-100 flex items-center justify-between">
-                        <span className="text-xs font-bold text-primary truncate">{module.title}</span>
+                    <div className="absolute left-full top-0 ml-2 z-50 bg-[#e69b95] dark:bg-[#4a101d] border border-primary/25 shadow-2xl rounded-2xl p-2.5 min-w-[220px] max-w-[280px] animate-in fade-in slide-in-from-left-2 duration-150">
+                      <div className="px-2.5 py-1.5 mb-1.5 border-b border-primary/20 flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#40000e] dark:text-rose-100 truncate">{module.title}</span>
                         {moduleBadge}
                       </div>
-                      <div className="space-y-1 max-h-[360px] overflow-y-auto">
+                      <div className="space-y-0.5 max-h-[360px] overflow-y-auto">
                         {module.items.map((item) => {
                           const isActive = navigationTab === item.id;
                           const itemBadge = getItemBadge(item, isActive);
@@ -413,14 +413,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 onSelectTab(item.id);
                                 setHoveredModuleId(null);
                               }}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-all duration-150 cursor-pointer ${
                                 isActive
-                                  ? 'bg-primary text-white font-bold'
-                                  : 'text-slate-700 hover:bg-primary/10 hover:text-primary font-medium'
+                                  ? 'bg-primary text-white font-bold shadow-xs'
+                                  : 'text-[#40000e] hover:bg-black/10 hover:text-[#2d000a] dark:text-rose-100 dark:hover:bg-black/20 font-medium'
                               }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="material-symbols-outlined text-[15px] shrink-0">{item.icon}</span>
+                                <span className={`material-symbols-outlined text-[15px] shrink-0 ${
+                                  isActive ? 'text-white' : 'text-primary'
+                                }`}>
+                                  {item.icon}
+                                </span>
                                 <span className="truncate">{item.label}</span>
                               </div>
                               {itemBadge}
@@ -433,7 +437,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   {/* Expanded Submenu Accordion Drawer */}
                   {(!isCompact || mobileOpen) && isExpanded && (
-                    <div className="mt-1 ml-4 pl-2.5 border-l-2 border-primary/25 space-y-1 py-1 transition-all">
+                    <div className="mt-1 ml-3 mr-1.5 p-1.5 rounded-xl bg-black/[0.07] dark:bg-black/25 border-l-2 border-primary/35 border border-primary/15 shadow-inner space-y-0.5 transition-all duration-200">
                       {module.items.map((item) => {
                         const isActive = navigationTab === item.id;
                         const itemBadge = getItemBadge(item, isActive);
@@ -446,16 +450,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               onSelectTab(item.id);
                               onCloseMobile();
                             }}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-all duration-150 cursor-pointer ${
                               isActive
                                 ? 'bg-primary text-white font-bold shadow-xs'
-                                : 'text-[#500010] hover:bg-primary/15 hover:text-primary font-medium'
+                                : 'text-[#40000e] hover:bg-black/10 hover:text-[#2d000a] dark:text-rose-100 dark:hover:bg-black/20 font-medium'
                             }`}
                             data-path={item.id}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className={`material-symbols-outlined text-[15px] shrink-0 ${
-                                isActive ? 'text-white' : 'text-primary/70'
+                                isActive ? 'text-white' : 'text-primary/75'
                               }`}>
                                 {item.icon}
                               </span>

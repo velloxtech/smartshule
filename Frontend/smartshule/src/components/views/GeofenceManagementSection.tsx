@@ -174,17 +174,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
             </p>
           </div>
         </div>
-      ) : (
-        <div className="p-4 rounded-xl bg-primary-fixed border border-primary text-on-primary-fixed flex items-start gap-3">
-          <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">verified_user</span>
-          <div>
-            <h4 className="font-bold text-sm">Director & Super Admin Geofence Control Active</h4>
-            <p className="text-xs mt-0.5 leading-relaxed text-on-primary-fixed">
-              You have privileged access to configure the physical perimeter of the school compound. Teachers will only be permitted to clock in when physically situated within this boundary.
-            </p>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* Main Coordinate Setting Form & Visualizer Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -193,9 +183,6 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
           <div className="flex items-center justify-between pb-3 border-b border-surface-container">
             <div>
               <h3 className="font-bold text-base text-on-surface">School Compound Coordinates</h3>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                Define the geographic center point and allowed radius for teacher biometric clock-in
-              </p>
             </div>
             {canEditCoordinates && (
               <button
@@ -249,7 +236,6 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                     className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container disabled:text-outline"
                   />
                 </div>
-                <span className="text-[10px] text-on-surface-variant mt-1 block">Range: -90.000000 to +90.000000</span>
               </div>
 
               <div>
@@ -271,7 +257,6 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                     className="w-full pl-9 pr-3 py-2 text-xs font-data-mono bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary disabled:bg-surface-container disabled:text-outline"
                   />
                 </div>
-                <span className="text-[10px] text-on-surface-variant mt-1 block">Range: -180.000000 to +180.000000</span>
               </div>
             </div>
 
@@ -309,11 +294,6 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
                 onChange={(e) => setRadiusMeters(Number(e.target.value))}
                 className="w-full accent-[#7a1228] cursor-pointer"
               />
-              <div className="flex justify-between text-[10px] text-outline mt-0.5">
-                <span>50m (Compact School)</span>
-                <span>500m (Standard Compound)</span>
-                <span>2000m (Large Perimeter)</span>
-              </div>
             </div>
 
             {/* Compound Address */}

@@ -1120,9 +1120,6 @@ export const PayrollManagementView: React.FC = () => {
             Kenyan Statutory HR & Faculty Payroll
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Staff Payroll & Leave Management</h1>
-          <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
-            Automated KRA PAYE bands, SHIF 2.75%, NSSF Tier 1 & 2, and Affordable Housing Levy 1.5% with digital ledger and payment disbursement tracking.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

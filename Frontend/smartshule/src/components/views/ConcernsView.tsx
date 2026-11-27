@@ -422,11 +422,6 @@ export const ConcernsView: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-black mb-2">
             {isParent ? 'Daily Homefun & Parent Concern Pipeline' : 'Parent Concern Management & Resolution Desk'}
           </h1>
-          <p className="text-sm md:text-base text-white/90 leading-relaxed">
-            {isParent
-              ? 'Raise, track and communicate with school educators and administrators regarding your learners. Every concern is assigned a unique tracking reference, guaranteed response deadlines, and an auditable investigation log.'
-              : 'Centrally receive, investigate, assign, escalate and ratify parent concerns across CBC grades with strict role-based isolation, two-way messaging, and response-deadline enforcement.'}
-          </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button

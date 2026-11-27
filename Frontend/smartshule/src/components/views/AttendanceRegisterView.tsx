@@ -793,9 +793,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Biometric & Teacher Roll-Call Register
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            {schoolInfo?.name || 'Grace Seeds School'} · Morning roll call records, absence reasons, and parent SMS alerts
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">

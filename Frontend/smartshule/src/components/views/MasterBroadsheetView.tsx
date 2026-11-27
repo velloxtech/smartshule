@@ -76,6 +76,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
   const [broadsheet, setBroadsheet] = useState<BroadsheetResult | null>(null);
   const requestVersion=useRef(0);
+  const activeChipRef = useRef<HTMLButtonElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,6 +168,12 @@ export const MasterBroadsheetView: React.FC = () => {
     }).catch(err=>{if(live){requestVersion.current++;setClasses([]);setStreams([]);setBroadsheet(null);setError(err?.message||'Teaching assignments could not be verified.');}});
     return()=>{live=false;};
   },[user?.role,selectedYear,selectedTerm,selectedClassId]);
+
+  useEffect(() => {
+    if (activeChipRef.current) {
+      activeChipRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [selectedClassId]);
 
   const handleClassChange = async (classId: string) => {
     setInitializing(true);
@@ -779,97 +786,103 @@ export const MasterBroadsheetView: React.FC = () => {
       </div>
 
       {/* Control Selector Bar */}
-      <div className="print:hidden bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center gap-1.5 pb-3 border-b border-outline-variant/30">
-          <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-base text-rose-800">school</span>
-            Grade:
-          </span>
-          {classes.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => handleClassChange(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                c.id === selectedClassId
-                  ? 'bg-primary-container text-white shadow-sm'
-                  : 'bg-surface-container-low hover:bg-surface-container text-on-surface-variant'
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
+      <div className="print:hidden bg-white border border-[#e5e7eb] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Row 1: Grade Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
+          <div className="flex items-center gap-1.5 text-[12px] font-normal text-[#6b7280] shrink-0 mr-1.5">
+            <span className="material-symbols-outlined text-[18px] text-[#7a1228]">school</span>
+            <span>Grade</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {classes.map((c) => {
+              const isActive = c.id === selectedClassId;
+              return (
+                <button
+                  key={c.id}
+                  ref={isActive ? activeChipRef : null}
+                  type="button"
+                  onClick={() => handleClassChange(c.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all shrink-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#7a1228] text-white shadow-xs border border-[#7a1228]'
+                      : 'bg-white text-[#6b7280] border border-[#e5e7eb] hover:bg-[#fbeef1] hover:text-[#7a1228] hover:border-[#7a1228]/30'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Class / Grade</label>
-              <select
-                value={selectedClassId}
-                onChange={(e) => handleClassChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
-              >
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Thin Divider */}
+        <div className="border-t border-[#e5e7eb]" />
 
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Stream</label>
-              <select
-                value={selectedStreamId}
-                onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+        {/* Row 2: Aligned Controls */}
+        <div className="flex flex-wrap lg:flex-nowrap items-end gap-3.5">
+          {/* Stream Dropdown */}
+          <div className="flex-1 min-w-[200px]">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[12px] text-[#6b7280] font-normal">Stream</label>
+              <span
+                className="text-[11px] text-[#9ca3af] font-normal truncate max-w-[130px]"
+                title={classes.find((c) => c.id === selectedClassId)?.name}
               >
-                <option value="all">
-                  ⭐ {user?.role==='TEACHER'?'Permitted streams':'All Streams'} ({classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'})
+                {classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'}
+              </span>
+            </div>
+            <select
+              value={selectedStreamId}
+              onChange={(e) => setSelectedStreamId(e.target.value)}
+              className="w-full h-[38px] px-3 py-2 rounded-lg border border-[#e5e7eb] bg-white text-[14px] font-medium text-[#1f2937] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] transition-colors cursor-pointer"
+            >
+              <option value="all">
+                {user?.role === 'TEACHER' ? 'Permitted streams' : 'All streams'}
+              </option>
+              {streams.map((s) => (
+                <option key={s.id} value={s.id}>
+                  Stream {s.name}
                 </option>
-                {streams.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    Stream {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              ))}
+            </select>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Assessment Type</label>
-              <select
-                value={selectedExamType}
-                onChange={(e) => setSelectedExamType(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
-              >
-                <option value="End of Term Examination">End of Term Examination</option>
-                <option value="Mid-Term Assessment">Mid-Term Assessment</option>
-                <option value="Opener Examination">Opener Examination</option>
-                <option value="Continuous Assessment Tests (CATs)">Continuous Assessment Tests (CATs)</option>
-              </select>
-            </div>
+          {/* Assessment Type Dropdown */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-[12px] text-[#6b7280] font-normal mb-1.5 block">Assessment Type</label>
+            <select
+              value={selectedExamType}
+              onChange={(e) => setSelectedExamType(e.target.value)}
+              className="w-full h-[38px] px-3 py-2 rounded-lg border border-[#e5e7eb] bg-white text-[14px] font-medium text-[#1f2937] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228] transition-colors cursor-pointer"
+            >
+              <option value="End of Term Examination">End of Term Examination</option>
+              <option value="Mid-Term Assessment">Mid-Term Assessment</option>
+              <option value="Opener Examination">Opener Examination</option>
+              <option value="Continuous Assessment Tests (CATs)">Continuous Assessment Tests (CATs)</option>
+            </select>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Term</label>
+          {/* Merged Term & Year Control */}
+          <div className="flex-1 min-w-[230px]">
+            <label className="text-[12px] text-[#6b7280] font-normal mb-1.5 block">Term</label>
+            <div className="flex h-[38px] rounded-lg border border-[#e5e7eb] bg-white overflow-hidden hover:border-gray-400 focus-within:ring-2 focus-within:ring-[#7a1228]/20 focus-within:border-[#7a1228] transition-colors">
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="flex-1 px-3 py-2 bg-transparent text-[14px] font-medium text-[#1f2937] focus:outline-none border-r border-[#e5e7eb] cursor-pointer min-w-0 truncate"
+                title="Term"
               >
                 {academicTerms.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {t.name.replace(/\s*-\s*\d{4}$/, '')}
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">Year</label>
               <select
                 value={selectedYear}
                 onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary-container focus:border-primary-container"
+                className="w-[88px] px-2.5 py-2 bg-transparent text-[14px] font-medium text-[#1f2937] focus:outline-none cursor-pointer shrink-0"
+                title="Year"
               >
                 {academicYears.map((y) => (
                   <option key={y.id} value={y.id}>
@@ -880,13 +893,17 @@ export const MasterBroadsheetView: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => fetchBroadsheetData(selectedStreamId)}
-            className="bg-primary hover:bg-primary-container text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
-          >
-            <span className="material-symbols-outlined text-base">refresh</span>
-            Recalculate Broadsheet
-          </button>
+          {/* Recalculate Broadsheet Button */}
+          <div className="shrink-0">
+            <button
+              type="button"
+              onClick={() => fetchBroadsheetData(selectedStreamId)}
+              className="h-[38px] px-4 rounded-lg bg-[#7a1228] hover:bg-[#5c0a1a] text-white text-[13px] font-medium flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+              <span>Recalculate Broadsheet</span>
+            </button>
+          </div>
         </div>
       </div>
 

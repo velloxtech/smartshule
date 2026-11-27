@@ -360,9 +360,6 @@ export const StrandsView: React.FC = () => {
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Official CBC Strands &amp; Sub-Strands Dictionary
           </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            KICD Curriculum Strands, Sub-strands, and Learning Outcomes scoped by Grade and Learning Area.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

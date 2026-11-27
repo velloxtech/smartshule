@@ -1110,9 +1110,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               <span className="material-symbols-outlined text-[16px]">sync</span>
               <span>Refresh</span>
             </button>
-            <div className="text-xs font-medium text-gray-500">
-              Showing <strong>{matrixRows.length}</strong> learners across <strong>{effectiveSubjects.length}</strong> subject columns
-            </div>
           </div>
         </div>
       </div>

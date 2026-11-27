@@ -309,9 +309,6 @@ export const LearningAreasView: React.FC<{onNavigateTab?:(tab:string)=>void}> = 
               <span className="material-symbols-outlined text-[18px] text-primary">public</span>
               <span>Learning Areas Catalogue ({filteredAreas.length})</span>
             </h2>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Grade-specific curriculum offerings referencing canonical global subjects.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

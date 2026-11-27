@@ -934,9 +934,6 @@ export const AnnouncementsView: React.FC = () => {
             <span className="material-symbols-outlined text-primary-fixed-dim text-3xl">campaign</span>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notice Board & Circulars</h1>
           </div>
-          <p className="text-rose-100/90 text-sm max-w-2xl">
-            Official communications, administrative circulars, urgent safety alerts, and whole-year school directives.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

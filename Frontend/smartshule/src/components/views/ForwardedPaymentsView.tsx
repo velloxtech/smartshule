@@ -294,10 +294,6 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
             </span>
             <span>Parent Forwarded Payments &amp; Verification</span>
           </h1>
-          <p className="text-xs text-on-surface-variant mt-1 max-w-3xl">
-            Audit and verify fee payment confirmation messages forwarded by parents from M-Pesa, Bank Deposits, and Airtel Money. 
-            Approving a transaction automatically credits the student&apos;s invoice ledger, updates arrears, and generates an official school receipt.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
@@ -572,9 +568,6 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">verified</span>
               <span>Parent Payment Verification Records ({filteredTransactions.length})</span>
             </h2>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Compare payment confirmation codes against your bank or paybill statement, then approve to credit.
-            </p>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
