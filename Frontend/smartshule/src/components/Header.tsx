@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
   },[canUseStaffMessages,user?.id]);
 
   return (
-    <header className="sticky top-0 z-30 w-full h-16 bg-gradient-to-r from-[#7a0f26] via-[#85132d] to-[#6d0c20] text-white border-b border-[#a82442]/40 shadow-md shrink-0">
+    <header className="sticky top-0 z-30 w-full h-16 bg-[#791329] text-white border-b border-[#5F0D20] shadow-sm shrink-0">
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3">
         {/* Mobile Toggle & Search Group */}
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 max-w-xl">

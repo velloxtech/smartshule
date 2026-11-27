@@ -12,10 +12,10 @@ import {
 // Official CBC Performance Rubric Color Tokens
 const CBC_COLORS = {
   EE: '#00796B', // Teal (Exceeding Expectations)
-  ME: '#880E35', // Dark Burgundy (Meeting Expectations)
+  ME: '#791329', // Primary Burgundy (Meeting Expectations)
   AE: '#C45A00', // Orange (Approaching Expectations)
-  BE: '#E53935', // Red (Below Expectations)
-  PENDING: '#94A3B8', // Neutral Slate
+  BE: '#C62828', // Red (Below Expectations)
+  PENDING: '#526174', // Neutral Slate
 };
 
 interface SubjectAnalyticsItem {

@@ -1173,7 +1173,7 @@ export function getRoleDisplayName(role?: UserRole): string {
 export function getRoleBadgeStyle(role?: UserRole): { bg: string; text: string } {
   switch (role) {
     case UserRole.SUPER_ADMIN:
-      return { bg: 'bg-[#7a1228]/15', text: 'text-[#7a1228]' };
+      return { bg: 'bg-[#791329]/15', text: 'text-[#791329]' };
     case UserRole.ADMIN:
     case UserRole.SCHOOL_ADMIN:
       return { bg: 'bg-rose-100', text: 'text-rose-900' };

@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Scrollable Container with Nav and Non-Sticky Bottom Card (moves with sidebar) */}
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-[#7a1228]/20 flex flex-col justify-between">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-[#791329]/20 flex flex-col justify-between">
           <nav className="px-2 pt-3 pb-2 space-y-1.5">
             {/* Standalone Top Item: Dashboard */}
             {dashboardItem && (

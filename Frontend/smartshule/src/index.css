@@ -1,24 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-maroon: #7a1228;
-  --color-maroon-deep: #5a1226;
-  --color-maroon-light: #9e2644;
-  --color-maroon-pale: #f9eef1;
+  --color-maroon: #791329;
+  --color-maroon-deep: #5f0d20;
+  --color-maroon-light: #941b34;
+  --color-maroon-pale: #fce8ec;
   --color-gold: #e8a92a;
   --color-gold-light: #f5c84a;
   --color-cream: #fdfaf6;
-  --color-text: #0f172a;
-  --color-muted: #64748b;
+  --color-text: #172033;
+  --color-muted: #526174;
 
-  --color-primary: #7a1228;
+  /* Brand Primary: Burgundy Identity */
+  --color-primary: #791329;
   --color-on-primary: #ffffff;
-  --color-primary-container: #5c0a1a;
+  --color-primary-hover: #5f0d20;
+  --color-primary-container: #5f0d20;
   --color-on-primary-container: #fce8ec;
   --color-primary-fixed: #fce8ec;
   --color-primary-fixed-dim: #f6bdc8;
   --color-on-primary-fixed: #40000e;
-  --color-on-primary-fixed-variant: #660d20;
+  --color-on-primary-fixed-variant: #5f0d20;
 
   --color-secondary: #754654;
   --color-on-secondary: #ffffff;
@@ -27,7 +29,7 @@
   --color-secondary-fixed: #fce8ec;
   --color-secondary-fixed-dim: #f6bdc8;
   --color-on-secondary-fixed: #40000e;
-  --color-on-secondary-fixed-variant: #660d20;
+  --color-on-secondary-fixed-variant: #5f0d20;
 
   --color-tertiary: #65545c;
   --color-on-tertiary: #ffffff;
@@ -38,58 +40,69 @@
   --color-on-tertiary-fixed: #28141d;
   --color-on-tertiary-fixed-variant: #513b46;
 
-  /* Semantic data colours are independent of brand/action colours. */
-  --color-success: #006a63;
+  /* Assessment & Semantic Data Colours */
+  --color-ee: #00796B;
+  --color-me: #791329;
+  --color-ae: #C45A00;
+  --color-be: #C62828;
+
+  --color-success: #00796B; /* EE: Exceeding Expectations (Teal) */
   --color-on-success: #ffffff;
-  --color-success-container: #ccfbf1;
-  --color-on-success-container: #004d47;
+  --color-success-container: #e0f2f1;
+  --color-on-success-container: #004d40;
   --color-success-fixed: #9cf2e8;
   --color-success-fixed-dim: #80d5cb;
   --color-on-success-fixed: #00201d;
-  --color-on-success-fixed-variant: #00504a;
-  --color-warning: #5c2d00;
+  --color-on-success-fixed-variant: #004d40;
+
+  --color-warning: #C45A00; /* AE: Approaching Expectations (Orange) */
   --color-on-warning: #ffffff;
-  --color-warning-container: #ffedd5;
-  --color-on-warning-container: #7c2d12;
+  --color-warning-container: #fff3e0;
+  --color-on-warning-container: #e65100;
   --color-warning-fixed: #ffdcc3;
   --color-warning-fixed-dim: #ffb77d;
   --color-on-warning-fixed: #2f1500;
   --color-on-warning-fixed-variant: #6e3900;
 
-  --color-surface: #f3f5f8;
-  --color-surface-dim: #dce2ec;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #eaedf4;
-  --color-surface-container-low: #dfe4ee;
-  --color-surface-container: #d4dbe8;
-  --color-surface-container-high: #c5d0df;
-  --color-surface-container-highest: #b2c0d4;
-  --color-surface-variant: #eaedf4;
-  --color-surface-tint: #7a1228;
-  --color-card-bg: #eaedf4;
+  --color-error: #C62828; /* BE: Below Expectations (Red) */
+  --color-on-error: #ffffff;
+  --color-error-container: #ffebee;
+  --color-on-error-container: #b71c1c;
 
-  --color-on-surface: #0f172a;
-  --color-on-surface-variant: #475569;
-  --color-inverse-surface: #0f172a;
+  /* Main Surfaces & Clean Backgrounds */
+  --color-background: #E5E7ED; /* Soft Neutral Main Background */
+  --color-on-background: #172033; /* Primary Dark Text */
+
+  --color-surface: #E5E7ED; /* Main App Canvas */
+  --color-surface-dim: #D5D9E2;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff; /* Card Background: Pure White */
+  --color-surface-container-low: #F8FAFC;
+  --color-surface-container: #F1F4F9;
+  --color-surface-container-high: #E8EDF5;
+  --color-surface-container-highest: #DCE3EE;
+  --color-surface-variant: #ffffff;
+  --color-surface-tint: #791329;
+  --color-card-bg: #ffffff;
+
+  /* Text & Typography Contrast */
+  --color-on-surface: #172033; /* Primary Text: Dark Charcoal */
+  --color-on-surface-variant: #526174; /* Secondary Text: Slate Charcoal */
+  --color-inverse-surface: #172033;
   --color-inverse-on-surface: #f8fafc;
   --color-inverse-primary: #f6bdc8;
 
-  --color-outline: #475569;
-  --color-outline-variant: #9b8792;
+  /* Borders & Dividers */
+  --color-outline: #526174; /* Visible Structural Outlines */
+  --color-outline-variant: #D5D9E2; /* Crisp Light Card & Input Borders */
+  --color-border: #D5D9E2;
 
-  --color-error: #dc2626;
-  --color-on-error: #ffffff;
-  --color-error-container: #fee2e2;
-  --color-on-error-container: #991b1b;
-
-  --color-background: #f1f3f7;
-  --color-on-background: #0f172a;
-
-  --shadow-xs: 0 1px 3px 0 rgba(15, 23, 42, 0.07), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 3px 8px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 6px 16px -2px rgba(15, 23, 42, 0.10), 0 3px 6px -2px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 6px 12px -3px rgba(15, 23, 42, 0.07);
-  --shadow-xl: 0 20px 36px -6px rgba(15, 23, 42, 0.15), 0 10px 16px -4px rgba(15, 23, 42, 0.08);
+  /* Shadows: Soft & Subtle Modern Elevation */
+  --shadow-xs: 0 1px 3px 0 rgba(23, 32, 51, 0.05), 0 1px 2px -1px rgba(23, 32, 51, 0.03);
+  --shadow-sm: 0 2px 6px -1px rgba(23, 32, 51, 0.06), 0 1px 3px -1px rgba(23, 32, 51, 0.04);
+  --shadow-md: 0 4px 14px -2px rgba(23, 32, 51, 0.08), 0 2px 5px -2px rgba(23, 32, 51, 0.04);
+  --shadow-lg: 0 10px 24px -4px rgba(23, 32, 51, 0.10), 0 4px 8px -3px rgba(23, 32, 51, 0.05);
+  --shadow-xl: 0 16px 32px -6px rgba(23, 32, 51, 0.12), 0 8px 12px -4px rgba(23, 32, 51, 0.06);
 
   --font-display: 'Inter', sans-serif;
   --font-headline-lg: 'Inter', sans-serif;
@@ -304,11 +317,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: #94a3b8;
 }
 
 @keyframes fadeIn {
@@ -325,38 +338,143 @@
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Explicit card styling; utility variants and printable paper keep their own surfaces. */
+/* Explicit card styling with pure white surface, crisp #D5D9E2 border and soft shadow */
 .portal-card {
-  background-color: var(--color-surface-container-lowest);
-  box-shadow: 0 1px 4px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  background-color: #ffffff;
+  border: 1px solid #D5D9E2;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(23, 32, 51, 0.05), 0 1px 2px -1px rgba(23, 32, 51, 0.03);
 }
 
 @layer components {
+  /* Consistent Button System */
   .ui-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-outline-variant bg-white px-4 py-2 text-xs font-semibold text-on-surface shadow-2xs transition-all hover:bg-surface-container-low hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-slate-100;
   }
 
   .ui-button-primary {
-    @apply border-primary bg-primary text-on-primary hover:border-primary-container hover:bg-primary-container;
+    @apply border-primary bg-primary text-white shadow-xs hover:border-[#5F0D20] hover:bg-[#5F0D20] active:bg-[#520B1C];
+  }
+
+  .ui-button-secondary {
+    @apply border-outline-variant bg-white text-on-surface hover:bg-surface-container-low hover:border-primary/40 hover:text-primary shadow-2xs;
   }
 
   .ui-button-danger {
-    @apply border-error/30 bg-error-container text-on-error-container hover:bg-error-container/70;
+    @apply border-error/30 bg-error-container text-on-error-container hover:bg-error-container/70 shadow-2xs;
   }
 
+  /* Consistent Form & Input Fields */
   .ui-field {
-    @apply min-h-11 w-full rounded-lg border border-outline-variant/50 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply min-h-10 w-full rounded-xl border border-outline-variant bg-white px-3.5 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/70 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200;
+  }
+
+  /* Assessment Badges */
+  .badge-ee {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border border-[#00796B]/30 bg-[#E0F2F1] text-[#004D40];
+  }
+  .badge-me {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border border-[#791329]/30 bg-[#FCE8EC] text-[#791329];
+  }
+  .badge-ae {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border border-[#C45A00]/30 bg-[#FFF3E0] text-[#C45A00];
+  }
+  .badge-be {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border border-[#C62828]/30 bg-[#FFEBEE] text-[#C62828];
+  }
+
+  /* Marksheets & Tables */
+  .ui-table {
+    @apply w-full border-collapse text-left text-sm text-on-surface;
+  }
+  .ui-table thead th {
+    @apply bg-surface-container-low border-b border-outline-variant px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wider text-on-surface;
+  }
+  .ui-table tbody td {
+    @apply border-b border-outline-variant px-3.5 py-2.5 text-sm text-on-surface;
+  }
+  .ui-table tbody tr:hover td {
+    @apply bg-slate-50/80;
   }
 }
 
 @layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-on-surface);
+    font-weight: 600;
+  }
+
+  p {
+    color: var(--color-on-surface);
+  }
+
+  /* Accessible form elements */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  input[type="search"],
+  select,
+  textarea {
+    color: var(--color-on-surface);
+    background-color: #ffffff;
+    border-color: var(--color-outline-variant);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-on-surface-variant);
+    opacity: 0.75;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23526174' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.65rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.25rem;
+  }
+
+  /* Accessible Focus States */
+  :where(input, select, textarea):focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(121, 19, 41, 0.15);
+  }
+
   :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
     accent-color: var(--color-primary);
   }
 
   :where(button, a, input, select, textarea, summary, [role="button"]):focus-visible {
     outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
+    outline-offset: 2px;
+  }
+
+  /* Tables and Marksheets Baseline Styling */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  th {
+    color: var(--color-on-surface);
+    background-color: var(--color-surface-container-low);
+    border-bottom: 1px solid var(--color-outline-variant);
+    font-weight: 600;
+  }
+
+  td {
+    color: var(--color-on-surface);
+    border-bottom: 1px solid var(--color-outline-variant);
   }
 }
 
@@ -403,6 +521,19 @@
 
 /* Mobile Safe Area & Native Touch Optimizations */
 :root {
+  --color-primary: #791329;
+  --color-primary-hover: #5F0D20;
+  --color-background: #E5E7ED;
+  --color-card: #FFFFFF;
+  --color-text-primary: #172033;
+  --color-text-secondary: #526174;
+  --color-border: #D5D9E2;
+
+  --color-ee: #00796B;
+  --color-me: #791329;
+  --color-ae: #C45A00;
+  --color-be: #C62828;
+
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);

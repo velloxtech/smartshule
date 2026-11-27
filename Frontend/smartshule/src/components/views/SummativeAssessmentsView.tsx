@@ -886,23 +886,23 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
   const getLevelPill = (level: string) => {
     switch (level) {
       case 'EE':
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">EE</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-[#E0F2F1] text-[#004D40] border border-[#00796B]/30">EE</span>;
       case 'ME':
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-300">ME</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-[#FCE8EC] text-[#791329] border border-[#791329]/30">ME</span>;
       case 'AE':
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300">AE</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-[#FFF3E0] text-[#C45A00] border border-[#C45A00]/30">AE</span>;
       case 'BE':
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-rose-100 text-rose-800 border border-rose-300">BE</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-[#FFEBEE] text-[#C62828] border border-[#C62828]/30">BE</span>;
       default:
-        return <span className="text-gray-400 font-mono text-[9px]">--</span>;
+        return <span className="text-[#526174] font-mono text-[9px]">--</span>;
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-700 font-bold';
-    if (score >= 65) return 'text-blue-700 font-bold';
-    if (score >= 50) return 'text-amber-700 font-semibold';
-    return 'text-rose-700 font-semibold';
+    if (score >= 80) return 'text-[#00796B] font-bold';
+    if (score >= 65) return 'text-[#791329] font-bold';
+    if (score >= 50) return 'text-[#C45A00] font-semibold';
+    return 'text-[#C62828] font-semibold';
   };
 
   return (
